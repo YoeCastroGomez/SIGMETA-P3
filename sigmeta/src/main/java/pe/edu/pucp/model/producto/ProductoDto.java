@@ -1,15 +1,11 @@
 package pe.edu.pucp.model.producto;
 
-import java.util.ArrayList;
-import java.util.List;
-import pe.edu.pucp.model.enums.TipoProducto;
 import pe.edu.pucp.model.enums.UnidadMedida;
 
 /**
- * Producto del catalogo. Lleva los tres codigos de busqueda y el factor de conversion entre la unidad de compra y la de venta (RF005).
+ * Producto del catalogo de comercializacion (RF005 y RF006).
  */
 public class ProductoDto {
-
     private int idProducto;
     private String codigoInterno;
     private String codigoFabricante;
@@ -20,19 +16,22 @@ public class ProductoDto {
     private UnidadMedida unidadCompra;
     private UnidadMedida unidadVenta;
     private double factorConversion;
-    private TipoProducto tipo;
     private double precioVenta;
     private double costoUnitario;
     private double stockActual;
     private double stockMinimo;
+    private String imagen;
     private boolean estado;
-    private List<ComponenteProductoDto> componentes;
 
     public ProductoDto() {
-        this.componentes = new ArrayList<>();
     }
 
-    public ProductoDto(int idProducto, String codigoInterno, String codigoFabricante, String codigoProveedor, String nombre, String descripcion, CategoriaDto categoria, UnidadMedida unidadCompra, UnidadMedida unidadVenta, double factorConversion, TipoProducto tipo, double precioVenta, double costoUnitario, double stockActual, double stockMinimo, boolean estado, List<ComponenteProductoDto> componentes) {
+    public ProductoDto(int idProducto, String codigoInterno, String codigoFabricante,
+                       String codigoProveedor, String nombre, String descripcion,
+                       CategoriaDto categoria, UnidadMedida unidadCompra,
+                       UnidadMedida unidadVenta, double factorConversion,
+                       double precioVenta, double costoUnitario, double stockActual,
+                       double stockMinimo, String imagen, boolean estado) {
         this.idProducto = idProducto;
         this.codigoInterno = codigoInterno;
         this.codigoFabricante = codigoFabricante;
@@ -43,13 +42,12 @@ public class ProductoDto {
         this.unidadCompra = unidadCompra;
         this.unidadVenta = unidadVenta;
         this.factorConversion = factorConversion;
-        this.tipo = tipo;
         this.precioVenta = precioVenta;
         this.costoUnitario = costoUnitario;
         this.stockActual = stockActual;
         this.stockMinimo = stockMinimo;
+        this.imagen = imagen;
         this.estado = estado;
-        this.componentes = componentes;
     }
 
     public int getIdProducto() {
@@ -132,14 +130,6 @@ public class ProductoDto {
         this.factorConversion = factorConversion;
     }
 
-    public TipoProducto getTipo() {
-        return tipo;
-    }
-
-    public void setTipo(TipoProducto tipo) {
-        this.tipo = tipo;
-    }
-
     public double getPrecioVenta() {
         return precioVenta;
     }
@@ -172,6 +162,14 @@ public class ProductoDto {
         this.stockMinimo = stockMinimo;
     }
 
+    public String getImagen() {
+        return imagen;
+    }
+
+    public void setImagen(String imagen) {
+        this.imagen = imagen;
+    }
+
     public boolean isEstado() {
         return estado;
     }
@@ -179,13 +177,4 @@ public class ProductoDto {
     public void setEstado(boolean estado) {
         this.estado = estado;
     }
-
-    public List<ComponenteProductoDto> getComponentes() {
-        return componentes;
-    }
-
-    public void setComponentes(List<ComponenteProductoDto> componentes) {
-        this.componentes = componentes;
-    }
-
 }

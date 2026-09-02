@@ -5,6 +5,7 @@ package pe.edu.pucp.model.enums;
  */
 public enum TipoRol {
     VENDEDOR,
+    CAJERO,
     ALMACENERO,
     ADMINISTRADOR
 }

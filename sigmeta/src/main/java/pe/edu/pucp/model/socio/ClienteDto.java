@@ -5,7 +5,7 @@ import pe.edu.pucp.model.enums.CondicionPago;
 import pe.edu.pucp.model.enums.TipoDocumentoIdentidad;
 
 /**
- * Cliente de la empresa (RF003).
+ * Cliente de la empresa (RF003 y RF009).
  */
 public class ClienteDto extends EntidadComercial {
 
@@ -15,12 +15,16 @@ public class ClienteDto extends EntidadComercial {
     private String contactoNombre;
     private CondicionPago condicionPago;
     private int plazoCreditoDias;
+    private double limiteCredito;
 
     public ClienteDto() {
         super();
     }
 
-    public ClienteDto(String razonSocial, String direccion, String telefono, String correo, boolean estado, int idCliente, TipoDocumentoIdentidad tipoDocumento, String numeroDocumento, String contactoNombre, CondicionPago condicionPago, int plazoCreditoDias) {
+    public ClienteDto(String razonSocial, String direccion, String telefono, String correo,
+                      boolean estado, int idCliente, TipoDocumentoIdentidad tipoDocumento,
+                      String numeroDocumento, String contactoNombre, CondicionPago condicionPago,
+                      int plazoCreditoDias, double limiteCredito) {
         super(razonSocial, direccion, telefono, correo, estado);
         this.idCliente = idCliente;
         this.tipoDocumento = tipoDocumento;
@@ -28,6 +32,7 @@ public class ClienteDto extends EntidadComercial {
         this.contactoNombre = contactoNombre;
         this.condicionPago = condicionPago;
         this.plazoCreditoDias = plazoCreditoDias;
+        this.limiteCredito = limiteCredito;
     }
 
     public int getIdCliente() {
@@ -78,4 +83,11 @@ public class ClienteDto extends EntidadComercial {
         this.plazoCreditoDias = plazoCreditoDias;
     }
 
+    public double getLimiteCredito() {
+        return limiteCredito;
+    }
+
+    public void setLimiteCredito(double limiteCredito) {
+        this.limiteCredito = limiteCredito;
+    }
 }

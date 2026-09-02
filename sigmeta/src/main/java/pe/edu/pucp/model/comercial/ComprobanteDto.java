@@ -10,7 +10,6 @@ import pe.edu.pucp.model.enums.TipoComprobante;
  * Comprobante electronico asociado a una venta (RF008).
  */
 public class ComprobanteDto {
-
     private int idComprobante;
     private VentaDto venta;
     private TipoComprobante tipo;
@@ -22,12 +21,20 @@ public class ComprobanteDto {
     private double igv;
     private double total;
     private EstadoComprobante estado;
+    private ComprobanteDto comprobanteRelacionado;
+    private String medioEnvio;
+    private LocalDateTime fechaEnvio;
     private LocalDateTime fechaRegistro;
 
     public ComprobanteDto() {
     }
 
-    public ComprobanteDto(int idComprobante, VentaDto venta, TipoComprobante tipo, String serie, String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, EstadoComprobante estado, LocalDateTime fechaRegistro) {
+    public ComprobanteDto(int idComprobante, VentaDto venta, TipoComprobante tipo,
+                          String serie, String numero, LocalDate fechaEmision,
+                          Moneda moneda, double subTotal, double igv, double total,
+                          EstadoComprobante estado, ComprobanteDto comprobanteRelacionado,
+                          String medioEnvio, LocalDateTime fechaEnvio,
+                          LocalDateTime fechaRegistro) {
         this.idComprobante = idComprobante;
         this.venta = venta;
         this.tipo = tipo;
@@ -39,6 +46,9 @@ public class ComprobanteDto {
         this.igv = igv;
         this.total = total;
         this.estado = estado;
+        this.comprobanteRelacionado = comprobanteRelacionado;
+        this.medioEnvio = medioEnvio;
+        this.fechaEnvio = fechaEnvio;
         this.fechaRegistro = fechaRegistro;
     }
 
@@ -130,6 +140,30 @@ public class ComprobanteDto {
         this.estado = estado;
     }
 
+    public ComprobanteDto getComprobanteRelacionado() {
+        return comprobanteRelacionado;
+    }
+
+    public void setComprobanteRelacionado(ComprobanteDto comprobanteRelacionado) {
+        this.comprobanteRelacionado = comprobanteRelacionado;
+    }
+
+    public String getMedioEnvio() {
+        return medioEnvio;
+    }
+
+    public void setMedioEnvio(String medioEnvio) {
+        this.medioEnvio = medioEnvio;
+    }
+
+    public LocalDateTime getFechaEnvio() {
+        return fechaEnvio;
+    }
+
+    public void setFechaEnvio(LocalDateTime fechaEnvio) {
+        this.fechaEnvio = fechaEnvio;
+    }
+
     public LocalDateTime getFechaRegistro() {
         return fechaRegistro;
     }
@@ -137,5 +171,4 @@ public class ComprobanteDto {
     public void setFechaRegistro(LocalDateTime fechaRegistro) {
         this.fechaRegistro = fechaRegistro;
     }
-
 }

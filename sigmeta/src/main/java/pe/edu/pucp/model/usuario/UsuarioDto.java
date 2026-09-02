@@ -3,7 +3,7 @@ package pe.edu.pucp.model.usuario;
 import java.time.LocalDateTime;
 
 /**
- * Usuario del sistema. La clave se conserva cifrada con salt segun el RNF001.
+ * Usuario del sistema. La clave se conserva mediante hash con salt segun el RNF001.
  */
 public class UsuarioDto {
 
@@ -21,7 +21,9 @@ public class UsuarioDto {
     public UsuarioDto() {
     }
 
-    public UsuarioDto(int idUsuario, String nombreUsuario, String claveHash, String salt, String nombres, String apellidos, String correo, RolDto rol, boolean estado, LocalDateTime fechaRegistro) {
+    public UsuarioDto(int idUsuario, String nombreUsuario, String claveHash, String salt,
+                      String nombres, String apellidos, String correo, RolDto rol,
+                      boolean estado, LocalDateTime fechaRegistro) {
         this.idUsuario = idUsuario;
         this.nombreUsuario = nombreUsuario;
         this.claveHash = claveHash;
@@ -113,5 +115,4 @@ public class UsuarioDto {
     public void setFechaRegistro(LocalDateTime fechaRegistro) {
         this.fechaRegistro = fechaRegistro;
     }
-
 }
