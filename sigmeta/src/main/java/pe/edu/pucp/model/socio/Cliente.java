@@ -1,13 +1,17 @@
 package pe.edu.pucp.model.socio;
 
+import pe.edu.pucp.model.cobranza.CuentaPorCobrar;
+import pe.edu.pucp.model.comercial.Venta;
 import pe.edu.pucp.model.comun.EntidadComercial;
 import pe.edu.pucp.model.enums.CondicionPago;
 import pe.edu.pucp.model.enums.TipoDocumentoIdentidad;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Cliente de la empresa (RF003 y RF009).
  */
-public class ClienteDto extends EntidadComercial {
+public class Cliente extends EntidadComercial {
 
     private int idCliente;
     private TipoDocumentoIdentidad tipoDocumento;
@@ -16,15 +20,20 @@ public class ClienteDto extends EntidadComercial {
     private CondicionPago condicionPago;
     private int plazoCreditoDias;
     private double limiteCredito;
+    private String calificacionCrediticia;
+    private List<Venta> ventas;
+    private List<CuentaPorCobrar> cuentasPorCobrar;
 
-    public ClienteDto() {
+    public Cliente() {
         super();
+        this.ventas = new ArrayList<>();
+        this.cuentasPorCobrar = new ArrayList<>();
     }
 
-    public ClienteDto(String razonSocial, String direccion, String telefono, String correo,
+    public Cliente(String razonSocial, String direccion, String telefono, String correo,
                       boolean estado, int idCliente, TipoDocumentoIdentidad tipoDocumento,
                       String numeroDocumento, String contactoNombre, CondicionPago condicionPago,
-                      int plazoCreditoDias, double limiteCredito) {
+                      int plazoCreditoDias, double limiteCredito, String calificacionCrediticia) {
         super(razonSocial, direccion, telefono, correo, estado);
         this.idCliente = idCliente;
         this.tipoDocumento = tipoDocumento;
@@ -33,6 +42,7 @@ public class ClienteDto extends EntidadComercial {
         this.condicionPago = condicionPago;
         this.plazoCreditoDias = plazoCreditoDias;
         this.limiteCredito = limiteCredito;
+        this.calificacionCrediticia = calificacionCrediticia;
     }
 
     public int getIdCliente() {
@@ -89,5 +99,29 @@ public class ClienteDto extends EntidadComercial {
 
     public void setLimiteCredito(double limiteCredito) {
         this.limiteCredito = limiteCredito;
+    }
+
+    public List<Venta> getVentas() {
+        return ventas;
+    }
+
+    public void setVentas(List<Venta> ventas) {
+        this.ventas = ventas;
+    }
+
+    public List<CuentaPorCobrar> getCuentasPorCobrar() {
+        return cuentasPorCobrar;
+    }
+
+    public void setCuentasPorCobrar(List<CuentaPorCobrar> cuentasPorCobrar) {
+        this.cuentasPorCobrar = cuentasPorCobrar;
+    }
+
+    public String getCalificacionCrediticia() {
+        return calificacionCrediticia;
+    }
+
+    public void setCalificacionCrediticia(String calificacionCrediticia) {
+        this.calificacionCrediticia = calificacionCrediticia;
     }
 }

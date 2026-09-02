@@ -3,7 +3,7 @@ package pe.edu.pucp.model.comun;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import pe.edu.pucp.model.enums.Moneda;
-import pe.edu.pucp.model.usuario.UsuarioDto;
+import pe.edu.pucp.model.usuario.Usuario;
 
 /**
  * Superclase de los documentos del ciclo comercial. Concentra numeracion, montos y auditoria.
@@ -18,7 +18,7 @@ public abstract class DocumentoComercial implements Auditable, Anulable {
     private double total;
     private String observaciones;
     private LocalDateTime fechaRegistro;
-    private UsuarioDto usuarioRegistro;
+    private Usuario usuarioRegistro;
     private boolean anulado;
     private String motivoAnulacion;
     private LocalDateTime fechaAnulacion;
@@ -26,7 +26,7 @@ public abstract class DocumentoComercial implements Auditable, Anulable {
     public DocumentoComercial() {
     }
 
-    public DocumentoComercial(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, UsuarioDto usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion) {
+    public DocumentoComercial(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, Usuario usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion) {
         this.numero = numero;
         this.fechaEmision = fechaEmision;
         this.moneda = moneda;
@@ -105,11 +105,11 @@ public abstract class DocumentoComercial implements Auditable, Anulable {
         this.fechaRegistro = fechaRegistro;
     }
 
-    public UsuarioDto getUsuarioRegistro() {
+    public Usuario getUsuarioRegistro() {
         return usuarioRegistro;
     }
 
-    public void setUsuarioRegistro(UsuarioDto usuarioRegistro) {
+    public void setUsuarioRegistro(Usuario usuarioRegistro) {
         this.usuarioRegistro = usuarioRegistro;
     }
 

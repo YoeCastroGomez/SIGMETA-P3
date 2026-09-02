@@ -3,26 +3,26 @@ package pe.edu.pucp.model.cobranza;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import pe.edu.pucp.model.enums.MedioPago;
-import pe.edu.pucp.model.usuario.UsuarioDto;
+import pe.edu.pucp.model.usuario.Usuario;
 
 /**
  * Cobro total o parcial aplicado a una cuenta por cobrar (RF009).
  */
-public class CobroDto {
+public class Cobro {
 
     private int idCobro;
-    private CuentaPorCobrarDto cuentaPorCobrar;
+    private CuentaPorCobrar cuentaPorCobrar;
     private LocalDate fechaCobro;
     private MedioPago medioPago;
     private double monto;
     private String referencia;
-    private UsuarioDto usuarioRegistro;
+    private Usuario usuarioRegistro;
     private LocalDateTime fechaRegistro;
 
-    public CobroDto() {
+    public Cobro() {
     }
 
-    public CobroDto(int idCobro, CuentaPorCobrarDto cuentaPorCobrar, LocalDate fechaCobro, MedioPago medioPago, double monto, String referencia, UsuarioDto usuarioRegistro, LocalDateTime fechaRegistro) {
+    public Cobro(int idCobro, CuentaPorCobrar cuentaPorCobrar, LocalDate fechaCobro, MedioPago medioPago, double monto, String referencia, Usuario usuarioRegistro, LocalDateTime fechaRegistro) {
         this.idCobro = idCobro;
         this.cuentaPorCobrar = cuentaPorCobrar;
         this.fechaCobro = fechaCobro;
@@ -41,11 +41,11 @@ public class CobroDto {
         this.idCobro = idCobro;
     }
 
-    public CuentaPorCobrarDto getCuentaPorCobrar() {
+    public CuentaPorCobrar getCuentaPorCobrar() {
         return cuentaPorCobrar;
     }
 
-    public void setCuentaPorCobrar(CuentaPorCobrarDto cuentaPorCobrar) {
+    public void setCuentaPorCobrar(CuentaPorCobrar cuentaPorCobrar) {
         this.cuentaPorCobrar = cuentaPorCobrar;
     }
 
@@ -81,11 +81,11 @@ public class CobroDto {
         this.referencia = referencia;
     }
 
-    public UsuarioDto getUsuarioRegistro() {
+    public Usuario getUsuarioRegistro() {
         return usuarioRegistro;
     }
 
-    public void setUsuarioRegistro(UsuarioDto usuarioRegistro) {
+    public void setUsuarioRegistro(Usuario usuarioRegistro) {
         this.usuarioRegistro = usuarioRegistro;
     }
 

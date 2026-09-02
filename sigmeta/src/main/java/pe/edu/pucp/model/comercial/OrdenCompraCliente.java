@@ -7,27 +7,27 @@ import java.util.List;
 import pe.edu.pucp.model.comun.DocumentoComercial;
 import pe.edu.pucp.model.enums.EstadoOrdenCompraCliente;
 import pe.edu.pucp.model.enums.Moneda;
-import pe.edu.pucp.model.socio.ClienteDto;
-import pe.edu.pucp.model.usuario.UsuarioDto;
+import pe.edu.pucp.model.socio.Cliente;
+import pe.edu.pucp.model.usuario.Usuario;
 
 /**
  * Orden de compra recibida del cliente (RF007).
  */
-public class OrdenCompraClienteDto extends DocumentoComercial {
+public class OrdenCompraCliente extends DocumentoComercial {
 
     private int idOrdenCompraCliente;
-    private ClienteDto cliente;
-    private CotizacionDto cotizacion;
+    private Cliente cliente;
+    private Cotizacion cotizacion;
     private String numeroOrdenCliente;
     private EstadoOrdenCompraCliente estado;
-    private List<DetalleOrdenCompraClienteDto> detalles;
+    private List<DetalleOrdenCompraCliente> detalles;
 
-    public OrdenCompraClienteDto() {
+    public OrdenCompraCliente() {
         super();
         this.detalles = new ArrayList<>();
     }
 
-    public OrdenCompraClienteDto(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, UsuarioDto usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int idOrdenCompraCliente, ClienteDto cliente, CotizacionDto cotizacion, String numeroOrdenCliente, EstadoOrdenCompraCliente estado, List<DetalleOrdenCompraClienteDto> detalles) {
+    public OrdenCompraCliente(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, Usuario usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int idOrdenCompraCliente, Cliente cliente, Cotizacion cotizacion, String numeroOrdenCliente, EstadoOrdenCompraCliente estado, List<DetalleOrdenCompraCliente> detalles) {
         super(numero, fechaEmision, moneda, subTotal, igv, total, observaciones, fechaRegistro, usuarioRegistro, anulado, motivoAnulacion, fechaAnulacion);
         this.idOrdenCompraCliente = idOrdenCompraCliente;
         this.cliente = cliente;
@@ -45,19 +45,19 @@ public class OrdenCompraClienteDto extends DocumentoComercial {
         this.idOrdenCompraCliente = idOrdenCompraCliente;
     }
 
-    public ClienteDto getCliente() {
+    public Cliente getCliente() {
         return cliente;
     }
 
-    public void setCliente(ClienteDto cliente) {
+    public void setCliente(Cliente cliente) {
         this.cliente = cliente;
     }
 
-    public CotizacionDto getCotizacion() {
+    public Cotizacion getCotizacion() {
         return cotizacion;
     }
 
-    public void setCotizacion(CotizacionDto cotizacion) {
+    public void setCotizacion(Cotizacion cotizacion) {
         this.cotizacion = cotizacion;
     }
 
@@ -77,11 +77,11 @@ public class OrdenCompraClienteDto extends DocumentoComercial {
         this.estado = estado;
     }
 
-    public List<DetalleOrdenCompraClienteDto> getDetalles() {
+    public List<DetalleOrdenCompraCliente> getDetalles() {
         return detalles;
     }
 
-    public void setDetalles(List<DetalleOrdenCompraClienteDto> detalles) {
+    public void setDetalles(List<DetalleOrdenCompraCliente> detalles) {
         this.detalles = detalles;
     }
 

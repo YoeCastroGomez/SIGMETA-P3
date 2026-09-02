@@ -4,29 +4,29 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import pe.edu.pucp.model.compras.CompraDto;
-import pe.edu.pucp.model.usuario.UsuarioDto;
+import pe.edu.pucp.model.compras.Compra;
+import pe.edu.pucp.model.usuario.Usuario;
 
 /**
  * Recepcion total o parcial de una orden de compra a proveedor (RF012).
  */
-public class RecepcionCompraDto {
+public class RecepcionCompra {
     private int idRecepcionCompra;
-    private CompraDto compra;
+    private Compra compra;
     private LocalDate fechaRecepcion;
     private String observaciones;
-    private UsuarioDto usuarioRegistro;
+    private Usuario usuarioRegistro;
     private LocalDateTime fechaRegistro;
-    private List<DetalleRecepcionCompraDto> detalles;
+    private List<DetalleRecepcionCompra> detalles;
 
-    public RecepcionCompraDto() {
+    public RecepcionCompra() {
         this.detalles = new ArrayList<>();
     }
 
-    public RecepcionCompraDto(int idRecepcionCompra, CompraDto compra, LocalDate fechaRecepcion,
-                              String observaciones, UsuarioDto usuarioRegistro,
+    public RecepcionCompra(int idRecepcionCompra, Compra compra, LocalDate fechaRecepcion,
+                              String observaciones, Usuario usuarioRegistro,
                               LocalDateTime fechaRegistro,
-                              List<DetalleRecepcionCompraDto> detalles) {
+                              List<DetalleRecepcionCompra> detalles) {
         this.idRecepcionCompra = idRecepcionCompra;
         this.compra = compra;
         this.fechaRecepcion = fechaRecepcion;
@@ -44,11 +44,11 @@ public class RecepcionCompraDto {
         this.idRecepcionCompra = idRecepcionCompra;
     }
 
-    public CompraDto getCompra() {
+    public Compra getCompra() {
         return compra;
     }
 
-    public void setCompra(CompraDto compra) {
+    public void setCompra(Compra compra) {
         this.compra = compra;
     }
 
@@ -68,11 +68,11 @@ public class RecepcionCompraDto {
         this.observaciones = observaciones;
     }
 
-    public UsuarioDto getUsuarioRegistro() {
+    public Usuario getUsuarioRegistro() {
         return usuarioRegistro;
     }
 
-    public void setUsuarioRegistro(UsuarioDto usuarioRegistro) {
+    public void setUsuarioRegistro(Usuario usuarioRegistro) {
         this.usuarioRegistro = usuarioRegistro;
     }
 
@@ -84,11 +84,11 @@ public class RecepcionCompraDto {
         this.fechaRegistro = fechaRegistro;
     }
 
-    public List<DetalleRecepcionCompraDto> getDetalles() {
+    public List<DetalleRecepcionCompra> getDetalles() {
         return detalles;
     }
 
-    public void setDetalles(List<DetalleRecepcionCompraDto> detalles) {
+    public void setDetalles(List<DetalleRecepcionCompra> detalles) {
         this.detalles = detalles;
     }
 }

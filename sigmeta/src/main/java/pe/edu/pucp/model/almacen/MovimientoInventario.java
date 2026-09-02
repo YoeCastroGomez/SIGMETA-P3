@@ -2,35 +2,39 @@ package pe.edu.pucp.model.almacen;
 
 import java.time.LocalDateTime;
 import pe.edu.pucp.model.enums.TipoMovimientoInventario;
-import pe.edu.pucp.model.producto.ProductoDto;
-import pe.edu.pucp.model.usuario.UsuarioDto;
+import pe.edu.pucp.model.producto.Producto;
+import pe.edu.pucp.model.usuario.Usuario;
 
 /**
  * Movimiento trazable de existencias con su documento de origen y usuario (RF014).
  */
-public class MovimientoInventarioDto {
+public class MovimientoInventario {
 
     private int idMovimientoInventario;
-    private ProductoDto producto;
+    private Producto producto;
     private TipoMovimientoInventario tipo;
     private LocalDateTime fechaMovimiento;
     private double cantidad;
     private double stockResultante;
     private String documentoOrigen;
     private int idDocumentoOrigen;
-    private UsuarioDto usuarioRegistro;
+    private Usuario usuarioRegistro;
+    private String motivo;
+    private double cantidadContada;
 
-    public MovimientoInventarioDto() {
+    public MovimientoInventario() {
     }
 
-    public MovimientoInventarioDto(int idMovimientoInventario, ProductoDto producto, TipoMovimientoInventario tipo, LocalDateTime fechaMovimiento, double cantidad, double stockResultante, String documentoOrigen, int idDocumentoOrigen, UsuarioDto usuarioRegistro) {
+    public MovimientoInventario(int idMovimientoInventario, Producto producto, TipoMovimientoInventario tipo, LocalDateTime fechaMovimiento, double cantidad, double stockResultante, String documentoOrigen, int idDocumentoOrigen, Usuario usuarioRegistro, String motivo, double cantidadContada) {
         this.idMovimientoInventario = idMovimientoInventario;
         this.producto = producto;
         this.tipo = tipo;
         this.fechaMovimiento = fechaMovimiento;
         this.cantidad = cantidad;
         this.stockResultante = stockResultante;
+        this.motivo = motivo;
         this.documentoOrigen = documentoOrigen;
+        this.cantidadContada = cantidadContada;
         this.idDocumentoOrigen = idDocumentoOrigen;
         this.usuarioRegistro = usuarioRegistro;
     }
@@ -43,11 +47,11 @@ public class MovimientoInventarioDto {
         this.idMovimientoInventario = idMovimientoInventario;
     }
 
-    public ProductoDto getProducto() {
+    public Producto getProducto() {
         return producto;
     }
 
-    public void setProducto(ProductoDto producto) {
+    public void setProducto(Producto producto) {
         this.producto = producto;
     }
 
@@ -99,12 +103,28 @@ public class MovimientoInventarioDto {
         this.idDocumentoOrigen = idDocumentoOrigen;
     }
 
-    public UsuarioDto getUsuarioRegistro() {
+    public Usuario getUsuarioRegistro() {
         return usuarioRegistro;
     }
 
-    public void setUsuarioRegistro(UsuarioDto usuarioRegistro) {
+    public void setUsuarioRegistro(Usuario usuarioRegistro) {
         this.usuarioRegistro = usuarioRegistro;
     }
 
+
+    public String getMotivo() {
+        return motivo;
+    }
+
+    public void setMotivo(String motivo) {
+        this.motivo = motivo;
+    }
+
+    public double getCantidadContada() {
+        return cantidadContada;
+    }
+
+    public void setCantidadContada(double cantidadContada) {
+        this.cantidadContada = cantidadContada;
+    }
 }

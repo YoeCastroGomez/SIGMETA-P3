@@ -1,21 +1,21 @@
 package pe.edu.pucp.model.almacen;
 
-import pe.edu.pucp.model.producto.ProductoDto;
+import pe.edu.pucp.model.producto.Producto;
 
 /**
  * Linea de un despacho con la cantidad efectivamente entregada.
  */
-public class DetalleDespachoDto {
+public class DetalleDespacho {
 
     private int idDetalleDespacho;
-    private DespachoDto despacho;
-    private ProductoDto producto;
+    private Despacho despacho;
+    private Producto producto;
     private double cantidadDespachada;
 
-    public DetalleDespachoDto() {
+    public DetalleDespacho() {
     }
 
-    public DetalleDespachoDto(int idDetalleDespacho, DespachoDto despacho, ProductoDto producto, double cantidadDespachada) {
+    public DetalleDespacho(int idDetalleDespacho, Despacho despacho, Producto producto, double cantidadDespachada) {
         this.idDetalleDespacho = idDetalleDespacho;
         this.despacho = despacho;
         this.producto = producto;
@@ -30,19 +30,19 @@ public class DetalleDespachoDto {
         this.idDetalleDespacho = idDetalleDespacho;
     }
 
-    public DespachoDto getDespacho() {
+    public Despacho getDespacho() {
         return despacho;
     }
 
-    public void setDespacho(DespachoDto despacho) {
+    public void setDespacho(Despacho despacho) {
         this.despacho = despacho;
     }
 
-    public ProductoDto getProducto() {
+    public Producto getProducto() {
         return producto;
     }
 
-    public void setProducto(ProductoDto producto) {
+    public void setProducto(Producto producto) {
         this.producto = producto;
     }
 

@@ -1,19 +1,24 @@
 package pe.edu.pucp.model.producto;
 
+import java.util.List;
+import java.util.ArrayList;
+
 /**
  * Categoria con la que se clasifican los productos (RF005).
  */
-public class CategoriaDto {
+public class Categoria {
 
     private int idCategoria;
     private String nombre;
     private String descripcion;
     private boolean estado;
+    private List<Producto> productos;
 
-    public CategoriaDto() {
+    public Categoria() {
+        this.productos = new ArrayList<>();
     }
 
-    public CategoriaDto(int idCategoria, String nombre, String descripcion, boolean estado) {
+    public Categoria(int idCategoria, String nombre, String descripcion, boolean estado) {
         this.idCategoria = idCategoria;
         this.nombre = nombre;
         this.descripcion = descripcion;
@@ -52,4 +57,12 @@ public class CategoriaDto {
         this.estado = estado;
     }
 
+
+    public List<Producto> getProductos() {
+        return productos;
+    }
+
+    public void setProductos(List<Producto> productos) {
+        this.productos = productos;
+    }
 }

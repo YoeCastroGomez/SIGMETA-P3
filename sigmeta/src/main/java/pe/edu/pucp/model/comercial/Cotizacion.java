@@ -7,26 +7,26 @@ import java.util.List;
 import pe.edu.pucp.model.comun.DocumentoComercial;
 import pe.edu.pucp.model.enums.EstadoCotizacion;
 import pe.edu.pucp.model.enums.Moneda;
-import pe.edu.pucp.model.socio.ClienteDto;
-import pe.edu.pucp.model.usuario.UsuarioDto;
+import pe.edu.pucp.model.socio.Cliente;
+import pe.edu.pucp.model.usuario.Usuario;
 
 /**
  * Cotizacion dirigida a un cliente, con vigencia y estado (RF006).
  */
-public class CotizacionDto extends DocumentoComercial {
+public class Cotizacion extends DocumentoComercial {
 
     private int idCotizacion;
-    private ClienteDto cliente;
+    private Cliente cliente;
     private LocalDate fechaVigencia;
     private EstadoCotizacion estado;
-    private List<DetalleCotizacionDto> detalles;
+    private List<DetalleCotizacion> detalles;
 
-    public CotizacionDto() {
+    public Cotizacion() {
         super();
         this.detalles = new ArrayList<>();
     }
 
-    public CotizacionDto(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, UsuarioDto usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int idCotizacion, ClienteDto cliente, LocalDate fechaVigencia, EstadoCotizacion estado, List<DetalleCotizacionDto> detalles) {
+    public Cotizacion(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, Usuario usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int idCotizacion, Cliente cliente, LocalDate fechaVigencia, EstadoCotizacion estado, List<DetalleCotizacion> detalles) {
         super(numero, fechaEmision, moneda, subTotal, igv, total, observaciones, fechaRegistro, usuarioRegistro, anulado, motivoAnulacion, fechaAnulacion);
         this.idCotizacion = idCotizacion;
         this.cliente = cliente;
@@ -43,11 +43,11 @@ public class CotizacionDto extends DocumentoComercial {
         this.idCotizacion = idCotizacion;
     }
 
-    public ClienteDto getCliente() {
+    public Cliente getCliente() {
         return cliente;
     }
 
-    public void setCliente(ClienteDto cliente) {
+    public void setCliente(Cliente cliente) {
         this.cliente = cliente;
     }
 
@@ -67,11 +67,11 @@ public class CotizacionDto extends DocumentoComercial {
         this.estado = estado;
     }
 
-    public List<DetalleCotizacionDto> getDetalles() {
+    public List<DetalleCotizacion> getDetalles() {
         return detalles;
     }
 
-    public void setDetalles(List<DetalleCotizacionDto> detalles) {
+    public void setDetalles(List<DetalleCotizacion> detalles) {
         this.detalles = detalles;
     }
 

@@ -1,22 +1,22 @@
 package pe.edu.pucp.model.comercial;
 
 import pe.edu.pucp.model.comun.LineaDocumento;
-import pe.edu.pucp.model.producto.ProductoDto;
+import pe.edu.pucp.model.producto.Producto;
 
 /**
  * Linea de una venta, con el avance de despacho.
  */
-public class DetalleVentaDto extends LineaDocumento {
+public class DetalleVenta extends LineaDocumento {
 
     private int idDetalleVenta;
-    private VentaDto venta;
+    private Venta venta;
     private double cantidadDespachada;
 
-    public DetalleVentaDto() {
+    public DetalleVenta() {
         super();
     }
 
-    public DetalleVentaDto(int numeroLinea, ProductoDto producto, double cantidad, double precioUnitario, double descuento, double importe, int idDetalleVenta, VentaDto venta, double cantidadDespachada) {
+    public DetalleVenta(int numeroLinea, Producto producto, double cantidad, double precioUnitario, double descuento, double importe, int idDetalleVenta, Venta venta, double cantidadDespachada) {
         super(numeroLinea, producto, cantidad, precioUnitario, descuento, importe);
         this.idDetalleVenta = idDetalleVenta;
         this.venta = venta;
@@ -31,11 +31,11 @@ public class DetalleVentaDto extends LineaDocumento {
         this.idDetalleVenta = idDetalleVenta;
     }
 
-    public VentaDto getVenta() {
+    public Venta getVenta() {
         return venta;
     }
 
-    public void setVenta(VentaDto venta) {
+    public void setVenta(Venta venta) {
         this.venta = venta;
     }
 

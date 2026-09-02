@@ -1,18 +1,21 @@
 package pe.edu.pucp.model.producto;
 
+import pe.edu.pucp.model.almacen.MovimientoInventario;
 import pe.edu.pucp.model.enums.UnidadMedida;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Producto del catalogo de comercializacion (RF005 y RF006).
  */
-public class ProductoDto {
+public class Producto {
     private int idProducto;
     private String codigoInterno;
     private String codigoFabricante;
     private String codigoProveedor;
     private String nombre;
     private String descripcion;
-    private CategoriaDto categoria;
+    private Categoria categoria;
     private UnidadMedida unidadCompra;
     private UnidadMedida unidadVenta;
     private double factorConversion;
@@ -22,16 +25,19 @@ public class ProductoDto {
     private double stockMinimo;
     private String imagen;
     private boolean estado;
+    private double precioReferencial;
+    private List<MovimientoInventario> movimientos;
 
-    public ProductoDto() {
+    public Producto() {
+        this.movimientos = new ArrayList<>();
     }
 
-    public ProductoDto(int idProducto, String codigoInterno, String codigoFabricante,
+    public Producto(int idProducto, String codigoInterno, String codigoFabricante,
                        String codigoProveedor, String nombre, String descripcion,
-                       CategoriaDto categoria, UnidadMedida unidadCompra,
+                       Categoria categoria, UnidadMedida unidadCompra,
                        UnidadMedida unidadVenta, double factorConversion,
                        double precioVenta, double costoUnitario, double stockActual,
-                       double stockMinimo, String imagen, boolean estado) {
+                       double stockMinimo, String imagen, boolean estado, double precioReferencial) {
         this.idProducto = idProducto;
         this.codigoInterno = codigoInterno;
         this.codigoFabricante = codigoFabricante;
@@ -44,6 +50,7 @@ public class ProductoDto {
         this.factorConversion = factorConversion;
         this.precioVenta = precioVenta;
         this.costoUnitario = costoUnitario;
+        this.precioReferencial = precioReferencial;
         this.stockActual = stockActual;
         this.stockMinimo = stockMinimo;
         this.imagen = imagen;
@@ -98,11 +105,11 @@ public class ProductoDto {
         this.descripcion = descripcion;
     }
 
-    public CategoriaDto getCategoria() {
+    public Categoria getCategoria() {
         return categoria;
     }
 
-    public void setCategoria(CategoriaDto categoria) {
+    public void setCategoria(Categoria categoria) {
         this.categoria = categoria;
     }
 
@@ -176,5 +183,21 @@ public class ProductoDto {
 
     public void setEstado(boolean estado) {
         this.estado = estado;
+    }
+
+    public List<MovimientoInventario> getMovimientos() {
+        return movimientos;
+    }
+
+    public void setMovimientos(List<MovimientoInventario> movimientos) {
+        this.movimientos = movimientos;
+    }
+
+    public double getPrecioReferencial() {
+        return precioReferencial;
+    }
+
+    public void setPrecioReferencial(double precioReferencial) {
+        this.precioReferencial = precioReferencial;
     }
 }

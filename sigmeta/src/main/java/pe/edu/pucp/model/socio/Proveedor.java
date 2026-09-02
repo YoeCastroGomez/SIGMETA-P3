@@ -1,12 +1,15 @@
 package pe.edu.pucp.model.socio;
 
+import pe.edu.pucp.model.compras.Compra;
 import pe.edu.pucp.model.comun.EntidadComercial;
 import pe.edu.pucp.model.enums.CondicionPago;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Proveedor al que se realizan las compras (RF004).
  */
-public class ProveedorDto extends EntidadComercial {
+public class Proveedor extends EntidadComercial {
 
     private int idProveedor;
     private String ruc;
@@ -14,12 +17,14 @@ public class ProveedorDto extends EntidadComercial {
     private String contactoNombre;
     private int plazoEntregaDias;
     private CondicionPago condicionPago;
+    private List<Compra> compras;
 
-    public ProveedorDto() {
+    public Proveedor() {
         super();
+        this.compras = new ArrayList<>();
     }
 
-    public ProveedorDto(String razonSocial, String direccion, String telefono, String correo, boolean estado, int idProveedor, String ruc, String rubro, String contactoNombre, int plazoEntregaDias, CondicionPago condicionPago) {
+    public Proveedor(String razonSocial, String direccion, String telefono, String correo, boolean estado, int idProveedor, String ruc, String rubro, String contactoNombre, int plazoEntregaDias, CondicionPago condicionPago) {
         super(razonSocial, direccion, telefono, correo, estado);
         this.idProveedor = idProveedor;
         this.ruc = ruc;
@@ -77,4 +82,12 @@ public class ProveedorDto extends EntidadComercial {
         this.condicionPago = condicionPago;
     }
 
+
+    public List<Compra> getCompras() {
+        return compras;
+    }
+
+    public void setCompras(List<Compra> compras) {
+        this.compras = compras;
+    }
 }

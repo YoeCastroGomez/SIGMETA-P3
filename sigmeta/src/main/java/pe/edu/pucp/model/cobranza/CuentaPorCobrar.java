@@ -3,19 +3,19 @@ package pe.edu.pucp.model.cobranza;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import pe.edu.pucp.model.comercial.VentaDto;
+import pe.edu.pucp.model.comercial.Venta;
 import pe.edu.pucp.model.enums.EstadoCuentaPorCobrar;
 import pe.edu.pucp.model.enums.Moneda;
-import pe.edu.pucp.model.socio.ClienteDto;
+import pe.edu.pucp.model.socio.Cliente;
 
 /**
  * Cuenta por cobrar generada por una venta al credito (RF009).
  */
-public class CuentaPorCobrarDto {
+public class CuentaPorCobrar {
 
     private int idCuentaPorCobrar;
-    private VentaDto venta;
-    private ClienteDto cliente;
+    private Venta venta;
+    private Cliente cliente;
     private LocalDate fechaEmision;
     private LocalDate fechaVencimiento;
     private Moneda moneda;
@@ -23,13 +23,13 @@ public class CuentaPorCobrarDto {
     private double montoPagado;
     private double saldoPendiente;
     private EstadoCuentaPorCobrar estado;
-    private List<CobroDto> cobros;
+    private List<Cobro> cobros;
 
-    public CuentaPorCobrarDto() {
+    public CuentaPorCobrar() {
         this.cobros = new ArrayList<>();
     }
 
-    public CuentaPorCobrarDto(int idCuentaPorCobrar, VentaDto venta, ClienteDto cliente, LocalDate fechaEmision, LocalDate fechaVencimiento, Moneda moneda, double montoOriginal, double montoPagado, double saldoPendiente, EstadoCuentaPorCobrar estado, List<CobroDto> cobros) {
+    public CuentaPorCobrar(int idCuentaPorCobrar, Venta venta, Cliente cliente, LocalDate fechaEmision, LocalDate fechaVencimiento, Moneda moneda, double montoOriginal, double montoPagado, double saldoPendiente, EstadoCuentaPorCobrar estado, List<Cobro> cobros) {
         this.idCuentaPorCobrar = idCuentaPorCobrar;
         this.venta = venta;
         this.cliente = cliente;
@@ -51,19 +51,19 @@ public class CuentaPorCobrarDto {
         this.idCuentaPorCobrar = idCuentaPorCobrar;
     }
 
-    public VentaDto getVenta() {
+    public Venta getVenta() {
         return venta;
     }
 
-    public void setVenta(VentaDto venta) {
+    public void setVenta(Venta venta) {
         this.venta = venta;
     }
 
-    public ClienteDto getCliente() {
+    public Cliente getCliente() {
         return cliente;
     }
 
-    public void setCliente(ClienteDto cliente) {
+    public void setCliente(Cliente cliente) {
         this.cliente = cliente;
     }
 
@@ -123,11 +123,11 @@ public class CuentaPorCobrarDto {
         this.estado = estado;
     }
 
-    public List<CobroDto> getCobros() {
+    public List<Cobro> getCobros() {
         return cobros;
     }
 
-    public void setCobros(List<CobroDto> cobros) {
+    public void setCobros(List<Cobro> cobros) {
         this.cobros = cobros;
     }
 

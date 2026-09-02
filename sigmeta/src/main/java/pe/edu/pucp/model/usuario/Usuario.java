@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 /**
  * Usuario del sistema. La clave se conserva mediante hash con salt segun el RNF001.
  */
-public class UsuarioDto {
+public class Usuario {
 
     private int idUsuario;
     private String nombreUsuario;
@@ -14,15 +14,15 @@ public class UsuarioDto {
     private String nombres;
     private String apellidos;
     private String correo;
-    private RolDto rol;
+    private Rol rol;
     private boolean estado;
     private LocalDateTime fechaRegistro;
 
-    public UsuarioDto() {
+    public Usuario() {
     }
 
-    public UsuarioDto(int idUsuario, String nombreUsuario, String claveHash, String salt,
-                      String nombres, String apellidos, String correo, RolDto rol,
+    public Usuario(int idUsuario, String nombreUsuario, String claveHash, String salt,
+                      String nombres, String apellidos, String correo, Rol rol,
                       boolean estado, LocalDateTime fechaRegistro) {
         this.idUsuario = idUsuario;
         this.nombreUsuario = nombreUsuario;
@@ -92,11 +92,11 @@ public class UsuarioDto {
         this.correo = correo;
     }
 
-    public RolDto getRol() {
+    public Rol getRol() {
         return rol;
     }
 
-    public void setRol(RolDto rol) {
+    public void setRol(Rol rol) {
         this.rol = rol;
     }
 

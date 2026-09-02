@@ -1,21 +1,25 @@
 package pe.edu.pucp.model.usuario;
 
 import pe.edu.pucp.model.enums.TipoRol;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Rol asignable a un usuario del sistema (RF002).
  */
-public class RolDto {
+public class Rol {
 
     private int idRol;
     private TipoRol tipo;
     private String descripcion;
     private boolean estado;
+    private List<Usuario> usuarios;
 
-    public RolDto() {
+    public Rol() {
+        this.usuarios = new ArrayList<>();
     }
 
-    public RolDto(int idRol, TipoRol tipo, String descripcion, boolean estado) {
+    public Rol(int idRol, TipoRol tipo, String descripcion, boolean estado) {
         this.idRol = idRol;
         this.tipo = tipo;
         this.descripcion = descripcion;
@@ -54,4 +58,12 @@ public class RolDto {
         this.estado = estado;
     }
 
+
+    public List<Usuario> getUsuarios() {
+        return usuarios;
+    }
+
+    public void setUsuarios(List<Usuario> usuarios) {
+        this.usuarios = usuarios;
+    }
 }

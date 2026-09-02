@@ -1,6 +1,6 @@
 package pe.edu.pucp.model.comun;
 
-import pe.edu.pucp.model.producto.ProductoDto;
+import pe.edu.pucp.model.producto.Producto;
 
 /**
  * Superclase de las lineas de detalle de los documentos comerciales.
@@ -8,7 +8,7 @@ import pe.edu.pucp.model.producto.ProductoDto;
 public abstract class LineaDocumento {
 
     private int numeroLinea;
-    private ProductoDto producto;
+    private Producto producto;
     private double cantidad;
     private double precioUnitario;
     private double descuento;
@@ -17,7 +17,7 @@ public abstract class LineaDocumento {
     public LineaDocumento() {
     }
 
-    public LineaDocumento(int numeroLinea, ProductoDto producto, double cantidad, double precioUnitario, double descuento, double importe) {
+    public LineaDocumento(int numeroLinea, Producto producto, double cantidad, double precioUnitario, double descuento, double importe) {
         this.numeroLinea = numeroLinea;
         this.producto = producto;
         this.cantidad = cantidad;
@@ -34,11 +34,11 @@ public abstract class LineaDocumento {
         this.numeroLinea = numeroLinea;
     }
 
-    public ProductoDto getProducto() {
+    public Producto getProducto() {
         return producto;
     }
 
-    public void setProducto(ProductoDto producto) {
+    public void setProducto(Producto producto) {
         this.producto = producto;
     }
 

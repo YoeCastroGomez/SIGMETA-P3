@@ -1,26 +1,26 @@
 package pe.edu.pucp.model.caja;
 
 import java.time.LocalDateTime;
-import pe.edu.pucp.model.usuario.UsuarioDto;
+import pe.edu.pucp.model.usuario.Usuario;
 
 /**
  * Cierre y cuadre de una jornada de caja (RF010).
  */
-public class CierreCajaDto {
+public class CierreCaja {
     private int idCierreCaja;
-    private CajaDto caja;
+    private Caja caja;
     private LocalDateTime fechaCierre;
     private double montoCalculado;
     private double montoDeclarado;
     private double diferencia;
-    private UsuarioDto usuarioCierre;
+    private Usuario usuarioCierre;
 
-    public CierreCajaDto() {
+    public CierreCaja() {
     }
 
-    public CierreCajaDto(int idCierreCaja, CajaDto caja, LocalDateTime fechaCierre,
+    public CierreCaja(int idCierreCaja, Caja caja, LocalDateTime fechaCierre,
                          double montoCalculado, double montoDeclarado, double diferencia,
-                         UsuarioDto usuarioCierre) {
+                         Usuario usuarioCierre) {
         this.idCierreCaja = idCierreCaja;
         this.caja = caja;
         this.fechaCierre = fechaCierre;
@@ -38,11 +38,11 @@ public class CierreCajaDto {
         this.idCierreCaja = idCierreCaja;
     }
 
-    public CajaDto getCaja() {
+    public Caja getCaja() {
         return caja;
     }
 
-    public void setCaja(CajaDto caja) {
+    public void setCaja(Caja caja) {
         this.caja = caja;
     }
 
@@ -78,11 +78,11 @@ public class CierreCajaDto {
         this.diferencia = diferencia;
     }
 
-    public UsuarioDto getUsuarioCierre() {
+    public Usuario getUsuarioCierre() {
         return usuarioCierre;
     }
 
-    public void setUsuarioCierre(UsuarioDto usuarioCierre) {
+    public void setUsuarioCierre(Usuario usuarioCierre) {
         this.usuarioCierre = usuarioCierre;
     }
 }

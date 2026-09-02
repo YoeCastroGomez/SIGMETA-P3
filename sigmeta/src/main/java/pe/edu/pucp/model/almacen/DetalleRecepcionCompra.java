@@ -1,22 +1,22 @@
 package pe.edu.pucp.model.almacen;
 
-import pe.edu.pucp.model.compras.DetalleCompraDto;
+import pe.edu.pucp.model.compras.DetalleCompra;
 
 /**
  * Detalle de los productos recibidos en una recepcion de compra (RF012).
  */
-public class DetalleRecepcionCompraDto {
+public class DetalleRecepcionCompra {
     private int idDetalleRecepcionCompra;
-    private RecepcionCompraDto recepcionCompra;
-    private DetalleCompraDto detalleCompra;
+    private RecepcionCompra recepcionCompra;
+    private DetalleCompra detalleCompra;
     private double cantidadRecibida;
 
-    public DetalleRecepcionCompraDto() {
+    public DetalleRecepcionCompra() {
     }
 
-    public DetalleRecepcionCompraDto(int idDetalleRecepcionCompra,
-                                     RecepcionCompraDto recepcionCompra,
-                                     DetalleCompraDto detalleCompra,
+    public DetalleRecepcionCompra(int idDetalleRecepcionCompra,
+                                     RecepcionCompra recepcionCompra,
+                                     DetalleCompra detalleCompra,
                                      double cantidadRecibida) {
         this.idDetalleRecepcionCompra = idDetalleRecepcionCompra;
         this.recepcionCompra = recepcionCompra;
@@ -32,19 +32,19 @@ public class DetalleRecepcionCompraDto {
         this.idDetalleRecepcionCompra = idDetalleRecepcionCompra;
     }
 
-    public RecepcionCompraDto getRecepcionCompra() {
+    public RecepcionCompra getRecepcionCompra() {
         return recepcionCompra;
     }
 
-    public void setRecepcionCompra(RecepcionCompraDto recepcionCompra) {
+    public void setRecepcionCompra(RecepcionCompra recepcionCompra) {
         this.recepcionCompra = recepcionCompra;
     }
 
-    public DetalleCompraDto getDetalleCompra() {
+    public DetalleCompra getDetalleCompra() {
         return detalleCompra;
     }
 
-    public void setDetalleCompra(DetalleCompraDto detalleCompra) {
+    public void setDetalleCompra(DetalleCompra detalleCompra) {
         this.detalleCompra = detalleCompra;
     }
 

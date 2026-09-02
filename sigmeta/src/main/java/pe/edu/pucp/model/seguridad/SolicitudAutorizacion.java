@@ -2,15 +2,15 @@ package pe.edu.pucp.model.seguridad;
 
 import java.time.LocalDateTime;
 import pe.edu.pucp.model.enums.EstadoAutorizacion;
-import pe.edu.pucp.model.usuario.UsuarioDto;
+import pe.edu.pucp.model.usuario.Usuario;
 
 /**
  * Solicitud de autorizacion para una operacion restringida (RF014).
  */
-public class SolicitudAutorizacionDto {
+public class SolicitudAutorizacion {
     private int idSolicitudAutorizacion;
-    private UsuarioDto solicitante;
-    private UsuarioDto administrador;
+    private Usuario solicitante;
+    private Usuario administrador;
     private String operacionRestringida;
     private String motivo;
     private LocalDateTime fechaSolicitud;
@@ -19,11 +19,11 @@ public class SolicitudAutorizacionDto {
     private int vigenciaMinutos;
     private LocalDateTime fechaVencimiento;
 
-    public SolicitudAutorizacionDto() {
+    public SolicitudAutorizacion() {
     }
 
-    public SolicitudAutorizacionDto(int idSolicitudAutorizacion, UsuarioDto solicitante,
-                                    UsuarioDto administrador, String operacionRestringida,
+    public SolicitudAutorizacion(int idSolicitudAutorizacion, Usuario solicitante,
+                                    Usuario administrador, String operacionRestringida,
                                     String motivo, LocalDateTime fechaSolicitud,
                                     EstadoAutorizacion estado, LocalDateTime fechaResolucion,
                                     int vigenciaMinutos, LocalDateTime fechaVencimiento) {
@@ -47,19 +47,19 @@ public class SolicitudAutorizacionDto {
         this.idSolicitudAutorizacion = idSolicitudAutorizacion;
     }
 
-    public UsuarioDto getSolicitante() {
+    public Usuario getSolicitante() {
         return solicitante;
     }
 
-    public void setSolicitante(UsuarioDto solicitante) {
+    public void setSolicitante(Usuario solicitante) {
         this.solicitante = solicitante;
     }
 
-    public UsuarioDto getAdministrador() {
+    public Usuario getAdministrador() {
         return administrador;
     }
 
-    public void setAdministrador(UsuarioDto administrador) {
+    public void setAdministrador(Usuario administrador) {
         this.administrador = administrador;
     }
 

@@ -1,21 +1,21 @@
 package pe.edu.pucp.model.comercial;
 
 import pe.edu.pucp.model.comun.LineaDocumento;
-import pe.edu.pucp.model.producto.ProductoDto;
+import pe.edu.pucp.model.producto.Producto;
 
 /**
  * Linea de detalle de una cotizacion.
  */
-public class DetalleCotizacionDto extends LineaDocumento {
+public class DetalleCotizacion extends LineaDocumento {
 
     private int idDetalleCotizacion;
-    private CotizacionDto cotizacion;
+    private Cotizacion cotizacion;
 
-    public DetalleCotizacionDto() {
+    public DetalleCotizacion() {
         super();
     }
 
-    public DetalleCotizacionDto(int numeroLinea, ProductoDto producto, double cantidad, double precioUnitario, double descuento, double importe, int idDetalleCotizacion, CotizacionDto cotizacion) {
+    public DetalleCotizacion(int numeroLinea, Producto producto, double cantidad, double precioUnitario, double descuento, double importe, int idDetalleCotizacion, Cotizacion cotizacion) {
         super(numeroLinea, producto, cantidad, precioUnitario, descuento, importe);
         this.idDetalleCotizacion = idDetalleCotizacion;
         this.cotizacion = cotizacion;
@@ -29,11 +29,11 @@ public class DetalleCotizacionDto extends LineaDocumento {
         this.idDetalleCotizacion = idDetalleCotizacion;
     }
 
-    public CotizacionDto getCotizacion() {
+    public Cotizacion getCotizacion() {
         return cotizacion;
     }
 
-    public void setCotizacion(CotizacionDto cotizacion) {
+    public void setCotizacion(Cotizacion cotizacion) {
         this.cotizacion = cotizacion;
     }
 

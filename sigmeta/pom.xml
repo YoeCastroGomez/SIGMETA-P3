@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
 
     <name>SIGMETA</name>
-    <description>Sistema web de gestion para GRUPO META. Capa de dominio.</description>
+    <description>Sistema web de gestion para GRUPO META. Capa del modelo (dominio).</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>

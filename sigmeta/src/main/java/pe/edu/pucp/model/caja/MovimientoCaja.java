@@ -3,14 +3,14 @@ package pe.edu.pucp.model.caja;
 import java.time.LocalDateTime;
 import pe.edu.pucp.model.enums.MedioPago;
 import pe.edu.pucp.model.enums.TipoMovimientoCaja;
-import pe.edu.pucp.model.usuario.UsuarioDto;
+import pe.edu.pucp.model.usuario.Usuario;
 
 /**
  * Movimiento de ingreso o egreso registrado durante una jornada de caja (RF010).
  */
-public class MovimientoCajaDto {
+public class MovimientoCaja {
     private int idMovimientoCaja;
-    private CajaDto caja;
+    private Caja caja;
     private TipoMovimientoCaja tipo;
     private LocalDateTime fechaMovimiento;
     private MedioPago medioPago;
@@ -18,15 +18,15 @@ public class MovimientoCajaDto {
     private String concepto;
     private String documentoOrigen;
     private int idDocumentoOrigen;
-    private UsuarioDto usuarioRegistro;
+    private Usuario usuarioRegistro;
 
-    public MovimientoCajaDto() {
+    public MovimientoCaja() {
     }
 
-    public MovimientoCajaDto(int idMovimientoCaja, CajaDto caja, TipoMovimientoCaja tipo,
+    public MovimientoCaja(int idMovimientoCaja, Caja caja, TipoMovimientoCaja tipo,
                              LocalDateTime fechaMovimiento, MedioPago medioPago,
                              double monto, String concepto, String documentoOrigen,
-                             int idDocumentoOrigen, UsuarioDto usuarioRegistro) {
+                             int idDocumentoOrigen, Usuario usuarioRegistro) {
         this.idMovimientoCaja = idMovimientoCaja;
         this.caja = caja;
         this.tipo = tipo;
@@ -47,11 +47,11 @@ public class MovimientoCajaDto {
         this.idMovimientoCaja = idMovimientoCaja;
     }
 
-    public CajaDto getCaja() {
+    public Caja getCaja() {
         return caja;
     }
 
-    public void setCaja(CajaDto caja) {
+    public void setCaja(Caja caja) {
         this.caja = caja;
     }
 
@@ -111,11 +111,11 @@ public class MovimientoCajaDto {
         this.idDocumentoOrigen = idDocumentoOrigen;
     }
 
-    public UsuarioDto getUsuarioRegistro() {
+    public Usuario getUsuarioRegistro() {
         return usuarioRegistro;
     }
 
-    public void setUsuarioRegistro(UsuarioDto usuarioRegistro) {
+    public void setUsuarioRegistro(Usuario usuarioRegistro) {
         this.usuarioRegistro = usuarioRegistro;
     }
 }

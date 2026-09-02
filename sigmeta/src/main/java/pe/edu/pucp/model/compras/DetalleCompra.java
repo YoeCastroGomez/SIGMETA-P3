@@ -2,24 +2,24 @@ package pe.edu.pucp.model.compras;
 
 import pe.edu.pucp.model.comun.LineaDocumento;
 import pe.edu.pucp.model.enums.UnidadMedida;
-import pe.edu.pucp.model.producto.ProductoDto;
+import pe.edu.pucp.model.producto.Producto;
 
 /**
  * Linea de una compra. La cantidad y el costo van en la unidad de compra, y el factor de conversion permite convertirlos a unidad de venta al recibir (RF010, RF011).
  */
-public class DetalleCompraDto extends LineaDocumento {
+public class DetalleCompra extends LineaDocumento {
 
     private int idDetalleCompra;
-    private CompraDto compra;
+    private Compra compra;
     private UnidadMedida unidadCompra;
     private double factorConversion;
     private double cantidadRecibida;
 
-    public DetalleCompraDto() {
+    public DetalleCompra() {
         super();
     }
 
-    public DetalleCompraDto(int numeroLinea, ProductoDto producto, double cantidad, double precioUnitario, double descuento, double importe, int idDetalleCompra, CompraDto compra, UnidadMedida unidadCompra, double factorConversion, double cantidadRecibida) {
+    public DetalleCompra(int numeroLinea, Producto producto, double cantidad, double precioUnitario, double descuento, double importe, int idDetalleCompra, Compra compra, UnidadMedida unidadCompra, double factorConversion, double cantidadRecibida) {
         super(numeroLinea, producto, cantidad, precioUnitario, descuento, importe);
         this.idDetalleCompra = idDetalleCompra;
         this.compra = compra;
@@ -36,11 +36,11 @@ public class DetalleCompraDto extends LineaDocumento {
         this.idDetalleCompra = idDetalleCompra;
     }
 
-    public CompraDto getCompra() {
+    public Compra getCompra() {
         return compra;
     }
 
-    public void setCompra(CompraDto compra) {
+    public void setCompra(Compra compra) {
         this.compra = compra;
     }
 

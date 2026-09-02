@@ -1,23 +1,27 @@
 package pe.edu.pucp.model.caja;
 
 import java.time.LocalDateTime;
-import pe.edu.pucp.model.usuario.UsuarioDto;
+import pe.edu.pucp.model.usuario.Usuario;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Jornada de caja abierta por un usuario (RF010).
  */
-public class CajaDto {
+public class Caja {
     private int idCaja;
     private LocalDateTime fechaApertura;
     private double montoInicial;
-    private UsuarioDto usuarioApertura;
+    private Usuario usuarioApertura;
     private boolean abierta;
+    private List<MovimientoCaja> movimientos;
 
-    public CajaDto() {
+    public Caja() {
+        this.movimientos = new ArrayList<>();
     }
 
-    public CajaDto(int idCaja, LocalDateTime fechaApertura, double montoInicial,
-                   UsuarioDto usuarioApertura, boolean abierta) {
+    public Caja(int idCaja, LocalDateTime fechaApertura, double montoInicial,
+                   Usuario usuarioApertura, boolean abierta) {
         this.idCaja = idCaja;
         this.fechaApertura = fechaApertura;
         this.montoInicial = montoInicial;
@@ -49,11 +53,11 @@ public class CajaDto {
         this.montoInicial = montoInicial;
     }
 
-    public UsuarioDto getUsuarioApertura() {
+    public Usuario getUsuarioApertura() {
         return usuarioApertura;
     }
 
-    public void setUsuarioApertura(UsuarioDto usuarioApertura) {
+    public void setUsuarioApertura(Usuario usuarioApertura) {
         this.usuarioApertura = usuarioApertura;
     }
 
@@ -63,5 +67,13 @@ public class CajaDto {
 
     public void setAbierta(boolean abierta) {
         this.abierta = abierta;
+    }
+
+    public List<MovimientoCaja> getMovimientos() {
+        return movimientos;
+    }
+
+    public void setMovimientos(List<MovimientoCaja> movimientos) {
+        this.movimientos = movimientos;
     }
 }

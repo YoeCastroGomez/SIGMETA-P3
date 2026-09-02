@@ -4,31 +4,31 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import pe.edu.pucp.model.comercial.VentaDto;
-import pe.edu.pucp.model.usuario.UsuarioDto;
+import pe.edu.pucp.model.comercial.Venta;
+import pe.edu.pucp.model.usuario.Usuario;
 
 /**
  * Despacho de una venta con su guia de remision (RF011).
  */
-public class DespachoDto {
+public class Despacho {
 
     private int idDespacho;
-    private VentaDto venta;
+    private Venta venta;
     private String serieGuia;
     private String numeroGuia;
     private LocalDate fechaDespacho;
     private String direccionEntrega;
     private String transportista;
     private boolean anulado;
-    private UsuarioDto usuarioRegistro;
+    private Usuario usuarioRegistro;
     private LocalDateTime fechaRegistro;
-    private List<DetalleDespachoDto> detalles;
+    private List<DetalleDespacho> detalles;
 
-    public DespachoDto() {
+    public Despacho() {
         this.detalles = new ArrayList<>();
     }
 
-    public DespachoDto(int idDespacho, VentaDto venta, String serieGuia, String numeroGuia, LocalDate fechaDespacho, String direccionEntrega, String transportista, boolean anulado, UsuarioDto usuarioRegistro, LocalDateTime fechaRegistro, List<DetalleDespachoDto> detalles) {
+    public Despacho(int idDespacho, Venta venta, String serieGuia, String numeroGuia, LocalDate fechaDespacho, String direccionEntrega, String transportista, boolean anulado, Usuario usuarioRegistro, LocalDateTime fechaRegistro, List<DetalleDespacho> detalles) {
         this.idDespacho = idDespacho;
         this.venta = venta;
         this.serieGuia = serieGuia;
@@ -50,11 +50,11 @@ public class DespachoDto {
         this.idDespacho = idDespacho;
     }
 
-    public VentaDto getVenta() {
+    public Venta getVenta() {
         return venta;
     }
 
-    public void setVenta(VentaDto venta) {
+    public void setVenta(Venta venta) {
         this.venta = venta;
     }
 
@@ -106,11 +106,11 @@ public class DespachoDto {
         this.anulado = anulado;
     }
 
-    public UsuarioDto getUsuarioRegistro() {
+    public Usuario getUsuarioRegistro() {
         return usuarioRegistro;
     }
 
-    public void setUsuarioRegistro(UsuarioDto usuarioRegistro) {
+    public void setUsuarioRegistro(Usuario usuarioRegistro) {
         this.usuarioRegistro = usuarioRegistro;
     }
 
@@ -122,11 +122,11 @@ public class DespachoDto {
         this.fechaRegistro = fechaRegistro;
     }
 
-    public List<DetalleDespachoDto> getDetalles() {
+    public List<DetalleDespacho> getDetalles() {
         return detalles;
     }
 
-    public void setDetalles(List<DetalleDespachoDto> detalles) {
+    public void setDetalles(List<DetalleDespacho> detalles) {
         this.detalles = detalles;
     }
 

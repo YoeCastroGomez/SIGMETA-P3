@@ -1,5 +1,6 @@
 package pe.edu.pucp.model.comercial;
 
+import pe.edu.pucp.model.almacen.Despacho;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -8,28 +9,32 @@ import pe.edu.pucp.model.comun.DocumentoComercial;
 import pe.edu.pucp.model.enums.CondicionPago;
 import pe.edu.pucp.model.enums.EstadoVenta;
 import pe.edu.pucp.model.enums.Moneda;
-import pe.edu.pucp.model.socio.ClienteDto;
-import pe.edu.pucp.model.usuario.UsuarioDto;
+import pe.edu.pucp.model.socio.Cliente;
+import pe.edu.pucp.model.usuario.Usuario;
 
 /**
  * Venta registrada a partir de una orden de compra de cliente o de forma directa (RF008).
  */
-public class VentaDto extends DocumentoComercial {
+public class Venta extends DocumentoComercial {
 
     private int idVenta;
-    private ClienteDto cliente;
-    private OrdenCompraClienteDto ordenCompraCliente;
+    private Cliente cliente;
+    private OrdenCompraCliente ordenCompraCliente;
     private CondicionPago condicionPago;
     private int plazoCreditoDias;
     private EstadoVenta estado;
-    private List<DetalleVentaDto> detalles;
+    private List<DetalleVenta> detalles;
+    private List<Despacho> despachos;
+    private List<Comprobante> comprobantes;
 
-    public VentaDto() {
+    public Venta() {
         super();
         this.detalles = new ArrayList<>();
+        this.despachos = new ArrayList<>();
+        this.comprobantes = new ArrayList<>();
     }
 
-    public VentaDto(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, UsuarioDto usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int idVenta, ClienteDto cliente, OrdenCompraClienteDto ordenCompraCliente, CondicionPago condicionPago, int plazoCreditoDias, EstadoVenta estado, List<DetalleVentaDto> detalles) {
+    public Venta(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, Usuario usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int idVenta, Cliente cliente, OrdenCompraCliente ordenCompraCliente, CondicionPago condicionPago, int plazoCreditoDias, EstadoVenta estado, List<DetalleVenta> detalles) {
         super(numero, fechaEmision, moneda, subTotal, igv, total, observaciones, fechaRegistro, usuarioRegistro, anulado, motivoAnulacion, fechaAnulacion);
         this.idVenta = idVenta;
         this.cliente = cliente;
@@ -48,19 +53,19 @@ public class VentaDto extends DocumentoComercial {
         this.idVenta = idVenta;
     }
 
-    public ClienteDto getCliente() {
+    public Cliente getCliente() {
         return cliente;
     }
 
-    public void setCliente(ClienteDto cliente) {
+    public void setCliente(Cliente cliente) {
         this.cliente = cliente;
     }
 
-    public OrdenCompraClienteDto getOrdenCompraCliente() {
+    public OrdenCompraCliente getOrdenCompraCliente() {
         return ordenCompraCliente;
     }
 
-    public void setOrdenCompraCliente(OrdenCompraClienteDto ordenCompraCliente) {
+    public void setOrdenCompraCliente(OrdenCompraCliente ordenCompraCliente) {
         this.ordenCompraCliente = ordenCompraCliente;
     }
 
@@ -88,12 +93,28 @@ public class VentaDto extends DocumentoComercial {
         this.estado = estado;
     }
 
-    public List<DetalleVentaDto> getDetalles() {
+    public List<DetalleVenta> getDetalles() {
         return detalles;
     }
 
-    public void setDetalles(List<DetalleVentaDto> detalles) {
+    public void setDetalles(List<DetalleVenta> detalles) {
         this.detalles = detalles;
     }
 
+
+    public List<Despacho> getDespachos() {
+        return despachos;
+    }
+
+    public void setDespachos(List<Despacho> despachos) {
+        this.despachos = despachos;
+    }
+
+    public List<Comprobante> getComprobantes() {
+        return comprobantes;
+    }
+
+    public void setComprobantes(List<Comprobante> comprobantes) {
+        this.comprobantes = comprobantes;
+    }
 }

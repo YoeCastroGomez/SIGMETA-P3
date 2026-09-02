@@ -9,9 +9,9 @@ import pe.edu.pucp.model.enums.TipoComprobante;
 /**
  * Comprobante electronico asociado a una venta (RF008).
  */
-public class ComprobanteDto {
+public class Comprobante {
     private int idComprobante;
-    private VentaDto venta;
+    private Venta venta;
     private TipoComprobante tipo;
     private String serie;
     private String numero;
@@ -21,18 +21,18 @@ public class ComprobanteDto {
     private double igv;
     private double total;
     private EstadoComprobante estado;
-    private ComprobanteDto comprobanteRelacionado;
+    private Comprobante comprobanteRelacionado;
     private String medioEnvio;
     private LocalDateTime fechaEnvio;
     private LocalDateTime fechaRegistro;
 
-    public ComprobanteDto() {
+    public Comprobante() {
     }
 
-    public ComprobanteDto(int idComprobante, VentaDto venta, TipoComprobante tipo,
+    public Comprobante(int idComprobante, Venta venta, TipoComprobante tipo,
                           String serie, String numero, LocalDate fechaEmision,
                           Moneda moneda, double subTotal, double igv, double total,
-                          EstadoComprobante estado, ComprobanteDto comprobanteRelacionado,
+                          EstadoComprobante estado, Comprobante comprobanteRelacionado,
                           String medioEnvio, LocalDateTime fechaEnvio,
                           LocalDateTime fechaRegistro) {
         this.idComprobante = idComprobante;
@@ -60,11 +60,11 @@ public class ComprobanteDto {
         this.idComprobante = idComprobante;
     }
 
-    public VentaDto getVenta() {
+    public Venta getVenta() {
         return venta;
     }
 
-    public void setVenta(VentaDto venta) {
+    public void setVenta(Venta venta) {
         this.venta = venta;
     }
 
@@ -140,11 +140,11 @@ public class ComprobanteDto {
         this.estado = estado;
     }
 
-    public ComprobanteDto getComprobanteRelacionado() {
+    public Comprobante getComprobanteRelacionado() {
         return comprobanteRelacionado;
     }
 
-    public void setComprobanteRelacionado(ComprobanteDto comprobanteRelacionado) {
+    public void setComprobanteRelacionado(Comprobante comprobanteRelacionado) {
         this.comprobanteRelacionado = comprobanteRelacionado;
     }
 

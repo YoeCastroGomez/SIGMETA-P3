@@ -1,5 +1,6 @@
 package pe.edu.pucp.model.compras;
 
+import pe.edu.pucp.model.almacen.RecepcionCompra;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -7,26 +8,28 @@ import java.util.List;
 import pe.edu.pucp.model.comun.DocumentoComercial;
 import pe.edu.pucp.model.enums.EstadoCompra;
 import pe.edu.pucp.model.enums.Moneda;
-import pe.edu.pucp.model.socio.ProveedorDto;
-import pe.edu.pucp.model.usuario.UsuarioDto;
+import pe.edu.pucp.model.socio.Proveedor;
+import pe.edu.pucp.model.usuario.Usuario;
 
 /**
  * Compra realizada a un proveedor (RF010).
  */
-public class CompraDto extends DocumentoComercial {
+public class Compra extends DocumentoComercial {
 
     private int idCompra;
-    private ProveedorDto proveedor;
+    private Proveedor proveedor;
     private EstadoCompra estado;
     private LocalDate fechaRecepcionEstimada;
-    private List<DetalleCompraDto> detalles;
+    private List<DetalleCompra> detalles;
+    private List<RecepcionCompra> recepciones;
 
-    public CompraDto() {
+    public Compra() {
         super();
         this.detalles = new ArrayList<>();
+        this.recepciones = new ArrayList<>();
     }
 
-    public CompraDto(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, UsuarioDto usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int idCompra, ProveedorDto proveedor, EstadoCompra estado, LocalDate fechaRecepcionEstimada, List<DetalleCompraDto> detalles) {
+    public Compra(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, Usuario usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int idCompra, Proveedor proveedor, EstadoCompra estado, LocalDate fechaRecepcionEstimada, List<DetalleCompra> detalles) {
         super(numero, fechaEmision, moneda, subTotal, igv, total, observaciones, fechaRegistro, usuarioRegistro, anulado, motivoAnulacion, fechaAnulacion);
         this.idCompra = idCompra;
         this.proveedor = proveedor;
@@ -43,11 +46,11 @@ public class CompraDto extends DocumentoComercial {
         this.idCompra = idCompra;
     }
 
-    public ProveedorDto getProveedor() {
+    public Proveedor getProveedor() {
         return proveedor;
     }
 
-    public void setProveedor(ProveedorDto proveedor) {
+    public void setProveedor(Proveedor proveedor) {
         this.proveedor = proveedor;
     }
 
@@ -67,12 +70,20 @@ public class CompraDto extends DocumentoComercial {
         this.fechaRecepcionEstimada = fechaRecepcionEstimada;
     }
 
-    public List<DetalleCompraDto> getDetalles() {
+    public List<DetalleCompra> getDetalles() {
         return detalles;
     }
 
-    public void setDetalles(List<DetalleCompraDto> detalles) {
+    public void setDetalles(List<DetalleCompra> detalles) {
         this.detalles = detalles;
     }
 
+
+    public List<RecepcionCompra> getRecepciones() {
+        return recepciones;
+    }
+
+    public void setRecepciones(List<RecepcionCompra> recepciones) {
+        this.recepciones = recepciones;
+    }
 }
