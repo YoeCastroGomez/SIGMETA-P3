@@ -8,6 +8,7 @@ public enum TipoMovimientoInventario {
     SALIDA_DESPACHO,
     INGRESO_PRODUCCION,
     SALIDA_PRODUCCION,
+    INGRESO_DEVOLUCION,
     AJUSTE_INGRESO,
     AJUSTE_SALIDA
 }
