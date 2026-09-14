@@ -1,7 +1,7 @@
 package pe.edu.pucp.ejecucion;
 
 import java.util.List;
-import pe.edu.pucp.model.comercial.Cotizacion;
+import pe.edu.pucp.model.ventas.Cotizacion;
 import pe.edu.pucp.model.producto.Producto;
 
 /**

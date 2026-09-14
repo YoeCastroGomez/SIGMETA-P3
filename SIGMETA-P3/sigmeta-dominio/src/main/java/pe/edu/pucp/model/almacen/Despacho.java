@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import pe.edu.pucp.model.comercial.Venta;
+import pe.edu.pucp.model.ventas.Venta;
 import pe.edu.pucp.model.usuario.Usuario;
 
 /**

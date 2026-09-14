@@ -1,4 +1,4 @@
-package pe.edu.pucp.model.comercial;
+package pe.edu.pucp.model.ventas;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
