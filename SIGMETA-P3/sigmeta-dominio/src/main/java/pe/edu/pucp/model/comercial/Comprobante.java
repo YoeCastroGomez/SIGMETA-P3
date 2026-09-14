@@ -2,6 +2,8 @@ package pe.edu.pucp.model.comercial;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import pe.edu.pucp.model.enums.EstadoComprobante;
 import pe.edu.pucp.model.enums.Moneda;
 import pe.edu.pucp.model.enums.TipoComprobante;
@@ -25,16 +27,20 @@ public class Comprobante {
     private String medioEnvio;
     private LocalDateTime fechaEnvio;
     private LocalDateTime fechaRegistro;
+    private String motivo;
+    private List<DetalleNotaCredito> detalles;
 
     public Comprobante() {
+        this.detalles = new ArrayList<>();
     }
 
     public Comprobante(int idComprobante, Venta venta, TipoComprobante tipo,
-                          String serie, String numero, LocalDate fechaEmision,
-                          Moneda moneda, double subTotal, double igv, double total,
-                          EstadoComprobante estado, Comprobante comprobanteRelacionado,
-                          String medioEnvio, LocalDateTime fechaEnvio,
-                          LocalDateTime fechaRegistro) {
+                       String serie, String numero, LocalDate fechaEmision,
+                       Moneda moneda, double subTotal, double igv, double total,
+                       EstadoComprobante estado, Comprobante comprobanteRelacionado,
+                       String medioEnvio, LocalDateTime fechaEnvio,
+                       LocalDateTime fechaRegistro) {
+        this();
         this.idComprobante = idComprobante;
         this.venta = venta;
         this.tipo = tipo;
@@ -50,6 +56,32 @@ public class Comprobante {
         this.medioEnvio = medioEnvio;
         this.fechaEnvio = fechaEnvio;
         this.fechaRegistro = fechaRegistro;
+    }
+
+    public Comprobante(int idComprobante, Venta venta, TipoComprobante tipo,
+                       String serie, String numero, LocalDate fechaEmision,
+                       Moneda moneda, double subTotal, double igv, double total,
+                       EstadoComprobante estado, Comprobante comprobanteRelacionado,
+                       String medioEnvio, LocalDateTime fechaEnvio,
+                       LocalDateTime fechaRegistro, String motivo,
+                       List<DetalleNotaCredito> detalles) {
+        this.idComprobante = idComprobante;
+        this.venta = venta;
+        this.tipo = tipo;
+        this.serie = serie;
+        this.numero = numero;
+        this.fechaEmision = fechaEmision;
+        this.moneda = moneda;
+        this.subTotal = subTotal;
+        this.igv = igv;
+        this.total = total;
+        this.estado = estado;
+        this.comprobanteRelacionado = comprobanteRelacionado;
+        this.medioEnvio = medioEnvio;
+        this.fechaEnvio = fechaEnvio;
+        this.fechaRegistro = fechaRegistro;
+        this.motivo = motivo;
+        this.detalles = detalles != null ? detalles : new ArrayList<>();
     }
 
     public int getIdComprobante() {
@@ -170,5 +202,21 @@ public class Comprobante {
 
     public void setFechaRegistro(LocalDateTime fechaRegistro) {
         this.fechaRegistro = fechaRegistro;
+    }
+
+    public String getMotivo() {
+        return motivo;
+    }
+
+    public void setMotivo(String motivo) {
+        this.motivo = motivo;
+    }
+
+    public List<DetalleNotaCredito> getDetalles() {
+        return detalles;
+    }
+
+    public void setDetalles(List<DetalleNotaCredito> detalles) {
+        this.detalles = detalles;
     }
 }

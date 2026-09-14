@@ -1,5 +1,6 @@
 pe\edu\pucp\model\comun\Anulable.class
 pe\edu\pucp\model\comun\DocumentoComercial.class
+pe\edu\pucp\model\comercial\DetalleNotaCredito.class
 pe\edu\pucp\model\comun\EntidadComercial.class
 pe\edu\pucp\model\comercial\Comprobante.class
 pe\edu\pucp\model\cobranza\Cobro.class
