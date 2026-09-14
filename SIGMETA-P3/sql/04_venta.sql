@@ -1,4 +1,4 @@
--- 04_comercial.sql | Estudiante 4 | SIGMETA
+-- 04_venta.sql | Estudiante 4 | SIGMETA
 -- Bloque Comercial: ordenes de compra de clientes, ventas, comprobantes (facturas y notas de credito) y despachos
 
 SET FOREIGN_KEY_CHECKS = 0;
