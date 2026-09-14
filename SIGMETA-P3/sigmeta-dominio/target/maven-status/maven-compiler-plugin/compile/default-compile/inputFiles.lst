@@ -1,47 +1,48 @@
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\almacen\Despacho.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\almacen\DetalleDespacho.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\almacen\DetalleRecepcionCompra.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\almacen\MovimientoInventario.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\almacen\RecepcionCompra.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\caja\Caja.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\caja\CierreCaja.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\caja\MovimientoCaja.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\cobranza\Cobro.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\cobranza\CuentaPorCobrar.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\Comprobante.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\Cotizacion.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\DetalleCotizacion.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\DetalleOrdenCompraCliente.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\DetalleVenta.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\OrdenCompraCliente.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\Venta.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\compras\Compra.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\compras\DetalleCompra.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comun\Anulable.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comun\Auditable.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comun\DocumentoComercial.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comun\EntidadComercial.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comun\LineaDocumento.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\CondicionPago.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\EstadoAutorizacion.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\EstadoCompra.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\EstadoComprobante.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\EstadoCotizacion.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\EstadoCuentaPorCobrar.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\EstadoOrdenCompraCliente.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\EstadoVenta.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\MedioPago.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\Moneda.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\TipoComprobante.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\TipoDocumentoIdentidad.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\TipoMovimientoCaja.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\TipoMovimientoInventario.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\TipoRol.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\UnidadMedida.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\producto\Categoria.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\producto\Producto.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\seguridad\SolicitudAutorizacion.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\socio\Cliente.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\socio\Proveedor.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\usuario\Rol.java
-C:\Disco local D\Universidad\seventh_cycle\TA_programming_3\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\usuario\Usuario.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\almacen\Despacho.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\almacen\DetalleDespacho.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\almacen\DetalleRecepcionCompra.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\almacen\MovimientoInventario.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\almacen\RecepcionCompra.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\caja\Caja.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\caja\CierreCaja.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\caja\MovimientoCaja.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\cobranza\Cobro.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\cobranza\CuentaPorCobrar.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\Comprobante.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\Cotizacion.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\DetalleCotizacion.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\DetalleNotaCredito.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\DetalleOrdenCompraCliente.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\DetalleVenta.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\OrdenCompraCliente.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comercial\Venta.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\compras\Compra.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\compras\DetalleCompra.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comun\Anulable.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comun\Auditable.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comun\DocumentoComercial.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comun\EntidadComercial.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\comun\LineaDocumento.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\CondicionPago.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\EstadoAutorizacion.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\EstadoCompra.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\EstadoComprobante.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\EstadoCotizacion.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\EstadoCuentaPorCobrar.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\EstadoOrdenCompraCliente.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\EstadoVenta.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\MedioPago.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\Moneda.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\TipoComprobante.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\TipoDocumentoIdentidad.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\TipoMovimientoCaja.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\TipoMovimientoInventario.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\TipoRol.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\enums\UnidadMedida.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\producto\Categoria.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\producto\Producto.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\seguridad\SolicitudAutorizacion.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\socio\Cliente.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\socio\Proveedor.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\usuario\Rol.java
+P:\Programacion 3\TA\SIGMETA-P3\sigmeta-dominio\src\main\java\pe\edu\pucp\model\usuario\Usuario.java
