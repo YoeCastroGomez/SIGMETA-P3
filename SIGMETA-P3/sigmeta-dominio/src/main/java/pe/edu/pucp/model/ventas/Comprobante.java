@@ -1,4 +1,4 @@
-package pe.edu.pucp.model.comercial;
+package pe.edu.pucp.model.ventas;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -202,5 +202,21 @@ public class Comprobante {
 
     public void setFechaRegistro(LocalDateTime fechaRegistro) {
         this.fechaRegistro = fechaRegistro;
+    }
+
+    public String getMotivo() {
+        return motivo;
+    }
+
+    public void setMotivo(String motivo) {
+        this.motivo = motivo;
+    }
+
+    public List<DetalleNotaCredito> getDetalles() {
+        return detalles;
+    }
+
+    public void setDetalles(List<DetalleNotaCredito> detalles) {
+        this.detalles = detalles;
     }
 }

@@ -1,7 +1,7 @@
 package pe.edu.pucp.model.almacen;
 
 import java.time.LocalDateTime;
-import pe.edu.pucp.model.comercial.Comprobante;
+import pe.edu.pucp.model.ventas.Comprobante;
 import pe.edu.pucp.model.enums.TipoMovimientoInventario;
 import pe.edu.pucp.model.producto.Producto;
 import pe.edu.pucp.model.usuario.Usuario;

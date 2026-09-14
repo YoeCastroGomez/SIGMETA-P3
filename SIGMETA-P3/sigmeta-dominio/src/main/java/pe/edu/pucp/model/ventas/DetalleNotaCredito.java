@@ -1,4 +1,4 @@
-package pe.edu.pucp.model.comercial;
+package pe.edu.pucp.model.ventas;
 
 import pe.edu.pucp.model.comun.LineaDocumento;
 import pe.edu.pucp.model.producto.Producto;

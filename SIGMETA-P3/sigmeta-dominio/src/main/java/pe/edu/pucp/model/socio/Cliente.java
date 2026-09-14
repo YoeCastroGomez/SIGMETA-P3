@@ -1,7 +1,7 @@
 package pe.edu.pucp.model.socio;
 
 import pe.edu.pucp.model.cobranza.CuentaPorCobrar;
-import pe.edu.pucp.model.comercial.Venta;
+import pe.edu.pucp.model.ventas.Venta;
 import pe.edu.pucp.model.comun.EntidadComercial;
 import pe.edu.pucp.model.enums.CondicionPago;
 import pe.edu.pucp.model.enums.TipoDocumentoIdentidad;

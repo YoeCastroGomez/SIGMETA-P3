@@ -3,7 +3,7 @@ package pe.edu.pucp.model.cobranza;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import pe.edu.pucp.model.comercial.Venta;
+import pe.edu.pucp.model.ventas.Venta;
 import pe.edu.pucp.model.enums.EstadoCuentaPorCobrar;
 import pe.edu.pucp.model.enums.Moneda;
 import pe.edu.pucp.model.socio.Cliente;

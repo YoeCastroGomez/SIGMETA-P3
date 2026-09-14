@@ -1,6 +1,6 @@
 package pe.edu.pucp.ejecucion;
 
-import pe.edu.pucp.model.comercial.Venta;
+import pe.edu.pucp.model.ventas.Venta;
 import pe.edu.pucp.model.usuario.Usuario;
 
 /**
