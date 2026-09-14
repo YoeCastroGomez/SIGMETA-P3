@@ -203,20 +203,4 @@ public class Comprobante {
     public void setFechaRegistro(LocalDateTime fechaRegistro) {
         this.fechaRegistro = fechaRegistro;
     }
-
-    public String getMotivo() {
-        return motivo;
-    }
-
-    public void setMotivo(String motivo) {
-        this.motivo = motivo;
-    }
-
-    public List<DetalleNotaCredito> getDetalles() {
-        return detalles;
-    }
-
-    public void setDetalles(List<DetalleNotaCredito> detalles) {
-        this.detalles = detalles;
-    }
 }
