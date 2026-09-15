@@ -148,14 +148,6 @@ CREATE TABLE movimiento_inventario (
         FOREIGN KEY (id_recepcion_compra)
         REFERENCES recepcion_compra(id_recepcion_compra),
 
-    CONSTRAINT fk_movimiento_inventario_despacho
-        FOREIGN KEY (id_despacho)
-        REFERENCES despacho(id_despacho),
-
-    CONSTRAINT fk_movimiento_inventario_comprobante
-        FOREIGN KEY (id_comprobante)
-        REFERENCES comprobante(id_comprobante),
-
     CONSTRAINT fk_movimiento_inventario_usuario
         FOREIGN KEY (id_usuario_registro)
         REFERENCES usuario(id_usuario)
@@ -163,6 +155,53 @@ CREATE TABLE movimiento_inventario (
 
 -- ============ DATOS DE PRUEBA ============
 
--- Los INSERT van aqui.
+INSERT INTO compra (
+    id_compra, id_proveedor, numero, fecha_emision, moneda,
+    sub_total, igv, total, observaciones, fecha_registro,
+    id_usuario_registro, anulado, motivo_anulacion, fecha_anulacion,
+    estado, fecha_recepcion_estimada
+) VALUES (
+    1, 1, 'OC-DELTA-0087', '2026-08-25', 'SOLES',
+    1250.00, 225.00, 1475.00, 'Reposicion de stock de martillos',
+    '2026-08-25 10:00:00', 1, FALSE, NULL, NULL,
+    'RECIBIDA', '2026-08-28'
+);
+
+INSERT INTO detalle_compra (
+    id_detalle_compra, id_compra, numero_linea, id_producto,
+    cantidad, precio_unitario, descuento, importe,
+    unidad_compra, factor_conversion, cantidad_recibida
+) VALUES (
+    1, 1, 1, 1,
+    50.000, 25.00, 0.00, 1250.00,
+    'UNIDAD', 1.000, 50.000
+);
+
+INSERT INTO recepcion_compra (
+    id_recepcion_compra, id_compra, fecha_recepcion, observaciones,
+    id_usuario_registro, fecha_registro
+) VALUES (
+    1, 1, '2026-08-28', 'Recepcion completa, sin observaciones',
+    1, '2026-08-28 09:00:00'
+);
+
+INSERT INTO detalle_recepcion_compra (
+    id_detalle_recepcion_compra, id_recepcion_compra,
+    id_detalle_compra, cantidad_recibida
+) VALUES (
+    1, 1, 1, 50.000
+);
+
+INSERT INTO movimiento_inventario (
+    id_movimiento_inventario, id_producto, tipo, fecha_movimiento,
+    cantidad, stock_resultante,
+    id_recepcion_compra, id_despacho, id_comprobante,
+    id_usuario_registro, motivo, cantidad_contada
+) VALUES (
+    1, 1, 'INGRESO_COMPRA', '2026-08-28 09:00:00',
+    50.000, 100.000,
+    1, NULL, NULL,
+    1, NULL, NULL
+);
 
 -- SET FOREIGN_KEY_CHECKS = 1;
