@@ -7,7 +7,7 @@ import pe.edu.pucp.model.usuario.Usuario;
  * Cierre y cuadre de una jornada de caja (RF010).
  */
 public class CierreCaja {
-    private int idCierreCaja;
+    private int id;
     private Caja caja;
     private LocalDateTime fechaCierre;
     private double montoCalculado;
@@ -18,10 +18,10 @@ public class CierreCaja {
     public CierreCaja() {
     }
 
-    public CierreCaja(int idCierreCaja, Caja caja, LocalDateTime fechaCierre,
+    public CierreCaja(int id, Caja caja, LocalDateTime fechaCierre,
                          double montoCalculado, double montoDeclarado, double diferencia,
                          Usuario usuarioCierre) {
-        this.idCierreCaja = idCierreCaja;
+        this.id = id;
         this.caja = caja;
         this.fechaCierre = fechaCierre;
         this.montoCalculado = montoCalculado;
@@ -30,12 +30,12 @@ public class CierreCaja {
         this.usuarioCierre = usuarioCierre;
     }
 
-    public int getIdCierreCaja() {
-        return idCierreCaja;
+    public int getId() {
+        return id;
     }
 
-    public void setIdCierreCaja(int idCierreCaja) {
-        this.idCierreCaja = idCierreCaja;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Caja getCaja() {
