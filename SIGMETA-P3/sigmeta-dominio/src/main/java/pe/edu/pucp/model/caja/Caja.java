@@ -9,7 +9,7 @@ import java.util.ArrayList;
  * Jornada de caja abierta por un usuario (RF010).
  */
 public class Caja {
-    private int idCaja;
+    private int id;
     private LocalDateTime fechaApertura;
     private double montoInicial;
     private Usuario usuarioApertura;
@@ -20,21 +20,21 @@ public class Caja {
         this.movimientos = new ArrayList<>();
     }
 
-    public Caja(int idCaja, LocalDateTime fechaApertura, double montoInicial,
+    public Caja(int id, LocalDateTime fechaApertura, double montoInicial,
                    Usuario usuarioApertura, boolean abierta) {
-        this.idCaja = idCaja;
+        this.id = id;
         this.fechaApertura = fechaApertura;
         this.montoInicial = montoInicial;
         this.usuarioApertura = usuarioApertura;
         this.abierta = abierta;
     }
 
-    public int getIdCaja() {
-        return idCaja;
+    public int getId() {
+        return id;
     }
 
-    public void setIdCaja(int idCaja) {
-        this.idCaja = idCaja;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public LocalDateTime getFechaApertura() {
