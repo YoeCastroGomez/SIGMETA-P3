@@ -10,7 +10,7 @@ import pe.edu.pucp.model.usuario.Usuario;
  */
 public class Cobro {
 
-    private int idCobro;
+    private int id;
     private CuentaPorCobrar cuentaPorCobrar;
     private LocalDate fechaCobro;
     private MedioPago medioPago;
@@ -22,8 +22,8 @@ public class Cobro {
     public Cobro() {
     }
 
-    public Cobro(int idCobro, CuentaPorCobrar cuentaPorCobrar, LocalDate fechaCobro, MedioPago medioPago, double monto, String referencia, Usuario usuarioRegistro, LocalDateTime fechaRegistro) {
-        this.idCobro = idCobro;
+    public Cobro(int id, CuentaPorCobrar cuentaPorCobrar, LocalDate fechaCobro, MedioPago medioPago, double monto, String referencia, Usuario usuarioRegistro, LocalDateTime fechaRegistro) {
+        this.id = id;
         this.cuentaPorCobrar = cuentaPorCobrar;
         this.fechaCobro = fechaCobro;
         this.medioPago = medioPago;
@@ -33,12 +33,12 @@ public class Cobro {
         this.fechaRegistro = fechaRegistro;
     }
 
-    public int getIdCobro() {
-        return idCobro;
+    public int getId() {
+        return id;
     }
 
-    public void setIdCobro(int idCobro) {
-        this.idCobro = idCobro;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public CuentaPorCobrar getCuentaPorCobrar() {
