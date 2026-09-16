@@ -7,7 +7,7 @@ import pe.edu.pucp.model.producto.Producto;
  */
 public class DetalleDespacho {
 
-    private int idDetalleDespacho;
+    private int id;
     private Despacho despacho;
     private Producto producto;
     private double cantidadDespachada;
@@ -15,19 +15,19 @@ public class DetalleDespacho {
     public DetalleDespacho() {
     }
 
-    public DetalleDespacho(int idDetalleDespacho, Despacho despacho, Producto producto, double cantidadDespachada) {
-        this.idDetalleDespacho = idDetalleDespacho;
+    public DetalleDespacho(int id, Despacho despacho, Producto producto, double cantidadDespachada) {
+        this.id = id;
         this.despacho = despacho;
         this.producto = producto;
         this.cantidadDespachada = cantidadDespachada;
     }
 
-    public int getIdDetalleDespacho() {
-        return idDetalleDespacho;
+    public int getId() {
+        return id;
     }
 
-    public void setIdDetalleDespacho(int idDetalleDespacho) {
-        this.idDetalleDespacho = idDetalleDespacho;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Despacho getDespacho() {
