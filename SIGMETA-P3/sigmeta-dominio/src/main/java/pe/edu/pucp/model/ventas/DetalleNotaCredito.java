@@ -8,25 +8,25 @@ import pe.edu.pucp.model.producto.Producto;
  */
 public class DetalleNotaCredito extends LineaDocumento {
 
-    private int idDetalleNotaCredito;
+    private int id;
     private Comprobante comprobante;
 
     public DetalleNotaCredito() {
         super();
     }
 
-    public DetalleNotaCredito(int numeroLinea, Producto producto, double cantidad, double precioUnitario, double descuento, double importe, int idDetalleNotaCredito, Comprobante comprobante) {
+    public DetalleNotaCredito(int numeroLinea, Producto producto, double cantidad, double precioUnitario, double descuento, double importe, int id, Comprobante comprobante) {
         super(numeroLinea, producto, cantidad, precioUnitario, descuento, importe);
-        this.idDetalleNotaCredito = idDetalleNotaCredito;
+        this.id = id;
         this.comprobante = comprobante;
     }
 
-    public int getIdDetalleNotaCredito() {
-        return idDetalleNotaCredito;
+    public int getId() {
+        return id;
     }
 
-    public void setIdDetalleNotaCredito(int idDetalleNotaCredito) {
-        this.idDetalleNotaCredito = idDetalleNotaCredito;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Comprobante getComprobante() {
