@@ -17,7 +17,7 @@ import pe.edu.pucp.model.usuario.Usuario;
  */
 public class Venta extends DocumentoComercial {
 
-    private int idVenta;
+    private int id;
     private Cliente cliente;
     private OrdenCompraCliente ordenCompraCliente;
     private CondicionPago condicionPago;
@@ -34,9 +34,9 @@ public class Venta extends DocumentoComercial {
         this.comprobantes = new ArrayList<>();
     }
 
-    public Venta(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, Usuario usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int idVenta, Cliente cliente, OrdenCompraCliente ordenCompraCliente, CondicionPago condicionPago, int plazoCreditoDias, EstadoVenta estado, List<DetalleVenta> detalles) {
+    public Venta(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, Usuario usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int id, Cliente cliente, OrdenCompraCliente ordenCompraCliente, CondicionPago condicionPago, int plazoCreditoDias, EstadoVenta estado, List<DetalleVenta> detalles) {
         super(numero, fechaEmision, moneda, subTotal, igv, total, observaciones, fechaRegistro, usuarioRegistro, anulado, motivoAnulacion, fechaAnulacion);
-        this.idVenta = idVenta;
+        this.id = id;
         this.cliente = cliente;
         this.ordenCompraCliente = ordenCompraCliente;
         this.condicionPago = condicionPago;
@@ -45,12 +45,12 @@ public class Venta extends DocumentoComercial {
         this.detalles = detalles;
     }
 
-    public int getIdVenta() {
-        return idVenta;
+    public int getId() {
+        return id;
     }
 
-    public void setIdVenta(int idVenta) {
-        this.idVenta = idVenta;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Cliente getCliente() {
