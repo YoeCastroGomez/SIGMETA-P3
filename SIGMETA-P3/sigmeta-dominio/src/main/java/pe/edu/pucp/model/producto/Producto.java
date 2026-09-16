@@ -9,7 +9,7 @@ import java.util.ArrayList;
  * Producto del catalogo de comercializacion (RF005 y RF006).
  */
 public class Producto {
-    private int idProducto;
+    private int id;
     private String codigoInterno;
     private String codigoFabricante;
     private String codigoProveedor;
@@ -32,13 +32,13 @@ public class Producto {
         this.movimientos = new ArrayList<>();
     }
 
-    public Producto(int idProducto, String codigoInterno, String codigoFabricante,
+    public Producto(int id, String codigoInterno, String codigoFabricante,
                        String codigoProveedor, String nombre, String descripcion,
                        Categoria categoria, UnidadMedida unidadCompra,
                        UnidadMedida unidadVenta, double factorConversion,
                        double precioVenta, double costoUnitario, double stockActual,
                        double stockMinimo, String imagen, boolean estado, double precioReferencial) {
-        this.idProducto = idProducto;
+        this.id = id;
         this.codigoInterno = codigoInterno;
         this.codigoFabricante = codigoFabricante;
         this.codigoProveedor = codigoProveedor;
@@ -57,12 +57,12 @@ public class Producto {
         this.estado = estado;
     }
 
-    public int getIdProducto() {
-        return idProducto;
+    public int getId() {
+        return id;
     }
 
-    public void setIdProducto(int idProducto) {
-        this.idProducto = idProducto;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public String getCodigoInterno() {
