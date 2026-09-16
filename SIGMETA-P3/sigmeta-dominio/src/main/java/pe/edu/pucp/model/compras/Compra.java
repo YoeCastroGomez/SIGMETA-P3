@@ -16,7 +16,7 @@ import pe.edu.pucp.model.usuario.Usuario;
  */
 public class Compra extends DocumentoComercial {
 
-    private int idCompra;
+    private int id;
     private Proveedor proveedor;
     private EstadoCompra estado;
     private LocalDate fechaRecepcionEstimada;
@@ -29,21 +29,21 @@ public class Compra extends DocumentoComercial {
         this.recepciones = new ArrayList<>();
     }
 
-    public Compra(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, Usuario usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int idCompra, Proveedor proveedor, EstadoCompra estado, LocalDate fechaRecepcionEstimada, List<DetalleCompra> detalles) {
+    public Compra(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, Usuario usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int id, Proveedor proveedor, EstadoCompra estado, LocalDate fechaRecepcionEstimada, List<DetalleCompra> detalles) {
         super(numero, fechaEmision, moneda, subTotal, igv, total, observaciones, fechaRegistro, usuarioRegistro, anulado, motivoAnulacion, fechaAnulacion);
-        this.idCompra = idCompra;
+        this.id = id;
         this.proveedor = proveedor;
         this.estado = estado;
         this.fechaRecepcionEstimada = fechaRecepcionEstimada;
         this.detalles = detalles;
     }
 
-    public int getIdCompra() {
-        return idCompra;
+    public int getId() {
+        return id;
     }
 
-    public void setIdCompra(int idCompra) {
-        this.idCompra = idCompra;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Proveedor getProveedor() {
