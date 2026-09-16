@@ -11,10 +11,6 @@ import pe.edu.pucp.model.socio.Proveedor;
 import pe.edu.pucp.model.usuario.Rol;
 import pe.edu.pucp.model.usuario.Usuario;
 
-/**
- * ESTUDIANTE 1.
- * Tablas: rol, usuario, solicitud_autorizacion, cliente, proveedor.
- */
 public class PruebaSeguridad {
 
     private static final LocalDateTime INICIO = LocalDateTime.of(2026, 9, 1, 8, 0);
@@ -22,13 +18,11 @@ public class PruebaSeguridad {
     public static DatosMaestros ejecutar() {
         System.out.println("== PRUEBA 1: seguridad y socios ==");
 
-        // ---------- roles ----------
         Rol rolVendedor = crearRol(1, TipoRol.VENDEDOR, "Atencion al cliente y ciclo comercial");
         Rol rolCajero = crearRol(2, TipoRol.CAJERO, "Cobros y manejo de efectivo");
         Rol rolAlmacenero = crearRol(3, TipoRol.ALMACENERO, "Recepcion y despacho de mercaderia");
         Rol rolAdmin = crearRol(4, TipoRol.ADMINISTRADOR, "Supervision y configuracion");
 
-        // ---------- usuarios ----------
         Usuario vendedor = crearUsuario(1, "lrojas", "Lucia", "Rojas Vega",
                 "lrojas@grupometa.pe", rolVendedor);
         crearUsuario(2, "mchavez", "Marco", "Chavez Rios",
@@ -46,9 +40,8 @@ public class PruebaSeguridad {
             }
         }
 
-        // ---------- clientes ----------
         Cliente clienteContado = new Cliente();
-        clienteContado.setIdCliente(1);
+        clienteContado.setId(1);
         clienteContado.setRazonSocial("Pedro Alberto Ramos Diaz");
         clienteContado.setDireccion("Av. Los Angeles 240, Lurigancho-Chosica");
         clienteContado.setTelefono("987654321");
@@ -63,7 +56,7 @@ public class PruebaSeguridad {
         clienteContado.setCalificacionCrediticia("SIN LINEA");
 
         Cliente clienteCredito = new Cliente();
-        clienteCredito.setIdCliente(2);
+        clienteCredito.setId(2);
         clienteCredito.setRazonSocial("Constructora Andina del Sur S.A.C.");
         clienteCredito.setDireccion("Jr. Huaraz 1180, Cercado de Lima");
         clienteCredito.setTelefono("014785522");
@@ -80,15 +73,15 @@ public class PruebaSeguridad {
         System.out.println("Cliente al contado: " + clienteContado.getRazonSocial()
                 + " (" + clienteContado.getTipoDocumento() + " "
                 + clienteContado.getNumeroDocumento() + ")");
+
         System.out.println("Cliente al credito: " + clienteCredito.getRazonSocial()
                 + " (" + clienteCredito.getTipoDocumento() + " "
                 + clienteCredito.getNumeroDocumento() + "), limite S/ "
                 + clienteCredito.getLimiteCredito() + " a "
                 + clienteCredito.getPlazoCreditoDias() + " dias");
 
-        // ---------- proveedores ----------
         Proveedor proveedorPrincipal = new Proveedor();
-        proveedorPrincipal.setIdProveedor(1);
+        proveedorPrincipal.setId(1);
         proveedorPrincipal.setRazonSocial("Importaciones Electricas Delta S.A.C.");
         proveedorPrincipal.setDireccion("Av. Argentina 3450, Callao");
         proveedorPrincipal.setTelefono("014520011");
@@ -101,7 +94,7 @@ public class PruebaSeguridad {
         proveedorPrincipal.setCondicionPago(CondicionPago.CREDITO);
 
         Proveedor proveedorSecundario = new Proveedor();
-        proveedorSecundario.setIdProveedor(2);
+        proveedorSecundario.setId(2);
         proveedorSecundario.setRazonSocial("Ferreteria Industrial Huachipa E.I.R.L.");
         proveedorSecundario.setDireccion("Carretera Central km 9, Lurigancho-Chosica");
         proveedorSecundario.setTelefono("013710044");
@@ -118,9 +111,8 @@ public class PruebaSeguridad {
                 + proveedorSecundario.getRazonSocial()
                 + " (entrega en " + proveedorSecundario.getPlazoEntregaDias() + " dias)");
 
-        // ---------- solicitud de autorizacion (RF014) ----------
         SolicitudAutorizacion solicitud = new SolicitudAutorizacion();
-        solicitud.setIdSolicitudAutorizacion(1);
+        solicitud.setId(1);
         solicitud.setSolicitante(vendedor);
         solicitud.setAdministrador(administrador);
         solicitud.setOperacionRestringida("VENTA_SOBRE_LIMITE_CREDITO");
@@ -135,20 +127,23 @@ public class PruebaSeguridad {
                 + " pedida por " + solicitud.getSolicitante().getNombreUsuario()
                 + ", resuelta por " + solicitud.getAdministrador().getNombreUsuario()
                 + " como " + solicitud.getEstado());
+
         System.out.println("  vigencia de " + solicitud.getVigenciaMinutos()
                 + " minutos, vence el " + solicitud.getFechaVencimiento());
 
         boolean vigente = solicitud.getEstado() == EstadoAutorizacion.APROBADA
                 && solicitud.getFechaVencimiento().isAfter(solicitud.getFechaResolucion());
+
         System.out.println("  autorizacion utilizable: " + vigente);
 
         System.out.println();
+
         return new DatosMaestros(administrador, clienteCredito, proveedorPrincipal);
     }
 
     private static Rol crearRol(int id, TipoRol tipo, String descripcion) {
         Rol rol = new Rol();
-        rol.setIdRol(id);
+        rol.setId(id);
         rol.setTipo(tipo);
         rol.setDescripcion(descripcion);
         rol.setEstado(true);
@@ -158,7 +153,7 @@ public class PruebaSeguridad {
     private static Usuario crearUsuario(int id, String nombreUsuario, String nombres,
                                         String apellidos, String correo, Rol rol) {
         Usuario usuario = new Usuario();
-        usuario.setIdUsuario(id);
+        usuario.setId(id);
         usuario.setNombreUsuario(nombreUsuario);
         usuario.setClaveHash("hash_" + nombreUsuario);
         usuario.setSalt("salt_" + nombreUsuario);
@@ -167,11 +162,8 @@ public class PruebaSeguridad {
         usuario.setCorreo(correo);
         usuario.setEstado(true);
         usuario.setFechaRegistro(INICIO);
-
-        // se setean los dos lados de la relacion
         usuario.setRol(rol);
         rol.getUsuarios().add(usuario);
-
         return usuario;
     }
 }
