@@ -9,7 +9,7 @@ import pe.edu.pucp.model.producto.Producto;
  */
 public class DetalleCompra extends LineaDocumento {
 
-    private int idDetalleCompra;
+    private int id;
     private Compra compra;
     private UnidadMedida unidadCompra;
     private double factorConversion;
@@ -19,21 +19,21 @@ public class DetalleCompra extends LineaDocumento {
         super();
     }
 
-    public DetalleCompra(int numeroLinea, Producto producto, double cantidad, double precioUnitario, double descuento, double importe, int idDetalleCompra, Compra compra, UnidadMedida unidadCompra, double factorConversion, double cantidadRecibida) {
+    public DetalleCompra(int numeroLinea, Producto producto, double cantidad, double precioUnitario, double descuento, double importe, int id, Compra compra, UnidadMedida unidadCompra, double factorConversion, double cantidadRecibida) {
         super(numeroLinea, producto, cantidad, precioUnitario, descuento, importe);
-        this.idDetalleCompra = idDetalleCompra;
+        this.id = id;
         this.compra = compra;
         this.unidadCompra = unidadCompra;
         this.factorConversion = factorConversion;
         this.cantidadRecibida = cantidadRecibida;
     }
 
-    public int getIdDetalleCompra() {
-        return idDetalleCompra;
+    public int getId() {
+        return id;
     }
 
-    public void setIdDetalleCompra(int idDetalleCompra) {
-        this.idDetalleCompra = idDetalleCompra;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Compra getCompra() {
