@@ -10,7 +10,7 @@ import pe.edu.pucp.model.usuario.Usuario;
  * Movimiento trazable de existencias con su documento de origen y usuario (RF014).
  */
 public class MovimientoInventario {
-    private int idMovimientoInventario;
+    private int id;
     private Producto producto;
     private TipoMovimientoInventario tipo;
     private LocalDateTime fechaMovimiento;
@@ -29,7 +29,7 @@ public class MovimientoInventario {
     }
 
     public MovimientoInventario(
-            int idMovimientoInventario,
+            int id,
             Producto producto,
             TipoMovimientoInventario tipo,
             LocalDateTime fechaMovimiento,
@@ -42,7 +42,7 @@ public class MovimientoInventario {
             String motivo,
             double cantidadContada) {
 
-        this.idMovimientoInventario = idMovimientoInventario;
+        this.id = id;
         this.producto = producto;
         this.tipo = tipo;
         this.fechaMovimiento = fechaMovimiento;
@@ -56,12 +56,12 @@ public class MovimientoInventario {
         this.cantidadContada = cantidadContada;
     }
 
-    public int getIdMovimientoInventario() {
-        return idMovimientoInventario;
+    public int getId() {
+        return id;
     }
 
-    public void setIdMovimientoInventario(int idMovimientoInventario) {
-        this.idMovimientoInventario = idMovimientoInventario;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Producto getProducto() {
