@@ -13,7 +13,7 @@ import pe.edu.pucp.model.socio.Cliente;
  */
 public class CuentaPorCobrar {
 
-    private int idCuentaPorCobrar;
+    private int id;
     private Venta venta;
     private Cliente cliente;
     private LocalDate fechaEmision;
@@ -29,8 +29,8 @@ public class CuentaPorCobrar {
         this.cobros = new ArrayList<>();
     }
 
-    public CuentaPorCobrar(int idCuentaPorCobrar, Venta venta, Cliente cliente, LocalDate fechaEmision, LocalDate fechaVencimiento, Moneda moneda, double montoOriginal, double montoPagado, double saldoPendiente, EstadoCuentaPorCobrar estado, List<Cobro> cobros) {
-        this.idCuentaPorCobrar = idCuentaPorCobrar;
+    public CuentaPorCobrar(int id, Venta venta, Cliente cliente, LocalDate fechaEmision, LocalDate fechaVencimiento, Moneda moneda, double montoOriginal, double montoPagado, double saldoPendiente, EstadoCuentaPorCobrar estado, List<Cobro> cobros) {
+        this.id = id;
         this.venta = venta;
         this.cliente = cliente;
         this.fechaEmision = fechaEmision;
@@ -43,12 +43,12 @@ public class CuentaPorCobrar {
         this.cobros = cobros;
     }
 
-    public int getIdCuentaPorCobrar() {
-        return idCuentaPorCobrar;
+    public int getId() {
+        return id;
     }
 
-    public void setIdCuentaPorCobrar(int idCuentaPorCobrar) {
-        this.idCuentaPorCobrar = idCuentaPorCobrar;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Venta getVenta() {
