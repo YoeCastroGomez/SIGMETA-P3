@@ -8,25 +8,25 @@ import pe.edu.pucp.model.producto.Producto;
  */
 public class DetalleCotizacion extends LineaDocumento {
 
-    private int idDetalleCotizacion;
+    private int id;
     private Cotizacion cotizacion;
 
     public DetalleCotizacion() {
         super();
     }
 
-    public DetalleCotizacion(int numeroLinea, Producto producto, double cantidad, double precioUnitario, double descuento, double importe, int idDetalleCotizacion, Cotizacion cotizacion) {
+    public DetalleCotizacion(int numeroLinea, Producto producto, double cantidad, double precioUnitario, double descuento, double importe, int id, Cotizacion cotizacion) {
         super(numeroLinea, producto, cantidad, precioUnitario, descuento, importe);
-        this.idDetalleCotizacion = idDetalleCotizacion;
+        this.id = id;
         this.cotizacion = cotizacion;
     }
 
-    public int getIdDetalleCotizacion() {
-        return idDetalleCotizacion;
+    public int getId() {
+        return id;
     }
 
-    public void setIdDetalleCotizacion(int idDetalleCotizacion) {
-        this.idDetalleCotizacion = idDetalleCotizacion;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Cotizacion getCotizacion() {
