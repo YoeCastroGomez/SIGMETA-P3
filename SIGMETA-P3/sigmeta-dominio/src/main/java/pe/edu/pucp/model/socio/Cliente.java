@@ -13,7 +13,7 @@ import java.util.ArrayList;
  */
 public class Cliente extends EntidadComercial {
 
-    private int idCliente;
+    private int id;
     private TipoDocumentoIdentidad tipoDocumento;
     private String numeroDocumento;
     private String contactoNombre;
@@ -31,11 +31,11 @@ public class Cliente extends EntidadComercial {
     }
 
     public Cliente(String razonSocial, String direccion, String telefono, String correo,
-                      boolean estado, int idCliente, TipoDocumentoIdentidad tipoDocumento,
+                      boolean estado, int id, TipoDocumentoIdentidad tipoDocumento,
                       String numeroDocumento, String contactoNombre, CondicionPago condicionPago,
                       int plazoCreditoDias, double limiteCredito, String calificacionCrediticia) {
         super(razonSocial, direccion, telefono, correo, estado);
-        this.idCliente = idCliente;
+        this.id = id;
         this.tipoDocumento = tipoDocumento;
         this.numeroDocumento = numeroDocumento;
         this.contactoNombre = contactoNombre;
@@ -45,12 +45,12 @@ public class Cliente extends EntidadComercial {
         this.calificacionCrediticia = calificacionCrediticia;
     }
 
-    public int getIdCliente() {
-        return idCliente;
+    public int getId() {
+        return id;
     }
 
-    public void setIdCliente(int idCliente) {
-        this.idCliente = idCliente;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public TipoDocumentoIdentidad getTipoDocumento() {
