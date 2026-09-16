@@ -12,7 +12,7 @@ import pe.edu.pucp.model.usuario.Usuario;
  */
 public class Despacho {
 
-    private int idDespacho;
+    private int id;
     private Venta venta;
     private String serieGuia;
     private String numeroGuia;
@@ -28,8 +28,8 @@ public class Despacho {
         this.detalles = new ArrayList<>();
     }
 
-    public Despacho(int idDespacho, Venta venta, String serieGuia, String numeroGuia, LocalDate fechaDespacho, String direccionEntrega, String transportista, boolean anulado, Usuario usuarioRegistro, LocalDateTime fechaRegistro, List<DetalleDespacho> detalles) {
-        this.idDespacho = idDespacho;
+    public Despacho(int id, Venta venta, String serieGuia, String numeroGuia, LocalDate fechaDespacho, String direccionEntrega, String transportista, boolean anulado, Usuario usuarioRegistro, LocalDateTime fechaRegistro, List<DetalleDespacho> detalles) {
+        this.id = id;
         this.venta = venta;
         this.serieGuia = serieGuia;
         this.numeroGuia = numeroGuia;
@@ -42,12 +42,12 @@ public class Despacho {
         this.detalles = detalles;
     }
 
-    public int getIdDespacho() {
-        return idDespacho;
+    public int getId() {
+        return id;
     }
 
-    public void setIdDespacho(int idDespacho) {
-        this.idDespacho = idDespacho;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Venta getVenta() {
