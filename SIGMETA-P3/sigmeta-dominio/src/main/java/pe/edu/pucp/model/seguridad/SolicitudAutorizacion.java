@@ -8,7 +8,7 @@ import pe.edu.pucp.model.usuario.Usuario;
  * Solicitud de autorizacion para una operacion restringida (RF014).
  */
 public class SolicitudAutorizacion {
-    private int idSolicitudAutorizacion;
+    private int id;
     private Usuario solicitante;
     private Usuario administrador;
     private String operacionRestringida;
@@ -22,12 +22,12 @@ public class SolicitudAutorizacion {
     public SolicitudAutorizacion() {
     }
 
-    public SolicitudAutorizacion(int idSolicitudAutorizacion, Usuario solicitante,
+    public SolicitudAutorizacion(int id, Usuario solicitante,
                                     Usuario administrador, String operacionRestringida,
                                     String motivo, LocalDateTime fechaSolicitud,
                                     EstadoAutorizacion estado, LocalDateTime fechaResolucion,
                                     int vigenciaMinutos, LocalDateTime fechaVencimiento) {
-        this.idSolicitudAutorizacion = idSolicitudAutorizacion;
+        this.id = id;
         this.solicitante = solicitante;
         this.administrador = administrador;
         this.operacionRestringida = operacionRestringida;
@@ -39,12 +39,12 @@ public class SolicitudAutorizacion {
         this.fechaVencimiento = fechaVencimiento;
     }
 
-    public int getIdSolicitudAutorizacion() {
-        return idSolicitudAutorizacion;
+    public int getId() {
+        return id;
     }
 
-    public void setIdSolicitudAutorizacion(int idSolicitudAutorizacion) {
-        this.idSolicitudAutorizacion = idSolicitudAutorizacion;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Usuario getSolicitante() {
