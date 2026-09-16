@@ -8,7 +8,7 @@ import java.util.ArrayList;
  */
 public class Categoria {
 
-    private int idCategoria;
+    private int id;
     private String nombre;
     private String descripcion;
     private boolean estado;
@@ -18,19 +18,19 @@ public class Categoria {
         this.productos = new ArrayList<>();
     }
 
-    public Categoria(int idCategoria, String nombre, String descripcion, boolean estado) {
-        this.idCategoria = idCategoria;
+    public Categoria(int id, String nombre, String descripcion, boolean estado) {
+        this.id = id;
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.estado = estado;
     }
 
-    public int getIdCategoria() {
-        return idCategoria;
+    public int getId() {
+        return id;
     }
 
-    public void setIdCategoria(int idCategoria) {
-        this.idCategoria = idCategoria;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public String getNombre() {
