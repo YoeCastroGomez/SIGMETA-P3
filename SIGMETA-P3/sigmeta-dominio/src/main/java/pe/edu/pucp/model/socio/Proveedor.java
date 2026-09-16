@@ -11,7 +11,7 @@ import java.util.ArrayList;
  */
 public class Proveedor extends EntidadComercial {
 
-    private int idProveedor;
+    private int id;
     private String ruc;
     private String rubro;
     private String contactoNombre;
@@ -24,9 +24,9 @@ public class Proveedor extends EntidadComercial {
         this.compras = new ArrayList<>();
     }
 
-    public Proveedor(String razonSocial, String direccion, String telefono, String correo, boolean estado, int idProveedor, String ruc, String rubro, String contactoNombre, int plazoEntregaDias, CondicionPago condicionPago) {
+    public Proveedor(String razonSocial, String direccion, String telefono, String correo, boolean estado, int id, String ruc, String rubro, String contactoNombre, int plazoEntregaDias, CondicionPago condicionPago) {
         super(razonSocial, direccion, telefono, correo, estado);
-        this.idProveedor = idProveedor;
+        this.id = id;
         this.ruc = ruc;
         this.rubro = rubro;
         this.contactoNombre = contactoNombre;
@@ -34,12 +34,12 @@ public class Proveedor extends EntidadComercial {
         this.condicionPago = condicionPago;
     }
 
-    public int getIdProveedor() {
-        return idProveedor;
+    public int getId() {
+        return id;
     }
 
-    public void setIdProveedor(int idProveedor) {
-        this.idProveedor = idProveedor;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public String getRuc() {
