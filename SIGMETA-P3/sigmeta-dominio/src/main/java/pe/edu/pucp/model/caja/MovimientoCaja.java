@@ -9,7 +9,7 @@ import pe.edu.pucp.model.usuario.Usuario;
  * Movimiento de ingreso o egreso registrado durante una jornada de caja (RF010).
  */
 public class MovimientoCaja {
-    private int idMovimientoCaja;
+    private int id;
     private Caja caja;
     private TipoMovimientoCaja tipo;
     private LocalDateTime fechaMovimiento;
@@ -23,11 +23,11 @@ public class MovimientoCaja {
     public MovimientoCaja() {
     }
 
-    public MovimientoCaja(int idMovimientoCaja, Caja caja, TipoMovimientoCaja tipo,
+    public MovimientoCaja(int id, Caja caja, TipoMovimientoCaja tipo,
                              LocalDateTime fechaMovimiento, MedioPago medioPago,
                              double monto, String concepto, String documentoOrigen,
                              int idDocumentoOrigen, Usuario usuarioRegistro) {
-        this.idMovimientoCaja = idMovimientoCaja;
+        this.id = id;
         this.caja = caja;
         this.tipo = tipo;
         this.fechaMovimiento = fechaMovimiento;
@@ -39,12 +39,12 @@ public class MovimientoCaja {
         this.usuarioRegistro = usuarioRegistro;
     }
 
-    public int getIdMovimientoCaja() {
-        return idMovimientoCaja;
+    public int getId() {
+        return id;
     }
 
-    public void setIdMovimientoCaja(int idMovimientoCaja) {
-        this.idMovimientoCaja = idMovimientoCaja;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Caja getCaja() {
