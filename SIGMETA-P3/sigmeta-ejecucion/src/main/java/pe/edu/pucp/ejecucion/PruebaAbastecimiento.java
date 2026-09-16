@@ -30,7 +30,7 @@ public class PruebaAbastecimiento {
         Producto producto2 = productos.get(1);
 
         Compra compra = new Compra();
-        compra.setIdCompra(1);
+        compra.setId(1);
         compra.setProveedor(proveedor);
         compra.setEstado(EstadoCompra.REGISTRADA);
         compra.setFechaRecepcionEstimada(LocalDate.now().plusDays(2));
@@ -45,7 +45,7 @@ public class PruebaAbastecimiento {
         compra.setUsuarioRegistro(registro);
 
         DetalleCompra detalle1 = new DetalleCompra();
-        detalle1.setIdDetalleCompra(1);
+        detalle1.setId(1);
         detalle1.setCompra(compra);
         detalle1.setNumeroLinea(1);
         detalle1.setProducto(producto1);
@@ -58,7 +58,7 @@ public class PruebaAbastecimiento {
         detalle1.setCantidadRecibida(0);
 
         DetalleCompra detalle2 = new DetalleCompra();
-        detalle2.setIdDetalleCompra(2);
+        detalle2.setId(2);
         detalle2.setCompra(compra);
         detalle2.setNumeroLinea(2);
         detalle2.setProducto(producto2);
@@ -74,7 +74,7 @@ public class PruebaAbastecimiento {
         compra.getDetalles().add(detalle2);
 
         RecepcionCompra recepcion = new RecepcionCompra();
-        recepcion.setIdRecepcionCompra(1);
+        recepcion.setId(1);
         recepcion.setCompra(compra);
         recepcion.setFechaRecepcion(LocalDate.now());
         recepcion.setObservaciones("Primera recepcion parcial");
@@ -87,13 +87,13 @@ public class PruebaAbastecimiento {
         double cantidadRecibida2 = 2;
 
         DetalleRecepcionCompra recepcionDetalle1 = new DetalleRecepcionCompra();
-        recepcionDetalle1.setIdDetalleRecepcionCompra(1);
+        recepcionDetalle1.setId(1);
         recepcionDetalle1.setRecepcionCompra(recepcion);
         recepcionDetalle1.setDetalleCompra(detalle1);
         recepcionDetalle1.setCantidadRecibida(cantidadRecibida1);
 
         DetalleRecepcionCompra recepcionDetalle2 = new DetalleRecepcionCompra();
-        recepcionDetalle2.setIdDetalleRecepcionCompra(2);
+        recepcionDetalle2.setId(2);
         recepcionDetalle2.setRecepcionCompra(recepcion);
         recepcionDetalle2.setDetalleCompra(detalle2);
         recepcionDetalle2.setCantidadRecibida(cantidadRecibida2);
