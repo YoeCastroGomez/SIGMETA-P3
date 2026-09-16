@@ -15,7 +15,7 @@ import pe.edu.pucp.model.usuario.Usuario;
  */
 public class Cotizacion extends DocumentoComercial {
 
-    private int idCotizacion;
+    private int id;
     private Cliente cliente;
     private LocalDate fechaVigencia;
     private EstadoCotizacion estado;
@@ -26,21 +26,21 @@ public class Cotizacion extends DocumentoComercial {
         this.detalles = new ArrayList<>();
     }
 
-    public Cotizacion(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, Usuario usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int idCotizacion, Cliente cliente, LocalDate fechaVigencia, EstadoCotizacion estado, List<DetalleCotizacion> detalles) {
+    public Cotizacion(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, Usuario usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int id, Cliente cliente, LocalDate fechaVigencia, EstadoCotizacion estado, List<DetalleCotizacion> detalles) {
         super(numero, fechaEmision, moneda, subTotal, igv, total, observaciones, fechaRegistro, usuarioRegistro, anulado, motivoAnulacion, fechaAnulacion);
-        this.idCotizacion = idCotizacion;
+        this.id = id;
         this.cliente = cliente;
         this.fechaVigencia = fechaVigencia;
         this.estado = estado;
         this.detalles = detalles;
     }
 
-    public int getIdCotizacion() {
-        return idCotizacion;
+    public int getId() {
+        return id;
     }
 
-    public void setIdCotizacion(int idCotizacion) {
-        this.idCotizacion = idCotizacion;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Cliente getCliente() {
