@@ -9,7 +9,7 @@ import java.util.ArrayList;
  */
 public class Rol {
 
-    private int idRol;
+    private int id;
     private TipoRol tipo;
     private String descripcion;
     private boolean estado;
@@ -19,19 +19,19 @@ public class Rol {
         this.usuarios = new ArrayList<>();
     }
 
-    public Rol(int idRol, TipoRol tipo, String descripcion, boolean estado) {
-        this.idRol = idRol;
+    public Rol(int id, TipoRol tipo, String descripcion, boolean estado) {
+        this.id = id;
         this.tipo = tipo;
         this.descripcion = descripcion;
         this.estado = estado;
     }
 
-    public int getIdRol() {
-        return idRol;
+    public int getId() {
+        return id;
     }
 
-    public void setIdRol(int idRol) {
-        this.idRol = idRol;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public TipoRol getTipo() {
