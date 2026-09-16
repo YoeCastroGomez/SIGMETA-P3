@@ -12,7 +12,7 @@ import pe.edu.pucp.model.enums.TipoComprobante;
  * Comprobante electronico asociado a una venta (RF008).
  */
 public class Comprobante {
-    private int idComprobante;
+    private int id;
     private Venta venta;
     private TipoComprobante tipo;
     private String serie;
@@ -34,14 +34,14 @@ public class Comprobante {
         this.detalles = new ArrayList<>();
     }
 
-    public Comprobante(int idComprobante, Venta venta, TipoComprobante tipo,
+    public Comprobante(int id, Venta venta, TipoComprobante tipo,
                        String serie, String numero, LocalDate fechaEmision,
                        Moneda moneda, double subTotal, double igv, double total,
                        EstadoComprobante estado, Comprobante comprobanteRelacionado,
                        String medioEnvio, LocalDateTime fechaEnvio,
                        LocalDateTime fechaRegistro) {
         this();
-        this.idComprobante = idComprobante;
+        this.id = id;
         this.venta = venta;
         this.tipo = tipo;
         this.serie = serie;
@@ -58,14 +58,14 @@ public class Comprobante {
         this.fechaRegistro = fechaRegistro;
     }
 
-    public Comprobante(int idComprobante, Venta venta, TipoComprobante tipo,
+    public Comprobante(int id, Venta venta, TipoComprobante tipo,
                        String serie, String numero, LocalDate fechaEmision,
                        Moneda moneda, double subTotal, double igv, double total,
                        EstadoComprobante estado, Comprobante comprobanteRelacionado,
                        String medioEnvio, LocalDateTime fechaEnvio,
                        LocalDateTime fechaRegistro, String motivo,
                        List<DetalleNotaCredito> detalles) {
-        this.idComprobante = idComprobante;
+        this.id = id;
         this.venta = venta;
         this.tipo = tipo;
         this.serie = serie;
@@ -84,12 +84,12 @@ public class Comprobante {
         this.detalles = detalles != null ? detalles : new ArrayList<>();
     }
 
-    public int getIdComprobante() {
-        return idComprobante;
+    public int getId() {
+        return id;
     }
 
-    public void setIdComprobante(int idComprobante) {
-        this.idComprobante = idComprobante;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Venta getVenta() {
