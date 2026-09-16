@@ -8,7 +8,7 @@ import pe.edu.pucp.model.producto.Producto;
  */
 public class DetalleOrdenCompraCliente extends LineaDocumento {
 
-    private int idDetalleOrdenCompraCliente;
+    private int id;
     private OrdenCompraCliente ordenCompraCliente;
     private double cantidadAtendida;
 
@@ -16,19 +16,19 @@ public class DetalleOrdenCompraCliente extends LineaDocumento {
         super();
     }
 
-    public DetalleOrdenCompraCliente(int numeroLinea, Producto producto, double cantidad, double precioUnitario, double descuento, double importe, int idDetalleOrdenCompraCliente, OrdenCompraCliente ordenCompraCliente, double cantidadAtendida) {
+    public DetalleOrdenCompraCliente(int numeroLinea, Producto producto, double cantidad, double precioUnitario, double descuento, double importe, int id, OrdenCompraCliente ordenCompraCliente, double cantidadAtendida) {
         super(numeroLinea, producto, cantidad, precioUnitario, descuento, importe);
-        this.idDetalleOrdenCompraCliente = idDetalleOrdenCompraCliente;
+        this.id = id;
         this.ordenCompraCliente = ordenCompraCliente;
         this.cantidadAtendida = cantidadAtendida;
     }
 
-    public int getIdDetalleOrdenCompraCliente() {
-        return idDetalleOrdenCompraCliente;
+    public int getId() {
+        return id;
     }
 
-    public void setIdDetalleOrdenCompraCliente(int idDetalleOrdenCompraCliente) {
-        this.idDetalleOrdenCompraCliente = idDetalleOrdenCompraCliente;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public OrdenCompraCliente getOrdenCompraCliente() {
