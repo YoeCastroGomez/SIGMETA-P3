@@ -6,7 +6,7 @@ import pe.edu.pucp.model.compras.DetalleCompra;
  * Detalle de los productos recibidos en una recepcion de compra (RF012).
  */
 public class DetalleRecepcionCompra {
-    private int idDetalleRecepcionCompra;
+    private int id;
     private RecepcionCompra recepcionCompra;
     private DetalleCompra detalleCompra;
     private double cantidadRecibida;
@@ -14,22 +14,22 @@ public class DetalleRecepcionCompra {
     public DetalleRecepcionCompra() {
     }
 
-    public DetalleRecepcionCompra(int idDetalleRecepcionCompra,
+    public DetalleRecepcionCompra(int id,
                                      RecepcionCompra recepcionCompra,
                                      DetalleCompra detalleCompra,
                                      double cantidadRecibida) {
-        this.idDetalleRecepcionCompra = idDetalleRecepcionCompra;
+        this.id = id;
         this.recepcionCompra = recepcionCompra;
         this.detalleCompra = detalleCompra;
         this.cantidadRecibida = cantidadRecibida;
     }
 
-    public int getIdDetalleRecepcionCompra() {
-        return idDetalleRecepcionCompra;
+    public int getId() {
+        return id;
     }
 
-    public void setIdDetalleRecepcionCompra(int idDetalleRecepcionCompra) {
-        this.idDetalleRecepcionCompra = idDetalleRecepcionCompra;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public RecepcionCompra getRecepcionCompra() {
