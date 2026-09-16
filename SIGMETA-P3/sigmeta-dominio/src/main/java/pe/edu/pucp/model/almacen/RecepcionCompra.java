@@ -11,7 +11,7 @@ import pe.edu.pucp.model.usuario.Usuario;
  * Recepcion total o parcial de una orden de compra a proveedor (RF012).
  */
 public class RecepcionCompra {
-    private int idRecepcionCompra;
+    private int id;
     private Compra compra;
     private LocalDate fechaRecepcion;
     private String observaciones;
@@ -23,11 +23,11 @@ public class RecepcionCompra {
         this.detalles = new ArrayList<>();
     }
 
-    public RecepcionCompra(int idRecepcionCompra, Compra compra, LocalDate fechaRecepcion,
+    public RecepcionCompra(int id, Compra compra, LocalDate fechaRecepcion,
                               String observaciones, Usuario usuarioRegistro,
                               LocalDateTime fechaRegistro,
                               List<DetalleRecepcionCompra> detalles) {
-        this.idRecepcionCompra = idRecepcionCompra;
+        this.id = id;
         this.compra = compra;
         this.fechaRecepcion = fechaRecepcion;
         this.observaciones = observaciones;
@@ -36,12 +36,12 @@ public class RecepcionCompra {
         this.detalles = detalles;
     }
 
-    public int getIdRecepcionCompra() {
-        return idRecepcionCompra;
+    public int getId() {
+        return id;
     }
 
-    public void setIdRecepcionCompra(int idRecepcionCompra) {
-        this.idRecepcionCompra = idRecepcionCompra;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Compra getCompra() {
