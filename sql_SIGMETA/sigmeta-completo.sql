@@ -90,10 +90,10 @@ INSERT INTO rol (id_rol, tipo, descripcion, estado) VALUES
                                                         (4,'ADMINISTRADOR','Supervision y configuracion',TRUE);
 
 INSERT INTO usuario (id_usuario, nombre_usuario, clave_hash, salt, nombres, apellidos, correo, id_rol, estado, fecha_registro) VALUES
-                                                                                                                                   (1,'lrojas','hash_lrojas','salt_lrojas','Lucia','Rojas Vega','lrojas@grupometa.pe',1,TRUE,'2026-09-01 08:00:00'),
-                                                                                                                                   (2,'mchavez','hash_mchavez','salt_mchavez','Marco','Chavez Rios','mchavez@grupometa.pe',2,TRUE,'2026-09-01 08:00:00'),
-                                                                                                                                   (3,'jtorres','hash_jtorres','salt_jtorres','Jorge','Torres Pena','jtorres@grupometa.pe',3,TRUE,'2026-09-01 08:00:00'),
-                                                                                                                                   (4,'aquispe','hash_aquispe','salt_aquispe','Ana','Quispe Mendoza','aquispe@grupometa.pe',4,TRUE,'2026-09-01 08:00:00');
+                                                                                                                                   (1,'lrojas','hash_lrojas','salt_lrojas','Lucia','Rojas Vega','lrojas@grupometa.pe',1,TRUE,'2026-08-20 08:00:00'),
+                                                                                                                                   (2,'mchavez','hash_mchavez','salt_mchavez','Marco','Chavez Rios','mchavez@grupometa.pe',2,TRUE,'2026-08-20 08:00:00'),
+                                                                                                                                   (3,'jtorres','hash_jtorres','salt_jtorres','Jorge','Torres Pena','jtorres@grupometa.pe',3,TRUE,'2026-08-20 08:00:00'),
+                                                                                                                                   (4,'aquispe','hash_aquispe','salt_aquispe','Ana','Quispe Mendoza','aquispe@grupometa.pe',4,TRUE,'2026-08-20 08:00:00');
 
 INSERT INTO cliente (id_cliente, razon_social, direccion, telefono, correo, estado, tipo_documento, numero_documento, contacto_nombre, condicion_pago, plazo_credito_dias, limite_credito, calificacion_crediticia) VALUES
                                                                                                                                                                                                                         (1,'Pedro Alberto Ramos Diaz','Av. Los Angeles 240, Lurigancho-Chosica','987654321','pramos@gmail.com',TRUE,'DNI','45781290','Pedro Ramos','CONTADO',0,0.00,'SIN LINEA'),
@@ -104,7 +104,8 @@ INSERT INTO proveedor (id_proveedor, razon_social, direccion, telefono, correo, 
                                                                                                                                                              (2,'Ferreteria Industrial Huachipa E.I.R.L.','Carretera Central km 9, Lurigancho-Chosica','013710044','contacto@fihuachipa.pe',TRUE,'20512346789','Fijaciones y abrasivos','Nelly Fuentes',2,'CONTADO');
 
 INSERT INTO solicitud_autorizacion (id_solicitud_autorizacion, id_solicitante, id_administrador, operacion_restringida, motivo, fecha_solicitud, estado, fecha_resolucion, vigencia_minutos, fecha_vencimiento) VALUES
-    (1,1,4,'VENTA_SOBRE_LIMITE_CREDITO','El cliente supera su linea de credito en la orden del mes','2026-09-01 09:00:00','APROBADA','2026-09-01 09:12:00',60,'2026-09-01 10:12:00');
+    (1,1,4,'DESCUENTO_ESPECIAL','Descuento de S/ 50.00 en alicates para Constructora Andina del Sur','2026-09-01 14:40:00','APROBADA','2026-09-01 14:45:00',60,'2026-09-01 15:45:00'),
+    (2,2,4,'EMITIR_NOTA_CREDITO','Devolucion de 2 martillos con defecto de fabrica (F001-00000123)','2026-09-04 11:00:00','APROBADA','2026-09-04 11:05:00',30,'2026-09-04 11:35:00');
 
 -- SET FOREIGN_KEY_CHECKS = 1;-- bloque del estudiante 2
 -- Orden: primero todos los CREATE TABLE, despues todos los INSERT.
@@ -173,7 +174,7 @@ CREATE TABLE cotizacion (
   fecha_anulacion DATETIME,
   id_cliente INT NOT NULL,
   fecha_vigencia DATE,
-  estado ENUM('PENDIENTE', 'ACEPTADA', 'RECHAZADA') NOT NULL,
+  estado ENUM('REGISTRADA', 'ENVIADA', 'ACEPTADA', 'RECHAZADA', 'VENCIDA', 'ANULADA') NOT NULL,
   CONSTRAINT fk_cotizacion_cliente FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente),
   CONSTRAINT fk_cotizacion_usuario FOREIGN KEY (id_usuario_registro) REFERENCES usuario(id_usuario)
 );
@@ -215,8 +216,8 @@ INSERT INTO producto (codigo_interno, codigo_fabricante, codigo_proveedor, nombr
 ('INT-006', 'FAB-106', 'PROV-66', 'Fierro Corrugado', 3, 'UNIDAD', 'UNIDAD', 1.000, 32.00, 26.00, 150.000, 30.000, TRUE);
 
 -- 1 Cotización
-INSERT INTO cotizacion (numero, fecha_emision, moneda, sub_total, igv, total, fecha_registro, anulado, id_cliente, estado) VALUES
-('COT-2026-0001', '2026-09-01', 'SOLES', 1300.00, 234.00, 1534.00, '2026-09-01 15:00:00', FALSE, 2, 'ACEPTADA');
+INSERT INTO cotizacion (numero, fecha_emision, moneda, sub_total, igv, total, fecha_registro, id_usuario_registro, anulado, id_cliente, estado) VALUES
+('COT-2026-0001', '2026-09-01', 'SOLES', 1300.00, 234.00, 1534.00, '2026-09-01 15:00:00', 1, FALSE, 2, 'ACEPTADA');
 
 -- 3 Líneas de Detalle
 INSERT INTO detalle_cotizacion (id_cotizacion, numero_linea, id_producto, cantidad, precio_unitario, descuento, importe) VALUES
@@ -399,7 +400,7 @@ INSERT INTO compra (
 ) VALUES (
     1, 1, 'OC-DELTA-0087', '2026-08-25', 'SOLES',
     1250.00, 225.00, 1475.00, 'Reposicion de stock de martillos', '2026-08-25 10:00:00',
-    1, FALSE, NULL, NULL,
+    4, FALSE, NULL, NULL,
     'RECIBIDA', '2026-08-28'
 );
 
@@ -418,7 +419,7 @@ INSERT INTO recepcion_compra (
     id_usuario_registro, fecha_registro
 ) VALUES (
     1, 1, '2026-08-28', 'Recepcion completa, sin observaciones',
-    1, '2026-08-28 09:00:00'
+    3, '2026-08-28 09:00:00'
 );
 
 INSERT INTO detalle_recepcion_compra (
@@ -434,7 +435,7 @@ INSERT INTO movimiento_inventario (
 ) VALUES (
     1, 1, 'INGRESO_COMPRA', '2026-08-28 09:00:00',
     50.000, 100.000, 1, NULL, NULL,
-    1, NULL, NULL
+    3, NULL, NULL
 );
 
 -- SET FOREIGN_KEY_CHECKS = 1;
@@ -701,7 +702,7 @@ INSERT INTO despacho (
 ) VALUES (
     1, 1, 'T001', '00000045', '2026-09-03',
     'Jr. Huaraz 1180, Cercado de Lima', 'Transportes Rapidos del Centro S.A.C.',
-    FALSE, 2, '2026-09-03 08:30:00'
+    FALSE, 3, '2026-09-03 08:30:00'
 );
 
 -- 8. Detalle de despacho (cantidades parciales efectivamente entregadas)
@@ -768,7 +769,7 @@ CREATE TABLE cuenta_por_cobrar (
     monto_original       DECIMAL(12,2) NOT NULL,
     monto_pagado         DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     saldo_pendiente      DECIMAL(12,2) NOT NULL,
-    estado               ENUM('PENDIENTE', 'PARCIAL', 'PAGADA', 'ANULADA') NOT NULL,
+    estado               ENUM('PENDIENTE', 'PAGADA_PARCIAL', 'PAGADA', 'VENCIDA') NOT NULL,
     CONSTRAINT fk_cuenta_por_cobrar_venta
         FOREIGN KEY (id_venta) REFERENCES venta(id_venta),
     CONSTRAINT fk_cuenta_por_cobrar_cliente
@@ -785,7 +786,7 @@ CREATE TABLE cobro (
     id_cobro              INT AUTO_INCREMENT PRIMARY KEY,
     id_cuenta_por_cobrar  INT NOT NULL,
     fecha_cobro           DATE NOT NULL,
-    medio_pago            ENUM('EFECTIVO', 'TRANSFERENCIA', 'TARJETA', 'DEPOSITO') NOT NULL,
+    medio_pago            ENUM('EFECTIVO', 'TRANSFERENCIA', 'DEPOSITO', 'CHEQUE', 'TARJETA') NOT NULL,
     monto                 DECIMAL(12,2) NOT NULL,
     referencia            VARCHAR(50) NULL,
     id_usuario_registro   INT NOT NULL,
@@ -803,13 +804,13 @@ CREATE TABLE cobro (
 -- documento_origen / id_documento_origen son la referencia generica (String + int)
 -- que en la prueba de Java apuntara a 'COBRO' + id_cobro para el ingreso, y
 -- quedara en NULL para el egreso manual. RF010: la nota de credito jamas
--- produce un movimiento_caja de tipo INGRESO, por eso no participa del cierre.
+-- produce un movimiento_caja de cobro, por eso no participa del cierre.
 CREATE TABLE movimiento_caja (
     id_movimiento_caja  INT AUTO_INCREMENT PRIMARY KEY,
     id_caja             INT NOT NULL,
-    tipo                ENUM('INGRESO', 'EGRESO') NOT NULL,
+    tipo                ENUM('COBRO_CONTADO', 'COBRO_CREDITO', 'INGRESO_MANUAL', 'EGRESO_MANUAL') NOT NULL,
     fecha_movimiento    DATETIME NOT NULL,
-    medio_pago          ENUM('EFECTIVO', 'TRANSFERENCIA', 'TARJETA', 'DEPOSITO') NOT NULL,
+    medio_pago          ENUM('EFECTIVO', 'TRANSFERENCIA', 'DEPOSITO', 'CHEQUE', 'TARJETA') NOT NULL,
     monto               DECIMAL(12,2) NOT NULL,
     concepto            VARCHAR(150) NOT NULL,
     documento_origen    VARCHAR(50) NULL,
@@ -843,28 +844,28 @@ CREATE TABLE cierre_caja (
 -- ============================================================
 -- DATOS DE PRUEBA
 -- ============================================================
--- NOTA: id_usuario_apertura / id_usuario_cierre / id_usuario_registro asumen
--- el usuario con id_usuario = 1 (rol administrativo/cajero) creado por el
--- Estudiante 1. Ajustar el id si en su script el cajero quedo con otro id.
+-- NOTA: las operaciones de caja y cobranza las registra el cajero
+-- (id_usuario = 2, mchavez), creado por el Estudiante 1.
 -- id_cliente = 2 corresponde al cliente de la venta del Estudiante 4.
 
 -- 1. Apertura de caja con monto inicial (queda cerrada al final, ver paso 6)
 INSERT INTO caja (
     id_caja, fecha_apertura, monto_inicial, id_usuario_apertura, abierta
 ) VALUES (
-    1, '2026-09-05 08:00:00', 500.00, 1, FALSE
+    1, '2026-09-05 08:00:00', 500.00, 2, FALSE
 );
 
 -- 2. Cuenta por cobrar generada desde la venta al credito del Estudiante 4
---    (venta id_venta = 1, total 5900.00, plazo_credito_dias = 30 -> vence 2026-10-02)
---    Tras el cobro parcial del paso 3 queda con monto_pagado = 2000.00,
---    saldo_pendiente = 3900.00 y estado PARCIAL.
+--    (venta id_venta = 1, total 1534.00, plazo_credito_dias = 30 -> vence 2026-10-02)
+--    RF013: la nota de credito FC01-00000012 (106.20) revierte parte del saldo.
+--    Tras el cobro parcial del paso 3: monto_pagado = 800.00 y
+--    saldo_pendiente = 1534.00 - 106.20 - 800.00 = 627.80, estado PAGADA_PARCIAL.
 INSERT INTO cuenta_por_cobrar (
     id_cuenta_por_cobrar, id_venta, id_cliente, fecha_emision, fecha_vencimiento,
     moneda, monto_original, monto_pagado, saldo_pendiente, estado
 ) VALUES (
     1, 1, 2, '2026-09-02', '2026-10-02',
-    'SOLES', 1534.00, 800.00, 734.00, 'PARCIAL'
+    'SOLES', 1534.00, 800.00, 627.80, 'PAGADA_PARCIAL'
 );
 
 -- 3. Cobro parcial de la cuenta por cobrar (sin Caja directa en el modelo Java;
@@ -874,7 +875,7 @@ INSERT INTO cobro (
     monto, referencia, id_usuario_registro, fecha_registro
 ) VALUES (
     1, 1, '2026-09-05', 'TRANSFERENCIA',
-    800.00, 'OP-458821', 1, '2026-09-05 09:30:00'
+    800.00, 'OP-458821', 2, '2026-09-05 09:30:00'
 );
 
 -- 4. Movimiento de caja: ingreso generado por el cobro anterior
@@ -883,8 +884,8 @@ INSERT INTO movimiento_caja (
     id_movimiento_caja, id_caja, tipo, fecha_movimiento, medio_pago,
     monto, concepto, documento_origen, id_documento_origen, id_usuario_registro
 ) VALUES (
-    1, 1, 'INGRESO', '2026-09-05 09:30:00', 'TRANSFERENCIA',
-    800.00, 'Cobro parcial CxC venta VTA-2026-0001', 'COBRO', 1, 1
+    1, 1, 'COBRO_CREDITO', '2026-09-05 09:30:00', 'TRANSFERENCIA',
+    800.00, 'Cobro parcial CxC venta VTA-2026-0001', 'COBRO', 1, 2
 );
 
 -- 5. Movimiento de caja: egreso manual (sin documento de origen)
@@ -892,12 +893,12 @@ INSERT INTO movimiento_caja (
     id_movimiento_caja, id_caja, tipo, fecha_movimiento, medio_pago,
     monto, concepto, documento_origen, id_documento_origen, id_usuario_registro
 ) VALUES (
-    2, 1, 'EGRESO', '2026-09-05 15:00:00', 'EFECTIVO',
-    150.00, 'Compra de utiles de oficina', NULL, NULL, 1
+    2, 1, 'EGRESO_MANUAL', '2026-09-05 15:00:00', 'EFECTIVO',
+    150.00, 'Compra de utiles de oficina', NULL, NULL, 2
 );
 
 -- 6. Cierre de caja del dia
---    monto_calculado = monto_inicial (500.00) + ingresos (2000.00) - egresos (150.00) = 2350.00
+--    monto_calculado = monto_inicial (500.00) + ingresos (800.00) - egresos (150.00) = 1150.00
 --    monto_declarado difiere en 5.00 (faltante) para ejercitar la comparacion en la prueba de Java.
 --    RF010: el ingreso del paso 4 viene de un COBRO, nunca de una NOTA_CREDITO,
 --    por eso el monto_calculado no se ve afectado por la nota de credito del Estudiante 4.
@@ -906,7 +907,7 @@ INSERT INTO cierre_caja (
     monto_declarado, diferencia, id_usuario_cierre
 ) VALUES (
     1, 1, '2026-09-05 20:00:00', 1150.00,
-    1145.00, -5.00, 1
+    1145.00, -5.00, 2
 );
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -927,3 +928,23 @@ ALTER TABLE movimiento_inventario
 ALTER TABLE movimiento_inventario
     ADD CONSTRAINT fk_movimiento_inventario_comprobante
         FOREIGN KEY (id_comprobante) REFERENCES comprobante(id_comprobante);
+
+-- ============ MOVIMIENTOS DE INVENTARIO DEL FLUJO DE VENTA ============
+-- Se registran aqui porque referencian despacho y comprobante (bloque 4).
+-- Despacho parcial T001-00000045 (almacenero, id_usuario = 3)
+INSERT INTO movimiento_inventario (
+    id_movimiento_inventario, id_producto, tipo, fecha_movimiento,
+    cantidad, stock_resultante, id_recepcion_compra, id_despacho, id_comprobante,
+    id_usuario_registro, motivo, cantidad_contada
+) VALUES
+    (2, 1, 'SALIDA_DESPACHO',    '2026-09-03 08:30:00', 12.000,  88.000, NULL, 1, NULL, 3, NULL, NULL),
+    (3, 2, 'SALIDA_DESPACHO',    '2026-09-03 08:30:00',  6.000,  44.000, NULL, 1, NULL, 3, NULL, NULL),
+    (4, 3, 'SALIDA_DESPACHO',    '2026-09-03 08:30:00', 25.000, 475.000, NULL, 1, NULL, 3, NULL, NULL),
+-- Reingreso de 2 martillos por la nota de credito FC01-00000012 (RF013)
+    (5, 1, 'INGRESO_DEVOLUCION', '2026-09-04 11:25:00',  2.000,  90.000, NULL, NULL, 2, 3,
+     'Devolucion por defecto de fabrica', NULL);
+
+-- Stock final de los productos, igual al ultimo stock_resultante
+UPDATE producto SET stock_actual =  90.000 WHERE id_producto = 1;
+UPDATE producto SET stock_actual =  44.000 WHERE id_producto = 2;
+UPDATE producto SET stock_actual = 475.000 WHERE id_producto = 3;
