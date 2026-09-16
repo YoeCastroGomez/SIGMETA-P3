@@ -15,7 +15,7 @@ import pe.edu.pucp.model.usuario.Usuario;
  */
 public class OrdenCompraCliente extends DocumentoComercial {
 
-    private int idOrdenCompraCliente;
+    private int id;
     private Cliente cliente;
     private Cotizacion cotizacion;
     private String numeroOrdenCliente;
@@ -27,9 +27,9 @@ public class OrdenCompraCliente extends DocumentoComercial {
         this.detalles = new ArrayList<>();
     }
 
-    public OrdenCompraCliente(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, Usuario usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int idOrdenCompraCliente, Cliente cliente, Cotizacion cotizacion, String numeroOrdenCliente, EstadoOrdenCompraCliente estado, List<DetalleOrdenCompraCliente> detalles) {
+    public OrdenCompraCliente(String numero, LocalDate fechaEmision, Moneda moneda, double subTotal, double igv, double total, String observaciones, LocalDateTime fechaRegistro, Usuario usuarioRegistro, boolean anulado, String motivoAnulacion, LocalDateTime fechaAnulacion, int id, Cliente cliente, Cotizacion cotizacion, String numeroOrdenCliente, EstadoOrdenCompraCliente estado, List<DetalleOrdenCompraCliente> detalles) {
         super(numero, fechaEmision, moneda, subTotal, igv, total, observaciones, fechaRegistro, usuarioRegistro, anulado, motivoAnulacion, fechaAnulacion);
-        this.idOrdenCompraCliente = idOrdenCompraCliente;
+        this.id = id;
         this.cliente = cliente;
         this.cotizacion = cotizacion;
         this.numeroOrdenCliente = numeroOrdenCliente;
@@ -37,12 +37,12 @@ public class OrdenCompraCliente extends DocumentoComercial {
         this.detalles = detalles;
     }
 
-    public int getIdOrdenCompraCliente() {
-        return idOrdenCompraCliente;
+    public int getId() {
+        return id;
     }
 
-    public void setIdOrdenCompraCliente(int idOrdenCompraCliente) {
-        this.idOrdenCompraCliente = idOrdenCompraCliente;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Cliente getCliente() {
