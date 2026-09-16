@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
  */
 public class Usuario {
 
-    private int idUsuario;
+    private int id;
     private String nombreUsuario;
     private String claveHash;
     private String salt;
@@ -21,10 +21,10 @@ public class Usuario {
     public Usuario() {
     }
 
-    public Usuario(int idUsuario, String nombreUsuario, String claveHash, String salt,
+    public Usuario(int id, String nombreUsuario, String claveHash, String salt,
                       String nombres, String apellidos, String correo, Rol rol,
                       boolean estado, LocalDateTime fechaRegistro) {
-        this.idUsuario = idUsuario;
+        this.id = id;
         this.nombreUsuario = nombreUsuario;
         this.claveHash = claveHash;
         this.salt = salt;
@@ -36,12 +36,12 @@ public class Usuario {
         this.fechaRegistro = fechaRegistro;
     }
 
-    public int getIdUsuario() {
-        return idUsuario;
+    public int getId() {
+        return id;
     }
 
-    public void setIdUsuario(int idUsuario) {
-        this.idUsuario = idUsuario;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public String getNombreUsuario() {
