@@ -8,7 +8,7 @@ import pe.edu.pucp.model.producto.Producto;
  */
 public class DetalleVenta extends LineaDocumento {
 
-    private int idDetalleVenta;
+    private int id;
     private Venta venta;
     private double cantidadDespachada;
 
@@ -16,19 +16,19 @@ public class DetalleVenta extends LineaDocumento {
         super();
     }
 
-    public DetalleVenta(int numeroLinea, Producto producto, double cantidad, double precioUnitario, double descuento, double importe, int idDetalleVenta, Venta venta, double cantidadDespachada) {
+    public DetalleVenta(int numeroLinea, Producto producto, double cantidad, double precioUnitario, double descuento, double importe, int id, Venta venta, double cantidadDespachada) {
         super(numeroLinea, producto, cantidad, precioUnitario, descuento, importe);
-        this.idDetalleVenta = idDetalleVenta;
+        this.id = id;
         this.venta = venta;
         this.cantidadDespachada = cantidadDespachada;
     }
 
-    public int getIdDetalleVenta() {
-        return idDetalleVenta;
+    public int getId() {
+        return id;
     }
 
-    public void setIdDetalleVenta(int idDetalleVenta) {
-        this.idDetalleVenta = idDetalleVenta;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Venta getVenta() {
