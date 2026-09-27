@@ -6,8 +6,10 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="sigmeta-dominio" />
+        <module name="sigmeta-dbmanager" />
         <module name="sigmeta-ejecucion" />
+        <module name="sigmeta-dao" />
+        <module name="sigmeta-dominio" />
       </profile>
     </annotationProcessing>
   </component>
