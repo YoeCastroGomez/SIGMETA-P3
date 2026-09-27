@@ -15,6 +15,8 @@
     <modules>
         <module>sigmeta-dominio</module>
         <module>sigmeta-ejecucion</module>
+        <module>sigmeta-dbmanager</module>
+        <module>sigmeta-dao</module>
     </modules>
 
     <properties>
