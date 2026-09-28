@@ -1,2 +1,4 @@
 pe\edu\pucp\Main.class
+pe\edu\pucp\sigmeta\dao\usuario\UsuarioDAO.class
 pe\edu\pucp\dao\BaseDAO.class
+pe\edu\pucp\sigmeta\dao\usuario\UsuarioDaoImpl.class
