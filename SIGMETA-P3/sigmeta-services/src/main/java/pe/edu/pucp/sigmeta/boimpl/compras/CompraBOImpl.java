@@ -12,6 +12,8 @@ import pe.edu.pucp.sigmeta.model.enums.EstadoCompra;
 import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
 import java.sql.SQLException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -33,6 +35,7 @@ public class CompraBOImpl implements CompraBO {
             throw new IllegalArgumentException("Una compra nueva debe estar REGISTRADA y no anulada");
         }
         validarDetalles(compra.getDetalles());
+        verificarSubtotal(compra, compra.getDetalles());
 
         try {
             compraDAO.save(compra);
@@ -66,6 +69,17 @@ public class CompraBOImpl implements CompraBO {
             if (existente.isAnulado() || existente.getEstado() != EstadoCompra.REGISTRADA) {
                 throw new IllegalArgumentException("La compra ya no se puede modificar");
             }
+            // Una modificacion de cabecera no puede desajustar el importe de las lineas guardadas.
+            List<DetalleCompra> lineas = new java.util.ArrayList<>();
+            for (DetalleCompra linea : detalleCompraDAO.listAll()) {
+                if (linea.getCompra().getId() == compra.getId()) {
+                    lineas.add(linea);
+                }
+            }
+            if (lineas.isEmpty()) {
+                throw new IllegalArgumentException("La compra no tiene detalles registrados");
+            }
+            verificarSubtotal(compra, lineas);
             compraDAO.update(compra);
             transactionContext.commit();
             return compra;
@@ -142,6 +156,18 @@ public class CompraBOImpl implements CompraBO {
         }
         if (Math.abs(compra.getSubTotal() + compra.getIgv() - compra.getTotal()) > 0.011) {
             throw new IllegalArgumentException("El total debe ser igual al subtotal mas el IGV");
+        }
+    }
+
+    private void verificarSubtotal(Compra compra, List<DetalleCompra> detalles) {
+        BigDecimal suma = BigDecimal.ZERO;
+        for (DetalleCompra detalle : detalles) {
+            suma = suma.add(BigDecimal.valueOf(detalle.getImporte()));
+        }
+        suma = suma.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal subtotal = BigDecimal.valueOf(compra.getSubTotal()).setScale(2, RoundingMode.HALF_UP);
+        if (suma.compareTo(subtotal) != 0) {
+            throw new IllegalArgumentException("El subtotal no coincide con la suma de importes de los detalles");
         }
     }
 
