@@ -1,5 +1,9 @@
 
--- ============ PROCEDIMIENTOS ALMACENADOS: COMPRA ============
+USE sigmeta;
+
+-- ============================================================
+-- PROCEDIMIENTOS ALMACENADOS: COMPRA
+-- ============================================================
 
 DELIMITER $$
 
@@ -62,7 +66,8 @@ BEGIN
       AND anulado = FALSE
       AND estado = 'REGISTRADA'
       AND NOT EXISTS (
-          SELECT 1 FROM recepcion_compra
+          SELECT 1
+          FROM recepcion_compra
           WHERE id_compra = p_id
       );
 END$$
@@ -104,7 +109,10 @@ BEGIN
     ORDER BY id;
 END$$
 
--- ============ PROCEDIMIENTOS: DETALLE COMPRA ============
+
+-- ============================================================
+-- PROCEDIMIENTOS ALMACENADOS: DETALLE COMPRA
+-- ============================================================
 
 CREATE PROCEDURE sp_detalle_compra_insertar(
     IN p_id_compra INT,
@@ -120,7 +128,8 @@ CREATE PROCEDURE sp_detalle_compra_insertar(
 )
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM compra
+        SELECT 1
+        FROM compra
         WHERE id = p_id_compra
           AND anulado = FALSE
           AND estado = 'REGISTRADA'
@@ -157,7 +166,8 @@ CREATE PROCEDURE sp_detalle_compra_modificar(
 )
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM compra
+        SELECT 1
+        FROM compra
         WHERE id = p_id_compra
           AND anulado = FALSE
           AND estado <> 'ANULADA'
@@ -167,7 +177,8 @@ BEGIN
     END IF;
 
     IF EXISTS (
-        SELECT 1 FROM detalle_compra
+        SELECT 1
+        FROM detalle_compra
         WHERE id = p_id
           AND id_compra <> p_id_compra
     ) THEN
@@ -214,7 +225,10 @@ BEGIN
         FROM detalle_compra dc
         INNER JOIN compra c ON c.id = dc.id_compra
         WHERE dc.id = p_id
-          AND c.estado <> 'REGISTRADA'
+          AND (
+              c.estado <> 'REGISTRADA'
+              OR c.anulado = TRUE
+          )
     ) THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'Solo se pueden eliminar detalles de compras registradas';
@@ -241,7 +255,10 @@ BEGIN
     ORDER BY id;
 END$$
 
--- ============ PROCEDIMIENTOS: RECEPCION COMPRA ============
+
+-- ============================================================
+-- PROCEDIMIENTOS ALMACENADOS: RECEPCION COMPRA
+-- ============================================================
 
 CREATE PROCEDURE sp_recepcion_compra_insertar(
     IN p_id_compra INT,
@@ -252,7 +269,8 @@ CREATE PROCEDURE sp_recepcion_compra_insertar(
 )
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM compra
+        SELECT 1
+        FROM compra
         WHERE id = p_id_compra
           AND anulado = FALSE
           AND estado IN ('REGISTRADA', 'RECIBIDA_PARCIAL')
@@ -308,7 +326,10 @@ BEGIN
     ORDER BY id;
 END$$
 
--- ============ PROCEDIMIENTOS: DETALLE RECEPCION COMPRA ============
+
+-- ============================================================
+-- PROCEDIMIENTOS ALMACENADOS: DETALLE RECEPCION COMPRA
+-- ============================================================
 
 CREATE PROCEDURE sp_detalle_recepcion_compra_insertar(
     IN p_id_recepcion_compra INT,
@@ -317,7 +338,8 @@ CREATE PROCEDURE sp_detalle_recepcion_compra_insertar(
     OUT p_id INT
 )
 BEGIN
-    IF p_cantidad_recibida <= 0 THEN
+    IF p_cantidad_recibida IS NULL
+       OR p_cantidad_recibida <= 0 THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'La cantidad recibida debe ser positiva';
     END IF;
@@ -325,7 +347,8 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1
         FROM recepcion_compra r
-        INNER JOIN detalle_compra d ON d.id = p_id_detalle_compra
+        INNER JOIN detalle_compra d
+            ON d.id = p_id_detalle_compra
         WHERE r.id = p_id_recepcion_compra
           AND r.id_compra = d.id_compra
     ) THEN
@@ -351,7 +374,8 @@ CREATE PROCEDURE sp_detalle_recepcion_compra_modificar(
     IN p_cantidad_recibida DECIMAL(12,3)
 )
 BEGIN
-    IF p_cantidad_recibida <= 0 THEN
+    IF p_cantidad_recibida IS NULL
+       OR p_cantidad_recibida <= 0 THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'La cantidad recibida debe ser positiva';
     END IF;
@@ -396,7 +420,10 @@ BEGIN
     ORDER BY id;
 END$$
 
--- ============ PROCEDIMIENTOS: MOVIMIENTO INVENTARIO ============
+
+-- ============================================================
+-- PROCEDIMIENTOS ALMACENADOS: MOVIMIENTO INVENTARIO
+-- ============================================================
 
 CREATE PROCEDURE sp_movimiento_inventario_insertar(
     IN p_id_producto INT,
@@ -412,7 +439,7 @@ CREATE PROCEDURE sp_movimiento_inventario_insertar(
     OUT p_id INT
 )
 BEGIN
-    IF p_cantidad <= 0 THEN
+    IF p_cantidad IS NULL OR p_cantidad <= 0 THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'La cantidad del movimiento debe ser positiva';
     END IF;
@@ -467,22 +494,36 @@ BEGIN
     ORDER BY id;
 END$$
 
-DELIMITER ;
 
+-- ============================================================
+-- PROCEDIMIENTO ADICIONAL: ACTUALIZAR ESTADO DE COMPRA
+-- ============================================================
 
 CREATE PROCEDURE sp_compra_actualizar_estado(
     IN p_id INT,
     IN p_estado VARCHAR(30)
 )
 BEGIN
-    IF p_estado NOT IN ('RECIBIDA_PARCIAL', 'RECIBIDA') THEN
+    IF p_estado IS NULL
+       OR p_estado NOT IN ('RECIBIDA_PARCIAL', 'RECIBIDA') THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'Estado de recepcion no valido';
     END IF;
 
+    IF NOT EXISTS (
+        SELECT 1
+        FROM compra
+        WHERE id = p_id
+          AND anulado = FALSE
+          AND estado IN ('REGISTRADA', 'RECIBIDA_PARCIAL')
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La compra no permite actualizar su estado de recepcion';
+    END IF;
+
     UPDATE compra
     SET estado = p_estado
-    WHERE id = p_id
-      AND anulado = FALSE
-      AND estado IN ('REGISTRADA', 'RECIBIDA_PARCIAL');
+    WHERE id = p_id;
 END$$
+
+DELIMITER ;
