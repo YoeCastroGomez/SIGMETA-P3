@@ -48,8 +48,7 @@ CREATE PROCEDURE sp_compra_modificar(
 )
 BEGIN
     UPDATE compra
-    SET
-        id_proveedor = p_id_proveedor,
+    SET id_proveedor = p_id_proveedor,
         numero = p_numero,
         fecha_emision = p_fecha_emision,
         moneda = p_moneda,
@@ -59,23 +58,19 @@ BEGIN
         observaciones = p_observaciones,
         estado = p_estado,
         fecha_recepcion_estimada = p_fecha_recepcion_estimada
-    WHERE id = p_id
-      AND anulado = FALSE;
+    WHERE id = p_id AND anulado = FALSE;
 END$$
 
 CREATE PROCEDURE sp_compra_eliminar(
-    IN p_id INT,
-    IN p_motivo_anulacion VARCHAR(200)
+    IN p_id INT
 )
 BEGIN
     UPDATE compra
-    SET
-        anulado = TRUE,
+    SET anulado = TRUE,
         estado = 'ANULADA',
-        motivo_anulacion = p_motivo_anulacion,
+        motivo_anulacion = 'Anulacion desde el sistema',
         fecha_anulacion = NOW()
-    WHERE id = p_id
-      AND anulado = FALSE;
+    WHERE id = p_id AND anulado = FALSE;
 END$$
 
 CREATE PROCEDURE sp_compra_obtener(
@@ -379,4 +374,3 @@ BEGIN
 END$$
 
 DELIMITER ;
-
