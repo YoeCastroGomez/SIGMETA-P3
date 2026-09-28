@@ -1,0 +1,382 @@
+
+-- ============ PROCEDIMIENTOS ALMACENADOS: COMPRA ============
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_compra_insertar(
+    IN p_id_proveedor INT,
+    IN p_numero VARCHAR(50),
+    IN p_fecha_emision DATE,
+    IN p_moneda VARCHAR(10),
+    IN p_sub_total DECIMAL(12,2),
+    IN p_igv DECIMAL(12,2),
+    IN p_total DECIMAL(12,2),
+    IN p_observaciones VARCHAR(255),
+    IN p_id_usuario_registro INT,
+    IN p_estado VARCHAR(30),
+    IN p_fecha_recepcion_estimada DATE,
+    OUT p_id INT
+)
+BEGIN
+    INSERT INTO compra (
+        id_proveedor, numero, fecha_emision, moneda,
+        sub_total, igv, total, observaciones,
+        fecha_registro, id_usuario_registro, anulado,
+        estado, fecha_recepcion_estimada
+    ) VALUES (
+        p_id_proveedor, p_numero, p_fecha_emision, p_moneda,
+        p_sub_total, p_igv, p_total, p_observaciones,
+        NOW(), p_id_usuario_registro, FALSE,
+        p_estado, p_fecha_recepcion_estimada
+    );
+
+    SET p_id = LAST_INSERT_ID();
+END$$
+
+CREATE PROCEDURE sp_compra_modificar(
+    IN p_id INT,
+    IN p_id_proveedor INT,
+    IN p_numero VARCHAR(50),
+    IN p_fecha_emision DATE,
+    IN p_moneda VARCHAR(10),
+    IN p_sub_total DECIMAL(12,2),
+    IN p_igv DECIMAL(12,2),
+    IN p_total DECIMAL(12,2),
+    IN p_observaciones VARCHAR(255),
+    IN p_estado VARCHAR(30),
+    IN p_fecha_recepcion_estimada DATE
+)
+BEGIN
+    UPDATE compra
+    SET
+        id_proveedor = p_id_proveedor,
+        numero = p_numero,
+        fecha_emision = p_fecha_emision,
+        moneda = p_moneda,
+        sub_total = p_sub_total,
+        igv = p_igv,
+        total = p_total,
+        observaciones = p_observaciones,
+        estado = p_estado,
+        fecha_recepcion_estimada = p_fecha_recepcion_estimada
+    WHERE id = p_id
+      AND anulado = FALSE;
+END$$
+
+CREATE PROCEDURE sp_compra_eliminar(
+    IN p_id INT,
+    IN p_motivo_anulacion VARCHAR(200)
+)
+BEGIN
+    UPDATE compra
+    SET
+        anulado = TRUE,
+        estado = 'ANULADA',
+        motivo_anulacion = p_motivo_anulacion,
+        fecha_anulacion = NOW()
+    WHERE id = p_id
+      AND anulado = FALSE;
+END$$
+
+CREATE PROCEDURE sp_compra_obtener(
+    IN p_id INT
+)
+BEGIN
+    SELECT *
+    FROM compra
+    WHERE id = p_id;
+END$$
+
+CREATE PROCEDURE sp_compra_listar()
+BEGIN
+    SELECT *
+    FROM compra
+    ORDER BY id;
+END$$
+
+DELIMITER ;
+
+
+-- ============ PROCEDIMIENTOS: DETALLE COMPRA ============
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_detalle_compra_insertar(
+    IN p_id_compra INT,
+    IN p_numero_linea INT,
+    IN p_id_producto INT,
+    IN p_cantidad DECIMAL(12,3),
+    IN p_precio_unitario DECIMAL(12,2),
+    IN p_descuento DECIMAL(12,2),
+    IN p_importe DECIMAL(12,2),
+    IN p_unidad_compra VARCHAR(20),
+    IN p_factor_conversion DECIMAL(12,3),
+    OUT p_id INT
+)
+BEGIN
+    INSERT INTO detalle_compra (
+        id_compra, numero_linea, id_producto,
+        cantidad, precio_unitario, descuento, importe,
+        unidad_compra, factor_conversion, cantidad_recibida
+    ) VALUES (
+        p_id_compra, p_numero_linea, p_id_producto,
+        p_cantidad, p_precio_unitario, p_descuento, p_importe,
+        p_unidad_compra, p_factor_conversion, 0
+    );
+
+    SET p_id = LAST_INSERT_ID();
+END$$
+
+CREATE PROCEDURE sp_detalle_compra_modificar(
+    IN p_id INT,
+    IN p_id_compra INT,
+    IN p_numero_linea INT,
+    IN p_id_producto INT,
+    IN p_cantidad DECIMAL(12,3),
+    IN p_precio_unitario DECIMAL(12,2),
+    IN p_descuento DECIMAL(12,2),
+    IN p_importe DECIMAL(12,2),
+    IN p_unidad_compra VARCHAR(20),
+    IN p_factor_conversion DECIMAL(12,3),
+    IN p_cantidad_recibida DECIMAL(12,3)
+)
+BEGIN
+    UPDATE detalle_compra
+    SET id_compra = p_id_compra,
+        numero_linea = p_numero_linea,
+        id_producto = p_id_producto,
+        cantidad = p_cantidad,
+        precio_unitario = p_precio_unitario,
+        descuento = p_descuento,
+        importe = p_importe,
+        unidad_compra = p_unidad_compra,
+        factor_conversion = p_factor_conversion,
+        cantidad_recibida = p_cantidad_recibida
+    WHERE id = p_id AND anulado = FALSE;
+END$$
+
+CREATE PROCEDURE sp_detalle_compra_eliminar(
+    IN p_id INT
+)
+BEGIN
+    UPDATE detalle_compra
+    SET anulado = TRUE
+    WHERE id = p_id AND anulado = FALSE;
+END$$
+
+CREATE PROCEDURE sp_detalle_compra_obtener(
+    IN p_id INT
+)
+BEGIN
+    SELECT *
+    FROM detalle_compra
+    WHERE id = p_id;
+END$$
+
+CREATE PROCEDURE sp_detalle_compra_listar()
+BEGIN
+    SELECT *
+    FROM detalle_compra
+    ORDER BY id;
+END$$
+
+DELIMITER ;
+
+
+-- ============ PROCEDIMIENTOS: RECEPCION COMPRA ============
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_recepcion_compra_insertar(
+    IN p_id_compra INT,
+    IN p_fecha_recepcion DATE,
+    IN p_observaciones VARCHAR(255),
+    IN p_id_usuario_registro INT,
+    OUT p_id INT
+)
+BEGIN
+    INSERT INTO recepcion_compra (
+        id_compra, fecha_recepcion, observaciones,
+        id_usuario_registro, fecha_registro
+    ) VALUES (
+        p_id_compra, p_fecha_recepcion, p_observaciones,
+        p_id_usuario_registro, NOW()
+    );
+
+    SET p_id = LAST_INSERT_ID();
+END$$
+
+CREATE PROCEDURE sp_recepcion_compra_modificar(
+    IN p_id INT,
+    IN p_fecha_recepcion DATE,
+    IN p_observaciones VARCHAR(255)
+)
+BEGIN
+    UPDATE recepcion_compra
+    SET fecha_recepcion = p_fecha_recepcion,
+        observaciones = p_observaciones
+    WHERE id = p_id AND anulado = FALSE;
+END$$
+
+CREATE PROCEDURE sp_recepcion_compra_eliminar(
+    IN p_id INT
+)
+BEGIN
+    UPDATE recepcion_compra
+    SET anulado = TRUE
+    WHERE id = p_id AND anulado = FALSE;
+END$$
+
+CREATE PROCEDURE sp_recepcion_compra_obtener(
+    IN p_id INT
+)
+BEGIN
+    SELECT *
+    FROM recepcion_compra
+    WHERE id = p_id;
+END$$
+
+CREATE PROCEDURE sp_recepcion_compra_listar()
+BEGIN
+    SELECT *
+    FROM recepcion_compra
+    ORDER BY id;
+END$$
+
+DELIMITER ;
+
+
+-- ============ PROCEDIMIENTOS: DETALLE RECEPCION COMPRA ============
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_detalle_recepcion_compra_insertar(
+    IN p_id_recepcion_compra INT,
+    IN p_id_detalle_compra INT,
+    IN p_cantidad_recibida DECIMAL(12,3),
+    OUT p_id INT
+)
+BEGIN
+    INSERT INTO detalle_recepcion_compra (
+        id_recepcion_compra,
+        id_detalle_compra,
+        cantidad_recibida
+    ) VALUES (
+        p_id_recepcion_compra,
+        p_id_detalle_compra,
+        p_cantidad_recibida
+    );
+
+    SET p_id = LAST_INSERT_ID();
+END$$
+
+CREATE PROCEDURE sp_detalle_recepcion_compra_modificar(
+    IN p_id INT,
+    IN p_cantidad_recibida DECIMAL(12,3)
+)
+BEGIN
+    UPDATE detalle_recepcion_compra
+    SET cantidad_recibida = p_cantidad_recibida
+    WHERE id = p_id AND anulado = FALSE;
+END$$
+
+CREATE PROCEDURE sp_detalle_recepcion_compra_eliminar(
+    IN p_id INT
+)
+BEGIN
+    UPDATE detalle_recepcion_compra
+    SET anulado = TRUE
+    WHERE id = p_id AND anulado = FALSE;
+END$$
+
+CREATE PROCEDURE sp_detalle_recepcion_compra_obtener(
+    IN p_id INT
+)
+BEGIN
+    SELECT *
+    FROM detalle_recepcion_compra
+    WHERE id = p_id;
+END$$
+
+CREATE PROCEDURE sp_detalle_recepcion_compra_listar()
+BEGIN
+    SELECT *
+    FROM detalle_recepcion_compra
+    ORDER BY id;
+END$$
+
+DELIMITER ;
+
+
+-- ============ PROCEDIMIENTOS: MOVIMIENTO INVENTARIO ============
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_movimiento_inventario_insertar(
+    IN p_id_producto INT,
+    IN p_tipo VARCHAR(30),
+    IN p_cantidad DECIMAL(12,3),
+    IN p_stock_resultante DECIMAL(12,3),
+    IN p_id_recepcion_compra INT,
+    IN p_id_despacho INT,
+    IN p_id_comprobante INT,
+    IN p_id_usuario_registro INT,
+    IN p_motivo VARCHAR(255),
+    IN p_cantidad_contada DECIMAL(12,3),
+    OUT p_id INT
+)
+BEGIN
+    INSERT INTO movimiento_inventario (
+        id_producto, tipo, fecha_movimiento,
+        cantidad, stock_resultante,
+        id_recepcion_compra, id_despacho, id_comprobante,
+        id_usuario_registro, motivo, cantidad_contada
+    ) VALUES (
+        p_id_producto, p_tipo, NOW(),
+        p_cantidad, p_stock_resultante,
+        p_id_recepcion_compra, p_id_despacho, p_id_comprobante,
+        p_id_usuario_registro, p_motivo, p_cantidad_contada
+    );
+
+    SET p_id = LAST_INSERT_ID();
+END$$
+
+CREATE PROCEDURE sp_movimiento_inventario_modificar(
+    IN p_id INT,
+    IN p_motivo VARCHAR(255),
+    IN p_cantidad_contada DECIMAL(12,3)
+)
+BEGIN
+    UPDATE movimiento_inventario
+    SET motivo = p_motivo,
+        cantidad_contada = p_cantidad_contada
+    WHERE id = p_id AND anulado = FALSE;
+END$$
+
+CREATE PROCEDURE sp_movimiento_inventario_eliminar(
+    IN p_id INT
+)
+BEGIN
+    UPDATE movimiento_inventario
+    SET anulado = TRUE
+    WHERE id = p_id AND anulado = FALSE;
+END$$
+
+CREATE PROCEDURE sp_movimiento_inventario_obtener(
+    IN p_id INT
+)
+BEGIN
+    SELECT *
+    FROM movimiento_inventario
+    WHERE id = p_id;
+END$$
+
+CREATE PROCEDURE sp_movimiento_inventario_listar()
+BEGIN
+    SELECT *
+    FROM movimiento_inventario
+    ORDER BY id;
+END$$
+
+DELIMITER ;
+
