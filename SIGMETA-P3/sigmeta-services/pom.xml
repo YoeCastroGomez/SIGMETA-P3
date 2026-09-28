@@ -3,26 +3,24 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>pe.edu.pucp</groupId>
+        <artifactId>sigmeta</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
 
-    <groupId>pe.edu.pucp</groupId>
-    <artifactId>sigmeta</artifactId>
-    <version>1.0-SNAPSHOT</version>
-    <packaging>pom</packaging>
-
-    <name>sigmeta</name>
-    <description>Sistema de gestion para GRUPO META.</description>
-
-    <modules>
-        <module>sigmeta-dominio</module>
-        <module>sigmeta-ejecucion</module>
-        <module>sigmeta-dbmanager</module>
-        <module>sigmeta-dao</module>
-        <module>sigmeta-services</module>
-    </modules>
-
+    <artifactId>sigmeta-services</artifactId>
+    <dependencies>
+        <dependency>
+            <groupId>pe.edu.pucp</groupId>
+            <artifactId>sigmeta-dao</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+
 </project>
