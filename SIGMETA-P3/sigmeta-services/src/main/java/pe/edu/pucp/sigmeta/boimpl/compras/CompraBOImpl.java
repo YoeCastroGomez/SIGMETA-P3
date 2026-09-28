@@ -12,6 +12,9 @@ import pe.edu.pucp.sigmeta.model.enums.EstadoCompra;
 import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
 import java.sql.SQLException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.HashSet;
@@ -62,6 +65,15 @@ public class CompraBOImpl implements CompraBO {
         }
 
         try {
+            Connection conn = transactionContext.getConnection();
+            try (PreparedStatement ps = conn.prepareStatement("SELECT id FROM compra WHERE id = ? FOR UPDATE")) {
+                ps.setInt(1, compra.getId());
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        throw new IllegalArgumentException("No existe la compra con ID " + compra.getId());
+                    }
+                }
+            }
             Compra existente = compraDAO.load(compra.getId());
             if (existente == null) {
                 throw new IllegalArgumentException("No existe la compra con ID " + compra.getId());
