@@ -58,13 +58,28 @@ BEGIN
         observaciones = p_observaciones,
         estado = p_estado,
         fecha_recepcion_estimada = p_fecha_recepcion_estimada
-    WHERE id = p_id AND anulado = FALSE;
+    WHERE id = p_id
+      AND anulado = FALSE
+      AND estado = 'REGISTRADA'
+      AND NOT EXISTS (
+          SELECT 1 FROM recepcion_compra
+          WHERE id_compra = p_id
+      );
 END$$
 
 CREATE PROCEDURE sp_compra_eliminar(
     IN p_id INT
 )
 BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM recepcion_compra
+        WHERE id_compra = p_id
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'No se puede anular una compra con recepciones registradas';
+    END IF;
+
     UPDATE compra
     SET anulado = TRUE,
         estado = 'ANULADA',
@@ -89,12 +104,7 @@ BEGIN
     ORDER BY id;
 END$$
 
-DELIMITER ;
-
-
 -- ============ PROCEDIMIENTOS: DETALLE COMPRA ============
-
-DELIMITER $$
 
 CREATE PROCEDURE sp_detalle_compra_insertar(
     IN p_id_compra INT,
@@ -109,6 +119,16 @@ CREATE PROCEDURE sp_detalle_compra_insertar(
     OUT p_id INT
 )
 BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM compra
+        WHERE id = p_id_compra
+          AND anulado = FALSE
+          AND estado = 'REGISTRADA'
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La compra no permite agregar detalles';
+    END IF;
+
     INSERT INTO detalle_compra (
         id_compra, numero_linea, id_producto,
         cantidad, precio_unitario, descuento, importe,
@@ -136,9 +156,27 @@ CREATE PROCEDURE sp_detalle_compra_modificar(
     IN p_cantidad_recibida DECIMAL(12,3)
 )
 BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM compra
+        WHERE id = p_id_compra
+          AND anulado = FALSE
+          AND estado <> 'ANULADA'
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La compra no esta disponible';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM detalle_compra
+        WHERE id = p_id
+          AND id_compra <> p_id_compra
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'No se puede trasladar el detalle a otra compra';
+    END IF;
+
     UPDATE detalle_compra
-    SET id_compra = p_id_compra,
-        numero_linea = p_numero_linea,
+    SET numero_linea = p_numero_linea,
         id_producto = p_id_producto,
         cantidad = p_cantidad,
         precio_unitario = p_precio_unitario,
@@ -147,16 +185,44 @@ BEGIN
         unidad_compra = p_unidad_compra,
         factor_conversion = p_factor_conversion,
         cantidad_recibida = p_cantidad_recibida
-    WHERE id = p_id AND anulado = FALSE;
+    WHERE id = p_id
+      AND p_cantidad >= p_cantidad_recibida
+      AND (
+          p_cantidad_recibida = 0
+          OR (
+              id_producto = p_id_producto
+              AND cantidad_recibida <= p_cantidad_recibida
+          )
+      );
 END$$
 
 CREATE PROCEDURE sp_detalle_compra_eliminar(
     IN p_id INT
 )
 BEGIN
-    UPDATE detalle_compra
-    SET anulado = TRUE
-    WHERE id = p_id AND anulado = FALSE;
+    IF EXISTS (
+        SELECT 1
+        FROM detalle_recepcion_compra
+        WHERE id_detalle_compra = p_id
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'No se puede eliminar un detalle que ya tiene recepciones';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM detalle_compra dc
+        INNER JOIN compra c ON c.id = dc.id_compra
+        WHERE dc.id = p_id
+          AND c.estado <> 'REGISTRADA'
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Solo se pueden eliminar detalles de compras registradas';
+    END IF;
+
+    DELETE FROM detalle_compra
+    WHERE id = p_id
+      AND cantidad_recibida = 0;
 END$$
 
 CREATE PROCEDURE sp_detalle_compra_obtener(
@@ -175,12 +241,7 @@ BEGIN
     ORDER BY id;
 END$$
 
-DELIMITER ;
-
-
 -- ============ PROCEDIMIENTOS: RECEPCION COMPRA ============
-
-DELIMITER $$
 
 CREATE PROCEDURE sp_recepcion_compra_insertar(
     IN p_id_compra INT,
@@ -190,6 +251,16 @@ CREATE PROCEDURE sp_recepcion_compra_insertar(
     OUT p_id INT
 )
 BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM compra
+        WHERE id = p_id_compra
+          AND anulado = FALSE
+          AND estado IN ('REGISTRADA', 'RECIBIDA_PARCIAL')
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La compra no permite registrar nuevas recepciones';
+    END IF;
+
     INSERT INTO recepcion_compra (
         id_compra, fecha_recepcion, observaciones,
         id_usuario_registro, fecha_registro
@@ -210,16 +281,15 @@ BEGIN
     UPDATE recepcion_compra
     SET fecha_recepcion = p_fecha_recepcion,
         observaciones = p_observaciones
-    WHERE id = p_id AND anulado = FALSE;
+    WHERE id = p_id;
 END$$
 
 CREATE PROCEDURE sp_recepcion_compra_eliminar(
     IN p_id INT
 )
 BEGIN
-    UPDATE recepcion_compra
-    SET anulado = TRUE
-    WHERE id = p_id AND anulado = FALSE;
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'No se permite eliminar recepciones historicas';
 END$$
 
 CREATE PROCEDURE sp_recepcion_compra_obtener(
@@ -238,12 +308,7 @@ BEGIN
     ORDER BY id;
 END$$
 
-DELIMITER ;
-
-
 -- ============ PROCEDIMIENTOS: DETALLE RECEPCION COMPRA ============
-
-DELIMITER $$
 
 CREATE PROCEDURE sp_detalle_recepcion_compra_insertar(
     IN p_id_recepcion_compra INT,
@@ -252,6 +317,22 @@ CREATE PROCEDURE sp_detalle_recepcion_compra_insertar(
     OUT p_id INT
 )
 BEGIN
+    IF p_cantidad_recibida <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La cantidad recibida debe ser positiva';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM recepcion_compra r
+        INNER JOIN detalle_compra d ON d.id = p_id_detalle_compra
+        WHERE r.id = p_id_recepcion_compra
+          AND r.id_compra = d.id_compra
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'El detalle no pertenece a la compra de esta recepcion';
+    END IF;
+
     INSERT INTO detalle_recepcion_compra (
         id_recepcion_compra,
         id_detalle_compra,
@@ -270,18 +351,33 @@ CREATE PROCEDURE sp_detalle_recepcion_compra_modificar(
     IN p_cantidad_recibida DECIMAL(12,3)
 )
 BEGIN
+    IF p_cantidad_recibida <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La cantidad recibida debe ser positiva';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM detalle_recepcion_compra dr
+        INNER JOIN movimiento_inventario m
+            ON m.id_recepcion_compra = dr.id_recepcion_compra
+        WHERE dr.id = p_id
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'No se puede modificar una recepcion que ya genero movimientos';
+    END IF;
+
     UPDATE detalle_recepcion_compra
     SET cantidad_recibida = p_cantidad_recibida
-    WHERE id = p_id AND anulado = FALSE;
+    WHERE id = p_id;
 END$$
 
 CREATE PROCEDURE sp_detalle_recepcion_compra_eliminar(
     IN p_id INT
 )
 BEGIN
-    UPDATE detalle_recepcion_compra
-    SET anulado = TRUE
-    WHERE id = p_id AND anulado = FALSE;
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'No se permite eliminar detalles de recepciones historicas';
 END$$
 
 CREATE PROCEDURE sp_detalle_recepcion_compra_obtener(
@@ -300,12 +396,7 @@ BEGIN
     ORDER BY id;
 END$$
 
-DELIMITER ;
-
-
 -- ============ PROCEDIMIENTOS: MOVIMIENTO INVENTARIO ============
-
-DELIMITER $$
 
 CREATE PROCEDURE sp_movimiento_inventario_insertar(
     IN p_id_producto INT,
@@ -321,6 +412,11 @@ CREATE PROCEDURE sp_movimiento_inventario_insertar(
     OUT p_id INT
 )
 BEGIN
+    IF p_cantidad <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'La cantidad del movimiento debe ser positiva';
+    END IF;
+
     INSERT INTO movimiento_inventario (
         id_producto, tipo, fecha_movimiento,
         cantidad, stock_resultante,
@@ -343,18 +439,16 @@ CREATE PROCEDURE sp_movimiento_inventario_modificar(
 )
 BEGIN
     UPDATE movimiento_inventario
-    SET motivo = p_motivo,
-        cantidad_contada = p_cantidad_contada
-    WHERE id = p_id AND anulado = FALSE;
+    SET motivo = p_motivo
+    WHERE id = p_id;
 END$$
 
 CREATE PROCEDURE sp_movimiento_inventario_eliminar(
     IN p_id INT
 )
 BEGIN
-    UPDATE movimiento_inventario
-    SET anulado = TRUE
-    WHERE id = p_id AND anulado = FALSE;
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'No se permite eliminar movimientos historicos de inventario';
 END$$
 
 CREATE PROCEDURE sp_movimiento_inventario_obtener(
