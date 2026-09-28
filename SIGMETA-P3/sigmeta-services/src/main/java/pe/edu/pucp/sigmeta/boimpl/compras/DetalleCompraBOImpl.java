@@ -12,6 +12,11 @@ import pe.edu.pucp.sigmeta.model.enums.EstadoCompra;
 import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
 import java.sql.SQLException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 public class DetalleCompraBOImpl implements DetalleCompraBO {
@@ -32,9 +37,10 @@ public class DetalleCompraBOImpl implements DetalleCompraBO {
         }
 
         try {
-            obtenerCompraEditable(detalle.getCompra().getId());
+            Compra compra = bloquearCompraEditable(detalle.getCompra().getId());
             verificarNumeroLinea(detalle, 0);
             detalleCompraDAO.save(detalle);
+            recalcularTotales(compra);
             transactionContext.commit();
             return detalle;
         } catch (SQLException | RuntimeException e) {
@@ -51,17 +57,18 @@ public class DetalleCompraBOImpl implements DetalleCompraBO {
         validarId(detalle.getId());
 
         try {
+            Compra compra = bloquearCompraEditable(detalle.getCompra().getId());
             DetalleCompra existente = obtenerExistente(detalle.getId());
             if (existente.getCompra().getId() != detalle.getCompra().getId()) {
                 throw new IllegalArgumentException("No se puede trasladar el detalle a otra compra");
             }
-            obtenerCompraEditable(detalle.getCompra().getId());
             if (existente.getCantidadRecibida() > 0 || detalle.getCantidadRecibida() != 0) {
                 throw new IllegalArgumentException("No se puede editar un detalle que ya tiene cantidades recibidas");
             }
             verificarNumeroLinea(detalle, detalle.getId());
 
             detalleCompraDAO.update(detalle);
+            recalcularTotales(compra);
             transactionContext.commit();
             return detalle;
         } catch (SQLException | RuntimeException e) {
@@ -77,11 +84,17 @@ public class DetalleCompraBOImpl implements DetalleCompraBO {
         validarId(idDetalleCompra);
         try {
             DetalleCompra detalle = obtenerExistente(idDetalleCompra);
-            obtenerCompraEditable(detalle.getCompra().getId());
+            Compra compra = bloquearCompraEditable(detalle.getCompra().getId());
             if (detalle.getCantidadRecibida() > 0) {
                 throw new IllegalArgumentException("No se puede eliminar un detalle con cantidades recibidas");
             }
+            long numeroDetalles = detalleCompraDAO.listAll().stream()
+                    .filter(linea -> linea.getCompra().getId() == compra.getId()).count();
+            if (numeroDetalles <= 1) {
+                throw new IllegalArgumentException("No se puede eliminar el ultimo detalle de la compra");
+            }
             detalleCompraDAO.remove(detalle);
+            recalcularTotales(compra);
             transactionContext.commit();
         } catch (SQLException | RuntimeException e) {
             transactionContext.rollback();
@@ -108,6 +121,34 @@ public class DetalleCompraBOImpl implements DetalleCompraBO {
         } finally {
             transactionContext.close();
         }
+    }
+
+    private Compra bloquearCompraEditable(int idCompra) throws SQLException {
+        Connection conn = transactionContext.getConnection();
+        try (PreparedStatement ps = conn.prepareStatement("SELECT id FROM compra WHERE id = ? FOR UPDATE")) {
+            ps.setInt(1, idCompra);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    throw new IllegalArgumentException("No existe la compra con ID " + idCompra);
+                }
+            }
+        }
+        return obtenerCompraEditable(idCompra);
+    }
+
+    private void recalcularTotales(Compra compra) throws SQLException {
+        BigDecimal subtotal = BigDecimal.ZERO;
+        for (DetalleCompra linea : detalleCompraDAO.listAll()) {
+            if (linea.getCompra().getId() == compra.getId()) {
+                subtotal = subtotal.add(BigDecimal.valueOf(linea.getImporte()));
+            }
+        }
+        subtotal = subtotal.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal igv = subtotal.multiply(new BigDecimal("0.18")).setScale(2, RoundingMode.HALF_UP);
+        compra.setSubTotal(subtotal.doubleValue());
+        compra.setIgv(igv.doubleValue());
+        compra.setTotal(subtotal.add(igv).doubleValue());
+        compraDAO.update(compra);
     }
 
     private Compra obtenerCompraEditable(int idCompra) throws SQLException {
