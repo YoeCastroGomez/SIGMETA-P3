@@ -468,3 +468,21 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+
+CREATE PROCEDURE sp_compra_actualizar_estado(
+    IN p_id INT,
+    IN p_estado VARCHAR(30)
+)
+BEGIN
+    IF p_estado NOT IN ('RECIBIDA_PARCIAL', 'RECIBIDA') THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Estado de recepcion no valido';
+    END IF;
+
+    UPDATE compra
+    SET estado = p_estado
+    WHERE id = p_id
+      AND anulado = FALSE
+      AND estado IN ('REGISTRADA', 'RECIBIDA_PARCIAL');
+END$$
