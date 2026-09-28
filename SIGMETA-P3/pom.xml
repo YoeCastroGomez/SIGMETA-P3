@@ -9,7 +9,7 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>SIGMETA</name>
+    <name>sigmeta</name>
     <description>Sistema de gestion para GRUPO META.</description>
 
     <modules>

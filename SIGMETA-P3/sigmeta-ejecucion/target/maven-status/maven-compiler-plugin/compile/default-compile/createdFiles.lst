@@ -1,8 +1,5 @@
-pe\edu\pucp\ejecucion\PruebaCatalogo.class
-pe\edu\pucp\ejecucion\PruebaAbastecimiento.class
+pe\edu\pucp\sigmeta\ejecucion\PruebaInsert.class
 pe\edu\pucp\ejecucion\Main.class
-pe\edu\pucp\ejecucion\PruebaSeguridad.class
 pe\edu\pucp\ejecucion\DatosCatalogo.class
 pe\edu\pucp\ejecucion\DatosMaestros.class
-pe\edu\pucp\ejecucion\PruebaCaja.class
-pe\edu\pucp\ejecucion\PruebaVenta.class
+pe\edu\pucp\sigmeta\ejecucion\PruebaSelect.class

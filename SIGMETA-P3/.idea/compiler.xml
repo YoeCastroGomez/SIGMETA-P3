@@ -12,5 +12,8 @@
         <module name="sigmeta-dominio" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="sigmeta-db-manager" target="26" />
+    </bytecodeTargetLevel>
   </component>
 </project>

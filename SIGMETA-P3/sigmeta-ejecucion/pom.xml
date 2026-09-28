@@ -22,5 +22,10 @@
             <artifactId>sigmeta-dominio</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>pe.edu.pucp</groupId>
+            <artifactId>sigmeta-dbmanager</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 </project>
