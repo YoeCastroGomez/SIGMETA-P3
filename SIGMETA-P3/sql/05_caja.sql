@@ -1,5 +1,5 @@
 
--- 04_venta.sql | Estudiante 4 | SIGMETA
+-- 05_caja.sql | Estudiante 5 | SIGMETA
 -- Bloque Comercial: ordenes de compra de clientes, ventas, comprobantes y despachos
 
 -- ============ TABLAS ============
