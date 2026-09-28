@@ -40,7 +40,10 @@ public class CompraDAOImpl implements CompraDAO {
             cs.setString(10, compra.getEstado().name());
 
             if (compra.getFechaRecepcionEstimada() != null) {
-                cs.setDate(11, Date.valueOf(compra.getFechaRecepcionEstimada()));
+                cs.setDate(
+                        11,
+                        Date.valueOf(compra.getFechaRecepcionEstimada())
+                );
             } else {
                 cs.setNull(11, Types.DATE);
             }
@@ -49,6 +52,7 @@ public class CompraDAOImpl implements CompraDAO {
             cs.execute();
 
             compra.setId(cs.getInt(12));
+
             return compra;
         }
     }
@@ -91,12 +95,16 @@ public class CompraDAOImpl implements CompraDAO {
             cs.setString(10, compra.getEstado().name());
 
             if (compra.getFechaRecepcionEstimada() != null) {
-                cs.setDate(11, Date.valueOf(compra.getFechaRecepcionEstimada()));
+                cs.setDate(
+                        11,
+                        Date.valueOf(compra.getFechaRecepcionEstimada())
+                );
             } else {
                 cs.setNull(11, Types.DATE);
             }
 
-            cs.executeUpdate();
+            cs.execute();
+
             return compra;
         }
     }
@@ -109,7 +117,7 @@ public class CompraDAOImpl implements CompraDAO {
 
         try (CallableStatement cs = conn.prepareCall(sql)) {
             cs.setInt(1, compra.getId());
-            cs.executeUpdate();
+            cs.execute();
         }
     }
 
@@ -131,6 +139,22 @@ public class CompraDAOImpl implements CompraDAO {
         return compras;
     }
 
+    @Override
+    public void actualizarEstado(int idCompra, EstadoCompra estado)
+            throws SQLException {
+
+        String sql = "{CALL sp_compra_actualizar_estado(?,?)}";
+
+        Connection conn = transactionContext.getConnection();
+
+        try (CallableStatement cs = conn.prepareCall(sql)) {
+            cs.setInt(1, idCompra);
+            cs.setString(2, estado.name());
+
+            cs.execute();
+        }
+    }
+
     private Compra mapearCompra(ResultSet rs) throws SQLException {
         Compra compra = new Compra();
 
@@ -138,17 +162,22 @@ public class CompraDAOImpl implements CompraDAO {
         compra.setNumero(rs.getString("numero"));
 
         Date fechaEmision = rs.getDate("fecha_emision");
+
         if (fechaEmision != null) {
             compra.setFechaEmision(fechaEmision.toLocalDate());
         }
 
-        compra.setMoneda(Moneda.valueOf(rs.getString("moneda")));
+        compra.setMoneda(
+                Moneda.valueOf(rs.getString("moneda"))
+        );
+
         compra.setSubTotal(rs.getDouble("sub_total"));
         compra.setIgv(rs.getDouble("igv"));
         compra.setTotal(rs.getDouble("total"));
         compra.setObservaciones(rs.getString("observaciones"));
 
         Timestamp fechaRegistro = rs.getTimestamp("fecha_registro");
+
         if (fechaRegistro != null) {
             compra.setFechaRegistro(fechaRegistro.toLocalDateTime());
         }
@@ -157,13 +186,17 @@ public class CompraDAOImpl implements CompraDAO {
         compra.setMotivoAnulacion(rs.getString("motivo_anulacion"));
 
         Timestamp fechaAnulacion = rs.getTimestamp("fecha_anulacion");
+
         if (fechaAnulacion != null) {
             compra.setFechaAnulacion(fechaAnulacion.toLocalDateTime());
         }
 
-        compra.setEstado(EstadoCompra.valueOf(rs.getString("estado")));
+        compra.setEstado(
+                EstadoCompra.valueOf(rs.getString("estado"))
+        );
 
         Date fechaEstimada = rs.getDate("fecha_recepcion_estimada");
+
         if (fechaEstimada != null) {
             compra.setFechaRecepcionEstimada(fechaEstimada.toLocalDate());
         }
