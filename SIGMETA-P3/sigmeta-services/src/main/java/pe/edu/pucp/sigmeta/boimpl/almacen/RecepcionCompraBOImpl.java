@@ -191,10 +191,13 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
             if (existente == null) {
                 throw new IllegalArgumentException("No existe la recepcion con ID " + recepcion.getId());
             }
+            if (!existente.getFechaRecepcion().equals(recepcion.getFechaRecepcion())) {
+                throw new IllegalArgumentException("La fecha historica de recepcion no puede modificarse");
+            }
             if (existente.getCompra().getId() != recepcion.getCompra().getId()) {
                 throw new IllegalArgumentException("No se puede cambiar la compra de una recepcion");
             }
-            // Solo actualiza fecha y observaciones, nunca cantidades ni movimientos historicos.
+            // La fecha permanece inalterada; se permite corregir solo las observaciones.
             recepcionDAO.update(recepcion);
             transactionContext.commit();
             return recepcion;
