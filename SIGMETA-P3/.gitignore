@@ -1,0 +1,18 @@
+# Compilados de Maven (se generan al compilar)
+target/
+
+# Archivos compilados sueltos
+*.class
+
+# IntelliJ: configuracion personal de cada integrante
+.idea/workspace.xml
+.idea/shelf/
+*.iml
+out/
+
+# Archivos comprimidos
+*.zip
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
