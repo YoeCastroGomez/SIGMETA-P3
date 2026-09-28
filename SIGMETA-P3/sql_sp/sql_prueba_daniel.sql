@@ -1,12 +1,11 @@
 
 -- =========================================================================
--- PRUEBAS DE PROCEDIMIENTOS ALMACENADOS
+-- SCRIPT DE PRUEBAS PARA PROCEDIMIENTOS ALMACENADOS
 -- MODULO ABASTECIMIENTO E INVENTARIO
 -- =========================================================================
 
 USE sigmeta;
 
--- Las pruebas se revierten al finalizar.
 START TRANSACTION;
 
 -- ---------------------------------------------------------
@@ -66,7 +65,7 @@ CALL sp_detalle_compra_insertar(
     @id_detalle_compra
 );
 
-SELECT @id_detalle_compra AS 'ID Detalle Compra';
+SELECT @id_detalle_compra AS 'ID Detalle Compra Generado';
 
 CALL sp_detalle_compra_obtener(@id_detalle_compra);
 
@@ -123,11 +122,12 @@ CALL sp_detalle_recepcion_compra_insertar(
     @id_detalle_recepcion
 );
 
-SELECT @id_detalle_recepcion AS 'ID Detalle Recepcion';
+SELECT @id_detalle_recepcion AS 'ID Detalle Recepcion Generado';
 
 CALL sp_detalle_recepcion_compra_obtener(@id_detalle_recepcion);
 
 -- Modificamos la cantidad recibida de 1 a 2 unidades.
+
 CALL sp_detalle_recepcion_compra_modificar(
     @id_detalle_recepcion,
     2.000
@@ -135,7 +135,8 @@ CALL sp_detalle_recepcion_compra_modificar(
 
 CALL sp_detalle_recepcion_compra_listar();
 
--- Actualizamos el acumulado del detalle de compra.
+-- Actualizamos la cantidad recibida acumulada del detalle de compra.
+
 CALL sp_detalle_compra_modificar(
     @id_detalle_compra,
     @id_compra,
@@ -150,28 +151,16 @@ CALL sp_detalle_compra_modificar(
     2.000
 );
 
--- Actualizamos el estado de la compra.
-CALL sp_compra_modificar(
-    @id_compra,
-    1,
-    'COMP-TEST-001',
-    '2026-09-28',
-    'SOLES',
-    96.00,
-    17.28,
-    113.28,
-    'Compra recibida parcialmente',
-    'RECIBIDA_PARCIAL',
-    '2026-10-03'
-);
+CALL sp_detalle_compra_obtener(@id_detalle_compra);
 
 
 -- ---------------------------------------------------------
 -- 5. PRUEBA: MOVIMIENTO INVENTARIO
 -- ---------------------------------------------------------
 
--- Se usa un stock resultante ficticio de 102 para probar el SP.
--- Esta llamada no actualiza producto.stock_actual.
+-- Se registra un movimiento de ingreso por las 2 unidades recibidas.
+-- El stock resultante es un valor de prueba.
+-- Este procedimiento no actualiza automaticamente producto.stock_actual.
 
 CALL sp_movimiento_inventario_insertar(
     1,
@@ -201,60 +190,112 @@ CALL sp_movimiento_inventario_listar();
 
 
 -- ---------------------------------------------------------
--- 6. PRUEBAS DE ELIMINACION LOGICA
+-- 6. PRUEBA: ELIMINACION DE DETALLE Y ANULACION DE COMPRA
 -- ---------------------------------------------------------
 
-CALL sp_movimiento_inventario_eliminar(@id_movimiento);
+-- Creamos una segunda compra para probar la anulacion.
+-- Esta compra no tendra recepciones asociadas.
 
-CALL sp_detalle_recepcion_compra_eliminar(@id_detalle_recepcion);
+CALL sp_compra_insertar(
+    1,
+    'COMP-TEST-ANULACION',
+    '2026-09-28',
+    'SOLES',
+    50.00,
+    9.00,
+    59.00,
+    'Compra creada para probar la anulacion',
+    1,
+    'REGISTRADA',
+    '2026-10-05',
+    @id_compra_anulacion
+);
 
-CALL sp_recepcion_compra_eliminar(@id_recepcion);
+SELECT @id_compra_anulacion AS 'ID Compra para Anulacion';
 
-CALL sp_detalle_compra_eliminar(@id_detalle_compra);
+-- Insertamos un detalle que todavia no tiene recepciones.
 
-CALL sp_compra_eliminar(@id_compra);
+CALL sp_detalle_compra_insertar(
+    @id_compra_anulacion,
+    1,
+    1,
+    2.000,
+    25.00,
+    0.00,
+    50.00,
+    'UNIDAD',
+    1.000,
+    @id_detalle_anulacion
+);
+
+SELECT @id_detalle_anulacion AS 'ID Detalle para Eliminacion';
+
+-- Eliminacion fisica del detalle sin recepciones.
+
+CALL sp_detalle_compra_eliminar(@id_detalle_anulacion);
+
+-- Comprobamos que el detalle ya no existe.
+
+SELECT *
+FROM detalle_compra
+WHERE id = @id_detalle_anulacion;
+
+-- Anulacion logica de la compra sin recepciones.
+
+CALL sp_compra_eliminar(@id_compra_anulacion);
+
+CALL sp_compra_obtener(@id_compra_anulacion);
 
 
 -- ---------------------------------------------------------
 -- 7. COMPROBACION FINAL
 -- ---------------------------------------------------------
 
+SELECT '--- COMPROBACION FINAL ---' AS INFO;
+
+-- La compra anulada debe tener:
+-- estado = ANULADA
+-- anulado = 1
+
 SELECT
-    'COMPRA' AS entidad,
     id,
-    anulado
+    numero,
+    estado,
+    anulado,
+    motivo_anulacion,
+    fecha_anulacion
 FROM compra
-WHERE id = @id_compra;
+WHERE id = @id_compra_anulacion;
 
-SELECT
-    'DETALLE COMPRA' AS entidad,
-    id,
-    anulado
+-- Debe devolver cero registros porque fue eliminado fisicamente.
+
+SELECT *
 FROM detalle_compra
-WHERE id = @id_detalle_compra;
+WHERE id = @id_detalle_anulacion;
 
-SELECT
-    'RECEPCION COMPRA' AS entidad,
-    id,
-    anulado
-FROM recepcion_compra
-WHERE id = @id_recepcion;
+-- La compra original sigue disponible.
 
-SELECT
-    'DETALLE RECEPCION' AS entidad,
-    id,
-    anulado
-FROM detalle_recepcion_compra
-WHERE id = @id_detalle_recepcion;
+CALL sp_compra_obtener(@id_compra);
 
-SELECT
-    'MOVIMIENTO INVENTARIO' AS entidad,
-    id,
-    anulado
-FROM movimiento_inventario
-WHERE id = @id_movimiento;
+-- El detalle original conserva las 2 unidades recibidas.
 
--- Revertimos todos los registros y modificaciones de prueba.
+CALL sp_detalle_compra_obtener(@id_detalle_compra);
+
+-- La recepcion y su detalle permanecen registrados.
+
+CALL sp_recepcion_compra_obtener(@id_recepcion);
+
+CALL sp_detalle_recepcion_compra_obtener(@id_detalle_recepcion);
+
+-- El movimiento historico tambien permanece registrado.
+
+CALL sp_movimiento_inventario_obtener(@id_movimiento);
+
+
+-- ---------------------------------------------------------
+-- 8. REVERSIÓN DE LAS PRUEBAS
+-- ---------------------------------------------------------
+
 ROLLBACK;
 
 SELECT 'PRUEBAS FINALIZADAS - ROLLBACK EJECUTADO' AS resultado;
