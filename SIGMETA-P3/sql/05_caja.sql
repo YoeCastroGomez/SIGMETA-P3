@@ -1,205 +1,258 @@
--- bloque del estudiante 5
--- Orden: primero todos los CREATE TABLE, despues todos los INSERT.
--- Mientras pruebas solo este archivo, descomenta la linea de abajo para
--- que MySQL no reclame por las FK que apuntan a tablas de otros bloques.
--- SET FOREIGN_KEY_CHECKS = 0;
+
+-- 04_venta.sql | Estudiante 4 | SIGMETA
+-- Bloque Comercial: ordenes de compra de clientes, ventas, comprobantes y despachos
 
 -- ============ TABLAS ============
-SET FOREIGN_KEY_CHECKS = 0;
 
--- ============================================================
--- ELIMINACION DE TABLAS (DROP IF EXISTS)
--- Orden inverso a las dependencias (FK)
--- ============================================================
-
-DROP TABLE IF EXISTS cierre_caja;
-DROP TABLE IF EXISTS movimiento_caja;
-DROP TABLE IF EXISTS cobro;
-DROP TABLE IF EXISTS cuenta_por_cobrar;
-DROP TABLE IF EXISTS caja;
-
--- ============================================================
--- CREACION DE TABLAS
--- ============================================================
-
--- Tabla: caja
--- Clase Java: Caja (idCaja, fechaApertura, montoInicial, usuarioApertura, abierta;
---             "movimientos" es la lista inversa, representada por movimiento_caja.id_caja)
--- NOTA (decision de equipo): la relacion Caja <-> CierreCaja es unidireccional.
--- CierreCaja conoce su Caja (ver id_caja abajo), pero Caja NO guarda id_cierre_caja;
--- coincide con la clase Java, que no tiene atributo CierreCaja.
-CREATE TABLE caja (
-    id_caja               INT AUTO_INCREMENT PRIMARY KEY,
-    fecha_apertura        DATETIME NOT NULL,
-    monto_inicial         DECIMAL(12,2) NOT NULL,
-    id_usuario_apertura   INT NOT NULL,
-    abierta               BOOLEAN NOT NULL,
-    CONSTRAINT fk_caja_usuario_apertura
-        FOREIGN KEY (id_usuario_apertura) REFERENCES usuario(id_usuario)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Tabla: cuenta_por_cobrar
--- Clase Java: CuentaPorCobrar (idCuentaPorCobrar, venta, cliente, fechaEmision,
---             fechaVencimiento, moneda, montoOriginal, montoPagado, saldoPendiente,
---             estado; "cobros" es la lista inversa -> cobro.id_cuenta_por_cobrar)
--- Se genera a partir de una venta al credito (Estudiante 4).
-CREATE TABLE cuenta_por_cobrar (
-    id_cuenta_por_cobrar INT AUTO_INCREMENT PRIMARY KEY,
-    id_venta             INT NOT NULL,
-    id_cliente           INT NOT NULL,
-    fecha_emision        DATE NOT NULL,
-    fecha_vencimiento    DATE NOT NULL,
-    moneda               ENUM('SOLES', 'DOLARES') NOT NULL,
-    monto_original       DECIMAL(12,2) NOT NULL,
-    monto_pagado         DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-    saldo_pendiente      DECIMAL(12,2) NOT NULL,
-    estado               ENUM('PENDIENTE', 'PARCIAL', 'PAGADA', 'ANULADA') NOT NULL,
-    CONSTRAINT fk_cuenta_por_cobrar_venta
-        FOREIGN KEY (id_venta) REFERENCES venta(id_venta),
-    CONSTRAINT fk_cuenta_por_cobrar_cliente
-        FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Tabla: cobro
--- Clase Java: Cobro (idCobro, cuentaPorCobrar, fechaCobro, medioPago, monto,
---             referencia, usuarioRegistro, fechaRegistro)
--- OJO: la clase NO tiene una Caja directa. La entrada de dinero a una caja
--- concreta se registra aparte en movimiento_caja, que referencia este cobro
--- de forma generica via documento_origen/id_documento_origen (ver abajo).
-CREATE TABLE cobro (
-    id_cobro              INT AUTO_INCREMENT PRIMARY KEY,
-    id_cuenta_por_cobrar  INT NOT NULL,
-    fecha_cobro           DATE NOT NULL,
-    medio_pago            ENUM('EFECTIVO', 'TRANSFERENCIA', 'TARJETA', 'DEPOSITO') NOT NULL,
-    monto                 DECIMAL(12,2) NOT NULL,
-    referencia            VARCHAR(50) NULL,
-    id_usuario_registro   INT NOT NULL,
-    fecha_registro        DATETIME NOT NULL,
-    CONSTRAINT fk_cobro_cuenta_por_cobrar
-        FOREIGN KEY (id_cuenta_por_cobrar) REFERENCES cuenta_por_cobrar(id_cuenta_por_cobrar),
-    CONSTRAINT fk_cobro_usuario
-        FOREIGN KEY (id_usuario_registro) REFERENCES usuario(id_usuario)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Tabla: movimiento_caja
--- Clase Java: MovimientoCaja (idMovimientoCaja, caja, tipo, fechaMovimiento,
---             medioPago, monto, concepto, documentoOrigen, idDocumentoOrigen,
---             usuarioRegistro)
--- documento_origen / id_documento_origen son la referencia generica (String + int)
--- que en la prueba de Java apuntara a 'COBRO' + id_cobro para el ingreso, y
--- quedara en NULL para el egreso manual. RF010: la nota de credito jamas
--- produce un movimiento_caja de tipo INGRESO, por eso no participa del cierre.
-CREATE TABLE movimiento_caja (
-    id_movimiento_caja  INT AUTO_INCREMENT PRIMARY KEY,
-    id_caja             INT NOT NULL,
-    tipo                ENUM('INGRESO', 'EGRESO') NOT NULL,
-    fecha_movimiento    DATETIME NOT NULL,
-    medio_pago          ENUM('EFECTIVO', 'TRANSFERENCIA', 'TARJETA', 'DEPOSITO') NOT NULL,
-    monto               DECIMAL(12,2) NOT NULL,
-    concepto            VARCHAR(150) NOT NULL,
-    documento_origen    VARCHAR(50) NULL,
-    id_documento_origen INT NULL,
+CREATE TABLE orden_compra_cliente (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_cliente INT NOT NULL,
+    id_cotizacion INT NULL,
+    numero_orden_cliente VARCHAR(30) NULL,
+    estado ENUM('PENDIENTE', 'ATENDIDA_PARCIAL', 'ATENDIDA', 'ANULADA') NOT NULL,
+    numero VARCHAR(20) NOT NULL,
+    fecha_emision DATE NOT NULL,
+    moneda ENUM('SOLES', 'DOLARES') NOT NULL,
+    sub_total DECIMAL(12,2) NOT NULL,
+    igv DECIMAL(12,2) NOT NULL,
+    total DECIMAL(12,2) NOT NULL,
+    observaciones VARCHAR(300) NULL,
+    fecha_registro DATETIME NOT NULL,
     id_usuario_registro INT NOT NULL,
-    CONSTRAINT fk_movimiento_caja_caja
-        FOREIGN KEY (id_caja) REFERENCES caja(id_caja),
-    CONSTRAINT fk_movimiento_caja_usuario
-        FOREIGN KEY (id_usuario_registro) REFERENCES usuario(id_usuario)
+    anulado BOOLEAN NOT NULL DEFAULT FALSE,
+    motivo_anulacion VARCHAR(200) NULL,
+    fecha_anulacion DATETIME NULL,
+
+    CONSTRAINT fk_orden_compra_cliente_cliente
+        FOREIGN KEY (id_cliente) REFERENCES cliente(id),
+
+    CONSTRAINT fk_orden_compra_cliente_cotizacion
+        FOREIGN KEY (id_cotizacion) REFERENCES cotizacion(id),
+
+    CONSTRAINT fk_orden_compra_cliente_usuario
+        FOREIGN KEY (id_usuario_registro) REFERENCES usuario(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Tabla: cierre_caja
--- Clase Java: CierreCaja (idCierreCaja, caja, fechaCierre, montoCalculado,
---             montoDeclarado, diferencia, usuarioCierre)
-CREATE TABLE cierre_caja (
-    id_cierre_caja      INT AUTO_INCREMENT PRIMARY KEY,
-    id_caja             INT NOT NULL,
-    fecha_cierre        DATETIME NOT NULL,
-    monto_calculado     DECIMAL(12,2) NOT NULL,
-    monto_declarado     DECIMAL(12,2) NOT NULL,
-    diferencia          DECIMAL(12,2) NOT NULL,
-    id_usuario_cierre   INT NOT NULL,
-    CONSTRAINT fk_cierre_caja_caja
-        FOREIGN KEY (id_caja) REFERENCES caja(id_caja),
-    CONSTRAINT fk_cierre_caja_usuario
-        FOREIGN KEY (id_usuario_cierre) REFERENCES usuario(id_usuario)
+CREATE TABLE detalle_orden_compra_cliente (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_orden_compra_cliente INT NOT NULL,
+    numero_linea INT NOT NULL,
+    id_producto INT NOT NULL,
+    cantidad DECIMAL(12,3) NOT NULL,
+    precio_unitario DECIMAL(12,2) NOT NULL,
+    descuento DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    importe DECIMAL(12,2) NOT NULL,
+    cantidad_atendida DECIMAL(12,3) NOT NULL DEFAULT 0.000,
+
+    CONSTRAINT fk_detalle_orden_compra_cliente_orden_compra_cliente
+        FOREIGN KEY (id_orden_compra_cliente) REFERENCES orden_compra_cliente(id),
+
+    CONSTRAINT fk_detalle_orden_compra_cliente_producto
+        FOREIGN KEY (id_producto) REFERENCES producto(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE venta (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_cliente INT NOT NULL,
+    id_orden_compra_cliente INT NULL,
+    condicion_pago ENUM('CONTADO', 'CREDITO') NOT NULL,
+    plazo_credito_dias INT NOT NULL DEFAULT 0,
+    estado ENUM('REGISTRADA', 'DESPACHADA_PARCIAL', 'DESPACHADA', 'ANULADA') NOT NULL,
+    numero VARCHAR(20) NOT NULL,
+    fecha_emision DATE NOT NULL,
+    moneda ENUM('SOLES', 'DOLARES') NOT NULL,
+    sub_total DECIMAL(12,2) NOT NULL,
+    igv DECIMAL(12,2) NOT NULL,
+    total DECIMAL(12,2) NOT NULL,
+    observaciones VARCHAR(300) NULL,
+    fecha_registro DATETIME NOT NULL,
+    id_usuario_registro INT NOT NULL,
+    anulado BOOLEAN NOT NULL DEFAULT FALSE,
+    motivo_anulacion VARCHAR(200) NULL,
+    fecha_anulacion DATETIME NULL,
+
+    CONSTRAINT fk_venta_cliente
+        FOREIGN KEY (id_cliente) REFERENCES cliente(id),
+
+    CONSTRAINT fk_venta_orden_compra_cliente
+        FOREIGN KEY (id_orden_compra_cliente) REFERENCES orden_compra_cliente(id),
+
+    CONSTRAINT fk_venta_usuario
+        FOREIGN KEY (id_usuario_registro) REFERENCES usuario(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE detalle_venta (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_venta INT NOT NULL,
+    numero_linea INT NOT NULL,
+    id_producto INT NOT NULL,
+    cantidad DECIMAL(12,3) NOT NULL,
+    precio_unitario DECIMAL(12,2) NOT NULL,
+    descuento DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    importe DECIMAL(12,2) NOT NULL,
+    cantidad_despachada DECIMAL(12,3) NOT NULL DEFAULT 0.000,
+
+    CONSTRAINT fk_detalle_venta_venta
+        FOREIGN KEY (id_venta) REFERENCES venta(id),
+
+    CONSTRAINT fk_detalle_venta_producto
+        FOREIGN KEY (id_producto) REFERENCES producto(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE comprobante (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_venta INT NOT NULL,
+    tipo ENUM('FACTURA', 'BOLETA', 'NOTA_CREDITO', 'NOTA_DEBITO') NOT NULL,
+    serie VARCHAR(10) NOT NULL,
+    numero VARCHAR(20) NOT NULL,
+    fecha_emision DATE NOT NULL,
+    moneda ENUM('SOLES', 'DOLARES') NOT NULL,
+    sub_total DECIMAL(12,2) NOT NULL,
+    igv DECIMAL(12,2) NOT NULL,
+    total DECIMAL(12,2) NOT NULL,
+    estado ENUM('EMITIDO', 'ACEPTADO', 'RECHAZADO', 'ANULADO') NOT NULL,
+    id_comprobante_relacionado INT NULL,
+    motivo VARCHAR(200) NULL,
+    medio_envio VARCHAR(30) NULL,
+    fecha_envio DATETIME NULL,
+    fecha_registro DATETIME NOT NULL,
+
+    CONSTRAINT fk_comprobante_venta
+        FOREIGN KEY (id_venta) REFERENCES venta(id),
+
+    CONSTRAINT fk_comprobante_comprobante
+        FOREIGN KEY (id_comprobante_relacionado) REFERENCES comprobante(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE detalle_nota_credito (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_comprobante INT NOT NULL,
+    numero_linea INT NOT NULL,
+    id_producto INT NOT NULL,
+    cantidad DECIMAL(12,3) NOT NULL,
+    precio_unitario DECIMAL(12,2) NOT NULL,
+    descuento DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    importe DECIMAL(12,2) NOT NULL,
+
+    CONSTRAINT fk_detalle_nota_credito_comprobante
+        FOREIGN KEY (id_comprobante) REFERENCES comprobante(id),
+
+    CONSTRAINT fk_detalle_nota_credito_producto
+        FOREIGN KEY (id_producto) REFERENCES producto(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE despacho (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_venta INT NOT NULL,
+    serie_guia VARCHAR(10) NOT NULL,
+    numero_guia VARCHAR(20) NOT NULL,
+    fecha_despacho DATE NOT NULL,
+    direccion_entrega VARCHAR(200) NULL,
+    transportista VARCHAR(100) NULL,
+    anulado BOOLEAN NOT NULL DEFAULT FALSE,
+    id_usuario_registro INT NOT NULL,
+    fecha_registro DATETIME NOT NULL,
+
+    CONSTRAINT fk_despacho_venta
+        FOREIGN KEY (id_venta) REFERENCES venta(id),
+
+    CONSTRAINT fk_despacho_usuario
+        FOREIGN KEY (id_usuario_registro) REFERENCES usuario(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE detalle_despacho (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_despacho INT NOT NULL,
+    id_producto INT NOT NULL,
+    cantidad_despachada DECIMAL(12,3) NOT NULL,
+
+    CONSTRAINT fk_detalle_despacho_despacho
+        FOREIGN KEY (id_despacho) REFERENCES despacho(id),
+
+    CONSTRAINT fk_detalle_despacho_producto
+        FOREIGN KEY (id_producto) REFERENCES producto(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============ DATOS DE PRUEBA ============
--- ============================================================
--- DATOS DE PRUEBA
--- ============================================================
--- NOTA: id_usuario_apertura / id_usuario_cierre / id_usuario_registro asumen
--- el usuario con id_usuario = 1 (rol administrativo/cajero) creado por el
--- Estudiante 1. Ajustar el id si en su script el cajero quedo con otro id.
--- id_cliente = 2 corresponde al cliente de la venta del Estudiante 4.
 
--- 1. Apertura de caja con monto inicial (queda cerrada al final, ver paso 6)
-INSERT INTO caja (
-    id_caja, fecha_apertura, monto_inicial, id_usuario_apertura, abierta
+INSERT INTO orden_compra_cliente (
+    id, id_cliente, id_cotizacion, numero_orden_cliente,
+    estado, numero, fecha_emision, moneda, sub_total, igv, total,
+    observaciones, fecha_registro, id_usuario_registro,
+    anulado, motivo_anulacion, fecha_anulacion
 ) VALUES (
-    1, '2026-09-05 08:00:00', 500.00, 1, FALSE
+    1, 2, 1, 'OC-ANDINA-4521',
+    'ATENDIDA', 'OCC-2026-0001', '2026-09-02', 'SOLES',
+    5000.00, 900.00, 5900.00,
+    'Orden de compra generada a partir de Cotizacion COT-2026-0001',
+    '2026-09-02 09:30:00', 1, FALSE, NULL, NULL
 );
 
--- 2. Cuenta por cobrar generada desde la venta al credito del Estudiante 4
---    (venta id_venta = 1, total 5900.00, plazo_credito_dias = 30 -> vence 2026-10-02)
---    Tras el cobro parcial del paso 3 queda con monto_pagado = 2000.00,
---    saldo_pendiente = 3900.00 y estado PARCIAL.
-INSERT INTO cuenta_por_cobrar (
-    id_cuenta_por_cobrar, id_venta, id_cliente, fecha_emision, fecha_vencimiento,
-    moneda, monto_original, monto_pagado, saldo_pendiente, estado
+INSERT INTO detalle_orden_compra_cliente (
+    id, id_orden_compra_cliente, numero_linea,
+    id_producto, cantidad, precio_unitario, descuento,
+    importe, cantidad_atendida
+) VALUES
+(1, 1, 1, 1, 20.000, 150.00, 0.00, 3000.00, 20.000),
+(2, 1, 2, 2, 10.000, 85.00, 50.00, 800.00, 10.000),
+(3, 1, 3, 3, 40.000, 30.00, 0.00, 1200.00, 40.000);
+
+INSERT INTO venta (
+    id, id_cliente, id_orden_compra_cliente, condicion_pago,
+    plazo_credito_dias, estado, numero, fecha_emision, moneda,
+    sub_total, igv, total, observaciones, fecha_registro,
+    id_usuario_registro, anulado, motivo_anulacion, fecha_anulacion
 ) VALUES (
-    1, 1, 2, '2026-09-02', '2026-10-02',
-    'SOLES', 5900.00, 2000.00, 3900.00, 'PARCIAL'
+    1, 2, 1, 'CREDITO',
+    30, 'DESPACHADA_PARCIAL', 'VTA-2026-0001', '2026-09-02', 'SOLES',
+    5000.00, 900.00, 5900.00,
+    'Venta al credito a 30 dias segun OC-ANDINA-4521',
+    '2026-09-02 10:15:00', 1, FALSE, NULL, NULL
 );
 
--- 3. Cobro parcial de la cuenta por cobrar (sin Caja directa en el modelo Java;
---    el vinculo con la caja se hace en el movimiento_caja del paso 4)
-INSERT INTO cobro (
-    id_cobro, id_cuenta_por_cobrar, fecha_cobro, medio_pago,
-    monto, referencia, id_usuario_registro, fecha_registro
+INSERT INTO detalle_venta (
+    id, id_venta, numero_linea, id_producto,
+    cantidad, precio_unitario, descuento, importe, cantidad_despachada
+) VALUES
+(1, 1, 1, 1, 20.000, 150.00, 0.00, 3000.00, 12.000),
+(2, 1, 2, 2, 10.000, 85.00, 50.00, 800.00, 6.000),
+(3, 1, 3, 3, 40.000, 30.00, 0.00, 1200.00, 25.000);
+
+INSERT INTO comprobante (
+    id, id_venta, tipo, serie, numero, fecha_emision,
+    moneda, sub_total, igv, total, estado,
+    id_comprobante_relacionado, motivo, medio_envio,
+    fecha_envio, fecha_registro
+) VALUES
+(1, 1, 'FACTURA', 'F001', '00000123', '2026-09-02',
+ 'SOLES', 5000.00, 900.00, 5900.00, 'EMITIDO',
+ NULL, NULL, 'OSE_NUBE', '2026-09-02 10:20:00', '2026-09-02 10:18:00'),
+(2, 1, 'NOTA_CREDITO', 'FC01', '00000012', '2026-09-04',
+ 'SOLES', 300.00, 54.00, 354.00, 'EMITIDO',
+ 1, 'Devolucion de producto por defecto de fabrica',
+ 'OSE_NUBE', '2026-09-04 11:30:00', '2026-09-04 11:25:00');
+
+INSERT INTO detalle_nota_credito (
+    id, id_comprobante, numero_linea, id_producto,
+    cantidad, precio_unitario, descuento, importe
 ) VALUES (
-    1, 1, '2026-09-05', 'TRANSFERENCIA',
-    2000.00, 'OP-458821', 1, '2026-09-05 09:30:00'
+    1, 2, 1, 1, 2.000, 150.00, 0.00, 300.00
 );
 
--- 4. Movimiento de caja: ingreso generado por el cobro anterior
---    (documento_origen/id_documento_origen apuntan de forma generica al cobro 1)
-INSERT INTO movimiento_caja (
-    id_movimiento_caja, id_caja, tipo, fecha_movimiento, medio_pago,
-    monto, concepto, documento_origen, id_documento_origen, id_usuario_registro
+INSERT INTO despacho (
+    id, id_venta, serie_guia, numero_guia, fecha_despacho,
+    direccion_entrega, transportista, anulado,
+    id_usuario_registro, fecha_registro
 ) VALUES (
-    1, 1, 'INGRESO', '2026-09-05 09:30:00', 'TRANSFERENCIA',
-    2000.00, 'Cobro parcial CxC venta VTA-2026-0001', 'COBRO', 1, 1
+    1, 1, 'T001', '00000045', '2026-09-03',
+    'Jr. Huaraz 1180, Cercado de Lima',
+    'Transportes Rapidos del Centro S.A.C.',
+    FALSE, 2, '2026-09-03 08:30:00'
 );
 
--- 5. Movimiento de caja: egreso manual (sin documento de origen)
-INSERT INTO movimiento_caja (
-    id_movimiento_caja, id_caja, tipo, fecha_movimiento, medio_pago,
-    monto, concepto, documento_origen, id_documento_origen, id_usuario_registro
-) VALUES (
-    2, 1, 'EGRESO', '2026-09-05 15:00:00', 'EFECTIVO',
-    150.00, 'Compra de utiles de oficina', NULL, NULL, 1
-);
-
--- 6. Cierre de caja del dia
---    monto_calculado = monto_inicial (500.00) + ingresos (2000.00) - egresos (150.00) = 2350.00
---    monto_declarado difiere en 5.00 (faltante) para ejercitar la comparacion en la prueba de Java.
---    RF010: el ingreso del paso 4 viene de un COBRO, nunca de una NOTA_CREDITO,
---    por eso el monto_calculado no se ve afectado por la nota de credito del Estudiante 4.
-INSERT INTO cierre_caja (
-    id_cierre_caja, id_caja, fecha_cierre, monto_calculado,
-    monto_declarado, diferencia, id_usuario_cierre
-) VALUES (
-    1, 1, '2026-09-05 20:00:00', 2350.00,
-    2345.00, -5.00, 1
-);
-
-SET FOREIGN_KEY_CHECKS = 1;
-
-SELECT * FROM caja;
-SELECT * FROM cuenta_por_cobrar;
-SELECT * FROM cobro;
-SELECT * FROM movimiento_caja;
-SELECT * FROM cierre_caja;
-
--- SET FOREIGN_KEY_CHECKS = 1;
+INSERT INTO detalle_despacho (
+    id, id_despacho, id_producto, cantidad_despachada
+) VALUES
+(1, 1, 1, 12.000),
+(2, 1, 2, 6.000),
+(3, 1, 3, 25.000);
