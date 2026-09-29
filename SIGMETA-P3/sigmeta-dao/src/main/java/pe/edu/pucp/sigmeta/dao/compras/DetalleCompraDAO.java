@@ -9,5 +9,6 @@ import java.util.List;
 public interface DetalleCompraDAO extends BaseDAO<DetalleCompra, Integer> {
 
     List<DetalleCompra> listAll() throws SQLException;
+    void descontarCantidadRecibida(int idDetalleCompra, double cantidad) throws SQLException;
 
 }
