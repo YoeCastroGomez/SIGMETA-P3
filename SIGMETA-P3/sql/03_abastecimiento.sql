@@ -74,6 +74,7 @@ CREATE TABLE recepcion_compra (
     observaciones VARCHAR(255),
     id_usuario_registro INT NOT NULL,
     fecha_registro DATETIME NOT NULL,
+    anulada BOOLEAN NOT NULL DEFAULT FALSE,
 
     CONSTRAINT fk_recepcion_compra_compra
         FOREIGN KEY (id_compra)
@@ -109,6 +110,9 @@ CREATE TABLE movimiento_inventario (
         'SALIDA_PRODUCCION',
         'INGRESO_DEVOLUCION',
         'INGRESO_REVERSION_DESPACHO',
+        'SALIDA_REVERSION_COMPRA',
+        'REVERSION_AJUSTE_INGRESO',
+        'REVERSION_AJUSTE_SALIDA',
         'AJUSTE_INGRESO',
         'AJUSTE_SALIDA'
     ) NOT NULL,
