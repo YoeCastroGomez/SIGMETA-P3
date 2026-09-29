@@ -9,6 +9,7 @@ import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
 import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -101,6 +102,22 @@ public class DetalleRecepcionCompraDAOImpl implements DetalleRecepcionCompraDAO 
             }
         }
 
+        return detalles;
+    }
+
+    @Override
+    public List<DetalleRecepcionCompra> listarPorRecepcion(int idRecepcion) throws SQLException {
+        String sql = "SELECT * FROM detalle_recepcion_compra WHERE id_recepcion_compra = ? ORDER BY id";
+        List<DetalleRecepcionCompra> detalles = new ArrayList<>();
+        Connection conn = transactionContext.getConnection();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idRecepcion);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    detalles.add(mapearDetalleRecepcion(rs));
+                }
+            }
+        }
         return detalles;
     }
 
