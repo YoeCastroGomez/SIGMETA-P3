@@ -10,6 +10,7 @@ import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
 import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -115,6 +116,24 @@ public class DetalleCompraDAOImpl implements DetalleCompraDAO {
         }
 
         return detalles;
+    }
+
+    @Override
+    public void descontarCantidadRecibida(int idDetalleCompra, double cantidad) throws SQLException {
+        if (!Double.isFinite(cantidad) || cantidad <= 0) {
+            throw new IllegalArgumentException("La cantidad a descontar debe ser positiva");
+        }
+        String sql = "UPDATE detalle_compra SET cantidad_recibida = cantidad_recibida - ? " +
+                     "WHERE id = ? AND cantidad_recibida >= ?";
+        Connection conn = transactionContext.getConnection();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDouble(1, cantidad);
+            ps.setInt(2, idDetalleCompra);
+            ps.setDouble(3, cantidad);
+            if (ps.executeUpdate() != 1) {
+                throw new IllegalStateException("No se puede revertir la cantidad recibida del detalle");
+            }
+        }
     }
 
     private DetalleCompra mapearDetalleCompra(ResultSet rs) throws SQLException {
