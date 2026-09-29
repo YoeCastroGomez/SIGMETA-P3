@@ -338,6 +338,7 @@ CREATE TABLE movimiento_inventario (
         'INGRESO_PRODUCCION',
         'SALIDA_PRODUCCION',
         'INGRESO_DEVOLUCION',
+        'INGRESO_REVERSION_DESPACHO',
         'AJUSTE_INGRESO',
         'AJUSTE_SALIDA'
     ) NOT NULL,
@@ -354,6 +355,8 @@ CREATE TABLE movimiento_inventario (
 
     motivo VARCHAR(255),
     cantidad_contada DECIMAL(12,3),
+    id_movimiento_revertido INT NULL,
+    UNIQUE KEY uq_movimiento_revertido (id_movimiento_revertido),
 
     CONSTRAINT fk_movimiento_inventario_producto
         FOREIGN KEY (id_producto)
@@ -365,6 +368,8 @@ CREATE TABLE movimiento_inventario (
 
     -- fk_movimiento_inventario_despacho y fk_movimiento_inventario_comprobante
     -- despacho y comprobante se crean despues, en 04_venta.sql
+
+    CONSTRAINT fk_movimiento_inventario_reversion FOREIGN KEY (id_movimiento_revertido) REFERENCES movimiento_inventario(id),
 
     CONSTRAINT fk_movimiento_inventario_usuario
         FOREIGN KEY (id_usuario_registro)
