@@ -9,6 +9,7 @@ import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
 import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -104,10 +105,23 @@ public class RecepcionCompraDAOImpl implements RecepcionCompraDAO {
         return recepciones;
     }
 
+    @Override
+    public void marcarAnulada(int idRecepcion) throws SQLException {
+        Connection conn = transactionContext.getConnection();
+        String sql = "UPDATE recepcion_compra SET anulada = TRUE WHERE id = ? AND anulada = FALSE";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idRecepcion);
+            if (ps.executeUpdate() != 1) {
+                throw new IllegalStateException("La recepcion ya fue anulada o no existe");
+            }
+        }
+    }
+
     private RecepcionCompra mapearRecepcion(ResultSet rs) throws SQLException {
         RecepcionCompra recepcion = new RecepcionCompra();
 
         recepcion.setId(rs.getInt("id"));
+        recepcion.setAnulada(rs.getBoolean("anulada"));
 
         Date fechaRecepcion = rs.getDate("fecha_recepcion");
         if (fechaRecepcion != null) {
