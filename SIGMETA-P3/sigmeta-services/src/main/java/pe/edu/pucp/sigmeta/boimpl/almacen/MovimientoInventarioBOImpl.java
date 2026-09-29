@@ -237,7 +237,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
                 DetalleCompra linea = lineas.get(d.getDetalleCompra().getId());
                 double restante = linea.getCantidadRecibida() - d.getCantidadRecibida();
                 linea.setCantidadRecibida(Math.max(0, restante));
-                detalleCompraDAO.update(linea);
+                detalleCompraDAO.descontarCantidadRecibida(linea.getId(), d.getCantidadRecibida());
             }
             boolean sinRecibir = true;
             boolean completo = true;
