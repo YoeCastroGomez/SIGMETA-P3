@@ -108,6 +108,7 @@ CREATE TABLE movimiento_inventario (
         'INGRESO_PRODUCCION',
         'SALIDA_PRODUCCION',
         'INGRESO_DEVOLUCION',
+        'INGRESO_REVERSION_DESPACHO',
         'AJUSTE_INGRESO',
         'AJUSTE_SALIDA'
     ) NOT NULL,
@@ -120,6 +121,8 @@ CREATE TABLE movimiento_inventario (
     id_usuario_registro INT NOT NULL,
     motivo VARCHAR(255),
     cantidad_contada DECIMAL(12,3),
+    id_movimiento_revertido INT NULL,
+    UNIQUE KEY uq_movimiento_revertido (id_movimiento_revertido),
 
     CONSTRAINT fk_movimiento_inventario_producto
         FOREIGN KEY (id_producto)
@@ -128,6 +131,8 @@ CREATE TABLE movimiento_inventario (
     CONSTRAINT fk_movimiento_inventario_recepcion
         FOREIGN KEY (id_recepcion_compra)
         REFERENCES recepcion_compra(id),
+
+    CONSTRAINT fk_movimiento_inventario_reversion FOREIGN KEY (id_movimiento_revertido) REFERENCES movimiento_inventario(id),
 
     CONSTRAINT fk_movimiento_inventario_usuario
         FOREIGN KEY (id_usuario_registro)
