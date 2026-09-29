@@ -3,16 +3,15 @@ package pe.edu.pucp.sigmeta.boimpl.almacen;
 import pe.edu.pucp.sigmeta.bo.almacen.MovimientoInventarioBO;
 import pe.edu.pucp.sigmeta.boimpl.Validador;
 import pe.edu.pucp.sigmeta.dao.almacen.MovimientoInventarioDAO;
+import pe.edu.pucp.sigmeta.dao.almacen.StockInventarioDAO;
 import pe.edu.pucp.sigmeta.daoimpl.almacen.MovimientoInventarioDAOImpl;
+import pe.edu.pucp.sigmeta.daoimpl.almacen.StockInventarioDAOImpl;
 import pe.edu.pucp.sigmeta.model.almacen.MovimientoInventario;
 import pe.edu.pucp.sigmeta.model.enums.TipoMovimientoInventario;
 import pe.edu.pucp.sigmeta.model.producto.Producto;
 import pe.edu.pucp.sigmeta.model.usuario.Usuario;
 import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,9 +20,11 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
 
     private static final double EPSILON = 0.000001;
     private final MovimientoInventarioDAO movimientoDAO;
+    private final StockInventarioDAO stockDAO;
 
     public MovimientoInventarioBOImpl() {
         this.movimientoDAO = new MovimientoInventarioDAOImpl();
+        this.stockDAO = new StockInventarioDAOImpl();
     }
 
     @Override
@@ -37,18 +38,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
         String motivoValidado = Validador.textoObligatorio(motivo, "motivo", 255);
 
         try {
-            Connection conn = transactionContext.getConnection();
-            double stockActual;
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT stock_actual FROM producto WHERE id = ? FOR UPDATE")) {
-                ps.setInt(1, idProducto);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (!rs.next()) {
-                        throw new IllegalArgumentException("No existe el producto con ID " + idProducto);
-                    }
-                    stockActual = rs.getDouble("stock_actual");
-                }
-            }
+            double stockActual = stockDAO.obtenerStockParaActualizar(idProducto);
 
             double diferencia = cantidadContada - stockActual;
             if (Math.abs(diferencia) < EPSILON) {
@@ -70,12 +60,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
             movimiento.setCantidadContada(cantidadContada);
             movimiento.setMotivo(motivoValidado);
 
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE producto SET stock_actual = ? WHERE id = ?")) {
-                ps.setDouble(1, cantidadContada);
-                ps.setInt(2, idProducto);
-                ps.executeUpdate();
-            }
+            stockDAO.actualizarStock(idProducto, cantidadContada);
             movimientoDAO.save(movimiento);
             transactionContext.commit();
             return movimiento;
