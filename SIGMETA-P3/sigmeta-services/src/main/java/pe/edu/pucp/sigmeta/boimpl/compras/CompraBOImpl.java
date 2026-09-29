@@ -1,6 +1,8 @@
 package pe.edu.pucp.sigmeta.boimpl.compras;
 
 import pe.edu.pucp.sigmeta.bo.compras.CompraBO;
+import pe.edu.pucp.sigmeta.bo.seguridad.UsuarioBO;
+import pe.edu.pucp.sigmeta.boimpl.seguridad.UsuarioBOImpl;
 import pe.edu.pucp.sigmeta.boimpl.Validador;
 import pe.edu.pucp.sigmeta.dao.compras.CompraDAO;
 import pe.edu.pucp.sigmeta.dao.compras.DetalleCompraDAO;
@@ -9,9 +11,11 @@ import pe.edu.pucp.sigmeta.daoimpl.compras.DetalleCompraDAOImpl;
 import pe.edu.pucp.sigmeta.model.compras.Compra;
 import pe.edu.pucp.sigmeta.model.compras.DetalleCompra;
 import pe.edu.pucp.sigmeta.model.enums.EstadoCompra;
+import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.HashSet;
@@ -22,10 +26,12 @@ public class CompraBOImpl implements CompraBO {
 
     private final CompraDAO compraDAO;
     private final DetalleCompraDAO detalleCompraDAO;
+    private final UsuarioBO usuarioBO;
 
     public CompraBOImpl() {
         this.compraDAO = new CompraDAOImpl();
         this.detalleCompraDAO = new DetalleCompraDAOImpl();
+        this.usuarioBO = new UsuarioBOImpl();
     }
 
     @Override
@@ -36,6 +42,7 @@ public class CompraBOImpl implements CompraBO {
         }
         validarDetalles(compra.getDetalles());
         verificarSubtotal(compra, compra.getDetalles());
+        usuarioBO.verificarRol(compra.getUsuarioRegistro().getId(), TipoRol.ADMINISTRADOR);
 
         try {
             compraDAO.save(compra);
@@ -54,13 +61,14 @@ public class CompraBOImpl implements CompraBO {
     }
 
     @Override
-    public Compra modificar(Compra compra) throws SQLException {
+    public Compra modificar(Compra compra, int idAdministrador) throws SQLException {
         validarCompra(compra);
         validarId(compra.getId());
         if (compra.getEstado() != EstadoCompra.REGISTRADA || compra.isAnulado()) {
             throw new IllegalArgumentException("Solo se pueden editar compras registradas y no anuladas");
         }
 
+        usuarioBO.verificarRol(idAdministrador, TipoRol.ADMINISTRADOR);
         try {
             compraDAO.bloquearCompra(compra.getId());
             Compra existente = compraDAO.load(compra.getId());
@@ -93,15 +101,20 @@ public class CompraBOImpl implements CompraBO {
     }
 
     @Override
-    public void anular(int idCompra) throws SQLException {
+    public void anular(int idCompra, int idAdministrador) throws SQLException {
         validarId(idCompra);
+        usuarioBO.verificarRol(idAdministrador, TipoRol.ADMINISTRADOR);
         try {
+            compraDAO.bloquearCompra(idCompra);
             Compra compra = compraDAO.load(idCompra);
             if (compra == null) {
                 throw new IllegalArgumentException("No existe la compra con ID " + idCompra);
             }
             if (compra.isAnulado()) {
                 throw new IllegalArgumentException("La compra ya esta anulada");
+            }
+            if (compra.getEstado() != EstadoCompra.REGISTRADA) {
+                throw new IllegalStateException("No se puede anular una compra con recepciones registradas");
             }
             compraDAO.remove(compra);
             transactionContext.commit();
@@ -127,6 +140,24 @@ public class CompraBOImpl implements CompraBO {
     public List<Compra> listarTodos() throws SQLException {
         try {
             return compraDAO.listAll();
+        } finally {
+            transactionContext.close();
+        }
+    }
+
+    @Override
+    public List<Compra> listarPorProveedorYFechas(int idProveedor, LocalDate fechaInicio, LocalDate fechaFin)
+            throws SQLException {
+        if (idProveedor <= 0) {
+            throw new IllegalArgumentException("El ID del proveedor debe ser positivo");
+        }
+        Validador.obligatorio(fechaInicio, "fecha de inicio");
+        Validador.obligatorio(fechaFin, "fecha de fin");
+        if (fechaInicio.isAfter(fechaFin)) {
+            throw new IllegalArgumentException("La fecha de inicio no puede ser posterior a la fecha de fin");
+        }
+        try {
+            return compraDAO.listarPorProveedorYFechas(idProveedor, fechaInicio, fechaFin);
         } finally {
             transactionContext.close();
         }
