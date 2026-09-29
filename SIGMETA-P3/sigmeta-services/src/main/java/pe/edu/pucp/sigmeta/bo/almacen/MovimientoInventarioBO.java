@@ -12,6 +12,14 @@ import java.util.List;
  */
 public interface MovimientoInventarioBO {
 
+    /**
+     * Uso interno por DespachoBO: revierte una salida concreta dentro de la
+     * transaccion del llamador. No realiza commit, rollback ni close.
+     * El llamador debe anular el despacho y confirmar todo atomicamente.
+     */
+    MovimientoInventario revertirSalidaDespacho(int idMovimientoSalida, int idDespacho,
+                                                 int idAlmacenero, String motivo) throws SQLException;
+
     MovimientoInventario registrarAjuste(int idProducto, int idUsuario,
                                          double cantidadContada, String motivo) throws SQLException;
 
