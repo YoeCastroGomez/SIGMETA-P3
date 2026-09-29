@@ -7,7 +7,6 @@ import pe.edu.pucp.sigmeta.model.almacen.DetalleRecepcionCompra;
 import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -45,14 +44,7 @@ public class DetalleRecepcionCompraBOImpl implements DetalleRecepcionCompraBO {
     public List<DetalleRecepcionCompra> listarPorRecepcion(int idRecepcion) throws SQLException {
         validarId(idRecepcion);
         try {
-            List<DetalleRecepcionCompra> encontrados = new ArrayList<>();
-            for (DetalleRecepcionCompra detalle : detalleDAO.listAll()) {
-                if (detalle.getRecepcionCompra() != null
-                        && detalle.getRecepcionCompra().getId() == idRecepcion) {
-                    encontrados.add(detalle);
-                }
-            }
-            return encontrados;
+            return detalleDAO.listarPorRecepcion(idRecepcion);
         } finally {
             transactionContext.close();
         }
