@@ -172,6 +172,9 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
             if (existente == null) {
                 throw new IllegalArgumentException("No existe la recepcion con ID " + recepcion.getId());
             }
+            if (existente.isAnulada()) {
+                throw new IllegalStateException("No se puede modificar una recepcion anulada");
+            }
             if (existente.getUsuarioRegistro().getId() != recepcion.getUsuarioRegistro().getId()) {
                 throw new IllegalArgumentException("No se puede cambiar el usuario que registro la recepcion");
             }
