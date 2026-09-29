@@ -17,6 +17,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -151,6 +152,25 @@ public class CompraDAOImpl implements CompraDAO {
             }
         }
 
+        return compras;
+    }
+
+    @Override
+    public List<Compra> listarPorProveedorYFechas(int idProveedor, LocalDate fechaInicio, LocalDate fechaFin)
+            throws SQLException {
+        String sql = "SELECT * FROM compra WHERE id_proveedor = ? AND fecha_emision BETWEEN ? AND ? ORDER BY fecha_emision DESC, id DESC";
+        List<Compra> compras = new ArrayList<>();
+        Connection conn = transactionContext.getConnection();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idProveedor);
+            ps.setDate(2, Date.valueOf(fechaInicio));
+            ps.setDate(3, Date.valueOf(fechaFin));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    compras.add(mapearCompra(rs));
+                }
+            }
+        }
         return compras;
     }
 
