@@ -1,7 +1,9 @@
 package pe.edu.pucp.sigmeta.boimpl.almacen;
 
 import pe.edu.pucp.sigmeta.bo.almacen.RecepcionCompraBO;
+import pe.edu.pucp.sigmeta.bo.seguridad.UsuarioBO;
 import pe.edu.pucp.sigmeta.boimpl.Validador;
+import pe.edu.pucp.sigmeta.boimpl.seguridad.UsuarioBOImpl;
 import pe.edu.pucp.sigmeta.dao.almacen.DetalleRecepcionCompraDAO;
 import pe.edu.pucp.sigmeta.dao.almacen.MovimientoInventarioDAO;
 import pe.edu.pucp.sigmeta.dao.almacen.RecepcionCompraDAO;
@@ -20,6 +22,7 @@ import pe.edu.pucp.sigmeta.model.almacen.RecepcionCompra;
 import pe.edu.pucp.sigmeta.model.compras.Compra;
 import pe.edu.pucp.sigmeta.model.compras.DetalleCompra;
 import pe.edu.pucp.sigmeta.model.enums.EstadoCompra;
+import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.model.enums.TipoMovimientoInventario;
 import pe.edu.pucp.sigmeta.model.producto.Producto;
 import pe.edu.pucp.sigmeta.transaction.transactionContext;
@@ -41,6 +44,7 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
     private final MovimientoInventarioDAO movimientoDAO;
     private final CompraDAO compraDAO;
     private final StockInventarioDAO stockDAO;
+    private final UsuarioBO usuarioBO;
 
     public RecepcionCompraBOImpl() {
         this.recepcionDAO = new RecepcionCompraDAOImpl();
@@ -49,11 +53,13 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
         this.movimientoDAO = new MovimientoInventarioDAOImpl();
         this.compraDAO = new CompraDAOImpl();
         this.stockDAO = new StockInventarioDAOImpl();
+        this.usuarioBO = new UsuarioBOImpl();
     }
 
     @Override
     public RecepcionCompra registrar(RecepcionCompra recepcion) throws SQLException {
         validarRecepcion(recepcion);
+        usuarioBO.verificarRol(recepcion.getUsuarioRegistro().getId(), TipoRol.ALMACENERO);
         List<DetalleRecepcionCompra> detalles = recepcion.getDetalles();
         if (detalles == null || detalles.isEmpty()) {
             throw new IllegalArgumentException("La recepcion debe tener al menos un detalle");
@@ -157,13 +163,17 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
     }
 
     @Override
-    public RecepcionCompra modificar(RecepcionCompra recepcion) throws SQLException {
+    public RecepcionCompra modificar(RecepcionCompra recepcion, int idAlmacenero) throws SQLException {
         validarRecepcion(recepcion);
         validarId(recepcion.getId());
+        usuarioBO.verificarRol(idAlmacenero, TipoRol.ALMACENERO);
         try {
             RecepcionCompra existente = recepcionDAO.load(recepcion.getId());
             if (existente == null) {
                 throw new IllegalArgumentException("No existe la recepcion con ID " + recepcion.getId());
+            }
+            if (existente.getUsuarioRegistro().getId() != recepcion.getUsuarioRegistro().getId()) {
+                throw new IllegalArgumentException("No se puede cambiar el usuario que registro la recepcion");
             }
             if (!existente.getFechaRecepcion().equals(recepcion.getFechaRecepcion())) {
                 throw new IllegalArgumentException("La fecha historica de recepcion no puede modificarse");
