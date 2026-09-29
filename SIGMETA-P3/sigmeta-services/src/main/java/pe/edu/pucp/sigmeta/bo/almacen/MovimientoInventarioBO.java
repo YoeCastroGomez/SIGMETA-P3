@@ -1,6 +1,7 @@
 package pe.edu.pucp.sigmeta.bo.almacen;
 
 import pe.edu.pucp.sigmeta.model.almacen.MovimientoInventario;
+import pe.edu.pucp.sigmeta.model.producto.Producto;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -14,11 +15,12 @@ public interface MovimientoInventarioBO {
     MovimientoInventario registrarAjuste(int idProducto, int idUsuario,
                                          double cantidadContada, String motivo) throws SQLException;
 
-    MovimientoInventario modificarMotivo(int idMovimiento, String motivo) throws SQLException;
+    MovimientoInventario modificarMotivo(int idMovimiento, String motivo, int idAdministrador) throws SQLException;
 
     MovimientoInventario obtener(int idMovimiento) throws SQLException;
 
     List<MovimientoInventario> listarTodos() throws SQLException;
 
     List<MovimientoInventario> listarPorProducto(int idProducto) throws SQLException;
+    List<Producto> listarEnStockMinimo() throws SQLException;
 }
