@@ -8,10 +8,23 @@ import pe.edu.pucp.sigmeta.boimpl.seguridad.UsuarioBOImpl;
 import pe.edu.pucp.sigmeta.boimpl.seguridad.SolicitudAutorizacionBOImpl;
 import pe.edu.pucp.sigmeta.dao.almacen.MovimientoInventarioDAO;
 import pe.edu.pucp.sigmeta.dao.almacen.StockInventarioDAO;
+import pe.edu.pucp.sigmeta.dao.almacen.RecepcionCompraDAO;
+import pe.edu.pucp.sigmeta.dao.almacen.DetalleRecepcionCompraDAO;
+import pe.edu.pucp.sigmeta.dao.compras.CompraDAO;
+import pe.edu.pucp.sigmeta.dao.compras.DetalleCompraDAO;
 import pe.edu.pucp.sigmeta.daoimpl.almacen.MovimientoInventarioDAOImpl;
 import pe.edu.pucp.sigmeta.daoimpl.almacen.StockInventarioDAOImpl;
+import pe.edu.pucp.sigmeta.daoimpl.almacen.RecepcionCompraDAOImpl;
+import pe.edu.pucp.sigmeta.daoimpl.almacen.DetalleRecepcionCompraDAOImpl;
+import pe.edu.pucp.sigmeta.daoimpl.compras.CompraDAOImpl;
+import pe.edu.pucp.sigmeta.daoimpl.compras.DetalleCompraDAOImpl;
 import pe.edu.pucp.sigmeta.model.almacen.MovimientoInventario;
 import pe.edu.pucp.sigmeta.model.almacen.Despacho;
+import pe.edu.pucp.sigmeta.model.almacen.RecepcionCompra;
+import pe.edu.pucp.sigmeta.model.almacen.DetalleRecepcionCompra;
+import pe.edu.pucp.sigmeta.model.compras.Compra;
+import pe.edu.pucp.sigmeta.model.compras.DetalleCompra;
+import pe.edu.pucp.sigmeta.model.enums.EstadoCompra;
 import pe.edu.pucp.sigmeta.model.enums.TipoMovimientoInventario;
 import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.model.producto.Producto;
@@ -20,6 +33,10 @@ import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Comparator;
 
 public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
 
@@ -29,12 +46,20 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
     private final StockInventarioDAO stockDAO;
     private final UsuarioBO usuarioBO;
     private final SolicitudAutorizacionBO autorizacionBO;
+    private final RecepcionCompraDAO recepcionDAO;
+    private final DetalleRecepcionCompraDAO detalleRecepcionDAO;
+    private final CompraDAO compraDAO;
+    private final DetalleCompraDAO detalleCompraDAO;
 
     public MovimientoInventarioBOImpl() {
         this.movimientoDAO = new MovimientoInventarioDAOImpl();
         this.stockDAO = new StockInventarioDAOImpl();
         this.usuarioBO = new UsuarioBOImpl();
         this.autorizacionBO = new SolicitudAutorizacionBOImpl();
+        this.recepcionDAO = new RecepcionCompraDAOImpl();
+        this.detalleRecepcionDAO = new DetalleRecepcionCompraDAOImpl();
+        this.compraDAO = new CompraDAOImpl();
+        this.detalleCompraDAO = new DetalleCompraDAOImpl();
     }
 
     /**
@@ -85,6 +110,164 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
 
         stockDAO.actualizarStock(idProducto, nuevoStock);
         return movimientoDAO.registrarReversionDespacho(reversion);
+    }
+
+    @Override
+    public MovimientoInventario revertirAjuste(int idMovimientoAjuste, int idAlmacenero,
+                                                 String motivo) throws SQLException {
+        validarId(idMovimientoAjuste);
+        validarId(idAlmacenero);
+        String razon = Validador.textoObligatorio(motivo, "motivo de reversion", 255);
+        usuarioBO.verificarRol(idAlmacenero, TipoRol.ALMACENERO);
+        if (!autorizacionBO.tieneAutorizacionVigente(idAlmacenero, OPERACION_AJUSTE_INVENTARIO)) {
+            throw new IllegalStateException("La reversion del ajuste requiere autorizacion vigente");
+        }
+        try {
+            MovimientoInventario original = movimientoDAO.bloquearMovimiento(idMovimientoAjuste);
+            if (original == null || (original.getTipo() != TipoMovimientoInventario.AJUSTE_INGRESO
+                    && original.getTipo() != TipoMovimientoInventario.AJUSTE_SALIDA)) {
+                throw new IllegalArgumentException("El movimiento no es un ajuste original");
+            }
+            if (movimientoDAO.existeReversion(idMovimientoAjuste)) {
+                throw new IllegalStateException("El ajuste ya fue revertido");
+            }
+            double cantidad = original.getCantidad();
+            if (!Double.isFinite(cantidad) || cantidad <= 0) {
+                throw new IllegalStateException("Cantidad historica invalida");
+            }
+            boolean ingresoOriginal = original.getTipo() == TipoMovimientoInventario.AJUSTE_INGRESO;
+            int idProducto = original.getProducto().getId();
+            double stock = stockDAO.obtenerStockParaActualizar(idProducto);
+            double nuevoStock = ingresoOriginal ? stock - cantidad : stock + cantidad;
+            if (!Double.isFinite(nuevoStock) || nuevoStock < -EPSILON) {
+                throw new IllegalStateException("No hay stock suficiente para revertir el ajuste");
+            }
+            if (nuevoStock < 0) nuevoStock = 0;
+            MovimientoInventario reversion = nuevaCompensacion(original, idAlmacenero, razon);
+            reversion.setTipo(ingresoOriginal ? TipoMovimientoInventario.REVERSION_AJUSTE_INGRESO
+                    : TipoMovimientoInventario.REVERSION_AJUSTE_SALIDA);
+            reversion.setStockResultante(nuevoStock);
+            stockDAO.actualizarStock(idProducto, nuevoStock);
+            movimientoDAO.registrarCompensacion(reversion);
+            transactionContext.commit();
+            return reversion;
+        } catch (SQLException | RuntimeException e) {
+            transactionContext.rollback();
+            throw e;
+        } finally {
+            transactionContext.close();
+        }
+    }
+
+    @Override
+    public List<MovimientoInventario> revertirRecepcionCompra(int idRecepcion, int idAlmacenero,
+                                                               String motivo) throws SQLException {
+        validarId(idRecepcion);
+        validarId(idAlmacenero);
+        String razon = Validador.textoObligatorio(motivo, "motivo de reversion", 255);
+        usuarioBO.verificarRol(idAlmacenero, TipoRol.ALMACENERO);
+        try {
+            RecepcionCompra recepcion = recepcionDAO.load(idRecepcion);
+            if (recepcion == null) throw new IllegalArgumentException("No existe la recepcion");
+            int idCompra = recepcion.getCompra().getId();
+            compraDAO.bloquearCompra(idCompra);
+            recepcion = recepcionDAO.load(idRecepcion);
+            if (recepcion.isAnulada()) throw new IllegalStateException("La recepcion ya fue anulada");
+            Compra compra = compraDAO.load(idCompra);
+            if (compra.isAnulado()) throw new IllegalStateException("No se revierte una compra anulada");
+
+            List<DetalleRecepcionCompra> detalles = detalleRecepcionDAO.listarPorRecepcion(idRecepcion);
+            List<MovimientoInventario> originales = new ArrayList<>();
+            for (MovimientoInventario m : movimientoDAO.listarPorRecepcion(idRecepcion)) {
+                if (m.getTipo() == TipoMovimientoInventario.INGRESO_COMPRA) originales.add(m);
+            }
+            if (detalles.isEmpty() || originales.isEmpty()) {
+                throw new IllegalStateException("La recepcion no tiene detalles o ingresos originales");
+            }
+            Map<Integer, Double> cantidadesEsperadas = new HashMap<>();
+            List<DetalleCompra> lineasCompra = detalleCompraDAO.listAll();
+            Map<Integer, DetalleCompra> lineas = new HashMap<>();
+            for (DetalleCompra linea : lineasCompra) {
+                if (linea.getCompra().getId() == idCompra) lineas.put(linea.getId(), linea);
+            }
+            for (DetalleRecepcionCompra d : detalles) {
+                DetalleCompra linea = lineas.get(d.getDetalleCompra().getId());
+                if (linea == null || linea.getCantidadRecibida() + EPSILON < d.getCantidadRecibida()) {
+                    throw new IllegalStateException("Las cantidades recibidas no son consistentes");
+                }
+                double unidades = d.getCantidadRecibida() * linea.getFactorConversion();
+                cantidadesEsperadas.merge(linea.getProducto().getId(), unidades, Double::sum);
+            }
+            Map<Integer, Double> cantidadesRegistradas = new HashMap<>();
+            for (MovimientoInventario m : originales) {
+                if (movimientoDAO.existeReversion(m.getId())) {
+                    throw new IllegalStateException("La recepcion tiene ingresos ya revertidos");
+                }
+                cantidadesRegistradas.merge(m.getProducto().getId(), m.getCantidad(), Double::sum);
+            }
+            if (cantidadesEsperadas.size() != cantidadesRegistradas.size()) {
+                throw new IllegalStateException("Los ingresos no coinciden con los detalles recibidos");
+            }
+            for (Map.Entry<Integer, Double> item : cantidadesEsperadas.entrySet()) {
+                if (Math.abs(item.getValue() - cantidadesRegistradas.getOrDefault(item.getKey(), -1.0)) > 0.0001) {
+                    throw new IllegalStateException("El inventario no coincide con los detalles historicos");
+                }
+            }
+
+            originales.sort(Comparator.comparingInt((MovimientoInventario m) -> m.getProducto().getId())
+                    .thenComparingInt(MovimientoInventario::getId));
+            List<MovimientoInventario> compensaciones = new ArrayList<>();
+            for (MovimientoInventario m : originales) {
+                movimientoDAO.bloquearMovimiento(m.getId());
+                int idProducto = m.getProducto().getId();
+                double stock = stockDAO.obtenerStockParaActualizar(idProducto);
+                double nuevoStock = stock - m.getCantidad();
+                if (!Double.isFinite(nuevoStock) || nuevoStock < -EPSILON) {
+                    throw new IllegalStateException("Stock insuficiente para revertir la recepcion");
+                }
+                if (nuevoStock < 0) nuevoStock = 0;
+                MovimientoInventario inverso = nuevaCompensacion(m, idAlmacenero, razon);
+                inverso.setTipo(TipoMovimientoInventario.SALIDA_REVERSION_COMPRA);
+                inverso.setRecepcionCompra(recepcion);
+                inverso.setStockResultante(nuevoStock);
+                stockDAO.actualizarStock(idProducto, nuevoStock);
+                compensaciones.add(movimientoDAO.registrarCompensacion(inverso));
+            }
+            for (DetalleRecepcionCompra d : detalles) {
+                DetalleCompra linea = lineas.get(d.getDetalleCompra().getId());
+                double restante = linea.getCantidadRecibida() - d.getCantidadRecibida();
+                linea.setCantidadRecibida(Math.max(0, restante));
+                detalleCompraDAO.update(linea);
+            }
+            boolean sinRecibir = true;
+            boolean completo = true;
+            for (DetalleCompra linea : lineas.values()) {
+                if (linea.getCantidadRecibida() > EPSILON) sinRecibir = false;
+                if (linea.getCantidadRecibida() + EPSILON < linea.getCantidad()) completo = false;
+            }
+            compraDAO.actualizarEstadoPorReversion(idCompra, sinRecibir ? EstadoCompra.REGISTRADA
+                    : completo ? EstadoCompra.RECIBIDA : EstadoCompra.RECIBIDA_PARCIAL);
+            recepcionDAO.marcarAnulada(idRecepcion);
+            transactionContext.commit();
+            return compensaciones;
+        } catch (SQLException | RuntimeException e) {
+            transactionContext.rollback();
+            throw e;
+        } finally {
+            transactionContext.close();
+        }
+    }
+
+    private MovimientoInventario nuevaCompensacion(MovimientoInventario original, int idUsuario, String motivo) {
+        MovimientoInventario reversion = new MovimientoInventario();
+        reversion.setProducto(original.getProducto());
+        reversion.setCantidad(original.getCantidad());
+        reversion.setIdMovimientoRevertido(original.getId());
+        Usuario usuario = new Usuario();
+        usuario.setId(idUsuario);
+        reversion.setUsuarioRegistro(usuario);
+        reversion.setMotivo(motivo);
+        return reversion;
     }
 
     @Override
