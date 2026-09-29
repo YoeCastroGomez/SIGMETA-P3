@@ -21,17 +21,17 @@ CREATE PROCEDURE sp_categoria_modificar(
 BEGIN
     UPDATE categoria 
     SET nombre = p_nombre, descripcion = p_descripcion
-    WHERE id_categoria = p_id_categoria;
+    WHERE id = p_id_categoria;
 END$$
 
 CREATE PROCEDURE sp_categoria_eliminar(IN p_id_categoria INT)
 BEGIN
-    UPDATE categoria SET estado = FALSE WHERE id_categoria = p_id_categoria;
+    UPDATE categoria SET estado = FALSE WHERE id = p_id_categoria;
 END$$
 
 CREATE PROCEDURE sp_categoria_obtener(IN p_id_categoria INT)
 BEGIN
-    SELECT * FROM categoria WHERE id_categoria = p_id_categoria;
+    SELECT * FROM categoria WHERE id = p_id_categoria;
 END$$
 
 CREATE PROCEDURE sp_categoria_listar()
@@ -98,17 +98,17 @@ BEGIN
         unidad_venta = p_unidad_venta, factor_conversion = p_factor_conversion, precio_venta = p_precio_venta, 
         costo_unitario = p_costo_unitario, stock_actual = p_stock_actual, stock_minimo = p_stock_minimo, 
         imagen = p_imagen, precio_referencial = p_precio_referencial
-    WHERE id_producto = p_id_producto;
+    WHERE id = p_id_producto;
 END$$
 
 CREATE PROCEDURE sp_producto_eliminar(IN p_id_producto INT)
 BEGIN
-    UPDATE producto SET estado = FALSE WHERE id_producto = p_id_producto;
+    UPDATE producto SET estado = FALSE WHERE id = p_id_producto;
 END$$
 
 CREATE PROCEDURE sp_producto_obtener(IN p_id_producto INT)
 BEGIN
-    SELECT * FROM producto WHERE id_producto = p_id_producto;
+    SELECT * FROM producto WHERE id = p_id_producto;
 END$$
 
 CREATE PROCEDURE sp_producto_listar()
@@ -162,7 +162,7 @@ BEGIN
         numero = p_numero, fecha_emision = p_fecha_emision, moneda = p_moneda, sub_total = p_sub_total, 
         igv = p_igv, total = p_total, observaciones = p_observaciones, id_cliente = p_id_cliente, 
         fecha_vigencia = p_fecha_vigencia, estado = p_estado
-    WHERE id_cotizacion = p_id_cotizacion;
+    WHERE id = p_id_cotizacion;
 END$$
 
 CREATE PROCEDURE sp_cotizacion_eliminar(
@@ -172,12 +172,12 @@ CREATE PROCEDURE sp_cotizacion_eliminar(
 BEGIN
     UPDATE cotizacion 
     SET anulado = TRUE, motivo_anulacion = p_motivo_anulacion, fecha_anulacion = NOW(), estado = 'ANULADA'
-    WHERE id_cotizacion = p_id_cotizacion;
+    WHERE id = p_id_cotizacion;
 END$$
 
 CREATE PROCEDURE sp_cotizacion_obtener(IN p_id_cotizacion INT)
 BEGIN
-    SELECT * FROM cotizacion WHERE id_cotizacion = p_id_cotizacion;
+    SELECT * FROM cotizacion WHERE id = p_id_cotizacion;
 END$$
 
 CREATE PROCEDURE sp_cotizacion_listar()
@@ -220,19 +220,19 @@ BEGIN
     UPDATE detalle_cotizacion SET 
         numero_linea = p_numero_linea, id_producto = p_id_producto, cantidad = p_cantidad, 
         precio_unitario = p_precio_unitario, descuento = p_descuento, importe = p_importe
-    WHERE id_detalle_cotizacion = p_id_detalle_cotizacion;
+    WHERE id = p_id_detalle_cotizacion;
 END$$
 
 CREATE PROCEDURE sp_detalle_cotizacion_eliminar(IN p_id_detalle_cotizacion INT)
 BEGIN
     -- Como la tabla detalle_cotizacion no tiene campo 'estado' o 'anulado', 
     -- y los detalles se manejan desde la cabecera, aquí aplicamos borrado físico si se elimina una línea.
-    DELETE FROM detalle_cotizacion WHERE id_detalle_cotizacion = p_id_detalle_cotizacion;
+    DELETE FROM detalle_cotizacion WHERE id = p_id_detalle_cotizacion;
 END$$
 
 CREATE PROCEDURE sp_detalle_cotizacion_obtener(IN p_id_detalle_cotizacion INT)
 BEGIN
-    SELECT * FROM detalle_cotizacion WHERE id_detalle_cotizacion = p_id_detalle_cotizacion;
+    SELECT * FROM detalle_cotizacion WHERE id = p_id_detalle_cotizacion;
 END$$
 
 CREATE PROCEDURE sp_detalle_cotizacion_listar(IN p_id_cotizacion INT)
