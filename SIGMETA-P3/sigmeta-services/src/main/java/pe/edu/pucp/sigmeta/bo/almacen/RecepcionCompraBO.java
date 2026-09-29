@@ -9,7 +9,7 @@ public interface RecepcionCompraBO {
 
     RecepcionCompra registrar(RecepcionCompra recepcion) throws SQLException;
 
-    RecepcionCompra modificar(RecepcionCompra recepcion) throws SQLException;
+    RecepcionCompra modificar(RecepcionCompra recepcion, int idAlmacenero) throws SQLException;
 
     RecepcionCompra obtener(int idRecepcion) throws SQLException;
 
