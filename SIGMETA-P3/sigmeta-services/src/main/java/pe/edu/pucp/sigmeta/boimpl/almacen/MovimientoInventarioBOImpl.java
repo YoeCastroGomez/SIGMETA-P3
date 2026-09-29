@@ -11,6 +11,7 @@ import pe.edu.pucp.sigmeta.dao.almacen.StockInventarioDAO;
 import pe.edu.pucp.sigmeta.daoimpl.almacen.MovimientoInventarioDAOImpl;
 import pe.edu.pucp.sigmeta.daoimpl.almacen.StockInventarioDAOImpl;
 import pe.edu.pucp.sigmeta.model.almacen.MovimientoInventario;
+import pe.edu.pucp.sigmeta.model.almacen.Despacho;
 import pe.edu.pucp.sigmeta.model.enums.TipoMovimientoInventario;
 import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.model.producto.Producto;
@@ -34,6 +35,56 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
         this.stockDAO = new StockInventarioDAOImpl();
         this.usuarioBO = new UsuarioBOImpl();
         this.autorizacionBO = new SolicitudAutorizacionBOImpl();
+    }
+
+    /**
+     * Operacion compuesta: DespachoBO es responsable del commit/rollback/close.
+     * El bloqueo de la salida y la UNIQUE en id_movimiento_revertido impiden
+     * acreditar el mismo movimiento dos veces, incluso con llamadas concurrentes.
+     */
+    @Override
+    public MovimientoInventario revertirSalidaDespacho(int idMovimientoSalida, int idDespacho,
+                                                        int idAlmacenero, String motivo) throws SQLException {
+        validarId(idMovimientoSalida);
+        validarId(idDespacho);
+        validarId(idAlmacenero);
+        String motivoValidado = Validador.textoObligatorio(motivo, "motivo de reversion", 255);
+        usuarioBO.verificarRol(idAlmacenero, TipoRol.ALMACENERO);
+
+        MovimientoInventario original = movimientoDAO.bloquearMovimiento(idMovimientoSalida);
+        if (original == null || original.getTipo() != TipoMovimientoInventario.SALIDA_DESPACHO
+                || original.getDespacho() == null || original.getDespacho().getId() != idDespacho) {
+            throw new IllegalArgumentException("La salida indicada no corresponde al despacho");
+        }
+        if (movimientoDAO.existeReversion(idMovimientoSalida)) {
+            throw new IllegalStateException("Esta salida de despacho ya fue revertida");
+        }
+        if (!Double.isFinite(original.getCantidad()) || original.getCantidad() <= 0) {
+            throw new IllegalStateException("La cantidad historica del movimiento no es valida");
+        }
+
+        int idProducto = original.getProducto().getId();
+        double stockActual = stockDAO.obtenerStockParaActualizar(idProducto);
+        double nuevoStock = stockActual + original.getCantidad();
+        if (!Double.isFinite(nuevoStock)) {
+            throw new IllegalStateException("El stock resultante no es valido");
+        }
+
+        MovimientoInventario reversion = new MovimientoInventario();
+        reversion.setProducto(original.getProducto());
+        reversion.setTipo(TipoMovimientoInventario.INGRESO_REVERSION_DESPACHO);
+        reversion.setCantidad(original.getCantidad());
+        reversion.setStockResultante(nuevoStock);
+        reversion.setDespacho(new Despacho());
+        reversion.getDespacho().setId(idDespacho);
+        Usuario responsable = new Usuario();
+        responsable.setId(idAlmacenero);
+        reversion.setUsuarioRegistro(responsable);
+        reversion.setMotivo(motivoValidado);
+        reversion.setIdMovimientoRevertido(idMovimientoSalida);
+
+        stockDAO.actualizarStock(idProducto, nuevoStock);
+        return movimientoDAO.registrarReversionDespacho(reversion);
     }
 
     @Override
