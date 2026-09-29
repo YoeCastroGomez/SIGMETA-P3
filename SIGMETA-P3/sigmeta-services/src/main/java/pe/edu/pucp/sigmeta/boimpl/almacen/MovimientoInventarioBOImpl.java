@@ -1,30 +1,39 @@
 package pe.edu.pucp.sigmeta.boimpl.almacen;
 
 import pe.edu.pucp.sigmeta.bo.almacen.MovimientoInventarioBO;
+import pe.edu.pucp.sigmeta.bo.seguridad.UsuarioBO;
+import pe.edu.pucp.sigmeta.bo.seguridad.SolicitudAutorizacionBO;
 import pe.edu.pucp.sigmeta.boimpl.Validador;
+import pe.edu.pucp.sigmeta.boimpl.seguridad.UsuarioBOImpl;
+import pe.edu.pucp.sigmeta.boimpl.seguridad.SolicitudAutorizacionBOImpl;
 import pe.edu.pucp.sigmeta.dao.almacen.MovimientoInventarioDAO;
 import pe.edu.pucp.sigmeta.dao.almacen.StockInventarioDAO;
 import pe.edu.pucp.sigmeta.daoimpl.almacen.MovimientoInventarioDAOImpl;
 import pe.edu.pucp.sigmeta.daoimpl.almacen.StockInventarioDAOImpl;
 import pe.edu.pucp.sigmeta.model.almacen.MovimientoInventario;
 import pe.edu.pucp.sigmeta.model.enums.TipoMovimientoInventario;
+import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.model.producto.Producto;
 import pe.edu.pucp.sigmeta.model.usuario.Usuario;
 import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
 public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
 
     private static final double EPSILON = 0.000001;
+    public static final String OPERACION_AJUSTE_INVENTARIO = "AJUSTE_INVENTARIO";
     private final MovimientoInventarioDAO movimientoDAO;
     private final StockInventarioDAO stockDAO;
+    private final UsuarioBO usuarioBO;
+    private final SolicitudAutorizacionBO autorizacionBO;
 
     public MovimientoInventarioBOImpl() {
         this.movimientoDAO = new MovimientoInventarioDAOImpl();
         this.stockDAO = new StockInventarioDAOImpl();
+        this.usuarioBO = new UsuarioBOImpl();
+        this.autorizacionBO = new SolicitudAutorizacionBOImpl();
     }
 
     @Override
@@ -36,6 +45,10 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
             throw new IllegalArgumentException("La cantidad contada debe ser valida y no negativa");
         }
         String motivoValidado = Validador.textoObligatorio(motivo, "motivo", 255);
+        usuarioBO.verificarRol(idUsuario, TipoRol.ALMACENERO);
+        if (!autorizacionBO.tieneAutorizacionVigente(idUsuario, OPERACION_AJUSTE_INVENTARIO)) {
+            throw new IllegalStateException("El ajuste requiere autorizacion vigente del Administrador");
+        }
 
         try {
             double stockActual = stockDAO.obtenerStockParaActualizar(idProducto);
@@ -73,9 +86,10 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
     }
 
     @Override
-    public MovimientoInventario modificarMotivo(int idMovimiento, String motivo) throws SQLException {
+    public MovimientoInventario modificarMotivo(int idMovimiento, String motivo, int idAdministrador) throws SQLException {
         validarId(idMovimiento);
         String motivoValidado = Validador.textoObligatorio(motivo, "motivo", 255);
+        usuarioBO.verificarRol(idAdministrador, TipoRol.ADMINISTRADOR);
         try {
             MovimientoInventario existente = movimientoDAO.load(idMovimiento);
             if (existente == null) {
@@ -116,14 +130,16 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
     public List<MovimientoInventario> listarPorProducto(int idProducto) throws SQLException {
         validarId(idProducto);
         try {
-            List<MovimientoInventario> encontrados = new ArrayList<>();
-            for (MovimientoInventario movimiento : movimientoDAO.listAll()) {
-                if (movimiento.getProducto() != null
-                        && movimiento.getProducto().getId() == idProducto) {
-                    encontrados.add(movimiento);
-                }
-            }
-            return encontrados;
+            return movimientoDAO.listarPorProducto(idProducto);
+        } finally {
+            transactionContext.close();
+        }
+    }
+
+    @Override
+    public List<Producto> listarEnStockMinimo() throws SQLException {
+        try {
+            return stockDAO.listarEnStockMinimo();
         } finally {
             transactionContext.close();
         }
