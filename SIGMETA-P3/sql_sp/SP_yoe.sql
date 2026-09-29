@@ -22,17 +22,17 @@ CREATE PROCEDURE sp_rol_modificar(
 BEGIN
     UPDATE rol
     SET tipo = p_tipo, descripcion = p_descripcion, estado = p_estado
-    WHERE id_rol = p_id_rol;
+    WHERE id = p_id_rol;
 END$$
 
 CREATE PROCEDURE sp_rol_eliminar(IN p_id_rol INT)
 BEGIN
-    UPDATE rol SET estado = FALSE WHERE id_rol = p_id_rol;
+    UPDATE rol SET estado = FALSE WHERE id = p_id_rol;
 END$$
 
 CREATE PROCEDURE sp_rol_obtener(IN p_id_rol INT)
 BEGIN
-    SELECT * FROM rol WHERE id_rol = p_id_rol;
+    SELECT * FROM rol WHERE id = p_id_rol;
 END$$
 
 CREATE PROCEDURE sp_rol_listar()
@@ -86,26 +86,26 @@ BEGIN
         nombre_usuario = p_nombre_usuario, clave_hash = p_clave_hash, salt = p_salt,
         nombres = p_nombres, apellidos = p_apellidos, correo = p_correo, id_rol = p_id_rol,
         estado = p_estado
-    WHERE id_usuario = p_id_usuario;
+    WHERE id = p_id_usuario;
 END$$
 
 CREATE PROCEDURE sp_usuario_eliminar(IN p_id_usuario INT)
 BEGIN
     -- Baja logica: el usuario desactivado conserva las operaciones que registro (RF002).
-    UPDATE usuario SET estado = FALSE WHERE id_usuario = p_id_usuario;
+    UPDATE usuario SET estado = FALSE WHERE id = p_id_usuario;
 END$$
 
 CREATE PROCEDURE sp_usuario_obtener(IN p_id_usuario INT)
 BEGIN
     SELECT u.*, r.tipo, r.descripcion, r.estado AS estado_rol
-    FROM usuario u INNER JOIN rol r ON u.id_rol = r.id_rol
-    WHERE u.id_usuario = p_id_usuario;
+    FROM usuario u INNER JOIN rol r ON u.id_rol = r.id
+    WHERE u.id = p_id_usuario;
 END$$
 
 CREATE PROCEDURE sp_usuario_listar()
 BEGIN
     SELECT u.*, r.tipo, r.descripcion, r.estado AS estado_rol
-    FROM usuario u INNER JOIN rol r ON u.id_rol = r.id_rol
+    FROM usuario u INNER JOIN rol r ON u.id_rol = r.id
     WHERE u.estado = TRUE;
 END$$
 
@@ -114,7 +114,7 @@ END$$
 CREATE PROCEDURE sp_usuario_buscar_por_nombre_usuario(IN p_nombre_usuario VARCHAR(50))
 BEGIN
     SELECT u.*, r.tipo, r.descripcion, r.estado AS estado_rol
-    FROM usuario u INNER JOIN rol r ON u.id_rol = r.id_rol
+    FROM usuario u INNER JOIN rol r ON u.id_rol = r.id
     WHERE u.nombre_usuario = p_nombre_usuario;
 END$$
 
@@ -122,7 +122,7 @@ END$$
 CREATE PROCEDURE sp_usuario_listar_por_estado(IN p_estado BOOLEAN)
 BEGIN
     SELECT u.*, r.tipo, r.descripcion, r.estado AS estado_rol
-    FROM usuario u INNER JOIN rol r ON u.id_rol = r.id_rol
+    FROM usuario u INNER JOIN rol r ON u.id_rol = r.id
     WHERE u.estado = p_estado;
 END$$
 
@@ -176,18 +176,18 @@ BEGIN
         contacto_nombre = p_contacto_nombre, condicion_pago = p_condicion_pago,
         plazo_credito_dias = p_plazo_credito_dias, limite_credito = p_limite_credito,
         calificacion_crediticia = p_calificacion_crediticia, estado = p_estado
-    WHERE id_cliente = p_id_cliente;
+    WHERE id = p_id_cliente;
 END$$
 
 CREATE PROCEDURE sp_cliente_eliminar(IN p_id_cliente INT)
 BEGIN
     -- Baja logica: el cliente conserva su historial comercial (RF003).
-    UPDATE cliente SET estado = FALSE WHERE id_cliente = p_id_cliente;
+    UPDATE cliente SET estado = FALSE WHERE id = p_id_cliente;
 END$$
 
 CREATE PROCEDURE sp_cliente_obtener(IN p_id_cliente INT)
 BEGIN
-    SELECT * FROM cliente WHERE id_cliente = p_id_cliente;
+    SELECT * FROM cliente WHERE id = p_id_cliente;
 END$$
 
 CREATE PROCEDURE sp_cliente_listar()
@@ -257,18 +257,18 @@ BEGIN
         razon_social = p_razon_social, direccion = p_direccion, telefono = p_telefono, correo = p_correo,
         ruc = p_ruc, rubro = p_rubro, contacto_nombre = p_contacto_nombre,
         plazo_entrega_dias = p_plazo_entrega_dias, condicion_pago = p_condicion_pago, estado = p_estado
-    WHERE id_proveedor = p_id_proveedor;
+    WHERE id = p_id_proveedor;
 END$$
 
 CREATE PROCEDURE sp_proveedor_eliminar(IN p_id_proveedor INT)
 BEGIN
     -- Baja logica: el proveedor conserva su historial de compras (RF004).
-    UPDATE proveedor SET estado = FALSE WHERE id_proveedor = p_id_proveedor;
+    UPDATE proveedor SET estado = FALSE WHERE id = p_id_proveedor;
 END$$
 
 CREATE PROCEDURE sp_proveedor_obtener(IN p_id_proveedor INT)
 BEGIN
-    SELECT * FROM proveedor WHERE id_proveedor = p_id_proveedor;
+    SELECT * FROM proveedor WHERE id = p_id_proveedor;
 END$$
 
 CREATE PROCEDURE sp_proveedor_listar()
@@ -338,7 +338,7 @@ BEGIN
         operacion_restringida = p_operacion_restringida, motivo = p_motivo,
         fecha_solicitud = p_fecha_solicitud, estado = p_estado, fecha_resolucion = p_fecha_resolucion,
         vigencia_minutos = p_vigencia_minutos, fecha_vencimiento = p_fecha_vencimiento
-    WHERE id_solicitud_autorizacion = p_id_solicitud_autorizacion;
+    WHERE id = p_id_solicitud_autorizacion;
 END$$
 
 CREATE PROCEDURE sp_solicitud_autorizacion_eliminar(IN p_id_solicitud_autorizacion INT)
@@ -350,13 +350,13 @@ BEGIN
         fecha_vencimiento = CASE WHEN estado = 'APROBADA' THEN NOW() ELSE fecha_vencimiento END,
         fecha_resolucion = COALESCE(fecha_resolucion, NOW()),
         estado = CASE WHEN estado = 'APROBADA' THEN 'VENCIDA' ELSE 'RECHAZADA' END
-    WHERE id_solicitud_autorizacion = p_id_solicitud_autorizacion
+    WHERE id = p_id_solicitud_autorizacion
       AND estado IN ('PENDIENTE', 'APROBADA');
 END$$
 
 CREATE PROCEDURE sp_solicitud_autorizacion_obtener(IN p_id_solicitud_autorizacion INT)
 BEGIN
-    SELECT * FROM solicitud_autorizacion WHERE id_solicitud_autorizacion = p_id_solicitud_autorizacion;
+    SELECT * FROM solicitud_autorizacion WHERE id = p_id_solicitud_autorizacion;
 END$$
 
 CREATE PROCEDURE sp_solicitud_autorizacion_listar()
