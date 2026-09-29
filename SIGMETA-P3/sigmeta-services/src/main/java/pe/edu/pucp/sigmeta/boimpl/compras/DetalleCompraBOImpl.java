@@ -1,7 +1,9 @@
 package pe.edu.pucp.sigmeta.boimpl.compras;
 
 import pe.edu.pucp.sigmeta.bo.compras.DetalleCompraBO;
+import pe.edu.pucp.sigmeta.bo.seguridad.UsuarioBO;
 import pe.edu.pucp.sigmeta.boimpl.Validador;
+import pe.edu.pucp.sigmeta.boimpl.seguridad.UsuarioBOImpl;
 import pe.edu.pucp.sigmeta.dao.compras.CompraDAO;
 import pe.edu.pucp.sigmeta.dao.compras.DetalleCompraDAO;
 import pe.edu.pucp.sigmeta.daoimpl.compras.CompraDAOImpl;
@@ -9,6 +11,7 @@ import pe.edu.pucp.sigmeta.daoimpl.compras.DetalleCompraDAOImpl;
 import pe.edu.pucp.sigmeta.model.compras.Compra;
 import pe.edu.pucp.sigmeta.model.compras.DetalleCompra;
 import pe.edu.pucp.sigmeta.model.enums.EstadoCompra;
+import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
 import java.sql.SQLException;
@@ -20,18 +23,21 @@ public class DetalleCompraBOImpl implements DetalleCompraBO {
 
     private final DetalleCompraDAO detalleCompraDAO;
     private final CompraDAO compraDAO;
+    private final UsuarioBO usuarioBO;
 
     public DetalleCompraBOImpl() {
         this.detalleCompraDAO = new DetalleCompraDAOImpl();
         this.compraDAO = new CompraDAOImpl();
+        this.usuarioBO = new UsuarioBOImpl();
     }
 
     @Override
-    public DetalleCompra registrar(DetalleCompra detalle) throws SQLException {
+    public DetalleCompra registrar(DetalleCompra detalle, int idAdministrador) throws SQLException {
         validarDetalle(detalle);
         if (detalle.getCantidadRecibida() != 0) {
             throw new IllegalArgumentException("Un detalle nuevo no puede tener cantidades recibidas");
         }
+        usuarioBO.verificarRol(idAdministrador, TipoRol.ADMINISTRADOR);
 
         try {
             Compra compra = bloquearCompraEditable(detalle.getCompra().getId());
@@ -49,9 +55,10 @@ public class DetalleCompraBOImpl implements DetalleCompraBO {
     }
 
     @Override
-    public DetalleCompra modificar(DetalleCompra detalle) throws SQLException {
+    public DetalleCompra modificar(DetalleCompra detalle, int idAdministrador) throws SQLException {
         validarDetalle(detalle);
         validarId(detalle.getId());
+        usuarioBO.verificarRol(idAdministrador, TipoRol.ADMINISTRADOR);
 
         try {
             Compra compra = bloquearCompraEditable(detalle.getCompra().getId());
@@ -77,8 +84,9 @@ public class DetalleCompraBOImpl implements DetalleCompraBO {
     }
 
     @Override
-    public void eliminar(int idDetalleCompra) throws SQLException {
+    public void eliminar(int idDetalleCompra, int idAdministrador) throws SQLException {
         validarId(idDetalleCompra);
+        usuarioBO.verificarRol(idAdministrador, TipoRol.ADMINISTRADOR);
         try {
             DetalleCompra detalle = obtenerExistente(idDetalleCompra);
             Compra compra = bloquearCompraEditable(detalle.getCompra().getId());
