@@ -20,6 +20,12 @@ public interface MovimientoInventarioBO {
     MovimientoInventario revertirSalidaDespacho(int idMovimientoSalida, int idDespacho,
                                                  int idAlmacenero, String motivo) throws SQLException;
 
+    List<MovimientoInventario> revertirRecepcionCompra(int idRecepcion, int idAlmacenero,
+                                                       String motivo) throws SQLException;
+
+    MovimientoInventario revertirAjuste(int idMovimientoAjuste, int idAlmacenero,
+                                        String motivo) throws SQLException;
+
     MovimientoInventario registrarAjuste(int idProducto, int idUsuario,
                                          double cantidadContada, String motivo) throws SQLException;
 
