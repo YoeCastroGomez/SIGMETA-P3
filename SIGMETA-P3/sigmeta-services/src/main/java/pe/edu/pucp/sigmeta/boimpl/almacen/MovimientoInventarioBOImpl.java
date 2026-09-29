@@ -74,7 +74,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
         validarId(idDespacho);
         validarId(idAlmacenero);
         String motivoValidado = Validador.textoObligatorio(motivo, "motivo de reversion", 255);
-        usuarioBO.verificarRol(idAlmacenero, TipoRol.ALMACENERO);
+        usuarioBO.verificarRol(idAlmacenero, TipoRol.ALMACENERO, TipoRol.ADMINISTRADOR);
 
         MovimientoInventario original = movimientoDAO.bloquearMovimiento(idMovimientoSalida);
         if (original == null || original.getTipo() != TipoMovimientoInventario.SALIDA_DESPACHO
