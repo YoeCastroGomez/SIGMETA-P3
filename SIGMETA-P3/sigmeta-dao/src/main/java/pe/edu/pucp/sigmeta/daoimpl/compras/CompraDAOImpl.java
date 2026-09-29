@@ -11,6 +11,7 @@ import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
 import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -20,6 +21,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class CompraDAOImpl implements CompraDAO {
+
+    @Override
+    public void bloquearCompra(int idCompra) throws SQLException {
+        Connection conn = transactionContext.getConnection();
+        String sql = "SELECT id FROM compra WHERE id = ? FOR UPDATE";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idCompra);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    throw new IllegalArgumentException("No existe la compra con ID " + idCompra);
+                }
+            }
+        }
+    }
 
     @Override
     public Compra save(Compra compra) throws SQLException {
