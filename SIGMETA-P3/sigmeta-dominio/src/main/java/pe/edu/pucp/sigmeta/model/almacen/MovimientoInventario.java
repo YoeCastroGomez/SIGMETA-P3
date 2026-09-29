@@ -24,6 +24,7 @@ public class MovimientoInventario {
     private Usuario usuarioRegistro;
     private String motivo;
     private double cantidadContada;
+    private Integer idMovimientoRevertido;
 
     public MovimientoInventario() {
     }
@@ -142,6 +143,14 @@ public class MovimientoInventario {
 
     public void setMotivo(String motivo) {
         this.motivo = motivo;
+    }
+
+    public Integer getIdMovimientoRevertido() {
+        return idMovimientoRevertido;
+    }
+
+    public void setIdMovimientoRevertido(Integer idMovimientoRevertido) {
+        this.idMovimientoRevertido = idMovimientoRevertido;
     }
 
     public double getCantidadContada() {
