@@ -7,11 +7,11 @@ import java.util.List;
 
 public interface DetalleCompraBO {
 
-    DetalleCompra registrar(DetalleCompra detalle) throws SQLException;
+    DetalleCompra registrar(DetalleCompra detalle, int idAdministrador) throws SQLException;
 
-    DetalleCompra modificar(DetalleCompra detalle) throws SQLException;
+    DetalleCompra modificar(DetalleCompra detalle, int idAdministrador) throws SQLException;
 
-    void eliminar(int idDetalleCompra) throws SQLException;
+    void eliminar(int idDetalleCompra, int idAdministrador) throws SQLException;
 
     DetalleCompra obtener(int idDetalleCompra) throws SQLException;
 
