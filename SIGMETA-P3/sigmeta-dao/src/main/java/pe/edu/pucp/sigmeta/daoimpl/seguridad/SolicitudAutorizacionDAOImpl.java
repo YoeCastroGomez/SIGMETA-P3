@@ -162,7 +162,7 @@ public class SolicitudAutorizacionDAOImpl implements SolicitudAutorizacionDAO {
         }
 
         SolicitudAutorizacion solicitud = new SolicitudAutorizacion();
-        solicitud.setId(rs.getInt("id_solicitud_autorizacion"));
+        solicitud.setId(rs.getInt("id"));
         solicitud.setSolicitante(solicitante);
         solicitud.setAdministrador(administrador);
         solicitud.setOperacionRestringida(rs.getString("operacion_restringida"));

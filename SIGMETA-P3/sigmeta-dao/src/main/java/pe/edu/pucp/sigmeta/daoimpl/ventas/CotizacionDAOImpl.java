@@ -31,15 +31,17 @@ public class CotizacionDAOImpl implements CotizacionDAO {
 
         c.setAnulado(rs.getBoolean("anulado"));
         c.setMotivoAnulacion(rs.getString("motivo_anulacion"));
+        Timestamp fAnulacion = rs.getTimestamp("fecha_anulacion");
+        if(fAnulacion != null) c.setFechaAnulacion(fAnulacion.toLocalDateTime());
 
         if(rs.getDate("fecha_vigencia") != null) c.setFechaVigencia(rs.getDate("fecha_vigencia").toLocalDate());
         c.setEstado(EstadoCotizacion.valueOf(rs.getString("estado")));
 
         Cliente cli = new Cliente();
-        cli.setId(rs.getInt("id"));
+        cli.setId(rs.getInt("id_cliente"));
         c.setCliente(cli);
 
-        int idUser = rs.getInt("id");
+        int idUser = rs.getInt("id_usuario_registro");
         if(!rs.wasNull()){
             Usuario u = new Usuario();
             u.setId(idUser);
@@ -137,7 +139,8 @@ public class CotizacionDAOImpl implements CotizacionDAO {
         Connection conn = transactionContext.getConnection();
         try (CallableStatement cs = conn.prepareCall(sql)) {
             cs.setInt(1, cotizacion.getId());
-            cs.setString(2, "Anulado por sistema");
+            cs.setString(2, cotizacion.getMotivoAnulacion() != null
+                    ? cotizacion.getMotivoAnulacion() : "Anulado por sistema");
             cs.executeUpdate();
         }
     }

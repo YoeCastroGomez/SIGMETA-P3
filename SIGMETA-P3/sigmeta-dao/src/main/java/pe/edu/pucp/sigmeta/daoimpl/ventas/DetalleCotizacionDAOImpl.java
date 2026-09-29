@@ -2,6 +2,7 @@ package pe.edu.pucp.sigmeta.daoimpl.ventas;
 
 import pe.edu.pucp.sigmeta.dao.ventas.DetalleCotizacionDAO;
 import pe.edu.pucp.sigmeta.model.producto.Producto;
+import pe.edu.pucp.sigmeta.model.ventas.Cotizacion;
 import pe.edu.pucp.sigmeta.model.ventas.DetalleCotizacion;
 import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
@@ -22,8 +23,12 @@ public class DetalleCotizacionDAOImpl implements DetalleCotizacionDAO {
         d.setImporte(rs.getDouble("importe"));
 
         Producto p = new Producto();
-        p.setId(rs.getInt("id"));
+        p.setId(rs.getInt("id_producto"));
         d.setProducto(p);
+
+        Cotizacion c = new Cotizacion();
+        c.setId(rs.getInt("id_cotizacion"));
+        d.setCotizacion(c);
 
         return d;
     }

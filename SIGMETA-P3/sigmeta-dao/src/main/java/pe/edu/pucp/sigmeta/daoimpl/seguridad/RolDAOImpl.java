@@ -105,7 +105,7 @@ public class RolDAOImpl implements RolDAO {
 
     private Rol mapear(ResultSet rs) throws SQLException {
         Rol rol = new Rol();
-        rol.setId(rs.getInt("id_rol"));
+        rol.setId(rs.getInt("id"));
         rol.setTipo(TipoRol.valueOf(rs.getString("tipo")));
         rol.setDescripcion(rs.getString("descripcion"));
         rol.setEstado(rs.getBoolean("estado"));
