@@ -15,7 +15,6 @@ import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -211,6 +210,49 @@ public class MovimientoInventarioDAOImpl implements MovimientoInventarioDAO {
             }
         }
         return reversion;
+    }
+
+    @Override
+    public MovimientoInventario registrarCompensacion(MovimientoInventario reversion) throws SQLException {
+        String sql = "INSERT INTO movimiento_inventario " +
+                "(id_producto, tipo, fecha_movimiento, cantidad, stock_resultante, " +
+                "id_recepcion_compra, id_usuario_registro, motivo, id_movimiento_revertido) " +
+                "VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?)";
+        Connection conn = transactionContext.getConnection();
+        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, reversion.getProducto().getId());
+            ps.setString(2, reversion.getTipo().name());
+            ps.setDouble(3, reversion.getCantidad());
+            ps.setDouble(4, reversion.getStockResultante());
+            if (reversion.getRecepcionCompra() != null) {
+                ps.setInt(5, reversion.getRecepcionCompra().getId());
+            } else {
+                ps.setNull(5, Types.INTEGER);
+            }
+            ps.setInt(6, reversion.getUsuarioRegistro().getId());
+            ps.setString(7, reversion.getMotivo());
+            ps.setInt(8, reversion.getIdMovimientoRevertido());
+            if (ps.executeUpdate() != 1) throw new SQLException("No se pudo registrar la compensacion");
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (!rs.next()) throw new SQLException("No se obtuvo el ID de compensacion");
+                reversion.setId(rs.getInt(1));
+            }
+        }
+        return reversion;
+    }
+
+    @Override
+    public List<MovimientoInventario> listarPorRecepcion(int idRecepcion) throws SQLException {
+        String sql = "SELECT * FROM movimiento_inventario WHERE id_recepcion_compra = ? ORDER BY id";
+        List<MovimientoInventario> lista = new ArrayList<>();
+        Connection conn = transactionContext.getConnection();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idRecepcion);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) lista.add(mapearMovimiento(rs));
+            }
+        }
+        return lista;
     }
 
     private MovimientoInventario mapearMovimiento(ResultSet rs)
