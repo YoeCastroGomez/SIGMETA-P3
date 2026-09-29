@@ -9,5 +9,6 @@ import java.util.List;
 public interface DetalleRecepcionCompraDAO extends BaseDAO<DetalleRecepcionCompra, Integer> {
 
     List<DetalleRecepcionCompra> listAll() throws SQLException;
+    List<DetalleRecepcionCompra> listarPorRecepcion(int idRecepcion) throws SQLException;
 
 }
