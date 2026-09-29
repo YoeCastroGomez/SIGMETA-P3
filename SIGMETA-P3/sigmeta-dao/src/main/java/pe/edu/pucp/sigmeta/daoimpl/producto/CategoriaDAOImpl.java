@@ -28,6 +28,7 @@ public class CategoriaDAOImpl implements CategoriaDAO {
         c.setId(rs.getInt("id"));
         c.setNombre(rs.getString("nombre"));
         c.setDescripcion(rs.getString("descripcion"));
+        c.setEstado(rs.getBoolean("estado"));
         return c;
     }
 
@@ -83,5 +84,19 @@ public class CategoriaDAOImpl implements CategoriaDAO {
             while (rs.next()) categorias.add(mapearCategoria(rs));
         }
         return categorias;
+    }
+
+    @Override
+    public List<Categoria> listarPorEstado(boolean estado) throws SQLException {
+        String sql = "{CALL sp_categoria_listar_por_estado(?)}";
+        List<Categoria> lista = new ArrayList<>();
+        Connection conn = transactionContext.getConnection();
+        try (CallableStatement cs = conn.prepareCall(sql)) {
+            cs.setBoolean(1, estado);
+            try (ResultSet rs = cs.executeQuery()) {
+                while (rs.next()) lista.add(mapearCategoria(rs));
+            }
+        }
+        return lista;
     }
 }

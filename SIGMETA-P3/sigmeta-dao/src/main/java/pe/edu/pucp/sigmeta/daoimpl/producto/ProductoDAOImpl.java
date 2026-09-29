@@ -30,7 +30,7 @@ public class ProductoDAOImpl implements ProductoDAO {
         p.setDescripcion(rs.getString("descripcion"));
 
         Categoria cat = new Categoria();
-        cat.setId(rs.getInt("id"));
+        cat.setId(rs.getInt("id_categoria"));
         p.setCategoria(cat);
 
         p.setUnidadCompra(UnidadMedida.valueOf(rs.getString("unidad_compra")));
@@ -42,6 +42,7 @@ public class ProductoDAOImpl implements ProductoDAO {
         p.setStockMinimo(rs.getDouble("stock_minimo"));
         p.setImagen(rs.getString("imagen"));
         p.setPrecioReferencial(rs.getDouble("precio_referencial"));
+        p.setEstado(rs.getBoolean("estado"));
         return p;
     }
 
@@ -121,6 +122,7 @@ public class ProductoDAOImpl implements ProductoDAO {
             cs.setDouble(14, producto.getStockMinimo());
             cs.setString(15, producto.getImagen());
             cs.setDouble(16, producto.getPrecioReferencial());
+            cs.executeUpdate();
             return producto;
         }
     }
@@ -133,5 +135,19 @@ public class ProductoDAOImpl implements ProductoDAO {
             cs.setInt(1, producto.getId());
             cs.executeUpdate();
         }
+    }
+
+    @Override
+    public List<Producto> listarPorEstado(boolean estado) throws SQLException {
+        String sql = "{CALL sp_producto_listar_por_estado(?)}";
+        List<Producto> lista = new ArrayList<>();
+        Connection conn = transactionContext.getConnection();
+        try (CallableStatement cs = conn.prepareCall(sql)) {
+            cs.setBoolean(1, estado);
+            try (ResultSet rs = cs.executeQuery()) {
+                while (rs.next()) lista.add(mapearProducto(rs));
+            }
+        }
+        return lista;
     }
 }

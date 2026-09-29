@@ -14,7 +14,10 @@ public class Main {
 
         DatosMaestros maestros = PruebaSeguridad.ejecutar();
 
-        DatosCatalogo catalogo = PruebaCatalogo.ejecutar(maestros.getCliente());
+        DatosCatalogo catalogo = PruebaCatalogo.ejecutar(
+                maestros.getCliente(),
+                maestros.getVendedor(),
+                maestros.getAdministrador());
 
         PruebaAbastecimiento.ejecutar(
                 maestros.getProveedor(),
