@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface CategoriaDAO extends BaseDAO<Categoria, Integer> {
     List<Categoria> listarTodos() throws SQLException;
+    List<Categoria> listarPorEstado(boolean estado) throws SQLException;
 }

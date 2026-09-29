@@ -11,17 +11,23 @@ import pe.edu.pucp.sigmeta.model.usuario.Usuario;
 public class DatosMaestros {
 
     private Usuario administrador;
+    private Usuario vendedor;
     private Cliente cliente;
     private Proveedor proveedor;
 
-    public DatosMaestros(Usuario administrador, Cliente cliente, Proveedor proveedor) {
+    public DatosMaestros(Usuario administrador, Usuario vendedor, Cliente cliente, Proveedor proveedor) {
         this.administrador = administrador;
+        this.vendedor = vendedor;
         this.cliente = cliente;
         this.proveedor = proveedor;
     }
 
     public Usuario getAdministrador() {
         return administrador;
+    }
+
+    public Usuario getVendedor() {
+        return vendedor;
     }
 
     public Cliente getCliente() {

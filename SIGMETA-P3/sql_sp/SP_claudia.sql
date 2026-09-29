@@ -239,4 +239,17 @@ CREATE PROCEDURE sp_detalle_cotizacion_listar(IN p_id_cotizacion INT)
 BEGIN
     SELECT * FROM detalle_cotizacion WHERE id_cotizacion = p_id_cotizacion;
 END$$
+
+-- RF006: busqueda de categorias por estado (activas o desactivadas)
+CREATE PROCEDURE sp_categoria_listar_por_estado(IN p_estado BOOLEAN)
+BEGIN
+    SELECT * FROM categoria WHERE estado = p_estado;
+END$$
+
+-- RF005: busqueda de productos por estado (activos o desactivados)
+CREATE PROCEDURE sp_producto_listar_por_estado(IN p_estado BOOLEAN)
+BEGIN
+    SELECT * FROM producto WHERE estado = p_estado;
+END$$
+
 DELIMITER ;

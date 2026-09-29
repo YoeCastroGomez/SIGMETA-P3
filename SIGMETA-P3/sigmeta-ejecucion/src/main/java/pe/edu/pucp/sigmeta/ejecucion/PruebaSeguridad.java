@@ -138,7 +138,7 @@ public class PruebaSeguridad {
 
         System.out.println();
 
-        return new DatosMaestros(administrador, clienteCredito, proveedorPrincipal);
+        return new DatosMaestros(administrador, vendedor, clienteCredito, proveedorPrincipal);
     }
 
     private static Rol crearRol(int id, TipoRol tipo, String descripcion) {
