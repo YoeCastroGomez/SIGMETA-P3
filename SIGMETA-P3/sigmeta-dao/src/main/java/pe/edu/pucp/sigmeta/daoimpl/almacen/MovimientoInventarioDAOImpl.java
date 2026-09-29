@@ -14,6 +14,8 @@ import pe.edu.pucp.sigmeta.transaction.transactionContext;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.Statement;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -162,6 +164,55 @@ public class MovimientoInventarioDAOImpl implements MovimientoInventarioDAO {
         return movimientos;
     }
 
+    @Override
+    public MovimientoInventario bloquearMovimiento(int idMovimiento) throws SQLException {
+        Connection conn = transactionContext.getConnection();
+        String sql = "SELECT * FROM movimiento_inventario WHERE id = ? FOR UPDATE";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idMovimiento);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapearMovimiento(rs) : null;
+            }
+        }
+    }
+
+    @Override
+    public boolean existeReversion(int idMovimientoOriginal) throws SQLException {
+        Connection conn = transactionContext.getConnection();
+        String sql = "SELECT id FROM movimiento_inventario WHERE id_movimiento_revertido = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idMovimientoOriginal);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    @Override
+    public MovimientoInventario registrarReversionDespacho(MovimientoInventario reversion) throws SQLException {
+        String sql = "INSERT INTO movimiento_inventario " +
+                "(id_producto, tipo, fecha_movimiento, cantidad, stock_resultante, " +
+                "id_despacho, id_usuario_registro, motivo, id_movimiento_revertido) " +
+                "VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?)";
+        Connection conn = transactionContext.getConnection();
+        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, reversion.getProducto().getId());
+            ps.setString(2, reversion.getTipo().name());
+            ps.setDouble(3, reversion.getCantidad());
+            ps.setDouble(4, reversion.getStockResultante());
+            ps.setInt(5, reversion.getDespacho().getId());
+            ps.setInt(6, reversion.getUsuarioRegistro().getId());
+            ps.setString(7, reversion.getMotivo());
+            ps.setInt(8, reversion.getIdMovimientoRevertido());
+            if (ps.executeUpdate() != 1) throw new SQLException("No se pudo registrar la reversion");
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (!keys.next()) throw new SQLException("No se obtuvo ID de reversion");
+                reversion.setId(keys.getInt(1));
+            }
+        }
+        return reversion;
+    }
+
     private MovimientoInventario mapearMovimiento(ResultSet rs)
             throws SQLException {
 
@@ -182,6 +233,8 @@ public class MovimientoInventarioDAOImpl implements MovimientoInventarioDAO {
         movimiento.setStockResultante(rs.getDouble("stock_resultante"));
         movimiento.setMotivo(rs.getString("motivo"));
         movimiento.setCantidadContada(rs.getDouble("cantidad_contada"));
+        int idOriginal = rs.getInt("id_movimiento_revertido");
+        if (!rs.wasNull()) movimiento.setIdMovimientoRevertido(idOriginal);
 
         Producto producto = new Producto();
         producto.setId(rs.getInt("id_producto"));
