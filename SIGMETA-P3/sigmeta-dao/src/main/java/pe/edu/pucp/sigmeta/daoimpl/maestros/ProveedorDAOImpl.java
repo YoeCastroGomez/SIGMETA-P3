@@ -144,7 +144,7 @@ public class ProveedorDAOImpl implements ProveedorDAO {
 
     private Proveedor mapear(ResultSet rs) throws SQLException {
         Proveedor proveedor = new Proveedor();
-        proveedor.setId(rs.getInt("id_proveedor"));
+        proveedor.setId(rs.getInt("id"));
         proveedor.setRazonSocial(rs.getString("razon_social"));
         proveedor.setDireccion(rs.getString("direccion"));
         proveedor.setTelefono(rs.getString("telefono"));

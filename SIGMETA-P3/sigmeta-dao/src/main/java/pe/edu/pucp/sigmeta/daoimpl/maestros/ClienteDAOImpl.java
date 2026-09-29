@@ -147,7 +147,7 @@ public class ClienteDAOImpl implements ClienteDAO {
 
     private Cliente mapear(ResultSet rs) throws SQLException {
         Cliente cliente = new Cliente();
-        cliente.setId(rs.getInt("id_cliente"));
+        cliente.setId(rs.getInt("id"));
         cliente.setRazonSocial(rs.getString("razon_social"));
         cliente.setDireccion(rs.getString("direccion"));
         cliente.setTelefono(rs.getString("telefono"));

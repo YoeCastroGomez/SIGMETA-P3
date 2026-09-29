@@ -134,7 +134,7 @@ public class UsuarioDAOImpl implements UsuarioDAO {
         rol.setEstado(rs.getBoolean("estado_rol"));
 
         Usuario usuario = new Usuario();
-        usuario.setId(rs.getInt("id_usuario"));
+        usuario.setId(rs.getInt("id"));
         usuario.setNombreUsuario(rs.getString("nombre_usuario"));
         usuario.setClaveHash(rs.getString("clave_hash"));
         usuario.setSalt(rs.getString("salt"));
