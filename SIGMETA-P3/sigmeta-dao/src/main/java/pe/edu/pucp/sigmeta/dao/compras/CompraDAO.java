@@ -14,6 +14,7 @@ public interface CompraDAO extends BaseDAO<Compra, Integer> {
     List<Compra> listAll() throws SQLException;
 
     void bloquearCompra(int idCompra) throws SQLException;
+    void actualizarEstadoPorReversion(int idCompra, EstadoCompra estado) throws SQLException;
 
     List<Compra> listarPorProveedorYFechas(int idProveedor, LocalDate fechaInicio, LocalDate fechaFin) throws SQLException;
 
