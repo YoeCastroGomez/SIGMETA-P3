@@ -5,11 +5,13 @@ import pe.edu.pucp.sigmeta.boimpl.Validador;
 import pe.edu.pucp.sigmeta.dao.almacen.DetalleRecepcionCompraDAO;
 import pe.edu.pucp.sigmeta.dao.almacen.MovimientoInventarioDAO;
 import pe.edu.pucp.sigmeta.dao.almacen.RecepcionCompraDAO;
+import pe.edu.pucp.sigmeta.dao.almacen.StockInventarioDAO;
 import pe.edu.pucp.sigmeta.dao.compras.CompraDAO;
 import pe.edu.pucp.sigmeta.dao.compras.DetalleCompraDAO;
 import pe.edu.pucp.sigmeta.daoimpl.almacen.DetalleRecepcionCompraDAOImpl;
 import pe.edu.pucp.sigmeta.daoimpl.almacen.MovimientoInventarioDAOImpl;
 import pe.edu.pucp.sigmeta.daoimpl.almacen.RecepcionCompraDAOImpl;
+import pe.edu.pucp.sigmeta.daoimpl.almacen.StockInventarioDAOImpl;
 import pe.edu.pucp.sigmeta.daoimpl.compras.CompraDAOImpl;
 import pe.edu.pucp.sigmeta.daoimpl.compras.DetalleCompraDAOImpl;
 import pe.edu.pucp.sigmeta.model.almacen.DetalleRecepcionCompra;
@@ -22,9 +24,6 @@ import pe.edu.pucp.sigmeta.model.enums.TipoMovimientoInventario;
 import pe.edu.pucp.sigmeta.model.producto.Producto;
 import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,6 +40,7 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
     private final DetalleCompraDAO detalleCompraDAO;
     private final MovimientoInventarioDAO movimientoDAO;
     private final CompraDAO compraDAO;
+    private final StockInventarioDAO stockDAO;
 
     public RecepcionCompraBOImpl() {
         this.recepcionDAO = new RecepcionCompraDAOImpl();
@@ -48,6 +48,7 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
         this.detalleCompraDAO = new DetalleCompraDAOImpl();
         this.movimientoDAO = new MovimientoInventarioDAOImpl();
         this.compraDAO = new CompraDAOImpl();
+        this.stockDAO = new StockInventarioDAOImpl();
     }
 
     @Override
@@ -59,19 +60,8 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
         }
 
         try {
-            Connection conn = transactionContext.getConnection();
             int idCompra = recepcion.getCompra().getId();
-
-            // Serializa las recepciones de la misma compra y evita recibir cantidades en exceso.
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT id FROM compra WHERE id = ? FOR UPDATE")) {
-                ps.setInt(1, idCompra);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (!rs.next()) {
-                        throw new IllegalArgumentException("No existe la compra con ID " + idCompra);
-                    }
-                }
-            }
+            compraDAO.bloquearCompra(idCompra);
 
             Compra compra = compraDAO.load(idCompra);
             if (compra.isAnulado() || (compra.getEstado() != EstadoCompra.REGISTRADA
@@ -129,25 +119,9 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
                     throw new IllegalArgumentException("La cantidad convertida no es valida");
                 }
                 int idProducto = linea.getProducto().getId();
-                double stockAnterior;
-                try (PreparedStatement ps = conn.prepareStatement(
-                        "SELECT stock_actual FROM producto WHERE id = ? FOR UPDATE")) {
-                    ps.setInt(1, idProducto);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        if (!rs.next()) {
-                            throw new IllegalArgumentException("No existe el producto con ID " + idProducto);
-                        }
-                        stockAnterior = rs.getDouble("stock_actual");
-                    }
-                }
-
+                double stockAnterior = stockDAO.obtenerStockParaActualizar(idProducto);
                 double nuevoStock = stockAnterior + cantidadStock;
-                try (PreparedStatement ps = conn.prepareStatement(
-                        "UPDATE producto SET stock_actual = ? WHERE id = ?")) {
-                    ps.setDouble(1, nuevoStock);
-                    ps.setInt(2, idProducto);
-                    ps.executeUpdate();
-                }
+                stockDAO.actualizarStock(idProducto, nuevoStock);
 
                 MovimientoInventario movimiento = new MovimientoInventario();
                 Producto producto = new Producto();
