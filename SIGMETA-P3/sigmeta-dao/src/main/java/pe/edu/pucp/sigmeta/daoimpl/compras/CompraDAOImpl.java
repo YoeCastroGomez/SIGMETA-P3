@@ -175,6 +175,23 @@ public class CompraDAOImpl implements CompraDAO {
     }
 
     @Override
+    public void actualizarEstadoPorReversion(int idCompra, EstadoCompra estado) throws SQLException {
+        if (estado != EstadoCompra.REGISTRADA && estado != EstadoCompra.RECIBIDA_PARCIAL
+                && estado != EstadoCompra.RECIBIDA) {
+            throw new IllegalArgumentException("Estado de compra no permitido en reversion");
+        }
+        Connection conn = transactionContext.getConnection();
+        String sql = "UPDATE compra SET estado = ? WHERE id = ? AND anulado = FALSE";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, estado.name());
+            ps.setInt(2, idCompra);
+            if (ps.executeUpdate() != 1) {
+                throw new SQLException("No se pudo actualizar el estado de la compra");
+            }
+        }
+    }
+
+    @Override
     public void actualizarEstado(int idCompra, EstadoCompra estado)
             throws SQLException {
 
