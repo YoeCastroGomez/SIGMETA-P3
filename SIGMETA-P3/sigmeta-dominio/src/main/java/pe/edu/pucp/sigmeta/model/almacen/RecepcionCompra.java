@@ -12,6 +12,7 @@ import pe.edu.pucp.sigmeta.model.usuario.Usuario;
  */
 public class RecepcionCompra {
     private int id;
+    private boolean anulada;
     private Compra compra;
     private LocalDate fechaRecepcion;
     private String observaciones;
@@ -35,6 +36,9 @@ public class RecepcionCompra {
         this.fechaRegistro = fechaRegistro;
         this.detalles = detalles;
     }
+
+    public boolean isAnulada() { return anulada; }
+    public void setAnulada(boolean anulada) { this.anulada = anulada; }
 
     public int getId() {
         return id;
