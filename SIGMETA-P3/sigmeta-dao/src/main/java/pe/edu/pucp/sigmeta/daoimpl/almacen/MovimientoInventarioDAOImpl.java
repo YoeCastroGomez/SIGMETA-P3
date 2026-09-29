@@ -13,6 +13,7 @@ import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
 import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -142,6 +143,22 @@ public class MovimientoInventarioDAOImpl implements MovimientoInventarioDAO {
             }
         }
 
+        return movimientos;
+    }
+
+    @Override
+    public List<MovimientoInventario> listarPorProducto(int idProducto) throws SQLException {
+        String sql = "SELECT * FROM movimiento_inventario WHERE id_producto = ? ORDER BY fecha_movimiento, id";
+        List<MovimientoInventario> movimientos = new ArrayList<>();
+        Connection conn = transactionContext.getConnection();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idProducto);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    movimientos.add(mapearMovimiento(rs));
+                }
+            }
+        }
         return movimientos;
     }
 
