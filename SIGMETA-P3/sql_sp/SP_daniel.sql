@@ -197,6 +197,7 @@ BEGIN
         factor_conversion = p_factor_conversion,
         cantidad_recibida = p_cantidad_recibida
     WHERE id = p_id
+      AND anulado = FALSE
       AND p_cantidad >= p_cantidad_recibida
       AND (
           p_cantidad_recibida = 0
@@ -234,9 +235,11 @@ BEGIN
         SET MESSAGE_TEXT = 'Solo se pueden eliminar detalles de compras registradas';
     END IF;
 
-    DELETE FROM detalle_compra
+    UPDATE detalle_compra
+    SET anulado = TRUE
     WHERE id = p_id
-      AND cantidad_recibida = 0;
+      AND cantidad_recibida = 0
+      AND anulado = FALSE;
 END$$
 
 CREATE PROCEDURE sp_detalle_compra_obtener(
@@ -252,8 +255,9 @@ CREATE PROCEDURE sp_detalle_compra_listar()
 BEGIN
     SELECT *
     FROM detalle_compra
+    WHERE anulado = FALSE
     ORDER BY id;
-END$$
+END$
 
 
 -- ============================================================
