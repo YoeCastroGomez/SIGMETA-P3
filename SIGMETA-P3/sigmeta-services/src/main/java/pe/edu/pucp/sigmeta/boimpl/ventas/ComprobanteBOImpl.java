@@ -352,6 +352,12 @@ public class ComprobanteBOImpl implements ComprobanteBO {
                     mov.setMotivo("Reversion de nota de credito " + comprobante.getSerie() + "-" + comprobante.getNumero());
                     movimientoDAO.save(mov);
                 }
+
+                // Revertir el efecto en la cuenta por cobrar: la deuda vuelve a su monto anterior (RF013)
+                Venta venta = ventaDAO.load(comprobante.getVenta().getId());
+                if (venta != null && venta.getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CREDITO) {
+                    comprobanteDAO.restaurarSaldoCuentaPorCobrar(venta.getId(), comprobante.getTotal());
+                }
             } else {
                 // Validar que no tenga notas de credito activas
                 List<Comprobante> ncs = comprobanteDAO.listarNotasCreditoPorComprobante(idComprobante);
