@@ -63,6 +63,7 @@ CALL sp_detalle_cotizacion_modificar(@id_det2, 2, @id_prod2, 2.000, 15.00, 0.00,
 -- Listar todos los detalles que pertenecen a la cotización específica
 CALL sp_detalle_cotizacion_listar(@id_cot1);
 CALL sp_detalle_cotizacion_obtener(@id_det1);
+CALL sp_detalle_cotizacion_listar_todos();
 
 
 -- ---------------------------------------------------------

@@ -252,4 +252,10 @@ BEGIN
     SELECT * FROM producto WHERE estado = p_estado;
 END$$
 
+-- Listado general de las lineas de todas las cotizaciones
+CREATE PROCEDURE sp_detalle_cotizacion_listar_todos()
+BEGIN
+    SELECT * FROM detalle_cotizacion ORDER BY id_cotizacion, numero_linea;
+END$$
+
 DELIMITER ;
