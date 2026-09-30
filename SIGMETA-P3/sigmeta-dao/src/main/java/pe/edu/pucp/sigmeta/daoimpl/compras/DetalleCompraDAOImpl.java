@@ -152,6 +152,7 @@ public class DetalleCompraDAOImpl implements DetalleCompraDAO {
 
         detalle.setFactorConversion(rs.getDouble("factor_conversion"));
         detalle.setCantidadRecibida(rs.getDouble("cantidad_recibida"));
+        detalle.setAnulado(rs.getBoolean("anulado"));
 
         Compra compra = new Compra();
         compra.setId(rs.getInt("id_compra"));
