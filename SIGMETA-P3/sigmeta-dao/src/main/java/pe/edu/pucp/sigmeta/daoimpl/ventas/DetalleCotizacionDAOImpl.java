@@ -35,6 +35,18 @@ public class DetalleCotizacionDAOImpl implements DetalleCotizacionDAO {
 
 
     @Override
+    public List<DetalleCotizacion> listarTodos() throws SQLException {
+        String sql = "{CALL sp_detalle_cotizacion_listar_todos()}";
+        List<DetalleCotizacion> detalles = new ArrayList<>();
+        Connection conn = transactionContext.getConnection();
+        try (CallableStatement cs = conn.prepareCall(sql);
+             ResultSet rs = cs.executeQuery()) {
+            while (rs.next()) detalles.add(mapearDetalle(rs));
+        }
+        return detalles;
+    }
+
+    @Override
     public List<DetalleCotizacion> listar_por_cotizacion(Integer idCotizacion) throws SQLException {
         String sql = "{CALL sp_detalle_cotizacion_listar(?)}";
         List<DetalleCotizacion> detalles = new ArrayList<>();
