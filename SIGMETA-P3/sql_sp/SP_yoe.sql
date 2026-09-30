@@ -315,7 +315,7 @@ BEGIN
         estado, fecha_resolucion, vigencia_minutos, fecha_vencimiento
     ) VALUES (
         p_id_solicitante, p_id_administrador, p_operacion_restringida, p_motivo, p_fecha_solicitud,
-        p_estado, p_fecha_resolucion, p_vigencia_minutos, p_fecha_vencimiento
+        p_estado, p_fecha_resolucion, COALESCE(p_vigencia_minutos, 0), p_fecha_vencimiento
     );
     SET p_id_solicitud_autorizacion = LAST_INSERT_ID();
 END$$
@@ -337,7 +337,7 @@ BEGIN
         id_solicitante = p_id_solicitante, id_administrador = p_id_administrador,
         operacion_restringida = p_operacion_restringida, motivo = p_motivo,
         fecha_solicitud = p_fecha_solicitud, estado = p_estado, fecha_resolucion = p_fecha_resolucion,
-        vigencia_minutos = p_vigencia_minutos, fecha_vencimiento = p_fecha_vencimiento
+        vigencia_minutos = COALESCE(p_vigencia_minutos, 0), fecha_vencimiento = p_fecha_vencimiento
     WHERE id = p_id_solicitud_autorizacion;
 END$$
 
