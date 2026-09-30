@@ -14,4 +14,5 @@ public interface ComprobanteDAO extends BaseDAO<Comprobante, Integer> {
     List<Comprobante> listarNotasCreditoPorComprobante(int idComprobanteRelacionado) throws SQLException;
     void actualizarEstado(int id, EstadoComprobante estado) throws SQLException;
     void revertirSaldoCuentaPorCobrar(int idVenta, double montoReversion) throws SQLException;
+    void restaurarSaldoCuentaPorCobrar(int idVenta, double monto) throws SQLException;
 }

@@ -220,4 +220,15 @@ public class ComprobanteDAOImpl implements ComprobanteDAO {
             cs.executeUpdate();
         }
     }
+
+    @Override
+    public void restaurarSaldoCuentaPorCobrar(int idVenta, double monto) throws SQLException {
+        String sql = "{CALL sp_comprobante_restaurar_saldo_cpc(?,?)}";
+        Connection conn = transactionContext.getConnection();
+        try (CallableStatement cs = conn.prepareCall(sql)) {
+            cs.setInt(1, idVenta);
+            cs.setDouble(2, monto);
+            cs.executeUpdate();
+        }
+    }
 }

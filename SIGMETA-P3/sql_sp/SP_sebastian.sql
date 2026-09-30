@@ -657,6 +657,9 @@ BEGIN
     SET p_correlativo = LPAD(v_max + 1, 8, '0');
 END$$
 
+-- RF013: la nota de credito rebaja la deuda (monto_original). El saldo siempre es
+-- monto_original - monto_pagado, el mismo criterio que usan los cobros (CobroBOImpl).
+-- MySQL asigna de izquierda a derecha: saldo_pendiente y estado ya ven el monto_original nuevo.
 DROP PROCEDURE IF EXISTS sp_comprobante_revertir_saldo_cpc$$
 CREATE PROCEDURE sp_comprobante_revertir_saldo_cpc(
     IN p_id_venta INT,
@@ -668,8 +671,38 @@ BEGIN
         WHERE table_schema = DATABASE() AND table_name = 'cuenta_por_cobrar'
     ) THEN
         UPDATE cuenta_por_cobrar
-        SET saldo_pendiente = GREATEST(0.00, saldo_pendiente - p_monto_reversion),
-            estado = CASE WHEN (saldo_pendiente - p_monto_reversion) <= 0.00 THEN 'PAGADA' ELSE estado END
+        SET monto_original = GREATEST(monto_pagado, monto_original - p_monto_reversion),
+            saldo_pendiente = monto_original - monto_pagado,
+            estado = CASE
+                        WHEN saldo_pendiente <= 0.00 THEN 'PAGADA'
+                        WHEN fecha_vencimiento < CURDATE() THEN 'VENCIDA'
+                        WHEN monto_pagado > 0.00 THEN 'PAGADA_PARCIAL'
+                        ELSE 'PENDIENTE'
+                     END
+        WHERE id_venta = p_id_venta;
+    END IF;
+END$$
+
+-- RF013: al anular una nota de credito la deuda vuelve a su monto anterior
+DROP PROCEDURE IF EXISTS sp_comprobante_restaurar_saldo_cpc$$
+CREATE PROCEDURE sp_comprobante_restaurar_saldo_cpc(
+    IN p_id_venta INT,
+    IN p_monto DECIMAL(12,2)
+)
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = DATABASE() AND table_name = 'cuenta_por_cobrar'
+    ) THEN
+        UPDATE cuenta_por_cobrar
+        SET monto_original = monto_original + p_monto,
+            saldo_pendiente = monto_original - monto_pagado,
+            estado = CASE
+                        WHEN saldo_pendiente <= 0.00 THEN 'PAGADA'
+                        WHEN fecha_vencimiento < CURDATE() THEN 'VENCIDA'
+                        WHEN monto_pagado > 0.00 THEN 'PAGADA_PARCIAL'
+                        ELSE 'PENDIENTE'
+                     END
         WHERE id_venta = p_id_venta;
     END IF;
 END$$
