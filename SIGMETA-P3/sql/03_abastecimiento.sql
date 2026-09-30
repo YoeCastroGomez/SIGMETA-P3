@@ -57,6 +57,7 @@ CREATE TABLE detalle_compra (
     ) NOT NULL,
     factor_conversion DECIMAL(12,3) NOT NULL DEFAULT 1,
     cantidad_recibida DECIMAL(12,3) NOT NULL DEFAULT 0,
+    anulado BOOLEAN NOT NULL DEFAULT FALSE,
 
     CONSTRAINT fk_detalle_compra_compra
         FOREIGN KEY (id_compra)
