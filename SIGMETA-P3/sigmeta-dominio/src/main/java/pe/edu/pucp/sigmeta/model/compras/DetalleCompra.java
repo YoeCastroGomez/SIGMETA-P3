@@ -14,6 +14,7 @@ public class DetalleCompra extends LineaDocumento {
     private UnidadMedida unidadCompra;
     private double factorConversion;
     private double cantidadRecibida;
+    private boolean anulado;
 
     public DetalleCompra() {
         super();
@@ -58,6 +59,14 @@ public class DetalleCompra extends LineaDocumento {
 
     public void setFactorConversion(double factorConversion) {
         this.factorConversion = factorConversion;
+    }
+
+    public boolean isAnulado() {
+        return anulado;
+    }
+
+    public void setAnulado(boolean anulado) {
+        this.anulado = anulado;
     }
 
     public double getCantidadRecibida() {
