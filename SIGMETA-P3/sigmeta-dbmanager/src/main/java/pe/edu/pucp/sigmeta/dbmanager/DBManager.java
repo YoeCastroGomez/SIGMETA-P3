@@ -15,11 +15,11 @@ public class DBManager {
 
     static {
         ResourceBundle db = ResourceBundle.getBundle("db");
-        host = db.getString("host");
-        port = Integer.parseInt(db.getString("port"));
-        username = db.getString("username");
-        password = db.getString("password");
-        database = db.getString("database");
+        host = db.getString("db.host");
+        port = Integer.parseInt(db.getString("db.port"));
+        username = db.getString("db.user");
+        password = db.getString("db.password");
+        database = db.getString("db.database");
         instance = new DBManager();
     }
 
