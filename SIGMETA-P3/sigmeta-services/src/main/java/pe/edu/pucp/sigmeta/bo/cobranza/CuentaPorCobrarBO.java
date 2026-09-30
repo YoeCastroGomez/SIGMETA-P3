@@ -1,26 +1,30 @@
 package pe.edu.pucp.sigmeta.bo.cobranza;
 
+import java.sql.SQLException;
 import java.util.List;
 import pe.edu.pucp.sigmeta.model.cobranza.CuentaPorCobrar;
 import pe.edu.pucp.sigmeta.model.enums.EstadoCuentaPorCobrar;
 
+// RF009: la cuenta se genera al registrar una venta al credito; aqui el Administrador la gestiona
 public interface CuentaPorCobrarBO {
 
-    CuentaPorCobrar insertar(CuentaPorCobrar cxc) throws Exception;
+    CuentaPorCobrar insertar(CuentaPorCobrar cxc, int idResponsable) throws SQLException;
 
-    CuentaPorCobrar modificar(CuentaPorCobrar cxc) throws Exception;
+    // solo la fecha de vencimiento (refinanciamiento); los montos los mueven los cobros
+    CuentaPorCobrar modificar(CuentaPorCobrar cxc, int idResponsable) throws SQLException;
 
-    void eliminar(CuentaPorCobrar cxc) throws Exception;
+    // solo una cuenta sin cobros
+    void eliminar(CuentaPorCobrar cxc, int idResponsable) throws SQLException;
 
-    CuentaPorCobrar obtenerPorId(int id) throws Exception;
+    CuentaPorCobrar obtenerPorId(int id) throws SQLException;
 
-    CuentaPorCobrar obtenerPorVenta(int idVenta) throws Exception;
+    CuentaPorCobrar obtenerPorVenta(int idVenta) throws SQLException;
 
-    List<CuentaPorCobrar> listarPorCliente(int idCliente) throws Exception;
+    List<CuentaPorCobrar> listarPorCliente(int idCliente) throws SQLException;
 
-    List<CuentaPorCobrar> listarPorEstado(EstadoCuentaPorCobrar estado) throws Exception;
+    List<CuentaPorCobrar> listarPorEstado(EstadoCuentaPorCobrar estado) throws SQLException;
 
-    List<CuentaPorCobrar> listarVencidas() throws Exception;
+    List<CuentaPorCobrar> listarVencidas() throws SQLException;
 
-    List<CuentaPorCobrar> listarTodasConDetalle() throws Exception;
+    List<CuentaPorCobrar> listarTodasConDetalle() throws SQLException;
 }

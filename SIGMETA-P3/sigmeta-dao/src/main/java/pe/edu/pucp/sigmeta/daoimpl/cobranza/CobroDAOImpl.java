@@ -128,6 +128,20 @@ public class CobroDAOImpl implements CobroDAO {
     }
 
     @Override
+    public List<Cobro> listarTodos() throws SQLException {
+        List<Cobro> lista = new ArrayList<>();
+        String sql = "{call sp_cobro_listar()}";
+        Connection con = transactionContext.getConnection();
+        try (CallableStatement cs = con.prepareCall(sql);
+             ResultSet rs = cs.executeQuery()) {
+            while (rs.next()) {
+                lista.add(mapearCobro(rs));
+            }
+        }
+        return lista;
+    }
+
+    @Override
     public List<Cobro> listarPorCuentaPorCobrar(int idCuentaPorCobrar) throws SQLException {
         List<Cobro> lista = new ArrayList<>();
         String sql = "{call sp_cobro_listar_por_cuenta_por_cobrar(?)}";

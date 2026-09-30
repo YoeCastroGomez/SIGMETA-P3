@@ -7,6 +7,8 @@ import pe.edu.pucp.sigmeta.model.cobranza.Cobro;
 
 public interface CobroDAO extends BaseDAO<Cobro, Integer> {
 
+    List<Cobro> listarTodos() throws SQLException;
+
     List<Cobro> listarPorCuentaPorCobrar(int idCuentaPorCobrar) throws SQLException;
 
     List<Cobro> listarPorCliente(int idCliente) throws SQLException;

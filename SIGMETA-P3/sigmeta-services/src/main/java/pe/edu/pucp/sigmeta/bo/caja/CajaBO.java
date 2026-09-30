@@ -1,31 +1,36 @@
 package pe.edu.pucp.sigmeta.bo.caja;
 
+import java.sql.SQLException;
 import java.util.List;
 import pe.edu.pucp.sigmeta.model.caja.Caja;
 import pe.edu.pucp.sigmeta.model.caja.CierreCaja;
 import pe.edu.pucp.sigmeta.model.caja.MovimientoCaja;
 
+// RF010
 public interface CajaBO {
 
-    Caja abrirCaja(Caja caja) throws Exception;
+    // idResponsable: usuario en sesion. Abre la caja el Cajero, con un monto inicial
+    Caja abrirCaja(Caja caja, int idResponsable) throws SQLException;
 
-    Caja modificar(Caja caja) throws Exception;
+    // corrige el monto inicial; con la caja cerrada solo el Administrador
+    Caja modificar(Caja caja, int idResponsable) throws SQLException;
 
-    void eliminar(Caja caja) throws Exception;
+    // solo una apertura sin movimientos ni cierre
+    void eliminar(Caja caja, int idResponsable) throws SQLException;
 
-    Caja obtenerPorId(int id) throws Exception;
+    Caja obtenerPorId(int id) throws SQLException;
 
-    Caja obtenerCajaAbiertaPorUsuario(int idUsuario) throws Exception;
+    Caja obtenerCajaAbiertaPorUsuario(int idUsuario) throws SQLException;
 
-    List<Caja> listarTodasConUsuario() throws Exception;
+    List<Caja> listarTodasConUsuario() throws SQLException;
 
-    MovimientoCaja registrarMovimiento(MovimientoCaja movimiento) throws Exception;
+    MovimientoCaja registrarMovimiento(MovimientoCaja movimiento, int idResponsable) throws SQLException;
 
-    List<MovimientoCaja> listarMovimientosPorCaja(int idCaja) throws Exception;
+    List<MovimientoCaja> listarMovimientosPorCaja(int idCaja) throws SQLException;
 
-    double calcularMontoCalculado(int idCaja) throws Exception;
+    double calcularMontoCalculado(int idCaja) throws SQLException;
 
-    CierreCaja cerrarCaja(CierreCaja cierreCaja) throws Exception;
+    CierreCaja cerrarCaja(CierreCaja cierreCaja, int idResponsable) throws SQLException;
 
-    CierreCaja obtenerCierrePorCaja(int idCaja) throws Exception;
+    CierreCaja obtenerCierrePorCaja(int idCaja) throws SQLException;
 }
