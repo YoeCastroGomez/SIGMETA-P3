@@ -1,0 +1,64 @@
+@page "/autorizaciones"
+
+<PageTitle>Solicitudes de autorización · SIGMETA</PageTitle>
+
+@* RF014 · Solicitudes, vista del Administrador. Solo visual (Lab 9): los filtros y botones no hacen nada. *@
+<Encabezado Rf="RF014" Titulo="Solicitudes de autorización"
+            Subtitulo="Solicitudes de todos los usuarios. Aprobar o rechazar se hace desde Resolver." />
+
+<div class="panel">
+    <div class="filtros">
+        <Campo Etiqueta="Mostrar" Id="fMostrar" Clase="angosto">
+            <select id="fMostrar" class="form-select">
+                <option>Todas</option>
+                <option>Solo pendientes</option>
+            </select>
+        </Campo>
+        <div class="campo">
+            <button class="btn btn-oscuro">Buscar</button>
+        </div>
+    </div>
+</div>
+
+<div class="panel p-0">
+    <div class="tabla-envoltura">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Solicitante</th>
+                    <th>Operación</th>
+                    <th>Motivo</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in MuestrasSeguridad.Solicitudes)
+                {
+                    <tr>
+                        <td><strong>@s.Solicitante</strong><div class="small text-muted">@MuestrasSeguridad.Texto(s.Rol)</div></td>
+                        <td class="mono">@s.OperacionRestringida</td>
+                        <td>@s.Motivo</td>
+                        <td class="mono">@s.FechaSolicitud</td>
+                        <td><Estado Texto="@MuestrasSeguridad.Texto(s.Estado)" /></td>
+                        <td class="acciones-fila">
+                            @if (s.Estado == "PENDIENTE")
+                            {
+                                <a class="btn btn-sm btn-primary" href="@($"/autorizaciones/aprobar/{s.Id}")">Resolver</a>
+                            }
+                            else
+                            {
+                                <a class="btn btn-sm btn-outline-secondary" href="@($"/autorizaciones/detalle/{s.Id}")">Ver</a>
+                                @if (s.Estado == "APROBADA")
+                                {
+                                    <button class="btn btn-sm btn-outline-danger">Revocar</button>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

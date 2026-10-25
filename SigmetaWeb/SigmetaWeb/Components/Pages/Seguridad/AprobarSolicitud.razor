@@ -1,0 +1,37 @@
+@page "/autorizaciones/aprobar/{Id:int}"
+@inject NavigationManager Nav
+
+<PageTitle>Resolver solicitud · SIGMETA</PageTitle>
+
+@* RF014 · aprobar(id, idAdministrador, vigenciaMinutos) / rechazar(id, idAdministrador). Solo una PENDIENTE. *@
+<Encabezado Rf="RF014" Titulo="Resolver solicitud" Subtitulo="Solo el Administrador.">
+    <a class="btn btn-outline-secondary" href="/autorizaciones">Volver a la lista</a>
+</Encabezado>
+
+<div class="panel" style="max-width: 720px;">
+    <DatosSolicitud Solicitud="ejemplo" />
+
+    <hr />
+
+    <Campo Etiqueta="Vigencia (minutos)" Id="vigencia" Obligatorio="true"
+           Ayuda="Mayor a 0. Tiempo durante el que el solicitante podrá hacer la operación. Solo se usa al aprobar.">
+        <input id="vigencia" type="number" min="1" class="form-control mono" style="max-width: 200px;" value="30" />
+    </Campo>
+
+    <div class="pie-form">
+        <span class="leyenda-req"><span class="req">*</span> Obligatorio para aprobar</span>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-danger" @onclick="Volver">Rechazar</button>
+            <button class="btn btn-primary" @onclick="Volver">Aprobar</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    // Ejemplo fijo de una solicitud pendiente (Lab 9: sin consultas).
+    private readonly SolicitudFila ejemplo = MuestrasSeguridad.Solicitudes[0];
+
+    private void Volver() => Nav.NavigateTo("/autorizaciones");
+}

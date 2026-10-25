@@ -1,0 +1,46 @@
+@implements IDisposable
+@inject NavigationManager Nav
+
+@* Aviso temporal para las pantallas que aún no se hacen.
+   Cada integrante lo reemplaza por su pantalla real (ver el documento de reparto). *@
+<PageTitle>@Datos.Titulo · SIGMETA</PageTitle>
+
+<Encabezado Rf="@Datos.Rf" Titulo="@Datos.Titulo" />
+
+<div class="aviso">Pantalla pendiente. Responsable: <strong>@Datos.Responsable</strong>.</div>
+
+@code {
+    private record Info(string Rf, string Titulo, string Responsable);
+
+    private static readonly Dictionary<string, Info> Pantallas = new()
+    {
+        ["proveedores"] = new("RF004", "Proveedores", "Claudia"),
+        ["productos"] = new("RF005", "Productos", "Claudia"),
+        ["categorias"] = new("RF006", "Categorías", "Claudia"),
+        ["cotizaciones"] = new("RF007", "Cotizaciones", "Claudia"),
+        ["compras"] = new("RF011", "Compras a proveedores", "Luis Daniel"),
+        ["recepciones"] = new("RF012", "Compras por recibir", "Luis Daniel"),
+        ["almacen/movimientos"] = new("RF012", "Movimientos de almacén", "Luis Daniel"),
+        ["almacen/ajuste"] = new("RF012", "Ajuste por conteo físico", "Luis Daniel"),
+        ["almacen/kardex"] = new("RF012", "Kardex", "Luis Daniel"),
+        ["almacen/stock-minimo"] = new("RF012", "Stock mínimo", "Luis Daniel"),
+        ["ordenes"] = new("RF007", "Órdenes de compra de clientes", "Sebastian"),
+        ["ventas"] = new("RF008", "Ventas y comprobantes", "Sebastian"),
+        ["despachos"] = new("RF012", "Ventas por despachar", "Sebastian"),
+        ["notas-credito"] = new("RF013", "Notas de crédito", "Sebastian"),
+        ["caja"] = new("RF010", "Caja", "Adriano"),
+        ["caja/movimientos"] = new("RF010", "Movimientos de caja", "Adriano"),
+        ["caja/cierre"] = new("RF010", "Cierre de caja", "Adriano"),
+        ["caja/cierres"] = new("RF010", "Cierres de caja", "Adriano"),
+        ["cobranzas"] = new("RF009", "Cuentas por cobrar", "Adriano"),
+        ["reportes"] = new("RF015", "Reportes", "Adriano"),
+    };
+
+    // Blazor reutiliza el componente entre rutas, así que se recalcula en cada render.
+    private Info Datos => Pantallas.GetValueOrDefault(
+        Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].Trim('/'), new("", "Pantalla pendiente", "—"));
+
+    protected override void OnInitialized() => Nav.LocationChanged += AlCambiarRuta;
+    private void AlCambiarRuta(object? sender, LocationChangedEventArgs e) => InvokeAsync(StateHasChanged);
+    public void Dispose() => Nav.LocationChanged -= AlCambiarRuta;
+}

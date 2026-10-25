@@ -1,0 +1,168 @@
+@implements IDisposable
+@inject NavigationManager Nav
+
+@*
+    RF001 · Menú por rol, solo visual (Lab 9).
+    Cuatro menús FIJOS, uno por rol, armados con los actores de cada RF del catálogo.
+    El rol llega del login (demostración). Aquí no se valida nada.
+    Para agregar una pantalla: se agrega su enlace en el menú de CADA rol que la usa.
+*@
+<nav class="menu">
+    <NavLink class="menu-link" href="/" Match="NavLinkMatch.All" @onclick="AlNavegar">Inicio</NavLink>
+
+    @foreach (var grupo in MenuActual)
+    {
+        var abierto = abiertos.Contains(grupo.Titulo);
+
+        <button class="menu-grupo" aria-expanded="@(abierto ? "true" : "false")" @onclick="() => Alternar(grupo.Titulo)">
+            <span>@grupo.Titulo</span>
+            <span class="menu-flecha">@(abierto ? "−" : "+")</span>
+        </button>
+
+        @if (abierto)
+        {
+            @foreach (var l in grupo.Enlaces)
+            {
+                <NavLink class="menu-link menu-sub" href="@l.Ruta" @onclick="AlNavegar">@l.Texto</NavLink>
+            }
+        }
+    }
+</nav>
+
+@code {
+    [Parameter] public string Rol { get; set; } = "Administrador";
+    [Parameter] public EventCallback AlNavegar { get; set; }
+
+    private record Enlace(string Texto, string Ruta);
+    private record Grupo(string Titulo, Enlace[] Enlaces);
+
+    // ---------------- Administrador ----------------
+    private static readonly Grupo[] MenuAdministrador =
+    {
+        new("Ventas", new Enlace[] {
+            new("Clientes", "/clientes"),                      // RF003
+            new("Notas de crédito", "/notas-credito"),         // RF013
+        }),
+        new("Caja y cobranza", new Enlace[] {
+            new("Cierres de caja", "/caja/cierres"),           // RF010 (reabrir)
+            new("Cuentas por cobrar", "/cobranzas"),           // RF009
+        }),
+        new("Compras e inventario", new Enlace[] {
+            new("Proveedores", "/proveedores"),                // RF004
+            new("Compras a proveedores", "/compras"),          // RF011
+            new("Kardex", "/almacen/kardex"),                  // RF012 (consulta)
+            new("Stock mínimo", "/almacen/stock-minimo"),      // RF012 (consulta)
+        }),
+        new("Catálogo", new Enlace[] {
+            new("Productos", "/productos"),                    // RF005
+            new("Categorías", "/categorias"),                  // RF006
+        }),
+        new("Administración", new Enlace[] {
+            new("Usuarios", "/usuarios"),                      // RF002
+            new("Roles", "/roles"),                            // RF002
+            new("Solicitudes de autorización", "/autorizaciones"), // RF014
+            new("Reportes", "/reportes"),                      // RF015
+        }),
+    };
+
+    // ---------------- Vendedor ----------------
+    private static readonly Grupo[] MenuVendedor =
+    {
+        new("Ventas", new Enlace[] {
+            new("Clientes", "/clientes"),                      // RF003
+            new("Cotizaciones", "/cotizaciones"),              // RF007
+            new("Órdenes de clientes", "/ordenes"),            // RF007
+            new("Ventas y comprobantes", "/ventas"),           // RF008
+        }),
+        new("Inventario", new Enlace[] {
+            new("Kardex", "/almacen/kardex"),                  // RF012 (consulta)
+            new("Stock mínimo", "/almacen/stock-minimo"),      // RF012 (consulta)
+        }),
+        new("Catálogo", new Enlace[] {
+            new("Productos", "/productos"),                    // RF005 (búsqueda)
+        }),
+        new("Autorizaciones", new Enlace[] {
+            new("Mis solicitudes", "/autorizaciones/mias"),    // RF014
+        }),
+    };
+
+    // ---------------- Cajero ----------------
+    private static readonly Grupo[] MenuCajero =
+    {
+        new("Ventas", new Enlace[] {
+            new("Ventas y comprobantes", "/ventas"),           // RF008
+            new("Notas de crédito", "/notas-credito"),         // RF013
+        }),
+        new("Caja y cobranza", new Enlace[] {
+            new("Caja", "/caja"),                              // RF010 (apertura)
+            new("Movimientos de caja", "/caja/movimientos"),   // RF010
+            new("Cierre de caja", "/caja/cierre"),             // RF010
+            new("Cuentas por cobrar", "/cobranzas"),           // RF009
+        }),
+        new("Inventario", new Enlace[] {
+            new("Kardex", "/almacen/kardex"),                  // RF012 (consulta)
+            new("Stock mínimo", "/almacen/stock-minimo"),      // RF012 (consulta)
+        }),
+        new("Catálogo", new Enlace[] {
+            new("Productos", "/productos"),                    // RF005 (búsqueda)
+        }),
+        new("Autorizaciones", new Enlace[] {
+            new("Mis solicitudes", "/autorizaciones/mias"),    // RF014
+        }),
+    };
+
+    // ---------------- Almacenero ----------------
+    private static readonly Grupo[] MenuAlmacenero =
+    {
+        new("Almacén", new Enlace[] {
+            new("Compras por recibir", "/recepciones"),        // RF012 (recepción)
+            new("Ventas por despachar", "/despachos"),         // RF012 (despacho)
+            new("Movimientos de almacén", "/almacen/movimientos"), // RF012
+            new("Ajuste por conteo físico", "/almacen/ajuste"),    // RF012
+            new("Kardex", "/almacen/kardex"),                  // RF012
+            new("Stock mínimo", "/almacen/stock-minimo"),      // RF012
+        }),
+        new("Catálogo", new Enlace[] {
+            new("Productos", "/productos"),                    // RF005 (búsqueda)
+        }),
+        new("Autorizaciones", new Enlace[] {
+            new("Mis solicitudes", "/autorizaciones/mias"),    // RF014
+        }),
+    };
+
+    // Elige cuál de los cuatro menús fijos se dibuja.
+    private Grupo[] MenuActual => Rol switch
+    {
+        "Vendedor" => MenuVendedor,
+        "Cajero" => MenuCajero,
+        "Almacenero" => MenuAlmacenero,
+        _ => MenuAdministrador,
+    };
+
+    // ---------------- Desplegar / plegar grupos (solo visual) ----------------
+    private readonly HashSet<string> abiertos = new();
+
+    protected override void OnInitialized() => Nav.LocationChanged += AlCambiarRuta;
+    protected override void OnParametersSet() => AbrirGrupoActual();
+
+    // Despliega el grupo de la página actual para que se vea dónde estás.
+    private void AbrirGrupoActual()
+    {
+        var ruta = "/" + Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0];
+        var grupo = MenuActual.FirstOrDefault(g => g.Enlaces.Any(l => ruta == l.Ruta || ruta.StartsWith(l.Ruta + "/")));
+        if (grupo is not null) abiertos.Add(grupo.Titulo);
+    }
+
+    private void Alternar(string titulo)
+    {
+        if (!abiertos.Remove(titulo)) abiertos.Add(titulo);
+    }
+
+    private void AlCambiarRuta(object? sender, LocationChangedEventArgs e)
+    {
+        AbrirGrupoActual();
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Nav.LocationChanged -= AlCambiarRuta;
+}

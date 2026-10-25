@@ -1,0 +1,14 @@
+<span class="estado estado-@Tono">@Texto</span>
+
+@code {
+    [Parameter, EditorRequired] public string Texto { get; set; } = "";
+
+    private string Tono => Texto.ToLowerInvariant() switch
+    {
+        "activo" or "aprobada" => "ok",
+        "inactivo" or "rechazada" => "off",
+        "pendiente" => "pend",
+        "vencida" => "venc",
+        _ => "neutro"
+    };
+}

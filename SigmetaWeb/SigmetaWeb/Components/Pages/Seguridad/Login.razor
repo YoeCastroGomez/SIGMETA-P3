@@ -1,0 +1,48 @@
+@page "/login"
+@layout LoginLayout
+@inject NavigationManager Nav
+
+<PageTitle>Iniciar sesión · SIGMETA</PageTitle>
+
+@* RF001. Lab 9: no se valida la clave; "Ingresar" solo navega. *@
+<div class="login-caja">
+    <div class="marca">
+        <span class="marca-logo">SM</span>
+        <div>
+            <div class="marca-nombre">SIGMETA</div>
+            <div class="marca-sub">Grupo Meta · Sistema comercial</div>
+        </div>
+    </div>
+
+    <h1 class="h5 mb-3">Iniciar sesión</h1>
+
+    <Campo Etiqueta="Usuario" Id="usuario" Obligatorio="true">
+        <input id="usuario" class="form-control" autocomplete="username" />
+    </Campo>
+
+    <Campo Etiqueta="Clave" Id="clave" Obligatorio="true">
+        <input id="clave" type="password" class="form-control" autocomplete="current-password" />
+    </Campo>
+
+    <button class="btn btn-primary w-100 mt-2" @onclick="@(() => Entrar("Administrador"))">Ingresar</button>
+
+    <p class="text-muted small mt-3 mb-0">
+        Si olvidaste tu clave, solicita al Administrador que la restablezca.
+    </p>
+
+    @* Solo para la demostración: entra con el menú de cada rol. *@
+    <div class="demo-roles">
+        <div class="demo-titulo">Demostración: entrar como</div>
+        <div class="demo-botones">
+            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Entrar("Administrador"))">Administrador</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Entrar("Vendedor"))">Vendedor</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Entrar("Cajero"))">Cajero</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Entrar("Almacenero"))">Almacenero</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    // forceLoad recrea el layout para que tome el rol elegido.
+    private void Entrar(string rol) => Nav.NavigateTo($"/?rol={Uri.EscapeDataString(rol)}", forceLoad: true);
+}

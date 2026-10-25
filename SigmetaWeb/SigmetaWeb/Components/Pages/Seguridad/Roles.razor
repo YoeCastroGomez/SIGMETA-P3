@@ -1,0 +1,26 @@
+@page "/roles"
+
+<PageTitle>Roles · SIGMETA</PageTitle>
+
+@* RF002 · Lista de roles (solo consulta). Solo visual (Lab 9). *@
+<Encabezado Rf="RF002" Titulo="Roles" Subtitulo="Los cuatro roles del sistema. Se asignan al registrar o editar un usuario." />
+
+<div class="panel p-0">
+    <div class="tabla-envoltura">
+        <table class="table">
+            <thead>
+                <tr><th>Rol</th><th>Descripción</th><th>Estado</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var r in MuestrasSeguridad.RolesDetalle)
+                {
+                    <tr>
+                        <td><strong>@MuestrasSeguridad.Texto(r.Tipo)</strong></td>
+                        <td>@r.Descripcion</td>
+                        <td><Estado Texto="@(r.Estado ? "Activo" : "Inactivo")" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
