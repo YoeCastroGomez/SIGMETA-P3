@@ -1,0 +1,21 @@
+<div class="encabezado">
+    <div>
+        @if (!string.IsNullOrEmpty(Rf))
+        {
+            <div class="encabezado-rf">@Rf</div>
+        }
+        <h1>@Titulo</h1>
+        @if (!string.IsNullOrEmpty(Subtitulo))
+        {
+            <p class="text-muted mb-0">@Subtitulo</p>
+        }
+    </div>
+    <div class="encabezado-acciones">@ChildContent</div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter] public string? Subtitulo { get; set; }
+    [Parameter] public string? Rf { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

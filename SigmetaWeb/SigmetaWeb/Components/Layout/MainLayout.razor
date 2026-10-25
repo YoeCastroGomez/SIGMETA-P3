@@ -1,0 +1,76 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager Nav
+
+<CascadingValue Value="rol" Name="Rol">
+    <div class="app">
+        <aside class="sidebar @(menuAbierto ? "abierto" : "")">
+            <div class="marca">
+                <span class="marca-logo">SM</span>
+                <div>
+                    <div class="marca-nombre">SIGMETA</div>
+                    <div class="marca-sub">Grupo Meta</div>
+                </div>
+            </div>
+            <NavMenu Rol="@rol" AlNavegar="() => menuAbierto = false" />
+        </aside>
+
+        <div class="principal">
+            <header class="barra">
+                <button class="btn btn-sm btn-outline-secondary d-xl-none" @onclick="() => menuAbierto = !menuAbierto">Menú</button>
+                <div class="ms-auto d-flex align-items-center gap-3">
+                    <a class="small text-decoration-none" href="/mi-clave" title="Cambiar mi clave">
+                        <strong>@Usuario</strong> <span class="text-muted d-none d-sm-inline">· @rol</span>
+                    </a>
+                    <a class="btn btn-sm btn-outline-secondary" href="/login">Cerrar sesión</a>
+                </div>
+            </header>
+
+            <main class="contenido">
+                @Body
+            </main>
+        </div>
+    </div>
+</CascadingValue>
+
+<div id="blazor-error-ui">
+    Ocurrió un error inesperado.
+    <a href="" class="reload">Recargar</a>
+    <a class="dismiss">×</a>
+</div>
+
+@code {
+    // Solo presentación (Lab 9): el rol llega del login como ?rol=... y decide qué menú fijo se ve.
+    // No hay sesión real ni validación de permisos; eso lo hará el backend Java.
+    private bool menuAbierto;
+    private string rol = "Administrador";
+
+    private string Usuario => rol switch
+    {
+        "Vendedor" => "jtorres",
+        "Cajero" => "mvargas",
+        "Almacenero" => "lpaucar",
+        _ => "admin",
+    };
+
+    protected override void OnInitialized()
+    {
+        LeerRol();
+        Nav.LocationChanged += AlCambiarRuta;
+    }
+
+    private void LeerRol()
+    {
+        var query = new Uri(Nav.Uri).Query.TrimStart('?').Split('&');
+        var valor = query.FirstOrDefault(p => p.StartsWith("rol="))?.Substring(4);
+        if (!string.IsNullOrEmpty(valor)) rol = Uri.UnescapeDataString(valor);
+    }
+
+    private void AlCambiarRuta(object? sender, LocationChangedEventArgs e)
+    {
+        LeerRol();
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Nav.LocationChanged -= AlCambiarRuta;
+}

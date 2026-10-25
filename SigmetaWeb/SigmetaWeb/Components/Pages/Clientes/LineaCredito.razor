@@ -1,0 +1,72 @@
+@page "/clientes/credito/{Id:int}"
+@inject NavigationManager Nav
+
+<PageTitle>Línea de crédito · SIGMETA</PageTitle>
+
+@* RF003 · Línea de crédito (Administrador). Solo visual (Lab 9). *@
+<Encabezado Rf="RF003" Titulo="Línea de crédito" Subtitulo="Solo el Administrador asigna o retira crédito.">
+    <a class="btn btn-outline-secondary" href="/clientes">Volver a la lista</a>
+</Encabezado>
+
+<div class="panel" style="max-width: 760px;">
+    <div class="row">
+        <div class="col-sm-7 dato">
+            <div class="dato-etiqueta">Cliente</div>
+            <div class="dato-valor">@ejemplo.NombreMostrado</div>
+        </div>
+        <div class="col-sm-5 dato">
+            <div class="dato-etiqueta">@MuestrasClientes.Texto(ejemplo.TipoDocumento)</div>
+            <div class="dato-valor mono">@ejemplo.NumeroDocumento</div>
+        </div>
+        <div class="col-sm-7 dato">
+            <div class="dato-etiqueta">Condición actual</div>
+            <div class="dato-valor">@MuestrasClientes.Texto(ejemplo.CondicionPago)</div>
+        </div>
+    </div>
+
+    <hr />
+
+    <div class="row">
+        <div class="col-md-4">
+            <Campo Etiqueta="Límite de crédito (S/)" Id="limite" Obligatorio="true" Ayuda="Mayor a 0.">
+                <input id="limite" type="number" min="0.01" step="0.01" class="form-control mono" value="@ejemplo.LimiteCredito" />
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Plazo (días)" Id="plazo" Obligatorio="true" Ayuda="Mayor a 0. Máximo por venta.">
+                <input id="plazo" type="number" min="1" class="form-control mono" value="@ejemplo.PlazoCreditoDias" />
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Calificación crediticia" Id="calif" Ayuda="Escala interna del Administrador.">
+                <select id="calif" class="form-select">
+                    @foreach (var c in new[] { "A", "B", "C", "SIN_EVALUAR" })
+                    {
+                        <option value="@c" selected="@(ejemplo.CalificacionCrediticia == c)">@MuestrasClientes.Texto(c)</option>
+                    }
+                </select>
+            </Campo>
+        </div>
+    </div>
+
+    <div class="pie-form">
+        <div>
+            <button class="btn btn-outline-danger" @onclick="Volver">Retirar línea</button>
+            <div class="form-text">El cliente pasa a contado. Se conserva su calificación.</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="/clientes">Cancelar</a>
+            <button class="btn btn-primary" @onclick="Volver">Guardar</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    // Ejemplo fijo (Lab 9: sin consultas).
+    private readonly ClienteFila ejemplo = MuestrasClientes.Clientes[0];
+
+    // Lab 9: no se registra nada, solo se navega.
+    private void Volver() => Nav.NavigateTo("/clientes");
+}

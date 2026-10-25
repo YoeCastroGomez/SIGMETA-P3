@@ -1,0 +1,81 @@
+@page "/clientes"
+
+<PageTitle>Clientes · SIGMETA</PageTitle>
+
+@* RF003 · Lista de clientes. Solo visual (Lab 9): los filtros y botones no hacen nada. *@
+<Encabezado Rf="RF003" Titulo="Clientes"
+            Subtitulo="Un cliente desactivado conserva su historial, pero no puede elegirse en documentos nuevos.">
+    <a class="btn btn-primary" href="/clientes/nuevo">Nuevo cliente</a>
+</Encabezado>
+
+<div class="panel">
+    <div class="filtros">
+        <Campo Etiqueta="Número de documento" Id="fDoc" Clase="angosto">
+            <input id="fDoc" class="form-control mono" maxlength="20" />
+        </Campo>
+        <Campo Etiqueta="Razón social o nombre" Id="fNombre">
+            <input id="fNombre" class="form-control" maxlength="150" />
+        </Campo>
+        <Campo Etiqueta="Estado" Id="fEstado" Clase="angosto">
+            <select id="fEstado" class="form-select">
+                <option>Todos</option>
+                <option>Activos</option>
+                <option>Inactivos</option>
+            </select>
+        </Campo>
+        <div class="campo">
+            <button class="btn btn-oscuro">Buscar</button>
+        </div>
+    </div>
+</div>
+
+<div class="panel p-0">
+    <div class="tabla-envoltura">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Documento</th>
+                    <th>Razón social o nombre</th>
+                    <th>Tipo</th>
+                    <th>Condición de pago</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in MuestrasClientes.Clientes)
+                {
+                    <tr>
+                        <td class="mono"><span class="small text-muted">@MuestrasClientes.Texto(c.TipoDocumento)</span><br />@c.NumeroDocumento</td>
+                        <td><strong>@c.NombreMostrado</strong></td>
+                        <td>@MuestrasClientes.Texto(c.TipoPersona)</td>
+                        <td>
+                            @MuestrasClientes.Texto(c.CondicionPago)
+                            @if (c.CondicionPago == "CREDITO")
+                            {
+                                <div class="small text-muted mono">Límite S/ @c.LimiteCredito.ToString("N2") · @c.PlazoCreditoDias días</div>
+                            }
+                        </td>
+                        <td><Estado Texto="@(c.Activo ? "Activo" : "Inactivo")" /></td>
+                        <td class="acciones-fila">
+                            <a class="btn btn-sm btn-outline-secondary" href="@($"/clientes/editar/{c.Id}")">Editar</a>
+                            @if (Rol == "Administrador")
+                            {
+                                @* RF003: el botón Crédito solo se muestra al Administrador *@
+                                <a class="btn btn-sm btn-outline-secondary" href="@($"/clientes/credito/{c.Id}")">Crédito</a>
+                            }
+                            @if (c.Activo)
+                            {
+                                <button class="btn btn-sm btn-outline-danger">Desactivar</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
+}

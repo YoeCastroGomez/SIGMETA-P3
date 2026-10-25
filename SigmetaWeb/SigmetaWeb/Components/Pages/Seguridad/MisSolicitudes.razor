@@ -1,0 +1,48 @@
+@page "/autorizaciones/mias"
+
+<PageTitle>Mis solicitudes · SIGMETA</PageTitle>
+
+@* RF014 · Mis solicitudes, vista del solicitante. Datos de ejemplo fijos por rol. Solo visual (Lab 9). *@
+<Encabezado Rf="RF014" Titulo="Mis solicitudes de autorización"
+            Subtitulo="Operaciones restringidas que pediste al Administrador.">
+    <a class="btn btn-primary" href="/autorizaciones/nueva">Nueva solicitud</a>
+</Encabezado>
+
+<div class="panel p-0">
+    <div class="tabla-envoltura">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Operación</th>
+                    <th>Motivo</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th>Vence</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in MuestrasSeguridad.MisSolicitudes.GetValueOrDefault(Rol, Array.Empty<SolicitudFila>()))
+                {
+                    <tr>
+                        <td class="mono">@s.OperacionRestringida</td>
+                        <td>@s.Motivo</td>
+                        <td class="mono">@s.FechaSolicitud</td>
+                        <td><Estado Texto="@MuestrasSeguridad.Texto(s.Estado)" /></td>
+                        <td class="mono">@(s.FechaVencimiento ?? "—")</td>
+                        <td class="acciones-fila">
+                            @if (s.Estado == "PENDIENTE" || s.Estado == "APROBADA")
+                            {
+                                <button class="btn btn-sm btn-outline-danger">Anular</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Vendedor";
+}

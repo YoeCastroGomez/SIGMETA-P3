@@ -1,0 +1,160 @@
+@page "/clientes/nuevo"
+@page "/clientes/editar/{Id:int}"
+@inject NavigationManager Nav
+
+<PageTitle>@Titulo · SIGMETA</PageTitle>
+
+@* RF003 · Formulario de cliente. Solo visual (Lab 9): Guardar no registra, solo vuelve a la lista. *@
+<Encabezado Rf="RF003" Titulo="@Titulo">
+    <a class="btn btn-outline-secondary" href="/clientes">Volver a la lista</a>
+</Encabezado>
+
+<div class="panel">
+    <div class="panel-titulo">Identificación</div>
+
+    @* Solo cambia qué campos se ven: JURIDICA = razón social, NATURAL = nombres y apellidos. *@
+    <Campo Etiqueta="Tipo de persona" Obligatorio="true">
+        <div class="d-flex gap-4">
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="tipoPersona" id="tpJuridica"
+                       checked="@esEmpresa" @onchange="() => esEmpresa = true" />
+                <label class="form-check-label" for="tpJuridica">Empresa (jurídica)</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="tipoPersona" id="tpNatural"
+                       checked="@(!esEmpresa)" @onchange="() => esEmpresa = false" />
+                <label class="form-check-label" for="tpNatural">Persona natural</label>
+            </div>
+        </div>
+    </Campo>
+
+    <div class="row">
+        <div class="col-md-4">
+            <Campo Etiqueta="Tipo de documento" Id="tipoDoc" Obligatorio="true">
+                <select id="tipoDoc" class="form-select">
+                    <option value="RUC">RUC</option>
+                    <option value="DNI">DNI</option>
+                    <option value="CARNET_EXTRANJERIA">Carné de extranjería</option>
+                    <option value="PASAPORTE">Pasaporte</option>
+                </select>
+            </Campo>
+        </div>
+        <div class="col-md-8">
+            <Campo Etiqueta="Número de documento" Id="numDoc" Obligatorio="true"
+                   Ayuda="Único. RUC: 11 dígitos · DNI: 8 dígitos · Carné: 9 a 12 · Pasaporte: 6 a 12.">
+                <input id="numDoc" class="form-control mono" maxlength="20" value="@ejemplo?.NumeroDocumento" />
+            </Campo>
+        </div>
+
+        @if (esEmpresa)
+        {
+            <div class="col-12">
+                <Campo Etiqueta="Razón social" Id="razonSocial" Obligatorio="true" Ayuda="No puede repetirse.">
+                    <input id="razonSocial" class="form-control" maxlength="150" value="@ejemplo?.RazonSocial" />
+                </Campo>
+            </div>
+        }
+        else
+        {
+            <div class="col-md-6">
+                <Campo Etiqueta="Nombres" Id="nombres" Obligatorio="true">
+                    <input id="nombres" class="form-control" maxlength="100" />
+                </Campo>
+            </div>
+            <div class="col-md-6">
+                <Campo Etiqueta="Apellidos" Id="apellidos" Obligatorio="true">
+                    <input id="apellidos" class="form-control" maxlength="100" />
+                </Campo>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="panel">
+    <div class="panel-titulo">Datos de contacto</div>
+    <div class="row">
+        <div class="col-12">
+            <Campo Etiqueta="Dirección" Id="direccion">
+                <input id="direccion" class="form-control" maxlength="200" value="@ejemplo?.Direccion" />
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Teléfono" Id="telefono" Ayuda="Dígitos, espacios, + y -.">
+                <input id="telefono" type="tel" class="form-control" maxlength="20" value="@ejemplo?.Telefono" />
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Correo" Id="correo">
+                <input id="correo" type="email" class="form-control" maxlength="120" value="@ejemplo?.Correo" />
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Persona de contacto" Id="contacto">
+                <input id="contacto" class="form-control" maxlength="100" value="@ejemplo?.NombreContacto" />
+            </Campo>
+        </div>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="panel-titulo">Condición comercial</div>
+    @if (EsNuevo)
+    {
+        <div class="aviso">
+            Todo cliente nuevo empieza al <strong>contado</strong>. La línea de crédito, el plazo y la calificación
+            los asigna el Administrador desde la opción Crédito de la lista.
+        </div>
+    }
+    else
+    {
+        @* Solo lectura: el crédito se cambia en la pantalla Línea de crédito. *@
+        <div class="row">
+            <div class="col-sm-3 dato">
+                <div class="dato-etiqueta">Condición de pago</div>
+                <div class="dato-valor">@MuestrasClientes.Texto(ejemplo!.CondicionPago)</div>
+            </div>
+            <div class="col-sm-3 dato">
+                <div class="dato-etiqueta">Límite de crédito</div>
+                <div class="dato-valor mono">S/ @ejemplo.LimiteCredito.ToString("N2")</div>
+            </div>
+            <div class="col-sm-3 dato">
+                <div class="dato-etiqueta">Plazo</div>
+                <div class="dato-valor mono">@ejemplo.PlazoCreditoDias días</div>
+            </div>
+            <div class="col-sm-3 dato">
+                <div class="dato-etiqueta">Calificación</div>
+                <div class="dato-valor">@MuestrasClientes.Texto(ejemplo.CalificacionCrediticia)</div>
+            </div>
+            <div class="col-sm-3">
+                <Campo Etiqueta="Estado" Id="estado">
+                    <div class="form-check form-switch mt-1">
+                        <input id="estado" class="form-check-input" type="checkbox" checked="@ejemplo.Activo" />
+                        <label class="form-check-label" for="estado">Activo</label>
+                    </div>
+                </Campo>
+            </div>
+        </div>
+    }
+
+    <div class="pie-form">
+        <span class="leyenda-req"><span class="req">*</span> Campo obligatorio</span>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="/clientes">Cancelar</a>
+            <button class="btn btn-primary" @onclick="Volver">Guardar</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private bool esEmpresa = true;   // solo controla qué campos se muestran
+    private bool EsNuevo => Id is null;
+    private string Titulo => EsNuevo ? "Nuevo cliente" : "Editar cliente";
+
+    // Al editar se muestra un cliente de ejemplo fijo (Lab 9: sin consultas).
+    private ClienteFila? ejemplo => EsNuevo ? null : MuestrasClientes.Clientes[0];
+
+    // Lab 9: no se registra nada, solo se navega.
+    private void Volver() => Nav.NavigateTo("/clientes");
+}

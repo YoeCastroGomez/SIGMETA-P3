@@ -1,0 +1,41 @@
+@* Bloque de solo lectura con los campos de SolicitudAutorizacion. Lo usan Resolver y Detalle. *@
+<div class="row">
+    <div class="col-sm-6 dato">
+        <div class="dato-etiqueta">Solicitante</div>
+        <div class="dato-valor">@Solicitud.Solicitante (@MuestrasSeguridad.Texto(Solicitud.Rol))</div>
+    </div>
+    <div class="col-sm-6 dato">
+        <div class="dato-etiqueta">Fecha y hora de solicitud</div>
+        <div class="dato-valor mono">@Solicitud.FechaSolicitud</div>
+    </div>
+    <div class="col-sm-6 dato">
+        <div class="dato-etiqueta">Operación restringida</div>
+        <div class="dato-valor mono">@Solicitud.OperacionRestringida</div>
+    </div>
+    <div class="col-sm-6 dato">
+        <div class="dato-etiqueta">Estado</div>
+        <div class="dato-valor"><Estado Texto="@MuestrasSeguridad.Texto(Solicitud.Estado)" /></div>
+    </div>
+    <div class="col-12 dato">
+        <div class="dato-etiqueta">Motivo</div>
+        <div class="dato-valor fw-normal">@Solicitud.Motivo</div>
+    </div>
+    @if (Solicitud.Administrador is not null)
+    {
+        <div class="col-sm-6 dato">
+            <div class="dato-etiqueta">Resuelta por</div>
+            <div class="dato-valor">@Solicitud.Administrador · <span class="mono">@Solicitud.FechaResolucion</span></div>
+        </div>
+    }
+    @if (Solicitud.VigenciaMinutos is not null)
+    {
+        <div class="col-sm-6 dato">
+            <div class="dato-etiqueta">Vigencia</div>
+            <div class="dato-valor mono">@Solicitud.VigenciaMinutos min · vence @Solicitud.FechaVencimiento</div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SolicitudFila Solicitud { get; set; } = default!;
+}

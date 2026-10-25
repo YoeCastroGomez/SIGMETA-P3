@@ -1,0 +1,52 @@
+@page "/autorizaciones/nueva"
+@inject NavigationManager Nav
+
+<PageTitle>Nueva solicitud · SIGMETA</PageTitle>
+
+@* RF014 · Nueva solicitud. Solo visual (Lab 9): Enviar no registra, solo vuelve a la lista. *@
+<Encabezado Rf="RF014" Titulo="Nueva solicitud de autorización">
+    <a class="btn btn-outline-secondary" href="/autorizaciones/mias">Volver a mis solicitudes</a>
+</Encabezado>
+
+<div class="panel" style="max-width: 720px;">
+    <div class="row">
+        <div class="col-md-6 dato">
+            <div class="dato-etiqueta">Solicitante</div>
+            <div class="dato-valor">@MuestrasSeguridad.UsuarioPorRol.GetValueOrDefault(Rol, "—") (@Rol)</div>
+        </div>
+        <div class="col-md-6 dato">
+            <div class="dato-etiqueta">Fecha y hora</div>
+            <div class="dato-valor">Se registra al enviar</div>
+        </div>
+    </div>
+
+    <Campo Etiqueta="Operación restringida" Id="operacion" Obligatorio="true"
+           Ayuda="Máximo 60 caracteres. No puedes tener dos solicitudes pendientes de la misma operación.">
+        <input id="operacion" class="form-control mono" maxlength="60" list="operaciones" />
+        <datalist id="operaciones">
+            @foreach (var o in MuestrasSeguridad.OperacionesSugeridas.GetValueOrDefault(Rol, Array.Empty<string>()))
+            {
+                <option value="@o"></option>
+            }
+        </datalist>
+    </Campo>
+
+    <Campo Etiqueta="Motivo" Id="motivo" Obligatorio="true" Ayuda="Máximo 200 caracteres.">
+        <textarea id="motivo" class="form-control" rows="4" maxlength="200"></textarea>
+    </Campo>
+
+    <div class="pie-form">
+        <span class="leyenda-req"><span class="req">*</span> Campo obligatorio</span>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="/autorizaciones/mias">Cancelar</a>
+            <button class="btn btn-primary" @onclick="Volver">Enviar solicitud</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Vendedor";
+
+    // Lab 9: no se registra nada, solo se navega.
+    private void Volver() => Nav.NavigateTo("/autorizaciones/mias");
+}

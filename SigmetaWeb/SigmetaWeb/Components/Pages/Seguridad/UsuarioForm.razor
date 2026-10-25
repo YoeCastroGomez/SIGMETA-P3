@@ -1,0 +1,113 @@
+@page "/usuarios/nuevo"
+@page "/usuarios/editar/{Id:int}"
+@inject NavigationManager Nav
+
+<PageTitle>@Titulo · SIGMETA</PageTitle>
+
+@* RF002 · Formulario de usuario. Solo visual (Lab 9): Guardar no registra, solo vuelve a la lista. *@
+<Encabezado Rf="RF002" Titulo="@Titulo">
+    <a class="btn btn-outline-secondary" href="/usuarios">Volver a la lista</a>
+</Encabezado>
+
+<div class="panel">
+    <div class="row">
+        <div class="col-md-6">
+            <Campo Etiqueta="Nombre de usuario" Id="nombreUsuario" Obligatorio="true" Ayuda="Único. Letras, números, punto, guion y guion bajo.">
+                <input id="nombreUsuario" class="form-control" maxlength="50" value="@ejemplo?.NombreUsuario" />
+            </Campo>
+        </div>
+        <div class="col-md-6">
+            <Campo Etiqueta="Rol" Id="rol" Obligatorio="true" Ayuda="Un único rol por usuario.">
+                <select id="rol" class="form-select">
+                    <option value="">Seleccione…</option>
+                    @foreach (var r in MuestrasSeguridad.Roles)
+                    {
+                        <option value="@r" selected="@(ejemplo?.Rol == r)">@MuestrasSeguridad.Texto(r)</option>
+                    }
+                </select>
+            </Campo>
+        </div>
+        <div class="col-md-6">
+            <Campo Etiqueta="Nombres" Id="nombres" Obligatorio="true">
+                <input id="nombres" class="form-control" maxlength="100" value="@ejemplo?.Nombres" />
+            </Campo>
+        </div>
+        <div class="col-md-6">
+            <Campo Etiqueta="Apellidos" Id="apellidos" Obligatorio="true">
+                <input id="apellidos" class="form-control" maxlength="100" value="@ejemplo?.Apellidos" />
+            </Campo>
+        </div>
+        <div class="col-md-6">
+            <Campo Etiqueta="Correo" Id="correo">
+                <input id="correo" type="email" class="form-control" maxlength="120" value="@ejemplo?.Correo" />
+            </Campo>
+        </div>
+
+        @if (EsNuevo)
+        {
+            <div class="col-md-6">
+                <Campo Etiqueta="Clave" Id="clave" Obligatorio="true" Ayuda="Mínimo 8 caracteres, con al menos una letra y un número.">
+                    <input id="clave" type="password" class="form-control" autocomplete="new-password" />
+                </Campo>
+            </div>
+        }
+        else
+        {
+            <div class="col-md-3">
+                <Campo Etiqueta="Estado" Id="estado">
+                    <div class="form-check form-switch mt-1">
+                        <input id="estado" class="form-check-input" type="checkbox" checked="@ejemplo?.Estado" />
+                        <label class="form-check-label" for="estado">Activo</label>
+                    </div>
+                </Campo>
+            </div>
+            <div class="col-md-3">
+                <div class="dato">
+                    <div class="dato-etiqueta">Fecha de registro</div>
+                    <div class="dato-valor mono">@ejemplo?.FechaRegistro</div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="pie-form">
+        <span class="leyenda-req"><span class="req">*</span> Campo obligatorio</span>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="/usuarios">Cancelar</a>
+            <button class="btn btn-primary" @onclick="Volver">Guardar</button>
+        </div>
+    </div>
+</div>
+
+@if (!EsNuevo)
+{
+    @* Bloque aparte para restablecer la clave (solo visual). *@
+    <div class="panel">
+        <div class="panel-titulo">Restablecer clave</div>
+        <p class="text-muted small">Para el usuario que olvidó su clave.</p>
+        <div class="row align-items-end">
+            <div class="col-md-6">
+                <Campo Etiqueta="Clave nueva" Id="claveNueva" Obligatorio="true" Ayuda="Mínimo 8 caracteres, con al menos una letra y un número.">
+                    <input id="claveNueva" type="password" class="form-control" autocomplete="new-password" />
+                </Campo>
+            </div>
+            <div class="col-md-3">
+                <div class="campo"><button class="btn btn-oscuro w-100" @onclick="Volver">Restablecer</button></div>
+                <div class="form-text">&nbsp;</div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private bool EsNuevo => Id is null;
+    private string Titulo => EsNuevo ? "Nuevo usuario" : "Editar usuario";
+
+    // Al editar se muestra un usuario de ejemplo fijo (Lab 9: sin consultas).
+    private UsuarioFila? ejemplo => EsNuevo ? null : MuestrasSeguridad.Usuarios[1];
+
+    // Lab 9: no se registra nada, solo se navega.
+    private void Volver() => Nav.NavigateTo("/usuarios");
+}

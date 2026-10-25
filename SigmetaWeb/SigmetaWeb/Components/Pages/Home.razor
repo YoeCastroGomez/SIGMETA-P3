@@ -1,0 +1,59 @@
+@page "/"
+
+<PageTitle>Inicio · SIGMETA</PageTitle>
+
+<Encabezado Titulo="Inicio" Subtitulo="@($"Accesos rápidos · {Rol}")" />
+
+<div class="accesos">
+    @foreach (var a in AccesosActuales)
+    {
+        <a class="acceso" href="@a.Ruta">
+            <div class="acceso-titulo">@a.Titulo</div>
+            <div class="acceso-desc">@a.Desc</div>
+        </a>
+    }
+</div>
+
+@code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
+
+    private record Acceso(string Titulo, string Desc, string Ruta);
+
+    // Accesos fijos por rol (solo visual): la tarea principal de cada uno.
+    private static readonly Acceso[] Administrador =
+    {
+        new("Solicitudes de autorización", "Aprobar o rechazar operaciones restringidas.", "/autorizaciones"),
+        new("Usuarios", "Registrar, editar y desactivar usuarios.", "/usuarios"),
+        new("Clientes", "Clientes y líneas de crédito.", "/clientes"),
+        new("Reportes", "Comercial, abastecimiento y caja.", "/reportes"),
+    };
+    private static readonly Acceso[] Vendedor =
+    {
+        new("Clientes", "Registrar y buscar clientes.", "/clientes"),
+        new("Cotizaciones", "Preparar y enviar cotizaciones.", "/cotizaciones"),
+        new("Ventas y comprobantes", "Registrar ventas y emitir comprobantes.", "/ventas"),
+        new("Productos", "Buscar precio y existencias.", "/productos"),
+    };
+    private static readonly Acceso[] Cajero =
+    {
+        new("Caja", "Apertura de la jornada.", "/caja"),
+        new("Cuentas por cobrar", "Registrar cobros y ver saldos.", "/cobranzas"),
+        new("Notas de crédito", "Devoluciones sobre un comprobante.", "/notas-credito"),
+        new("Cierre de caja", "Cuadrar la caja al final del día.", "/caja/cierre"),
+    };
+    private static readonly Acceso[] Almacenero =
+    {
+        new("Compras por recibir", "Registrar la mercadería que llega.", "/recepciones"),
+        new("Ventas por despachar", "Entregar la mercadería vendida.", "/despachos"),
+        new("Movimientos de almacén", "Historial de entradas y salidas.", "/almacen/movimientos"),
+        new("Stock mínimo", "Productos por reponer.", "/almacen/stock-minimo"),
+    };
+
+    private Acceso[] AccesosActuales => Rol switch
+    {
+        "Vendedor" => Vendedor,
+        "Cajero" => Cajero,
+        "Almacenero" => Almacenero,
+        _ => Administrador,
+    };
+}

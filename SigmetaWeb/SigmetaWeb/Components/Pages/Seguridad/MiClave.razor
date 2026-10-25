@@ -1,0 +1,24 @@
+@page "/mi-clave"
+@inject NavigationManager Nav
+
+<PageTitle>Cambiar mi clave · SIGMETA</PageTitle>
+
+@* RF002 · Cambiar mi clave. Solo visual (Lab 9). *@
+<Encabezado Rf="RF002" Titulo="Cambiar mi clave" />
+
+<div class="panel" style="max-width: 520px;">
+    <Campo Etiqueta="Clave actual" Id="actual" Obligatorio="true">
+        <input id="actual" type="password" class="form-control" autocomplete="current-password" />
+    </Campo>
+    <Campo Etiqueta="Clave nueva" Id="nueva" Obligatorio="true" Ayuda="Mínimo 8 caracteres, con al menos una letra y un número. Distinta de la actual.">
+        <input id="nueva" type="password" class="form-control" autocomplete="new-password" />
+    </Campo>
+
+    <div class="pie-form">
+        <span class="leyenda-req"><span class="req">*</span> Campo obligatorio</span>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="/">Cancelar</a>
+            <button class="btn btn-primary" @onclick="@(() => Nav.NavigateTo("/"))">Cambiar clave</button>
+        </div>
+    </div>
+</div>
