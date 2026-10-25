@@ -1,0 +1,19 @@
+OK 1: persona natural con RUC conserva nombre
+OK 2: dos ventas concurrentes no exceden credito
+OK 3: CxC juridica mapea nombre
+OK 4: CxC natural mapea nombre
+OK 5: dos cobros concurrentes no exceden saldo
+OK 6: saldo coherente con cobros
+OK 7: doble anulacion produce una sola compensacion
+OK 8: anulacion restaura saldo exacto
+OK 9: stock agregado de producto repetido
+OK 10: orden de otro cliente rechazada
+OK 11: acumulado 8+3 supera orden de 10
+OK 12: modificar cliente conserva correspondencia con orden
+OK 13: modificar excluye su propia cantidad del acumulado
+OK 14: ocho correlativos concurrentes unicos
+OK 15: sesion impide suplantar ID de administrador
+OK 16: sesion deriva responsable autenticado
+OK 17: sesion cerrada rechazada
+REGRESION: 17 comprobaciones OK
+
