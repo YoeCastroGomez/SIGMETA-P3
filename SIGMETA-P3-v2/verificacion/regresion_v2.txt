@@ -1,0 +1,34 @@
+OK 1: contacto de cliente se conserva en DatosContacto
+OK 2: contacto de proveedor comparte DatosContacto
+OK 3: limite decimal conserva centavos
+OK 4: calificacion fuera de escala rechazada
+OK 5: calificacion valida permanece tras rechazo
+OK 6: plazo superior al autorizado rechazado
+OK 7: cambio del cliente no altera plazo historico
+OK 8: compra recalcula importe e IGV manipulados
+OK 9: editar detalle mantiene mismo calculo de compra
+OK 10: descuento superior al bruto rechazado
+OK 11: editar cabecera recalcula desde detalles guardados
+OK 12: BO impide reinterpretar unidad de stock
+OK 13: SP impide reinterpretar unidad de stock
+OK 14: unidad de inventario conservada
+OK 15: no crear deuda para venta al contado
+OK 16: no asociar deuda a otro cliente
+OK 17: venta sin CxC denuncia integridad al modificar
+OK 18: recuperacion deriva importe y fechas de venta
+OK 19: cuenta duplicada rechazada
+OK 20: BO impide borrar deuda vigente
+OK 21: SP impide borrar deuda vigente
+OK 22: anular venta retira cuenta sin cobros atomicamente
+OK 23: obtener deriva vencimiento actual
+OK 24: consultas por estado y vencimiento coinciden
+OK 25: cuenta vencida no aparece pendiente por estado obsoleto
+OK 26: pago parcial y vencimiento se representan a la vez
+OK 27: no anular venta con cobros vigentes
+OK 28: rollback conserva venta y deuda si anulacion falla
+OK 29: deuda vencida tambien consume limite de credito
+OK 30: editar venta no borra refinanciacion
+OK 31: fecha de venta al credito no desincroniza CxC
+OK 32: ventas del cliente se consultan bajo demanda
+REGRESION V2: 32 comprobaciones OK
+

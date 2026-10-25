@@ -1,0 +1,159 @@
+Migracion v1 -> v2 en BD local: OK
+================================================================================
+            PRUEBAS CRUD DE 6 ENTIDADES (CAPA DE NEGOCIO + BASE DE DATOS)        
+================================================================================
+
+[0] Datos base desde la BD
+   Administrador: aquispe | Vendedor: lrojas | Cajero: mchavez | Cliente: Pedro Alberto Ramos Diaz | Proveedor: Importaciones Electricas Delta S.A.C. | Producto: Martillo de Acero
+
+--------------------------------------------------------------------------------
+1. CLIENTE (RF003) - estudiante 1
+--------------------------------------------------------------------------------
+   [OK] Insertar  -> cliente id 3, DNI 71536092
+   [OK] Listar    -> el cliente nuevo aparece entre los activos
+   [OK] Obtener   -> Maria Elena Prueba Crud (CONTADO, sin razon social)
+   [OK] Modificar -> direccion = Jr. Actualizado 456, Lima
+   [OK] Eliminar  -> baja logica, activo = false
+
+--------------------------------------------------------------------------------
+2. PRODUCTO (RF005) - estudiante 2
+--------------------------------------------------------------------------------
+   [OK] Insertar  -> producto id 7, codigo INT-C1536092
+   [OK] Listar    -> el producto nuevo aparece entre los activos
+   [OK] Obtener   -> Guante Anticorte Prueba Crud, precio S/ 18.90, stock 0.0
+   [OK] Modificar -> precio = S/ 17.50
+   [OK] Eliminar  -> baja logica, activo = false
+
+--------------------------------------------------------------------------------
+3. COTIZACION (RF007) - estudiante 2
+--------------------------------------------------------------------------------
+   [OK] Insertar  -> COT-C1536092 (id 2), total S/ 159.30
+   [OK] Listar    -> la cotizacion nueva aparece entre las vigentes
+   [OK] Obtener   -> COT-C1536092 con 1 linea(s), estado REGISTRADA
+   [OK] Modificar -> cantidad 3 -> 5, subtotal = S/ 225.00, total = S/ 265.50
+   [OK] Eliminar  -> anulacion logica, estado = ANULADA
+
+--------------------------------------------------------------------------------
+4. COMPRA A PROVEEDOR (RF011) - estudiante 3
+--------------------------------------------------------------------------------
+   [OK] Insertar  -> OC-C1536092 (id 2), total S/ 295.00
+   [OK] Listar    -> la compra nueva aparece en el listado
+   [OK] Obtener   -> OC-C1536092, estado REGISTRADA
+   [OK] Modificar -> observaciones = Entregar en almacen principal
+   [OK] Eliminar  -> anulacion logica, estado = ANULADA
+
+--------------------------------------------------------------------------------
+5. VENTA (RF008) - estudiante 4
+--------------------------------------------------------------------------------
+   [OK] Insertar  -> VTA-C1536092 (id 2), total S/ 53.10
+   [OK] Listar    -> la venta nueva aparece en el listado
+   [OK] Obtener   -> VTA-C1536092 con 1 linea(s), estado REGISTRADA
+   [OK] Modificar -> cantidad 1 -> 2, subtotal = S/ 90.00, total = S/ 106.20
+   [OK] Eliminar  -> anulacion logica, estado = ANULADA
+
+--------------------------------------------------------------------------------
+6. CAJA (RF010) - estudiante 5
+--------------------------------------------------------------------------------
+   [OK] Insertar  -> caja id 2 abierta por mchavez con S/ 300.00
+   [OK] Listar    -> la caja nueva aparece en el listado
+   [OK] Obtener   -> caja 2, abierta = true, monto inicial S/ 300.00
+   [OK] Modificar -> monto inicial = S/ 350.00
+   [OK] Eliminar  -> apertura sin movimientos eliminada, existe = false
+
+--------------------------------------------------------------------------------
+7. ROLLBACK DE UNA TRANSACCION (RNF002)
+--------------------------------------------------------------------------------
+   La operacion fallo: Cannot add or update a child row: a foreign key constraint fails (`sigmeta`.`detalle_compra`, CONSTRAINT `fk_detalle_compra_producto` FOREIGN KEY (`id_producto`) REFERENCES `producto` (`id`))
+   [OK] Error     -> fallo la segunda operacion (detalle) por la FK del producto
+   [OK] Rollback  -> la cabecera OC-R1536092 no quedo registrada = true
+
+--------------------------------------------------------------------------------
+8. RAZON SOCIAL UNICA (correccion Lab 4)
+--------------------------------------------------------------------------------
+   Rechazado como se esperaba: Ya existe un proveedor con la razon social Importaciones Electricas Delta S.A.C.
+   [OK] Proveedor -> no se registra un segundo proveedor 'Importaciones Electricas Delta S.A.C.'
+   [OK] BD        -> el proveedor duplicado no quedo en la base
+
+--------------------------------------------------------------------------------
+9. DESPACHO POR LINEA DE VENTA (correccion Lab 4)
+--------------------------------------------------------------------------------
+   [OK] Venta     -> VTA-L1536092: dos lineas del producto Martillo de Acero
+   [OK] Despacho  -> solo la linea 2 queda despachada (linea 1: 0.0, linea 2: 2.0)
+   Rechazado como se esperaba: La cantidad excede lo pendiente de despachar en la linea 1 (Vendido: 1.0, Despachado: 0.0, Solicitado: 2.0)
+   [OK] Exceso    -> no se despacha mas de lo vendido en la linea 1
+
+--------------------------------------------------------------------------------
+10. NOTA DE CREDITO CON DESCUENTO (correccion Lab 4)
+--------------------------------------------------------------------------------
+   [OK] Comprobante -> BOLETA B001-00000001
+   [OK] Importe   -> devuelve S/ 44.00 (precio S/ 45.00 menos S/ 1.00 de descuento), no el precio de lista
+   Rechazado como se esperaba: La cantidad a devolver excede lo vendido menos lo ya acreditado en la linea 2 (Vendido: 2.0, Acreditado: 1.0, Devuelto: 2.0)
+   [OK] Exceso    -> no se devuelve mas de lo vendido en la linea
+   [OK] Anulacion -> NC, despacho, comprobante y venta anulados (baja logica)
+
+--------------------------------------------------------------------------------
+11. CIERRE Y REAPERTURA DE CAJA (correccion Lab 4)
+--------------------------------------------------------------------------------
+   [OK] Cierre    -> caja 3 cerrada con el cierre 2
+   [OK] Reapertura -> el cierre 2 queda REVERTIDO (no se borra) y la caja vuelve a abrirse
+   [OK] Historial -> la caja conserva 2 cierres: 1 vigente y 1 revertido
+
+================================================================================
+          RESUMEN: 11 PRUEBAS OK | 0 CON ERROR (de 11)
+================================================================================
+
+
+OK 1: persona natural con RUC conserva nombre
+OK 2: dos ventas concurrentes no exceden credito
+OK 3: CxC juridica mapea nombre
+OK 4: CxC natural mapea nombre
+OK 5: dos cobros concurrentes no exceden saldo
+OK 6: saldo coherente con cobros
+OK 7: doble anulacion produce una sola compensacion
+OK 8: anulacion restaura saldo exacto
+OK 9: stock agregado de producto repetido
+OK 10: orden de otro cliente rechazada
+OK 11: acumulado 8+3 supera orden de 10
+OK 12: modificar cliente conserva correspondencia con orden
+OK 13: modificar excluye su propia cantidad del acumulado
+OK 14: ocho correlativos concurrentes unicos
+OK 15: sesion impide suplantar ID de administrador
+OK 16: sesion deriva responsable autenticado
+OK 17: sesion cerrada rechazada
+REGRESION: 17 comprobaciones OK
+
+
+OK 1: contacto de cliente se conserva en DatosContacto
+OK 2: contacto de proveedor comparte DatosContacto
+OK 3: limite decimal conserva centavos
+OK 4: calificacion fuera de escala rechazada
+OK 5: calificacion valida permanece tras rechazo
+OK 6: plazo superior al autorizado rechazado
+OK 7: cambio del cliente no altera plazo historico
+OK 8: compra recalcula importe e IGV manipulados
+OK 9: editar detalle mantiene mismo calculo de compra
+OK 10: descuento superior al bruto rechazado
+OK 11: editar cabecera recalcula desde detalles guardados
+OK 12: BO impide reinterpretar unidad de stock
+OK 13: SP impide reinterpretar unidad de stock
+OK 14: unidad de inventario conservada
+OK 15: no crear deuda para venta al contado
+OK 16: no asociar deuda a otro cliente
+OK 17: venta sin CxC denuncia integridad al modificar
+OK 18: recuperacion deriva importe y fechas de venta
+OK 19: cuenta duplicada rechazada
+OK 20: BO impide borrar deuda vigente
+OK 21: SP impide borrar deuda vigente
+OK 22: anular venta retira cuenta sin cobros atomicamente
+OK 23: obtener deriva vencimiento actual
+OK 24: consultas por estado y vencimiento coinciden
+OK 25: cuenta vencida no aparece pendiente por estado obsoleto
+OK 26: pago parcial y vencimiento se representan a la vez
+OK 27: no anular venta con cobros vigentes
+OK 28: rollback conserva venta y deuda si anulacion falla
+OK 29: deuda vencida tambien consume limite de credito
+OK 30: editar venta no borra refinanciacion
+OK 31: fecha de venta al credito no desincroniza CxC
+OK 32: ventas del cliente se consultan bajo demanda
+REGRESION V2: 32 comprobaciones OK
+
