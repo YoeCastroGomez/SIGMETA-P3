@@ -1,0 +1,107 @@
+@page "/ventas"
+
+<PageTitle>Ventas y comprobantes · SIGMETA</PageTitle>
+
+@* RF008 · Lista de ventas (Vendedor y Cajero). Solo visual (Lab 9): filtros y botones no consultan nada. *@
+<Encabezado Rf="RF008" Titulo="Ventas y comprobantes"
+            Subtitulo="Ventas registradas desde una orden de compra de cliente o de forma directa. Importes en soles.">
+    @if (Rol == "Vendedor")
+    {
+        @* RF008: la venta la registra el Vendedor (VentaBOImpl.registrar exige el rol VENDEDOR) *@
+        <a class="btn btn-primary" href="/ventas/nueva">Nueva venta</a>
+    }
+</Encabezado>
+
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
+            <input id="fCliente" class="form-control" maxlength="150" placeholder="Razón social, nombre o documento" />
+        </Campo>
+        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-2">
+            <select id="fEstado" class="form-select">
+                <option>Todos</option>
+                <option>Registrada</option>
+                <option>Despachada parcial</option>
+                <option>Despachada</option>
+                <option>Anulada</option>
+            </select>
+        </Campo>
+        <Campo Etiqueta="Desde" Id="fDesde" Clase="col-sm-6 col-md-2">
+            <input id="fDesde" type="date" class="form-control" />
+        </Campo>
+        <Campo Etiqueta="Hasta" Id="fHasta" Clase="col-sm-6 col-md-2">
+            <input id="fHasta" type="date" class="form-control" />
+        </Campo>
+        <div class="col-auto">
+            <button class="btn btn-dark">Buscar</button>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Número</th>
+                    <th>Cliente</th>
+                    <th>Fecha</th>
+                    <th>Condición de pago</th>
+                    <th class="text-end">Total (S/)</th>
+                    <th>Comprobante</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var v in MuestrasVentas.Ventas)
+                {
+                    <tr>
+                        <td>
+                            <strong>@v.Numero</strong>
+                            <div class="small text-muted">@(v.OrdenCompraCliente is null ? "Venta directa" : $"Orden {v.OrdenCompraCliente}")</div>
+                        </td>
+                        <td>@v.Cliente</td>
+                        <td>@v.FechaEmision.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            @MuestrasVentas.Texto(v.CondicionPago)
+                            @if (v.CondicionPago == "CREDITO")
+                            {
+                                <div class="small text-muted">@v.PlazoCreditoDias días</div>
+                            }
+                        </td>
+                        <td class="text-end">@MuestrasVentas.Total(v.Detalles).ToString("N2")</td>
+                        <td>
+                            @if (v.Comprobante is not null)
+                            {
+                                @v.Comprobante
+                            }
+                            else
+                            {
+                                <span class="text-muted">Sin emitir</span>
+                            }
+                        </td>
+                        <td><Estado Texto="@MuestrasVentas.Texto(v.Estado)" /></td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1 text-nowrap">
+                                @if (v.Estado != "ANULADA")
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/ventas/{v.Id}/comprobante")">Comprobante</a>
+                                }
+                                @if (v.Estado == "REGISTRADA" && v.Comprobante is null)
+                                {
+                                    @* RF008: solo se anula una venta sin comprobante vigente ni despachos *@
+                                    <button class="btn btn-sm btn-outline-danger">Anular</button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
+}

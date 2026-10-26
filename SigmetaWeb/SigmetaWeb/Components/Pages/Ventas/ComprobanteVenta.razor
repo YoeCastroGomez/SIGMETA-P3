@@ -1,0 +1,157 @@
+@page "/ventas/{Id:int}/comprobante"
+@inject NavigationManager Nav
+
+<PageTitle>Comprobante de la venta · SIGMETA</PageTitle>
+
+@* RF008 · Emisión del comprobante electrónico de una venta y registro de su envío (Vendedor y Cajero).
+   Solo visual (Lab 9): Emitir y Registrar envío no registran nada, solo vuelven a la lista. *@
+<Encabezado Rf="RF008" Titulo="Comprobante de la venta" Subtitulo="@($"Venta {venta.Numero} · {venta.Cliente}")">
+    <a class="btn btn-outline-secondary" href="/ventas">Volver a la lista</a>
+</Encabezado>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Venta</h2>
+    <div class="row">
+        <div class="col-sm-6 col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Número</div>
+            <div class="fw-semibold">@venta.Numero</div>
+        </div>
+        <div class="col-sm-6 col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Fecha</div>
+            <div class="fw-semibold">@venta.FechaEmision.ToString("dd/MM/yyyy")</div>
+        </div>
+        <div class="col-sm-6 col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Condición de pago</div>
+            <div class="fw-semibold">@MuestrasVentas.Texto(venta.CondicionPago)</div>
+        </div>
+        <div class="col-sm-6 col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Total</div>
+            <div class="fw-semibold">S/ @MuestrasVentas.Total(venta.Detalles).ToString("N2")</div>
+        </div>
+    </div>
+</div>
+
+@if (comprobante is null)
+{
+    @* La venta todavía no tiene comprobante vigente: se emite factura o boleta *@
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Emitir comprobante</h2>
+        <div class="row">
+            <div class="col-md-6">
+                <Campo Etiqueta="Tipo de comprobante" Obligatorio="true"
+                       Ayuda="La factura exige que el cliente tenga RUC. Una venta tiene un solo comprobante vigente.">
+                    <div class="d-flex gap-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="tipo" id="tipoFactura"
+                                   checked="@esFactura" @onchange="() => esFactura = true" />
+                            <label class="form-check-label" for="tipoFactura">Factura</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="tipo" id="tipoBoleta"
+                                   checked="@(!esFactura)" @onchange="() => esFactura = false" />
+                            <label class="form-check-label" for="tipoBoleta">Boleta</label>
+                        </div>
+                    </div>
+                </Campo>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Serie</div>
+                <div class="fw-semibold">@(esFactura ? "F001" : "B001")</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Número</div>
+                <div class="text-muted">Se asigna al emitir</div>
+            </div>
+        </div>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" href="/ventas">Cancelar</a>
+                <button class="btn btn-primary" @onclick="Volver">Emitir comprobante</button>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card card-body mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+            <h2 class="h6 fw-semibold mb-0">Comprobante emitido</h2>
+            <Estado Texto="@MuestrasVentas.Texto(comprobante.Estado)" />
+        </div>
+        <div class="row">
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Tipo</div>
+                <div class="fw-semibold">@MuestrasVentas.Texto(comprobante.Tipo)</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Serie y número</div>
+                <div class="fw-semibold">@comprobante.SerieNumero</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Fecha de emisión</div>
+                <div class="fw-semibold">@comprobante.FechaEmision.ToString("dd/MM/yyyy")</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Último envío</div>
+                <div class="fw-semibold">
+                    @if (comprobante.MedioEnvio is null)
+                    {
+                        <span class="text-muted">Sin enviar</span>
+                    }
+                    else
+                    {
+                        @MuestrasVentas.Texto(comprobante.MedioEnvio)
+                        <div class="small text-muted">@comprobante.FechaEnvio?.ToString("dd/MM/yyyy HH:mm")</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* RF008: se deja registro del medio y la fecha de envío (ComprobanteBO.registrarEnvio) *@
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Entregar al cliente</h2>
+        <div class="row align-items-end">
+            <div class="col-md-6">
+                <Campo Etiqueta="Medio de envío" Id="medio" Obligatorio="true"
+                       Ayuda="La fecha y hora del envío se registran automáticamente.">
+                    <select id="medio" class="form-select">
+                        <option value="CORREO">Correo electrónico</option>
+                        <option value="MENSAJERIA">Mensajería al contacto registrado</option>
+                        <option value="IMPRESO">Formato imprimible</option>
+                    </select>
+                </Campo>
+            </div>
+            <div class="col-md-6 mb-3 d-flex flex-wrap gap-2 justify-content-md-end">
+                @if (Rol == "Cajero")
+                {
+                    @* RF013: la nota de crédito la registra el Cajero sobre un comprobante emitido *@
+                    <a class="btn btn-outline-secondary" href="/notas-credito/nueva">Nota de crédito</a>
+                }
+                <button class="btn btn-primary" @onclick="Volver">Registrar envío</button>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body pb-0">
+        <h2 class="h6 fw-semibold mb-1">Detalle de la venta</h2>
+    </div>
+    <TablaLineas Lineas="@venta.Detalles" />
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
+
+    private bool esFactura = true;   // solo controla qué serie se muestra
+
+    // Lab 9: sin consultas; si el id no existe se muestra la primera venta de ejemplo.
+    private VentaFila venta => MuestrasVentas.Venta(Id) ?? MuestrasVentas.Ventas[0];
+    private ComprobanteFila? comprobante => MuestrasVentas.ComprobanteDeVenta(venta.Id);
+
+    // Lab 9: no se registra nada, solo se navega.
+    private void Volver() => Nav.NavigateTo("/ventas");
+}
