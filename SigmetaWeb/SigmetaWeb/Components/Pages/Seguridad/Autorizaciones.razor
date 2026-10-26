@@ -6,24 +6,24 @@
 <Encabezado Rf="RF014" Titulo="Solicitudes de autorización"
             Subtitulo="Solicitudes de todos los usuarios. Aprobar o rechazar se hace desde Resolver." />
 
-<div class="panel">
-    <div class="filtros">
-        <Campo Etiqueta="Mostrar" Id="fMostrar" Clase="angosto">
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <Campo Etiqueta="Mostrar" Id="fMostrar" Clase="col-sm-6 col-md-3">
             <select id="fMostrar" class="form-select">
                 <option>Todas</option>
                 <option>Solo pendientes</option>
             </select>
         </Campo>
-        <div class="campo">
-            <button class="btn btn-oscuro">Buscar</button>
+        <div class="col-auto">
+            <button class="btn btn-dark">Buscar</button>
         </div>
     </div>
 </div>
 
-<div class="panel p-0">
-    <div class="tabla-envoltura">
-        <table class="table table-hover">
-            <thead>
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
                 <tr>
                     <th>Solicitante</th>
                     <th>Operación</th>
@@ -38,23 +38,25 @@
                 {
                     <tr>
                         <td><strong>@s.Solicitante</strong><div class="small text-muted">@MuestrasSeguridad.Texto(s.Rol)</div></td>
-                        <td class="mono">@s.OperacionRestringida</td>
+                        <td>@s.OperacionRestringida</td>
                         <td>@s.Motivo</td>
-                        <td class="mono">@s.FechaSolicitud</td>
+                        <td>@s.FechaSolicitud</td>
                         <td><Estado Texto="@MuestrasSeguridad.Texto(s.Estado)" /></td>
-                        <td class="acciones-fila">
-                            @if (s.Estado == "PENDIENTE")
-                            {
-                                <a class="btn btn-sm btn-primary" href="@($"/autorizaciones/aprobar/{s.Id}")">Resolver</a>
-                            }
-                            else
-                            {
-                                <a class="btn btn-sm btn-outline-secondary" href="@($"/autorizaciones/detalle/{s.Id}")">Ver</a>
-                                @if (s.Estado == "APROBADA")
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1 text-nowrap">
+                                @if (s.Estado == "PENDIENTE")
                                 {
-                                    <button class="btn btn-sm btn-outline-danger">Revocar</button>
+                                    <a class="btn btn-sm btn-primary" href="@($"/autorizaciones/aprobar/{s.Id}")">Resolver</a>
                                 }
-                            }
+                                else
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/autorizaciones/detalle/{s.Id}")">Ver</a>
+                                    @if (s.Estado == "APROBADA")
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger">Revocar</button>
+                                    }
+                                }
+                            </div>
                         </td>
                     </tr>
                 }

@@ -7,23 +7,24 @@
     El rol llega del login (demostración). Aquí no se valida nada.
     Para agregar una pantalla: se agrega su enlace en el menú de CADA rol que la usa.
 *@
-<nav class="menu">
-    <NavLink class="menu-link" href="/" Match="NavLinkMatch.All" @onclick="AlNavegar">Inicio</NavLink>
+<nav class="nav flex-column py-2">
+    <NavLink class="nav-link px-3" href="/" Match="NavLinkMatch.All" @onclick="AlNavegar">Inicio</NavLink>
 
     @foreach (var grupo in MenuActual)
     {
         var abierto = abiertos.Contains(grupo.Titulo);
 
-        <button class="menu-grupo" aria-expanded="@(abierto ? "true" : "false")" @onclick="() => Alternar(grupo.Titulo)">
+        <button class="menu-grupo btn btn-link text-decoration-none text-uppercase fw-semibold d-flex justify-content-between w-100 px-3 pt-3 pb-1"
+                aria-expanded="@(abierto ? "true" : "false")" @onclick="() => Alternar(grupo.Titulo)">
             <span>@grupo.Titulo</span>
-            <span class="menu-flecha">@(abierto ? "−" : "+")</span>
+            <span>@(abierto ? "−" : "+")</span>
         </button>
 
         @if (abierto)
         {
             @foreach (var l in grupo.Enlaces)
             {
-                <NavLink class="menu-link menu-sub" href="@l.Ruta" @onclick="AlNavegar">@l.Texto</NavLink>
+                <NavLink class="nav-link ps-4 pe-3 py-2" href="@l.Ruta" @onclick="AlNavegar">@l.Texto</NavLink>
             }
         }
     }

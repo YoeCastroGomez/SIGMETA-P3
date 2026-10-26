@@ -8,31 +8,31 @@
     <a class="btn btn-primary" href="/clientes/nuevo">Nuevo cliente</a>
 </Encabezado>
 
-<div class="panel">
-    <div class="filtros">
-        <Campo Etiqueta="Número de documento" Id="fDoc" Clase="angosto">
-            <input id="fDoc" class="form-control mono" maxlength="20" />
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <Campo Etiqueta="Número de documento" Id="fDoc" Clase="col-sm-6 col-md-3">
+            <input id="fDoc" class="form-control" maxlength="20" />
         </Campo>
-        <Campo Etiqueta="Razón social o nombre" Id="fNombre">
+        <Campo Etiqueta="Razón social o nombre" Id="fNombre" Clase="col-sm-6 col-md">
             <input id="fNombre" class="form-control" maxlength="150" />
         </Campo>
-        <Campo Etiqueta="Estado" Id="fEstado" Clase="angosto">
+        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-3">
             <select id="fEstado" class="form-select">
                 <option>Todos</option>
                 <option>Activos</option>
                 <option>Inactivos</option>
             </select>
         </Campo>
-        <div class="campo">
-            <button class="btn btn-oscuro">Buscar</button>
+        <div class="col-auto">
+            <button class="btn btn-dark">Buscar</button>
         </div>
     </div>
 </div>
 
-<div class="panel p-0">
-    <div class="tabla-envoltura">
-        <table class="table table-hover">
-            <thead>
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
                 <tr>
                     <th>Documento</th>
                     <th>Razón social o nombre</th>
@@ -46,28 +46,30 @@
                 @foreach (var c in MuestrasClientes.Clientes)
                 {
                     <tr>
-                        <td class="mono"><span class="small text-muted">@MuestrasClientes.Texto(c.TipoDocumento)</span><br />@c.NumeroDocumento</td>
+                        <td><span class="small text-muted">@MuestrasClientes.Texto(c.TipoDocumento)</span><br />@c.NumeroDocumento</td>
                         <td><strong>@c.NombreMostrado</strong></td>
                         <td>@MuestrasClientes.Texto(c.TipoPersona)</td>
                         <td>
                             @MuestrasClientes.Texto(c.CondicionPago)
                             @if (c.CondicionPago == "CREDITO")
                             {
-                                <div class="small text-muted mono">Límite S/ @c.LimiteCredito.ToString("N2") · @c.PlazoCreditoDias días</div>
+                                <div class="small text-muted">Límite S/ @c.LimiteCredito.ToString("N2") · @c.PlazoCreditoDias días</div>
                             }
                         </td>
                         <td><Estado Texto="@(c.Activo ? "Activo" : "Inactivo")" /></td>
-                        <td class="acciones-fila">
-                            <a class="btn btn-sm btn-outline-secondary" href="@($"/clientes/editar/{c.Id}")">Editar</a>
-                            @if (Rol == "Administrador")
-                            {
-                                @* RF003: el botón Crédito solo se muestra al Administrador *@
-                                <a class="btn btn-sm btn-outline-secondary" href="@($"/clientes/credito/{c.Id}")">Crédito</a>
-                            }
-                            @if (c.Activo)
-                            {
-                                <button class="btn btn-sm btn-outline-danger">Desactivar</button>
-                            }
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1 text-nowrap">
+                                <a class="btn btn-sm btn-outline-secondary" href="@($"/clientes/editar/{c.Id}")">Editar</a>
+                                @if (Rol == "Administrador")
+                                {
+                                    @* RF003: el botón Crédito solo se muestra al Administrador *@
+                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/clientes/credito/{c.Id}")">Crédito</a>
+                                }
+                                @if (c.Activo)
+                                {
+                                    <button class="btn btn-sm btn-outline-danger">Desactivar</button>
+                                }
+                            </div>
                         </td>
                     </tr>
                 }
