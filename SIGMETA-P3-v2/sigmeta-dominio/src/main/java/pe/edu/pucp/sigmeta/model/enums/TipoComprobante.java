@@ -6,6 +6,5 @@ package pe.edu.pucp.sigmeta.model.enums;
 public enum TipoComprobante {
     FACTURA,
     BOLETA,
-    NOTA_CREDITO,
-    NOTA_DEBITO
+    NOTA_CREDITO
 }

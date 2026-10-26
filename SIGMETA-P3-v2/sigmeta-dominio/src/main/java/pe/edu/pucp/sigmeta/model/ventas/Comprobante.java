@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import pe.edu.pucp.sigmeta.model.enums.EstadoComprobante;
 import pe.edu.pucp.sigmeta.model.enums.TipoComprobante;
+import pe.edu.pucp.sigmeta.model.usuario.Usuario;
 
 /**
  * Comprobante electronico asociado a una venta (RF008).
@@ -26,6 +27,7 @@ public class Comprobante {
     private LocalDateTime fechaEnvio;
     private LocalDateTime fechaRegistro;
     private String motivo;
+    private Usuario administradorAutoriza;
     private List<DetalleNotaCredito> detalles;
 
     public Comprobante() {
@@ -207,5 +209,13 @@ public class Comprobante {
 
     public void setDetalles(List<DetalleNotaCredito> detalles) {
         this.detalles = detalles;
+    }
+
+    public Usuario getAdministradorAutoriza() {
+        return administradorAutoriza;
+    }
+
+    public void setAdministradorAutoriza(Usuario administradorAutoriza) {
+        this.administradorAutoriza = administradorAutoriza;
     }
 }

@@ -3,9 +3,13 @@ package pe.edu.pucp.sigmeta.daoimpl.ventas;
 import pe.edu.pucp.sigmeta.dao.ventas.ComprobanteDAO;
 import pe.edu.pucp.sigmeta.model.enums.EstadoComprobante;
 import pe.edu.pucp.sigmeta.model.enums.TipoComprobante;
+import pe.edu.pucp.sigmeta.model.usuario.Usuario;
 import pe.edu.pucp.sigmeta.model.ventas.Comprobante;
 import pe.edu.pucp.sigmeta.model.ventas.Venta;
 import pe.edu.pucp.sigmeta.transaction.transactionContext;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -55,6 +59,13 @@ public class ComprobanteDAOImpl implements ComprobanteDAO {
             c.setFechaRegistro(fRegistro.toLocalDateTime());
         }
 
+        int idAdmin = rs.getInt("id_administrador_autoriza");
+        if (!rs.wasNull()) {
+            Usuario admin = new Usuario();
+            admin.setId(idAdmin);
+            c.setAdministradorAutoriza(admin);
+        }
+
         return c;
     }
 
@@ -75,7 +86,7 @@ public class ComprobanteDAOImpl implements ComprobanteDAO {
 
     @Override
     public Comprobante save(Comprobante c) throws SQLException {
-        String sql = "{CALL sp_comprobante_insertar(?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
+        String sql = "{CALL sp_comprobante_insertar(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}";
         Connection conn = transactionContext.getConnection();
         try (CallableStatement cs = conn.prepareCall(sql)) {
             cs.setInt(1, c.getVenta().getId());
@@ -103,9 +114,15 @@ public class ComprobanteDAOImpl implements ComprobanteDAO {
                 cs.setNull(13, Types.TIMESTAMP);
             }
 
-            cs.registerOutParameter(14, Types.INTEGER);
+            if (c.getAdministradorAutoriza() != null && c.getAdministradorAutoriza().getId() > 0) {
+                cs.setInt(14, c.getAdministradorAutoriza().getId());
+            } else {
+                cs.setNull(14, Types.INTEGER);
+            }
+
+            cs.registerOutParameter(15, Types.INTEGER);
             cs.execute();
-            c.setId(cs.getInt(14));
+            c.setId(cs.getInt(15));
             return c;
         }
     }
@@ -227,5 +244,56 @@ public class ComprobanteDAOImpl implements ComprobanteDAO {
             cs.setDouble(2, monto);
             cs.executeUpdate();
         }
+    }
+
+    @Override
+    public void registrarEnvio(int id, String medioEnvio, LocalDateTime fechaEnvio) throws SQLException {
+        String sql = "{CALL sp_comprobante_registrar_envio(?,?,?)}";
+        Connection conn = transactionContext.getConnection();
+        try (CallableStatement cs = conn.prepareCall(sql)) {
+            cs.setInt(1, id);
+            cs.setString(2, medioEnvio);
+            if (fechaEnvio != null) {
+                cs.setTimestamp(3, Timestamp.valueOf(fechaEnvio));
+            } else {
+                cs.setNull(3, Types.TIMESTAMP);
+            }
+            cs.executeUpdate();
+        }
+    }
+
+    @Override
+    public List<Comprobante> buscarNotasCredito(LocalDate fechaDesde, LocalDate fechaHasta, Integer idCliente, String serieNumeroOrigen) throws SQLException {
+        String sql = "{CALL sp_comprobante_buscar_nc(?,?,?,?)}";
+        List<Comprobante> lista = new ArrayList<>();
+        Connection conn = transactionContext.getConnection();
+        try (CallableStatement cs = conn.prepareCall(sql)) {
+            if (fechaDesde != null) {
+                cs.setDate(1, Date.valueOf(fechaDesde));
+            } else {
+                cs.setNull(1, Types.DATE);
+            }
+            if (fechaHasta != null) {
+                cs.setDate(2, Date.valueOf(fechaHasta));
+            } else {
+                cs.setNull(2, Types.DATE);
+            }
+            if (idCliente != null) {
+                cs.setInt(3, idCliente);
+            } else {
+                cs.setNull(3, Types.INTEGER);
+            }
+            if (serieNumeroOrigen != null && !serieNumeroOrigen.trim().isEmpty()) {
+                cs.setString(4, serieNumeroOrigen.trim());
+            } else {
+                cs.setNull(4, Types.VARCHAR);
+            }
+            try (ResultSet rs = cs.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(mapear(rs));
+                }
+            }
+        }
+        return lista;
     }
 }
