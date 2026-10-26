@@ -46,13 +46,16 @@ Los paquetes de `dao` y `services` siguen los mismos subpaquetes que el modelo
 
 **Ojo: esto borra la base `sigmeta` y la crea de nuevo. Sacar un respaldo antes.**
 
-Con la consola de MySQL, desde la raiz del proyecto:
+**MySQL 8 o superior:** antes de instalar, quitar `ONLY_FULL_GROUP_BY` del `sql_mode`. La ultima sentencia de
+`sigmeta.sql` (correlativos de venta) falla con el error 1055 si ese modo esta activo, y los procedimientos
+guardan el `sql_mode` con el que se crean:
 
-```sh
-mysql -h HOST -u USUARIO -p --abort-source-on-error < instalar_nueva_bd.sql
+```sql
+SET PERSIST sql_mode = (SELECT REPLACE(@@GLOBAL.sql_mode, 'ONLY_FULL_GROUP_BY', ''));
+SET SESSION sql_mode = (SELECT REPLACE(@@SESSION.sql_mode, 'ONLY_FULL_GROUP_BY', ''));
 ```
 
-Con Workbench (no acepta `SOURCE`), ejecutar uno por uno y en este orden:
+Con Workbench, ejecutar uno por uno y en este orden:
 
 1. `sql/sigmeta.sql` (tablas y datos de ejemplo)
 2. `sql_sp/00_drop_sps.sql`
@@ -69,9 +72,13 @@ porque esos dos archivos no tienen `USE sigmeta;`.
 En vez de `sql/sigmeta.sql` se pueden correr `sql/00_base.sql` a `sql/06_integridad.sql` en orden.
 Una opcion o la otra, no las dos.
 
-Para revisar que quedo bien: 29 tablas y 201 procedimientos en el schema `sigmeta`.
+Para revisar que quedo bien: 29 tablas y 203 procedimientos en el schema `sigmeta`.
 
 Los archivos `sql_sp/sql_prueba_*.sql` son consultas para probar a mano los procedimientos de cada integrante.
+
+**Base ya instalada (por ejemplo la de AWS):** no reinstalar. Aplicar las migraciones pendientes de `sql/`
+(por ejemplo `migracion_lab9_sebastian.sql`) y despues recargar todos los procedimientos en el mismo orden
+de los pasos 2 a 8.
 
 ## 2. Configurar la conexion
 
@@ -97,8 +104,8 @@ mvn clean install
 
 Luego ejecutar `pe.edu.pucp.sigmeta.ejecucion.Main` desde el IDE.
 
-El `Main` corre 11 pruebas, todas a traves de la capa de negocio. Tiene que terminar con
-**11 PRUEBAS OK | 0 CON ERROR**.
+El `Main` corre 13 pruebas, todas a traves de la capa de negocio. Tiene que terminar con
+**13 PRUEBAS OK | 0 CON ERROR**.
 
 | #  | Prueba                                   |
 |----|------------------------------------------|
@@ -113,6 +120,8 @@ El `Main` corre 11 pruebas, todas a traves de la capa de negocio. Tiene que term
 | 9  | Despacho por linea de venta (correccion Lab 4) |
 | 10 | Nota de credito con descuento (correccion Lab 4) |
 | 11 | Cierre y reapertura de caja (correccion Lab 4)   |
+| 12 | Registro del envio de comprobante (RF008)        |
+| 13 | Busqueda de notas de credito por origen, cliente y fecha (RF013) |
 
 Las pruebas insertan datos en la base. Correrlas solo en la base del curso o en una de prueba.
 

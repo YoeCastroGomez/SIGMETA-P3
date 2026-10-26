@@ -549,7 +549,7 @@ CREATE TABLE detalle_venta (
 CREATE TABLE comprobante (
     id             INT AUTO_INCREMENT PRIMARY KEY,
     id_venta                   INT NOT NULL,
-    tipo                       ENUM('FACTURA', 'BOLETA', 'NOTA_CREDITO', 'NOTA_DEBITO') NOT NULL,
+    tipo                       ENUM('FACTURA', 'BOLETA', 'NOTA_CREDITO') NOT NULL,
     serie                      VARCHAR(10) NOT NULL,
     numero                     VARCHAR(20) NOT NULL,
     fecha_emision              DATE NOT NULL,
@@ -561,15 +561,18 @@ CREATE TABLE comprobante (
     motivo                     VARCHAR(200) NULL,
     medio_envio                VARCHAR(30) NULL,
     fecha_envio                DATETIME NULL,
+    id_administrador_autoriza  INT NULL,
     fecha_registro             DATETIME NOT NULL,
     CONSTRAINT fk_comprobante_venta
         FOREIGN KEY (id_venta) REFERENCES venta(id),
     CONSTRAINT fk_comprobante_comprobante
-        FOREIGN KEY (id_comprobante_relacionado) REFERENCES comprobante(id)
+        FOREIGN KEY (id_comprobante_relacionado) REFERENCES comprobante(id),
+    CONSTRAINT fk_comprobante_admin
+        FOREIGN KEY (id_administrador_autoriza) REFERENCES usuario(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: detalle_nota_credito
--- Clase Java: DetalleNotaCredito extends LineaDocumento (tabla nueva por decision de equipo)
+-- Clase Java: DetalleNotaCredito (tabla nueva por decision de equipo)
 CREATE TABLE detalle_nota_credito (
     id INT AUTO_INCREMENT PRIMARY KEY,
     id_comprobante          INT NOT NULL,
@@ -671,14 +674,17 @@ INSERT INTO detalle_venta (
 INSERT INTO comprobante (
     id, id_venta, tipo, serie, numero, fecha_emision,
     sub_total, igv, total, estado,
-    id_comprobante_relacionado, motivo, medio_envio, fecha_envio, fecha_registro
+    id_comprobante_relacionado, motivo, medio_envio, fecha_envio,
+    id_administrador_autoriza, fecha_registro
 ) VALUES
     (1, 1, 'FACTURA', 'F001', '00000123', '2026-09-02',
      1300.00, 234.00, 1534.00, 'EMITIDO',
-     NULL, NULL, 'OSE_NUBE', '2026-09-02 10:20:00', '2026-09-02 10:18:00'),
+     NULL, NULL, 'CORREO', '2026-09-02 10:20:00',
+     NULL, '2026-09-02 10:18:00'),
     (2, 1, 'NOTA_CREDITO', 'FC01', '00000012', '2026-09-04',
      90.00, 16.20, 106.20, 'EMITIDO',
-     1, 'Devolucion de producto por defecto de fabrica', 'OSE_NUBE', '2026-09-04 11:30:00', '2026-09-04 11:25:00');
+     1, 'Devolucion de producto por defecto de fabrica', 'CORREO', '2026-09-04 11:30:00',
+     1, '2026-09-04 11:25:00');
 
 -- 6. Detalle de nota de credito (linea de producto devuelto asociada al comprobante 2)
 INSERT INTO detalle_nota_credito (

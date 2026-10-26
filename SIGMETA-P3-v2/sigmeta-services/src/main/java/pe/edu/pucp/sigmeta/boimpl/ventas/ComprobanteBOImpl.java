@@ -137,7 +137,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
     @Override
     public Comprobante registrarNotaCredito(Comprobante notaCredito, int idAdministradorAutoriza, int idResponsable) throws SQLException {
         Usuario responsable = usuarioBO.verificarRol(idResponsable, TipoRol.CAJERO);
-        usuarioBO.obtenerAdministradorActivo(idAdministradorAutoriza);
+        Usuario admin = usuarioBO.obtenerAdministradorActivo(idAdministradorAutoriza);
 
         Validador.obligatorio(notaCredito, "nota de credito");
         Validador.obligatorio(notaCredito.getComprobanteRelacionado(), "comprobante origen");
@@ -244,6 +244,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
             notaCredito.setTotal(totalNC.doubleValue());
             notaCredito.setEstado(EstadoComprobante.EMITIDO);
             notaCredito.setComprobanteRelacionado(origen);
+            notaCredito.setAdministradorAutoriza(admin);
             notaCredito.setFechaRegistro(LocalDateTime.now());
 
             comprobanteDAO.save(notaCredito);
@@ -397,6 +398,55 @@ public class ComprobanteBOImpl implements ComprobanteBO {
     public List<Comprobante> listarTodos() throws SQLException {
         return Transaccion.ejecutar(() -> {
             return comprobanteDAO.listarTodos();
+        });
+    }
+
+    // RF008: Registro de envio de comprobante electronico
+    @Override
+    public Comprobante registrarEnvio(int idComprobante, String medioEnvio, int idResponsable) throws SQLException {
+        usuarioBO.verificarRol(idResponsable, TipoRol.VENDEDOR, TipoRol.CAJERO);
+        String medio = Validador.textoObligatorio(medioEnvio, "medio de envio", 30).trim().toUpperCase();
+        if (!medio.equals("CORREO") && !medio.equals("MENSAJERIA") && !medio.equals("IMPRESO")) {
+            throw new IllegalArgumentException("Medio de envio no valido (solo se permite CORREO, MENSAJERIA o IMPRESO): " + medioEnvio);
+        }
+
+        return Transaccion.ejecutar(() -> {
+            Comprobante comprobante = comprobanteDAO.load(idComprobante);
+            if (comprobante == null) {
+                throw new IllegalArgumentException("No existe el comprobante con id " + idComprobante);
+            }
+            if (comprobante.getTipo() != TipoComprobante.FACTURA && comprobante.getTipo() != TipoComprobante.BOLETA) {
+                throw new IllegalArgumentException("Solo se puede registrar envio de FACTURA o BOLETA");
+            }
+            if (comprobante.getEstado() == EstadoComprobante.ANULADO) {
+                throw new IllegalStateException("No se puede registrar el envio de un comprobante anulado");
+            }
+
+            LocalDateTime ahora = LocalDateTime.now();
+            comprobanteDAO.registrarEnvio(idComprobante, medio, ahora);
+            comprobante.setMedioEnvio(medio);
+            comprobante.setFechaEnvio(ahora);
+            return comprobante;
+        });
+    }
+
+    // RF013: Busqueda de notas de credito con filtros opcionales
+    @Override
+    public List<Comprobante> buscarNotasCredito(LocalDate fechaDesde, LocalDate fechaHasta, Integer idCliente, String serieNumeroOrigen) throws SQLException {
+        if (fechaDesde != null && fechaHasta != null && fechaDesde.isAfter(fechaHasta)) {
+            throw new IllegalArgumentException("La fecha inicial (" + fechaDesde + ") no puede ser posterior a la fecha final (" + fechaHasta + ")");
+        }
+
+        return Transaccion.ejecutar(() -> {
+            List<Comprobante> lista = comprobanteDAO.buscarNotasCredito(fechaDesde, fechaHasta, idCliente, serieNumeroOrigen);
+            for (Comprobante nc : lista) {
+                List<DetalleNotaCredito> detalles = detalleNotaCreditoDAO.listarPorComprobante(nc.getId());
+                for (DetalleNotaCredito d : detalles) {
+                    d.setComprobante(nc);
+                }
+                nc.setDetalles(detalles);
+            }
+            return lista;
         });
     }
 }

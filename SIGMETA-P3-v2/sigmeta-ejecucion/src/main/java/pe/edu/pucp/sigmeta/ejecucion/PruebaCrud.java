@@ -20,6 +20,7 @@ import pe.edu.pucp.sigmeta.model.almacen.Despacho;
 import pe.edu.pucp.sigmeta.model.almacen.DetalleDespacho;
 import pe.edu.pucp.sigmeta.model.comun.DatosContacto;
 import pe.edu.pucp.sigmeta.model.enums.EstadoCierreCaja;
+import pe.edu.pucp.sigmeta.model.enums.EstadoComprobante;
 import pe.edu.pucp.sigmeta.model.enums.TipoComprobante;
 import pe.edu.pucp.sigmeta.model.ventas.Comprobante;
 import pe.edu.pucp.sigmeta.model.ventas.DetalleNotaCredito;
@@ -66,6 +67,8 @@ import java.util.List;
  * la prueba de esa entidad falla. La prueba 7 comprueba el rollback de una transaccion (RNF002).
  * Las pruebas 8 a 11 demuestran las correcciones del Laboratorio 4: razon social unica, despacho por
  * linea de venta, nota de credito sobre el precio con descuento y cierre de caja persistente.
+ * Las pruebas 12 y 13 demuestran las nuevas funcionalidades del Laboratorio 9 (estudiante 4):
+ * registro de envio de comprobante (RF008) y busqueda de notas de credito autorizadas (RF013).
  * Requiere la base cargada con sigmeta.sql y los procedimientos de sql_sp.
  */
 public class PruebaCrud {
@@ -123,9 +126,11 @@ public class PruebaCrud {
         probar("9. DESPACHO POR LINEA DE VENTA (correccion Lab 4)", PruebaCrud::pruebaDespachoPorLinea);
         probar("10. NOTA DE CREDITO CON DESCUENTO (correccion Lab 4)", PruebaCrud::pruebaNotaCreditoConDescuento);
         probar("11. CIERRE Y REAPERTURA DE CAJA (correccion Lab 4)", PruebaCrud::pruebaReaperturaCaja);
+        probar("12. ENVIO DE COMPROBANTE (RF008) - estudiante 4", PruebaCrud::pruebaEnvioComprobante);
+        probar("13. BUSQUEDA DE NOTAS DE CREDITO (RF013) - estudiante 4", PruebaCrud::pruebaBusquedaNotasCredito);
 
         System.out.println("\n================================================================================");
-        System.out.printf("          RESUMEN: %d PRUEBAS OK | %d CON ERROR (de 11)%n", exitos, fallos);
+        System.out.printf("          RESUMEN: %d PRUEBAS OK | %d CON ERROR (de 13)%n", exitos, fallos);
         System.out.println("================================================================================");
     }
 
@@ -527,6 +532,8 @@ public class PruebaCrud {
         ok("Importe", igual(lineaNc.getImporte(), esperado) && lineaNc.getDetalleVenta().getId() == linea2.getId(),
                 "devuelve S/ " + formato(lineaNc.getImporte()) + " (precio S/ " + formato(linea2.getPrecioUnitario())
                         + " menos S/ " + formato(lineaNc.getDescuento()) + " de descuento), no el precio de lista");
+        ok("AdminAutoriza", ncLeida.getAdministradorAutoriza() != null && ncLeida.getAdministradorAutoriza().getId() == admin.getId(),
+                "NC autorizada por admin id " + admin.getId() + " (" + admin.getNombreUsuario() + ")");
 
         // la linea 2 vendio 2 y ya se acredito 1: devolver 2 mas debe rechazarse
         Comprobante exceso = new Comprobante();
@@ -587,6 +594,101 @@ public class PruebaCrud {
         ok("Historial", historial.size() == 2 && vigentes == 1 && revertidos == 1
                         && cajaBO.obtenerCierrePorCaja(caja.getId()).getId() == segundo.getId(),
                 "la caja conserva " + historial.size() + " cierres: " + vigentes + " vigente y " + revertidos + " revertido");
+    }
+
+    // ==========================================
+    // 12. ENVIO DE COMPROBANTE (RF008)
+    // ==========================================
+    private static void pruebaEnvioComprobante() throws SQLException {
+        // Crear venta propia
+        double precio = productoBase.getPrecioVenta();
+        Venta venta = new Venta();
+        venta.setCliente(clienteBase);
+        venta.setCondicionPago(CondicionPago.CONTADO);
+        venta.setFechaEmision(LocalDate.now());
+        venta.setNumero("VTA-ENV-" + SUFIJO);
+        DetalleVenta detalle = new DetalleVenta();
+        detalle.setNumeroLinea(1);
+        detalle.setProducto(productoBase);
+        detalle.setCantidad(1);
+        detalle.setPrecioUnitario(precio);
+        detalle.setDescuento(0);
+        venta.getDetalles().add(detalle);
+        ventaBO.registrar(venta, vendedor.getId());
+        ok("Venta", venta.getId() > 0, "venta propia registrada: " + venta.getNumero());
+
+        // Emitir comprobante
+        TipoComprobante tipo = clienteBase.getTipoDocumento() == TipoDocumentoIdentidad.RUC ? TipoComprobante.FACTURA : TipoComprobante.BOLETA;
+        Comprobante comprobante = comprobanteBO.emitir(venta.getId(), tipo, vendedor.getId());
+        ok("Emision", comprobante.getId() > 0, tipo + " " + comprobante.getSerie() + "-" + comprobante.getNumero());
+
+        // Registrar envio valido (CORREO)
+        Comprobante enviado = comprobanteBO.registrarEnvio(comprobante.getId(), "CORREO", vendedor.getId());
+        ok("Envio", "CORREO".equals(enviado.getMedioEnvio()) && enviado.getFechaEnvio() != null,
+                "medio = " + enviado.getMedioEnvio() + ", fecha envio = " + enviado.getFechaEnvio());
+
+        // Prueba rechazo 1: medio invalido
+        boolean rechazadoMedio = false;
+        try {
+            comprobanteBO.registrarEnvio(comprobante.getId(), "TELEPATIA", vendedor.getId());
+        } catch (IllegalArgumentException e) {
+            rechazadoMedio = true;
+            System.out.println("   Rechazado como se esperaba (medio invalido): " + e.getMessage());
+        }
+        ok("MedioInvalido", rechazadoMedio, "no permite medio de envio no reconocido");
+
+        // Prueba rechazo 2: rol no autorizado (almacenero no es VENDEDOR ni CAJERO)
+        boolean rechazadoRol = false;
+        try {
+            comprobanteBO.registrarEnvio(comprobante.getId(), "CORREO", almacenero.getId());
+        } catch (IllegalStateException e) {
+            rechazadoRol = true;
+            System.out.println("   Rechazado como se esperaba (rol no autorizado): " + e.getMessage());
+        }
+        ok("RolInvalido", rechazadoRol, "almacenero no puede registrar envio de comprobante");
+
+        // Prueba rechazo 3: no permite registrar envio sobre una NOTA_CREDITO
+        List<Comprobante> ncs = comprobanteBO.buscarNotasCredito(null, null, null, null);
+        int idNc = !ncs.isEmpty() ? ncs.get(0).getId() : 2;
+        boolean rechazadoNC = false;
+        try {
+            comprobanteBO.registrarEnvio(idNc, "CORREO", vendedor.getId());
+        } catch (IllegalArgumentException e) {
+            rechazadoNC = true;
+            System.out.println("   Rechazado como se esperaba (no se envia NC): " + e.getMessage());
+        }
+        ok("EnvioNCRechazado", rechazadoNC, "solo se admite envio para FACTURA o BOLETA, no para NOTA_CREDITO");
+
+        // Limpieza: anular comprobante y venta
+        comprobanteBO.anular(comprobante.getId(), "Prueba de envio", admin.getId());
+        ventaBO.anular(venta.getId(), "Prueba de envio", vendedor.getId());
+        ok("Limpieza", comprobanteBO.obtener(comprobante.getId()).getEstado() == EstadoComprobante.ANULADO
+                && ventaBO.obtener(venta.getId()).isAnulado(), "comprobante y venta anulados (repetible)");
+    }
+
+    // ==========================================
+    // 13. BUSQUEDA DE NOTAS DE CREDITO (RF013)
+    // ==========================================
+    private static void pruebaBusquedaNotasCredito() throws SQLException {
+        // Busqueda general: debe encontrar al menos la NC semilla
+        List<Comprobante> todasNC = comprobanteBO.buscarNotasCredito(null, null, null, null);
+        ok("BusquedaGeneral", !todasNC.isEmpty(), "se encontraron " + todasNC.size() + " nota(s) de credito (al menos una)");
+
+        // Busqueda por comprobante de origen: F001-00000123 debe encontrar FC01-00000012
+        List<Comprobante> porOrigen = comprobanteBO.buscarNotasCredito(null, null, null, "F001-00000123");
+        boolean encontroSemilla = porOrigen.stream()
+                .anyMatch(nc -> "FC01".equals(nc.getSerie()) && "00000012".equals(nc.getNumero()));
+        ok("FiltroOrigen", encontroSemilla, "busqueda por comprobante origen F001-00000123 encuentra la NC FC01-00000012");
+
+        // Busqueda con rango de fechas invertido (debe lanzar excepcion)
+        boolean fechaInvertidaRechazada = false;
+        try {
+            comprobanteBO.buscarNotasCredito(LocalDate.now(), LocalDate.now().minusDays(5), null, null);
+        } catch (IllegalArgumentException e) {
+            fechaInvertidaRechazada = true;
+            System.out.println("   Rechazado como se esperaba (fechaDesde > fechaHasta): " + e.getMessage());
+        }
+        ok("FechasInvertidas", fechaInvertidaRechazada, "valida que fechaDesde no sea posterior a fechaHasta");
     }
 
     private static DetalleVenta lineaVenta(int numero, Producto producto, double cantidad, double precio, double descuento) {

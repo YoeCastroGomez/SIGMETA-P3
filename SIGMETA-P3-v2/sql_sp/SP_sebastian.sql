@@ -534,6 +534,7 @@ CREATE PROCEDURE sp_comprobante_insertar(
     IN p_motivo VARCHAR(200),
     IN p_medio_envio VARCHAR(30),
     IN p_fecha_envio DATETIME,
+    IN p_id_administrador_autoriza INT,
     OUT p_id INT
 )
 BEGIN
@@ -541,12 +542,12 @@ BEGIN
         id_venta, tipo, serie, numero, fecha_emision,
         sub_total, igv, total, estado,
         id_comprobante_relacionado, motivo, medio_envio,
-        fecha_envio, fecha_registro
+        fecha_envio, id_administrador_autoriza, fecha_registro
     ) VALUES (
         p_id_venta, p_tipo, p_serie, p_numero, p_fecha_emision,
         p_sub_total, p_igv, p_total, p_estado,
         p_id_comprobante_relacionado, p_motivo, p_medio_envio,
-        p_fecha_envio, NOW()
+        p_fecha_envio, p_id_administrador_autoriza, NOW()
     );
     SET p_id = LAST_INSERT_ID();
 END$$
@@ -693,6 +694,41 @@ BEGIN
                      END
         WHERE id_venta = p_id_venta;
     END IF;
+END$$
+
+DROP PROCEDURE IF EXISTS sp_comprobante_registrar_envio$$
+CREATE PROCEDURE sp_comprobante_registrar_envio(
+    IN p_id INT,
+    IN p_medio_envio VARCHAR(30),
+    IN p_fecha_envio DATETIME
+)
+BEGIN
+    UPDATE comprobante
+    SET medio_envio = p_medio_envio,
+        fecha_envio = p_fecha_envio
+    WHERE id = p_id;
+END$$
+
+DROP PROCEDURE IF EXISTS sp_comprobante_buscar_nc$$
+CREATE PROCEDURE sp_comprobante_buscar_nc(
+    IN p_fecha_desde DATE,
+    IN p_fecha_hasta DATE,
+    IN p_id_cliente INT,
+    IN p_serie_numero_origen VARCHAR(30)
+)
+BEGIN
+    SELECT c.*
+    FROM comprobante c
+    JOIN venta v ON c.id_venta = v.id
+    LEFT JOIN comprobante o ON o.id = c.id_comprobante_relacionado
+    WHERE c.tipo = 'NOTA_CREDITO'
+      AND (p_fecha_desde IS NULL OR c.fecha_emision >= p_fecha_desde)
+      AND (p_fecha_hasta IS NULL OR c.fecha_emision <= p_fecha_hasta)
+      AND (p_id_cliente IS NULL OR v.id_cliente = p_id_cliente)
+      AND (p_serie_numero_origen IS NULL OR CONCAT(o.serie, '-', o.numero) LIKE CONCAT('%', p_serie_numero_origen, '%')
+                                         OR o.numero LIKE CONCAT('%', p_serie_numero_origen, '%')
+                                         OR o.serie LIKE CONCAT('%', p_serie_numero_origen, '%'))
+    ORDER BY c.fecha_emision DESC, c.id DESC;
 END$$
 
 
