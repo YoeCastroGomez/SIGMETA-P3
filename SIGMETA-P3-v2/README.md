@@ -5,6 +5,12 @@ Tarea Academica de Programacion 3 (1INF30), PUCP, 2026-2.
 
 Este repositorio es el **backend en Java**. El frontend (Blazor, .NET 10) es un proyecto aparte.
 
+## Alcance monetario
+
+SIGMETA opera **exclusivamente en soles peruanos (PEN, simbolo S/)**. Los importes de cotizaciones, ordenes de compra de clientes, ventas, comprobantes, compras a proveedores, cuentas por cobrar, cobros y caja se expresan y se interpretan en PEN. El sistema no admite registrar operaciones en dolares ni efectuar conversiones por tipo de cambio.
+
+El modelo de datos actual guarda importes numericos sin columna de moneda: por decision de alcance, todos representan PEN. No debe utilizarse para importar montos de otras monedas sin una conversion externa previa y una validacion explicita de los datos. Los requerimientos RF007, RF008 y RF011 deben reflejar este mismo alcance.
+
 ## Integrantes
 
 | Estudiante | Nombre      | Parte                                   |
