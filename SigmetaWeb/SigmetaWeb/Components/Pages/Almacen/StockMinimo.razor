@@ -1,0 +1,94 @@
+﻿@page "/almacen/stock-minimo"
+
+@* RF012 - Consulta de productos con stock mínimo.
+   Solo presentación visual para el Laboratorio 9. *@
+
+<PageTitle>Stock mínimo · SIGMETA</PageTitle>
+
+<Encabezado Rf="RF012"
+            Titulo="Productos con stock mínimo"
+            Subtitulo="Productos cuyo stock actual es menor o igual al mínimo establecido." />
+
+<div class="alert alert-secondary">
+    Los productos mostrados requieren atención porque su
+    stock actual alcanzó o está por debajo del mínimo.
+</div>
+
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Código</th>
+                    <th>Producto</th>
+                    <th>Stock actual</th>
+                    <th>Stock mínimo</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr>
+                    <td>PROD-001</td>
+                    <td>Taladro industrial</td>
+                    <td>5</td>
+                    <td>10</td>
+                    <td>
+                        <span class="badge bg-danger">
+                            Bajo el mínimo
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="/almacen/kardex/1">
+                            Ver Kardex
+                        </a>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>PROD-002</td>
+                    <td>Martillo de acero</td>
+                    <td>20</td>
+                    <td>20</td>
+                    <td>
+                        <span class="badge bg-warning text-dark">
+                            En el mínimo
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="/almacen/kardex/2">
+                            Ver Kardex
+                        </a>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>PROD-003</td>
+                    <td>Caja de tornillos</td>
+                    <td>8</td>
+                    <td>15</td>
+                    <td>
+                        <span class="badge bg-danger">
+                            Bajo el mínimo
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="/almacen/kardex/3">
+                            Ver Kardex
+                        </a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="alert alert-secondary">
+    Los datos mostrados son de demostración.
+    La consulta real del inventario se integrará posteriormente
+    con los servicios Java.
+</div>

@@ -1,0 +1,169 @@
+﻿@page "/compras/{Id:int}/recepcion"
+@inject NavigationManager Nav
+
+@* RF012 - Recepción de compra.
+   Solo presentación visual para el Laboratorio 9. *@
+
+<PageTitle>Recepción de compra · SIGMETA</PageTitle>
+
+<Encabezado Rf="RF012"
+            Titulo="Recepción de mercadería"
+            Subtitulo="Registrar visualmente una recepción total o parcial.">
+    <a class="btn btn-outline-secondary" href="/recepciones">
+        Volver a compras por recibir
+    </a>
+</Encabezado>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Datos de la compra</h2>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <div class="small text-muted text-uppercase">
+                Número de compra
+            </div>
+            <div class="fw-semibold">
+                @NumeroCompra
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="small text-muted text-uppercase">
+                Proveedor
+            </div>
+            <div class="fw-semibold">
+                @Proveedor
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="small text-muted text-uppercase">
+                Estado
+            </div>
+            <Estado Texto="@EstadoCompra" />
+        </div>
+    </div>
+</div>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">
+        Datos de la recepción
+    </h2>
+
+    <div class="row">
+        <div class="col-md-4">
+            <Campo Etiqueta="Fecha de recepción"
+                   Id="fechaRecepcion"
+                   Obligatorio="true">
+                <input id="fechaRecepcion"
+                       type="date"
+                       class="form-control"
+                       value="2026-10-26" />
+            </Campo>
+        </div>
+
+        <div class="col-md-8">
+            <Campo Etiqueta="Observaciones"
+                   Id="observaciones">
+                <textarea id="observaciones"
+                          class="form-control"
+                          rows="2"
+                          maxlength="250"
+                          placeholder="Observaciones de la recepción"></textarea>
+            </Campo>
+        </div>
+    </div>
+</div>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">
+        Productos de la compra
+    </h2>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Producto</th>
+                    <th>Pedido</th>
+                    <th>Ya recibido</th>
+                    <th>Pendiente</th>
+                    <th>Recibir ahora *</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Taladro industrial</td>
+                    <td>10</td>
+                    <td>4</td>
+                    <td>6</td>
+                    <td>
+                        <input type="number"
+                               class="form-control"
+                               min="0"
+                               max="6"
+                               step="1"
+                               value="3" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>Martillo de acero</td>
+                    <td>20</td>
+                    <td>0</td>
+                    <td>20</td>
+                    <td>
+                        <input type="number"
+                               class="form-control"
+                               min="0"
+                               max="20"
+                               step="1"
+                               value="10" />
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+    <span class="small text-muted">
+        <span class="text-danger">*</span> Campo obligatorio
+    </span>
+
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary"
+           href="/recepciones">
+            Cancelar
+        </a>
+
+        <button class="btn btn-primary"
+                @onclick="Volver">
+            Registrar recepción
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    // Datos de demostración. No se consulta la BD.
+    private string NumeroCompra =>
+        $"COMP-{Id:000}";
+
+    private string Proveedor =>
+        Id == 2
+            ? "Distribuidora Lima SAC"
+            : "Ferretería Industrial SAC";
+
+    private string EstadoCompra =>
+        Id == 2
+            ? "RECIBIDA_PARCIAL"
+            : "REGISTRADA";
+
+    // Lab 9: no se registra ninguna recepción.
+    private void Volver()
+    {
+        Nav.NavigateTo("/recepciones");
+    }
+}

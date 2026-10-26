@@ -1,0 +1,78 @@
+﻿@page "/almacen/movimientos"
+
+@* RF012 - Movimientos de inventario.
+   Solo presentación visual para el Laboratorio 9. *@
+
+<PageTitle>Movimientos de almacén · SIGMETA</PageTitle>
+
+<Encabezado Rf="RF012"
+            Titulo="Movimientos de almacén"
+            Subtitulo="Historial de entradas, salidas y reversiones de inventario." />
+
+<div class="alert alert-secondary">
+    Los movimientos de inventario se conservan en el historial.
+    Una operación incorrecta se corrige mediante un movimiento
+    de reversión, sin eliminar el movimiento original.
+</div>
+
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Producto</th>
+                    <th>Tipo</th>
+                    <th>Cantidad</th>
+                    <th>Stock resultante</th>
+                    <th>Usuario</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr>
+                    <td>26/10/2026</td>
+                    <td>Taladro industrial</td>
+                    <td><Estado Texto="ENTRADA" /></td>
+                    <td>10</td>
+                    <td>30</td>
+                    <td>lpaucar</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-danger">
+                            Revertir
+                        </button>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>26/10/2026</td>
+                    <td>Martillo de acero</td>
+                    <td><Estado Texto="SALIDA" /></td>
+                    <td>5</td>
+                    <td>15</td>
+                    <td>lpaucar</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-danger">
+                            Revertir
+                        </button>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>25/10/2026</td>
+                    <td>Tornillos</td>
+                    <td><Estado Texto="REVERSION" /></td>
+                    <td>20</td>
+                    <td>100</td>
+                    <td>admin</td>
+                    <td class="text-end">
+                        <span class="text-muted small">
+                            Movimiento compensatorio
+                        </span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
