@@ -1,0 +1,166 @@
+@page "/productos/nuevo"
+@page "/productos/editar/{Id:int}"
+@inject NavigationManager Nav
+
+<PageTitle>@Titulo · SIGMETA</PageTitle>
+
+@* RF005 · Formulario de producto. Solo visual (Lab 9): Guardar no registra, solo vuelve a la lista. *@
+<Encabezado Rf="RF005" Titulo="@Titulo">
+    <a class="btn btn-outline-secondary" href="/productos">Volver a la lista</a>
+</Encabezado>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Identificación</h2>
+    <div class="row">
+        <div class="col-md-4">
+            <Campo Etiqueta="Código interno" Id="codInterno" Obligatorio="true" Ayuda="Único.">
+                <input id="codInterno" class="form-control" maxlength="50" value="@ejemplo?.CodigoInterno" />
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Código de fabricante" Id="codFabricante">
+                <input id="codFabricante" class="form-control" maxlength="50" value="@ejemplo?.CodigoFabricante" />
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Código de proveedor" Id="codProveedor">
+                <input id="codProveedor" class="form-control" maxlength="50" value="@ejemplo?.CodigoProveedor" />
+            </Campo>
+        </div>
+        <div class="col-md-8">
+            <Campo Etiqueta="Nombre" Id="nombre" Obligatorio="true">
+                <input id="nombre" class="form-control" maxlength="150" value="@ejemplo?.Nombre" />
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Categoría" Id="categoria" Obligatorio="true">
+                <select id="categoria" class="form-select">
+                    <option value="">Seleccione…</option>
+                    @foreach (var c in MuestrasCatalogo.Categorias.Where(c => c.Activo))
+                    {
+                        <option selected="@(ejemplo?.Categoria == c.Nombre)">@c.Nombre</option>
+                    }
+                </select>
+            </Campo>
+        </div>
+        <div class="col-12">
+            <Campo Etiqueta="Descripción" Id="descripcion">
+                <input id="descripcion" class="form-control" maxlength="255" value="@ejemplo?.Descripcion" />
+            </Campo>
+        </div>
+    </div>
+</div>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Unidades</h2>
+    <div class="row">
+        <div class="col-md-4">
+            <Campo Etiqueta="Unidad de compra" Id="unidadCompra" Obligatorio="true">
+                <select id="unidadCompra" class="form-select">
+                    @foreach (var u in MuestrasCatalogo.Unidades)
+                    {
+                        <option value="@u" selected="@(ejemplo?.UnidadCompra == u)">@MuestrasCatalogo.Texto(u)</option>
+                    }
+                </select>
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            @* RF005/RF012: la unidad de venta es la unidad del stock y no puede cambiar después de registrar. *@
+            <Campo Etiqueta="Unidad de venta" Id="unidadVenta" Obligatorio="true"
+                   Ayuda="@(EsNuevo ? "En esta unidad se lleva el stock; luego no podrá cambiarse." : "No puede cambiarse: es la unidad del stock.")">
+                <select id="unidadVenta" class="form-select" disabled="@(!EsNuevo)">
+                    @foreach (var u in MuestrasCatalogo.Unidades)
+                    {
+                        <option value="@u" selected="@(ejemplo?.UnidadVenta == u)">@MuestrasCatalogo.Texto(u)</option>
+                    }
+                </select>
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Factor de conversión" Id="factor" Obligatorio="true"
+                   Ayuda="Unidades de venta en una unidad de compra. Si las unidades son iguales, es 1.">
+                <input id="factor" type="number" min="0" step="0.001" class="form-control" value="@(ejemplo?.FactorConversion ?? 1m)" />
+            </Campo>
+        </div>
+    </div>
+</div>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Precios y stock</h2>
+    <div class="row">
+        <div class="col-md-4">
+            <Campo Etiqueta="Precio de venta (S/)" Id="precio" Obligatorio="true">
+                <input id="precio" type="number" min="0" step="0.01" class="form-control" value="@ejemplo?.PrecioVenta" />
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Costo unitario (S/)" Id="costo" Obligatorio="true">
+                <input id="costo" type="number" min="0" step="0.01" class="form-control" value="@ejemplo?.CostoUnitario" />
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Precio referencial (S/)" Id="precioRef">
+                <input id="precioRef" type="number" min="0" step="0.01" class="form-control" value="@ejemplo?.PrecioReferencial" />
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Stock mínimo" Id="stockMinimo" Obligatorio="true">
+                <input id="stockMinimo" type="number" min="0" step="0.001" class="form-control" value="@ejemplo?.StockMinimo" />
+            </Campo>
+        </div>
+        <div class="col-md-8">
+            <Campo Etiqueta="Imagen" Id="imagen">
+                <input id="imagen" type="file" accept="image/*" class="form-control" />
+            </Campo>
+        </div>
+    </div>
+
+    @if (EsNuevo)
+    {
+        @* RF012: el producto nuevo entra con stock 0; el stock solo lo mueven las recepciones y los ajustes. *@
+        <div class="alert alert-secondary">
+            El producto se registra con <strong>stock 0</strong>. El stock aumenta con las recepciones de compra
+            y los ajustes de almacén.
+        </div>
+    }
+    else
+    {
+        @* Solo lectura: el stock lo cambian los movimientos de almacén; la auditoría la registra el sistema (RNF001).
+           El estado no se cambia aquí: se usa el botón Desactivar de la lista. *@
+        <div class="row border-top pt-3">
+            <div class="col-sm-4 mb-3">
+                <div class="small text-muted text-uppercase">Stock actual</div>
+                <div class="fw-semibold">@ejemplo!.StockActual.ToString("0.###") @MuestrasCatalogo.Texto(ejemplo.UnidadVenta).ToLowerInvariant()</div>
+            </div>
+            <div class="col-sm-4 mb-3">
+                <div class="small text-muted text-uppercase">Última modificación</div>
+                <div class="fw-semibold">admin · 12/09/2026 10:15</div>
+            </div>
+            <div class="col-sm-4 mb-3">
+                <div class="small text-muted text-uppercase">Estado</div>
+                <div class="fw-semibold"><Estado Texto="@(ejemplo.Activo ? "Activo" : "Inactivo")" /></div>
+            </div>
+        </div>
+    }
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="/productos">Cancelar</a>
+            <button class="btn btn-primary" @onclick="Volver">Guardar</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private bool EsNuevo => Id is null;
+    private string Titulo => EsNuevo ? "Nuevo producto" : "Editar producto";
+
+    // Al editar se muestra un producto de ejemplo fijo (Lab 9: sin consultas).
+    private ProductoFila? ejemplo => EsNuevo ? null : MuestrasCatalogo.Productos[0];
+
+    // Lab 9: no se registra nada, solo se navega.
+    private void Volver() => Nav.NavigateTo("/productos");
+}
