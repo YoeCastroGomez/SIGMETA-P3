@@ -9,6 +9,13 @@ import pe.edu.pucp.sigmeta.model.usuario.Usuario;
  */
 public abstract class DocumentoComercial implements Auditable, Anulable {
 
+    /** Moneda fija de todos los documentos comerciales: soles peruanos (PEN). */
+    public static final String MONEDA = "PEN";
+
+    public String getMoneda() {
+        return MONEDA;
+    }
+
     private String numero;
     private LocalDate fechaEmision;
     private double subTotal;
