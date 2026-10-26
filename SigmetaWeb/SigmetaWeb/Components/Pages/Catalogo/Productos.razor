@@ -1,0 +1,107 @@
+@page "/productos"
+
+<PageTitle>Productos · SIGMETA</PageTitle>
+
+@* RF005 · Lista y búsqueda de productos. Solo visual (Lab 9): los filtros y botones no hacen nada.
+   La buscan todos los roles; Nuevo, Editar y Desactivar solo se muestran al Administrador. *@
+<Encabezado Rf="RF005" Titulo="Productos"
+            Subtitulo="Un producto desactivado conserva su historial, pero no puede elegirse en documentos nuevos.">
+    @if (EsAdministrador)
+    {
+        <a class="btn btn-primary" href="/productos/nuevo">Nuevo producto</a>
+    }
+</Encabezado>
+
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        @* RF005: un solo campo para el código interno, de fabricante o de proveedor (ProductoBO.buscarPorCodigo).
+           Es también el espacio del lector de código de barras: el lector escribe aquí el código leído. *@
+        <Campo Etiqueta="Código" Id="fCodigo" Clase="col-sm-6 col-md-3"
+               Ayuda="Interno, de fabricante o de proveedor. Puede usar el lector.">
+            <input id="fCodigo" class="form-control" maxlength="50" placeholder="Escanear o escribir" />
+        </Campo>
+        <Campo Etiqueta="Nombre" Id="fNombre" Clase="col-sm-6 col-md">
+            <input id="fNombre" class="form-control" maxlength="150" />
+        </Campo>
+        <Campo Etiqueta="Categoría" Id="fCategoria" Clase="col-sm-6 col-md-3">
+            <select id="fCategoria" class="form-select">
+                <option>Todas</option>
+                @foreach (var c in MuestrasCatalogo.Categorias)
+                {
+                    <option>@c.Nombre</option>
+                }
+            </select>
+        </Campo>
+        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-2">
+            <select id="fEstado" class="form-select">
+                <option>Todos</option>
+                <option>Activos</option>
+                <option>Inactivos</option>
+            </select>
+        </Campo>
+        <div class="col-auto">
+            <button class="btn btn-dark">Buscar</button>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Categoría</th>
+                    <th class="text-end">Precio de venta</th>
+                    <th class="text-end">Stock</th>
+                    <th class="text-end">Stock mínimo</th>
+                    <th>Estado</th>
+                    @if (EsAdministrador)
+                    {
+                        <th class="text-end">Acciones</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in MuestrasCatalogo.Productos)
+                {
+                    <tr>
+                        <td>@p.CodigoInterno</td>
+                        <td><strong>@p.Nombre</strong></td>
+                        <td>@p.Categoria</td>
+                        <td class="text-end">S/ @p.PrecioVenta.ToString("N2")</td>
+                        <td class="text-end @ClaseStock(p)">
+                            @p.StockActual.ToString("0.###") @MuestrasCatalogo.Texto(p.UnidadVenta).ToLowerInvariant()
+                        </td>
+                        <td class="text-end">@p.StockMinimo.ToString("0.###")</td>
+                        <td><Estado Texto="@(p.Activo ? "Activo" : "Inactivo")" /></td>
+                        @if (EsAdministrador)
+                        {
+                            <td class="text-end">
+                                @* RF005: un producto desactivado ya no se modifica ni se desactiva otra vez. *@
+                                @if (p.Activo)
+                                {
+                                    <div class="d-inline-flex gap-1 text-nowrap">
+                                        <a class="btn btn-sm btn-outline-secondary" href="@($"/productos/editar/{p.Id}")">Editar</a>
+                                        <button class="btn btn-sm btn-outline-danger">Desactivar</button>
+                                    </div>
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
+
+    // Solo cambia qué botones se ven; en la pantalla no se valida nada.
+    private bool EsAdministrador => Rol == "Administrador";
+
+    // El stock se resalta en rojo cuando llegó al mínimo o está por debajo (RF012: stock mínimo).
+    private static string ClaseStock(ProductoFila p) => p.StockActual <= p.StockMinimo ? "text-danger fw-semibold" : "";
+}

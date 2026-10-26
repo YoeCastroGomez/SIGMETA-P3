@@ -1,0 +1,100 @@
+@page "/categorias"
+
+<PageTitle>Categorías · SIGMETA</PageTitle>
+
+@* RF006 · Lista y formulario de categorías en una sola pantalla. Solo visual (Lab 9): los filtros no filtran y
+   Guardar no registra; solo cierra el formulario. *@
+<Encabezado Rf="RF006" Titulo="Categorías"
+            Subtitulo="Con las categorías se clasifican los productos. Una categoría con productos activos no puede desactivarse.">
+    <button class="btn btn-primary" @onclick="Nueva">Nueva categoría</button>
+</Encabezado>
+
+@if (mostrarFormulario)
+{
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">@(editando is null ? "Nueva categoría" : "Editar categoría")</h2>
+        <div class="row">
+            <div class="col-md-6">
+                <Campo Etiqueta="Nombre" Id="nombre" Obligatorio="true">
+                    <input id="nombre" class="form-control" maxlength="100" value="@editando?.Nombre" />
+                </Campo>
+            </div>
+            <div class="col-md-6">
+                <Campo Etiqueta="Descripción" Id="descripcion">
+                    <input id="descripcion" class="form-control" maxlength="255" value="@editando?.Descripcion" />
+                </Campo>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary" @onclick="Cerrar">Cancelar</button>
+                <button class="btn btn-primary" @onclick="Cerrar">Guardar</button>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <Campo Etiqueta="Nombre" Id="fNombre" Clase="col-sm-6 col-md">
+            <input id="fNombre" class="form-control" maxlength="100" />
+        </Campo>
+        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-3">
+            <select id="fEstado" class="form-select">
+                <option>Todos</option>
+                <option>Activas</option>
+                <option>Inactivas</option>
+            </select>
+        </Campo>
+        <div class="col-auto">
+            <button class="btn btn-dark">Buscar</button>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in MuestrasCatalogo.Categorias)
+                {
+                    <tr>
+                        <td><strong>@c.Nombre</strong></td>
+                        <td>@(c.Descripcion ?? "—")</td>
+                        <td><Estado Texto="@(c.Activo ? "Activo" : "Inactivo")" /></td>
+                        <td class="text-end">
+                            @* RF006: una categoría desactivada ya no se modifica. *@
+                            @if (c.Activo)
+                            {
+                                <div class="d-inline-flex gap-1 text-nowrap">
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(c)">Editar</button>
+                                    <button class="btn btn-sm btn-outline-danger">Desactivar</button>
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    // Solo controla si el formulario se ve y con qué fila de ejemplo (Lab 9: sin consultas ni registros).
+    private bool mostrarFormulario;
+    private CategoriaFila? editando;
+
+    private void Nueva() { editando = null; mostrarFormulario = true; }
+    private void Editar(CategoriaFila categoria) { editando = categoria; mostrarFormulario = true; }
+    private void Cerrar() { editando = null; mostrarFormulario = false; }
+}
