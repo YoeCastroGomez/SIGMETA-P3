@@ -4,6 +4,10 @@ Blazor Web App, **.NET 10**, Bootstrap. Solo capa de presentación (Lab 9):
 sin lógica de negocio, sin consultas ni registros, sin BD ni servicios web. La navegación sí funciona.
 Las tablas muestran datos de ejemplo fijos, que se reemplazan al integrar con Java por servicios web.
 
+## Moneda de los importes
+
+Las pantallas que presenten o reciban importes monetarios deben indicar **soles peruanos (PEN, S/)** y no ofrecer un selector de divisas ni conversiones por tipo de cambio. El formulario de linea de credito ya identifica su importe con S/. Las pantallas pendientes de ventas, cotizaciones, compras y caja deben seguir el mismo criterio cuando se implementen.
+
 ## Abrir
 1. Visual Studio 2026 → abrir `SigmetaWeb.slnx` → F5.
 2. En `/login`, "Demostración: entrar como" muestra el sistema con el menú de cada rol (RF001).
