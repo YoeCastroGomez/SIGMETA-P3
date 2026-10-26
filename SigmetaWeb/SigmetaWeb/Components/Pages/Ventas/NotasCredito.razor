@@ -1,0 +1,80 @@
+@page "/notas-credito"
+
+<PageTitle>Notas de crédito · SIGMETA</PageTitle>
+
+@* RF013 · Notas de crédito (Cajero y Administrador). Solo visual (Lab 9): filtros y botones no consultan nada. *@
+<Encabezado Rf="RF013" Titulo="Notas de crédito"
+            Subtitulo="Se emiten sobre una factura o boleta con autorización del Administrador. No cuentan como cobro en el cierre de caja.">
+    @if (Rol == "Cajero")
+    {
+        @* RF013: la nota de crédito la registra el Cajero (ComprobanteBOImpl.registrarNotaCredito exige el rol CAJERO) *@
+        <a class="btn btn-primary" href="/notas-credito/nueva">Nueva nota de crédito</a>
+    }
+</Encabezado>
+
+@* Filtros del RF013: comprobante de origen, cliente y fecha (ComprobanteBO.buscarNotasCredito) *@
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <Campo Etiqueta="Comprobante de origen" Id="fOrigen" Clase="col-sm-6 col-md-3">
+            <input id="fOrigen" class="form-control" maxlength="30" placeholder="F001-00000123" />
+        </Campo>
+        <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
+            <input id="fCliente" class="form-control" maxlength="150" placeholder="Razón social, nombre o documento" />
+        </Campo>
+        <Campo Etiqueta="Desde" Id="fDesde" Clase="col-sm-6 col-md-2">
+            <input id="fDesde" type="date" class="form-control" />
+        </Campo>
+        <Campo Etiqueta="Hasta" Id="fHasta" Clase="col-sm-6 col-md-2">
+            <input id="fHasta" type="date" class="form-control" />
+        </Campo>
+        <div class="col-auto">
+            <button class="btn btn-dark">Buscar</button>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nota de crédito</th>
+                    <th>Comprobante de origen</th>
+                    <th>Cliente</th>
+                    <th>Fecha</th>
+                    <th>Motivo</th>
+                    <th class="text-end">Total (S/)</th>
+                    <th>Autorizada por</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var nc in MuestrasVentas.NotasCredito)
+                {
+                    <tr>
+                        <td><strong>@nc.SerieNumero</strong></td>
+                        <td>@nc.ComprobanteOrigen</td>
+                        <td>@nc.Cliente</td>
+                        <td>@nc.FechaEmision.ToString("dd/MM/yyyy")</td>
+                        <td class="small">@nc.Motivo</td>
+                        <td class="text-end">@nc.Total.ToString("N2")</td>
+                        <td>@(nc.AdministradorAutoriza ?? "No registrado")</td>
+                        <td><Estado Texto="@MuestrasVentas.Texto(nc.Estado)" /></td>
+                        <td class="text-end">
+                            @if (nc.Estado != "ANULADO" && (Rol == "Cajero" || Rol == "Administrador"))
+                            {
+                                @* Anular revierte el stock, la cuenta por cobrar y la devolución en caja *@
+                                <button class="btn btn-sm btn-outline-danger">Anular</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
+}

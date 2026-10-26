@@ -1,0 +1,75 @@
+@page "/ordenes"
+
+<PageTitle>Órdenes de compra de clientes · SIGMETA</PageTitle>
+
+@* RF007 · Órdenes de compra de clientes (Vendedor). Solo visual (Lab 9): filtros y botones no consultan nada. *@
+<Encabezado Rf="RF007" Titulo="Órdenes de compra de clientes"
+            Subtitulo="Cada orden se genera desde una cotización aceptada y toma su detalle sin volver a digitarlo.">
+    <a class="btn btn-primary" href="/ordenes/nueva">Nueva orden</a>
+</Encabezado>
+
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
+            <input id="fCliente" class="form-control" maxlength="150" placeholder="Razón social o documento" />
+        </Campo>
+        <Campo Etiqueta="Estado de atención" Id="fEstado" Clase="col-sm-6 col-md-3">
+            <select id="fEstado" class="form-select">
+                <option>Todos</option>
+                <option>Pendiente</option>
+                <option>Atendida parcial</option>
+                <option>Atendida</option>
+                <option>Anulada</option>
+            </select>
+        </Campo>
+        <div class="col-auto">
+            <button class="btn btn-dark">Buscar</button>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Número</th>
+                    <th>Nº orden del cliente</th>
+                    <th>Cliente</th>
+                    <th>Cotización</th>
+                    <th>Fecha</th>
+                    <th class="text-end">Total (S/)</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var o in MuestrasVentas.Ordenes)
+                {
+                    <tr>
+                        <td><strong>@o.Numero</strong></td>
+                        <td>@o.NumeroOrdenCliente</td>
+                        <td>@o.Cliente</td>
+                        <td>@o.Cotizacion</td>
+                        <td>@o.FechaEmision.ToString("dd/MM/yyyy")</td>
+                        <td class="text-end">@MuestrasVentas.Total(o.Detalles).ToString("N2")</td>
+                        <td><Estado Texto="@MuestrasVentas.Texto(o.Estado)" /></td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1 text-nowrap">
+                                @if (o.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL")
+                                {
+                                    @* RF008: la venta se registra a partir de una orden pendiente o atendida parcialmente *@
+                                    <a class="btn btn-sm btn-outline-secondary" href="/ventas/nueva">Registrar venta</a>
+                                }
+                                @if (o.Estado == "PENDIENTE")
+                                {
+                                    <button class="btn btn-sm btn-outline-danger">Anular</button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

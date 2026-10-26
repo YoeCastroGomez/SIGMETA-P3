@@ -1,0 +1,70 @@
+@* Tabla de líneas de un documento comercial (orden, venta) con subtotal, IGV y total.
+   Editable = true muestra cantidad, precio y descuento como campos (solo visual, Lab 9). *@
+<div class="table-responsive">
+    <table class="table align-middle mb-0">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 3rem;">#</th>
+                <th>Producto</th>
+                <th>Unidad</th>
+                <th class="text-end" style="width: 8rem;">Cantidad</th>
+                <th class="text-end" style="width: 9rem;">Precio unit. (S/)</th>
+                <th class="text-end" style="width: 9rem;">Descuento (S/)</th>
+                <th class="text-end">Importe (S/)</th>
+                @if (Editable)
+                {
+                    <th></th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var l in Lineas)
+            {
+                <tr>
+                    <td>@l.NumeroLinea</td>
+                    <td><span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto</td>
+                    <td>@l.Unidad</td>
+                    @if (Editable)
+                    {
+                        <td><input type="number" min="0.001" step="0.001" class="form-control form-control-sm text-end" value="@l.Cantidad" aria-label="Cantidad" /></td>
+                        <td><input type="number" min="0" step="0.01" class="form-control form-control-sm text-end" value="@l.PrecioUnitario" aria-label="Precio unitario" /></td>
+                        <td><input type="number" min="0" step="0.01" class="form-control form-control-sm text-end" value="@l.Descuento" aria-label="Descuento" /></td>
+                    }
+                    else
+                    {
+                        <td class="text-end">@l.Cantidad.ToString("0.###")</td>
+                        <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
+                        <td class="text-end">@l.Descuento.ToString("N2")</td>
+                    }
+                    <td class="text-end fw-semibold">@l.Importe.ToString("N2")</td>
+                    @if (Editable)
+                    {
+                        <td class="text-end"><button class="btn btn-sm btn-outline-danger" title="Quitar línea">Quitar</button></td>
+                    }
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="6" class="text-end text-muted">Subtotal</td>
+                <td class="text-end">@MuestrasVentas.SubTotal(Lineas).ToString("N2")</td>
+                @if (Editable) { <td></td> }
+            </tr>
+            <tr>
+                <td colspan="6" class="text-end text-muted">IGV (18 %)</td>
+                <td class="text-end">@MuestrasVentas.Igv(Lineas).ToString("N2")</td>
+                @if (Editable) { <td></td> }
+            </tr>
+            <tr>
+                <td colspan="6" class="text-end fw-bold">Total S/</td>
+                <td class="text-end fw-bold">@MuestrasVentas.Total(Lineas).ToString("N2")</td>
+                @if (Editable) { <td></td> }
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public LineaFila[] Lineas { get; set; } = Array.Empty<LineaFila>();
+    [Parameter] public bool Editable { get; set; }
+}

@@ -1,0 +1,111 @@
+@page "/despachos"
+
+<PageTitle>Ventas por despachar · SIGMETA</PageTitle>
+
+@* RF012 · Despacho de ventas con guía de remisión (Almacenero). Solo visual (Lab 9). *@
+<Encabezado Rf="RF012" Titulo="Ventas por despachar"
+            Subtitulo="Cada despacho descuenta el stock y se registra como movimiento de almacén. Se admiten despachos parciales." />
+
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <Campo Etiqueta="Venta o cliente" Id="fBuscar" Clase="col-sm-6 col-md">
+            <input id="fBuscar" class="form-control" maxlength="150" placeholder="Número de venta, razón social o nombre" />
+        </Campo>
+        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-3">
+            <select id="fEstado" class="form-select">
+                <option>Por despachar</option>
+                <option>Registrada</option>
+                <option>Despachada parcial</option>
+            </select>
+        </Campo>
+        <div class="col-auto">
+            <button class="btn btn-dark">Buscar</button>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Venta</th>
+                    <th>Cliente</th>
+                    <th>Fecha</th>
+                    <th>Avance</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var v in PorDespachar)
+                {
+                    var vendido = v.Detalles.Sum(l => l.Cantidad);
+                    var despachado = v.Detalles.Sum(l => MuestrasVentas.CantidadDespachada(v.Id, l.NumeroLinea));
+                    var porcentaje = vendido == 0 ? 0 : (int)(despachado * 100 / vendido);
+                    <tr>
+                        <td><strong>@v.Numero</strong></td>
+                        <td>@v.Cliente</td>
+                        <td>@v.FechaEmision.ToString("dd/MM/yyyy")</td>
+                        <td style="min-width: 10rem;">
+                            <div class="progress" role="progressbar" aria-label="Avance del despacho"
+                                 aria-valuenow="@porcentaje" aria-valuemin="0" aria-valuemax="100" style="height: .5rem;">
+                                <div class="progress-bar" style="width: @(porcentaje)%"></div>
+                            </div>
+                            <div class="small text-muted">@despachado.ToString("0.###") de @vendido.ToString("0.###") unidades</div>
+                        </td>
+                        <td><Estado Texto="@MuestrasVentas.Texto(v.Estado)" /></td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-primary" href="@($"/despachos/{v.Id}")">Despachar</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<h2 class="h6 fw-semibold mb-2">Guías de remisión registradas</h2>
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Guía</th>
+                    <th>Venta</th>
+                    <th>Fecha</th>
+                    <th>Dirección de entrega</th>
+                    <th>Transportista</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var d in MuestrasVentas.Despachos)
+                {
+                    <tr>
+                        <td><strong>@($"{d.SerieGuia}-{d.NumeroGuia}")</strong></td>
+                        <td>@MuestrasVentas.Venta(d.IdVenta)?.Numero</td>
+                        <td>@d.FechaDespacho.ToString("dd/MM/yyyy")</td>
+                        <td>@(d.DireccionEntrega ?? "—")</td>
+                        <td>@(d.Transportista ?? "—")</td>
+                        <td><Estado Texto="@(d.Anulado ? "Anulada" : "Vigente")" /></td>
+                        <td class="text-end">
+                            @if (!d.Anulado)
+                            {
+                                @* El despacho no se borra: anularlo repone el stock con un movimiento compensatorio *@
+                                <button class="btn btn-sm btn-outline-danger">Anular</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    // Ventas con líneas pendientes de despacho (Lab 9: datos de ejemplo)
+    private static readonly VentaFila[] PorDespachar =
+        MuestrasVentas.Ventas.Where(v => v.Estado is "REGISTRADA" or "DESPACHADA_PARCIAL").ToArray();
+}

@@ -1,0 +1,152 @@
+@page "/ventas/nueva"
+@inject NavigationManager Nav
+
+<PageTitle>Nueva venta · SIGMETA</PageTitle>
+
+@* RF008 · Registrar una venta desde una orden de compra de cliente o de forma directa (Vendedor).
+   Solo visual (Lab 9): Guardar no registra, solo vuelve a la lista. *@
+<Encabezado Rf="RF008" Titulo="Nueva venta">
+    <a class="btn btn-outline-secondary" href="/ventas">Volver a la lista</a>
+</Encabezado>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Origen y cliente</h2>
+
+    @* Solo cambia qué campos se ven: desde una orden el cliente y el detalle salen de la orden. *@
+    <Campo Etiqueta="Origen de la venta" Obligatorio="true">
+        <div class="d-flex flex-wrap gap-4">
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="origen" id="origenOrden"
+                       checked="@desdeOrden" @onchange="() => desdeOrden = true" />
+                <label class="form-check-label" for="origenOrden">Desde una orden de compra de cliente</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="origen" id="origenDirecta"
+                       checked="@(!desdeOrden)" @onchange="() => desdeOrden = false" />
+                <label class="form-check-label" for="origenDirecta">Venta directa</label>
+            </div>
+        </div>
+    </Campo>
+
+    <div class="row">
+        @if (desdeOrden)
+        {
+            <div class="col-md-6">
+                <Campo Etiqueta="Orden de compra de cliente" Id="orden" Obligatorio="true"
+                       Ayuda="Solo órdenes pendientes o atendidas parcialmente.">
+                    <select id="orden" class="form-select" @bind="idOrden">
+                        @foreach (var o in OrdenesAbiertas)
+                        {
+                            <option value="@o.Id">@o.Numero · @o.NumeroOrdenCliente · @o.Cliente</option>
+                        }
+                    </select>
+                </Campo>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="small text-muted text-uppercase">Cliente</div>
+                <div class="fw-semibold">@Orden.Cliente</div>
+            </div>
+        }
+        else
+        {
+            <div class="col-md-6">
+                <Campo Etiqueta="Cliente" Id="cliente" Obligatorio="true"
+                       Ayuda="Solo clientes activos. Busque por documento, razón social o nombre.">
+                    <select id="cliente" class="form-select">
+                        <option>Constructora Andina S.A.C. · RUC 20512345678</option>
+                        <option>Metalmecánica Chosica E.I.R.L. · RUC 20601122334</option>
+                        <option>Pedro Huamaní Flores · DNI 45678912</option>
+                        <option>Andrea Morales Pérez · CE 001234567</option>
+                    </select>
+                </Campo>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Condiciones</h2>
+    <div class="row">
+        <div class="col-md-4">
+            <Campo Etiqueta="Fecha de emisión" Id="fecha" Obligatorio="true">
+                <input id="fecha" type="date" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Condición de pago" Id="condicion" Obligatorio="true"
+                   Ayuda="Crédito solo para clientes con línea de crédito autorizada.">
+                <select id="condicion" class="form-select" @bind="condicionPago">
+                    <option value="CONTADO">Contado</option>
+                    <option value="CREDITO">Crédito</option>
+                </select>
+            </Campo>
+        </div>
+        @if (condicionPago == "CREDITO")
+        {
+            <div class="col-md-4">
+                <Campo Etiqueta="Plazo de crédito (días)" Id="plazo" Obligatorio="true"
+                       Ayuda="No puede superar el plazo autorizado del cliente. Vacío = plazo del cliente.">
+                    <input id="plazo" type="number" min="1" class="form-control" placeholder="30" />
+                </Campo>
+            </div>
+        }
+        <div class="col-12">
+            <Campo Etiqueta="Observaciones" Id="observaciones">
+                <textarea id="observaciones" class="form-control" rows="2" maxlength="300"></textarea>
+            </Campo>
+        </div>
+    </div>
+    @if (condicionPago == "CREDITO")
+    {
+        <div class="alert alert-secondary mb-0">
+            Al guardar se genera la cuenta por cobrar. El total no puede superar el crédito disponible del cliente.
+        </div>
+    }
+</div>
+
+<div class="card mb-3">
+    <div class="card-body pb-0 d-flex flex-wrap justify-content-between align-items-start gap-2">
+        <div>
+            <h2 class="h6 fw-semibold mb-1">Detalle</h2>
+            <p class="small text-muted">
+                @(desdeOrden ? $"Líneas pendientes de la orden {Orden.Numero}. Puede reducir las cantidades." : "Agregue los productos de la venta. Se valida el stock disponible.")
+            </p>
+        </div>
+        @if (!desdeOrden)
+        {
+            <div class="d-flex gap-2">
+                <input class="form-control" style="max-width: 16rem;" placeholder="Código o nombre del producto" aria-label="Buscar producto" />
+                <button class="btn btn-outline-secondary text-nowrap">Agregar línea</button>
+            </div>
+        }
+    </div>
+    <TablaLineas Lineas="@(desdeOrden ? Orden.Detalles : LineasDirecta)" Editable="true" />
+</div>
+
+<div class="card card-body mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="/ventas">Cancelar</a>
+            <button class="btn btn-primary" @onclick="Volver">Guardar</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Estas variables solo controlan qué se muestra (Lab 9: sin consultas).
+    private bool desdeOrden = true;
+    private string condicionPago = "CONTADO";
+
+    private static readonly OrdenFila[] OrdenesAbiertas =
+        MuestrasVentas.Ordenes.Where(o => o.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL").ToArray();
+
+    private int idOrden = OrdenesAbiertas[0].Id;
+    private OrdenFila Orden => OrdenesAbiertas.FirstOrDefault(o => o.Id == idOrden) ?? OrdenesAbiertas[0];
+
+    // Líneas de ejemplo de una venta directa de mostrador
+    private static readonly LineaFila[] LineasDirecta = MuestrasVentas.Ventas[2].Detalles;
+
+    // Lab 9: no se registra nada, solo se navega.
+    private void Volver() => Nav.NavigateTo("/ventas");
+}

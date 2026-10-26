@@ -1,0 +1,102 @@
+@page "/despachos/{Id:int}"
+@inject NavigationManager Nav
+
+<PageTitle>Registrar despacho · SIGMETA</PageTitle>
+
+@* RF012 · Registrar el despacho de una venta con su guía de remisión (Almacenero).
+   Cada línea del despacho apunta a una línea de la venta (DetalleDespacho.detalleVenta).
+   Solo visual (Lab 9): Registrar no guarda nada, solo vuelve a la lista. *@
+<Encabezado Rf="RF012" Titulo="Registrar despacho" Subtitulo="@($"Venta {venta.Numero} · {venta.Cliente}")">
+    <a class="btn btn-outline-secondary" href="/despachos">Volver a la lista</a>
+</Encabezado>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Guía de remisión</h2>
+    <div class="row">
+        <div class="col-sm-6 col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Serie</div>
+            <div class="fw-semibold">T001</div>
+        </div>
+        <div class="col-sm-6 col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Número</div>
+            <div class="text-muted">Se asigna al registrar</div>
+        </div>
+        <div class="col-md-6">
+            <Campo Etiqueta="Fecha de despacho" Id="fecha" Obligatorio="true">
+                <input id="fecha" type="date" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+            </Campo>
+        </div>
+        <div class="col-md-8">
+            <Campo Etiqueta="Dirección de entrega" Id="direccion" Ayuda="Por defecto, la dirección registrada del cliente.">
+                <input id="direccion" class="form-control" maxlength="200" />
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Transportista" Id="transportista">
+                <input id="transportista" class="form-control" maxlength="100" />
+            </Campo>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body pb-0">
+        <h2 class="h6 fw-semibold mb-1">Líneas de la venta</h2>
+        <p class="small text-muted">
+            No se puede despachar más de lo pendiente de cada línea, ni más del stock disponible.
+            Deje en 0 las líneas que no salen en este despacho.
+        </p>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 3rem;">#</th>
+                    <th>Producto</th>
+                    <th class="text-end">Vendido</th>
+                    <th class="text-end">Despachado</th>
+                    <th class="text-end">Pendiente</th>
+                    <th class="text-end" style="width: 10rem;">A despachar <span class="text-danger" title="Obligatorio">*</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var l in venta.Detalles)
+                {
+                    var despachado = MuestrasVentas.CantidadDespachada(venta.Id, l.NumeroLinea);
+                    var pendiente = l.Cantidad - despachado;
+                    <tr>
+                        <td>@l.NumeroLinea</td>
+                        <td><span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto <span class="small text-muted">(@l.Unidad)</span></td>
+                        <td class="text-end">@l.Cantidad.ToString("0.###")</td>
+                        <td class="text-end">@despachado.ToString("0.###")</td>
+                        <td class="text-end fw-semibold">@pendiente.ToString("0.###")</td>
+                        <td>
+                            <input type="number" min="0" max="@pendiente" step="0.001" class="form-control form-control-sm text-end"
+                                   value="@pendiente" disabled="@(pendiente <= 0)" aria-label="Cantidad a despachar" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card card-body mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="/despachos">Cancelar</a>
+            <button class="btn btn-primary" @onclick="Volver">Registrar despacho</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    // Lab 9: sin consultas; si el id no existe se muestra la primera venta de ejemplo.
+    private VentaFila venta => MuestrasVentas.Venta(Id) ?? MuestrasVentas.Ventas[0];
+
+    // Lab 9: no se registra nada, solo se navega.
+    private void Volver() => Nav.NavigateTo("/despachos");
+}

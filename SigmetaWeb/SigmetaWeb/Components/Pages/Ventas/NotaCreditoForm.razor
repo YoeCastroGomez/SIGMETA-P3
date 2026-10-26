@@ -1,0 +1,184 @@
+@page "/notas-credito/nueva"
+@inject NavigationManager Nav
+
+<PageTitle>Nueva nota de crédito · SIGMETA</PageTitle>
+
+@* RF013 · Registrar una nota de crédito sobre una factura o boleta (Cajero, con autorización del Administrador).
+   Cada línea apunta a una línea concreta de la venta (DetalleNotaCredito.detalleVenta) y el importe
+   se calcula con el precio efectivamente cobrado (con descuento), como en ComprobanteBOImpl.
+   Solo visual (Lab 9): el cálculo es de pantalla y Guardar no registra nada, solo vuelve a la lista. *@
+<Encabezado Rf="RF013" Titulo="Nueva nota de crédito">
+    <a class="btn btn-outline-secondary" href="/notas-credito">Volver a la lista</a>
+</Encabezado>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Comprobante de origen y autorización</h2>
+    <div class="row">
+        <div class="col-md-6">
+            <Campo Etiqueta="Comprobante de origen" Id="origen" Obligatorio="true"
+                   Ayuda="Solo facturas o boletas emitidas o aceptadas.">
+                <select id="origen" class="form-select" @bind="IdComprobante">
+                    @foreach (var c in MuestrasVentas.Comprobantes)
+                    {
+                        <option value="@c.Id">@c.SerieNumero · @MuestrasVentas.Venta(c.IdVenta)?.Cliente</option>
+                    }
+                </select>
+            </Campo>
+        </div>
+        <div class="col-md-6">
+            <Campo Etiqueta="Administrador que autoriza" Id="admin" Obligatorio="true"
+                   Ayuda="Debe ser un Administrador activo. Queda registrado en la nota (RNF001).">
+                <select id="admin" class="form-select">
+                    <option value="">Seleccione…</option>
+                    <option value="1">aquispe · Administrador</option>
+                </select>
+            </Campo>
+        </div>
+        <div class="col-sm-6 col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Venta</div>
+            <div class="fw-semibold">@Venta.Numero</div>
+        </div>
+        <div class="col-sm-6 col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Condición de pago</div>
+            <div class="fw-semibold">@MuestrasVentas.Texto(Venta.CondicionPago)</div>
+        </div>
+        <div class="col-sm-6 col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Serie de la nota</div>
+            <div class="fw-semibold">@(Comprobante.Tipo == "FACTURA" ? "FC01" : "BC01")</div>
+        </div>
+        <div class="col-sm-6 col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Número</div>
+            <div class="text-muted">Se asigna al registrar</div>
+        </div>
+        <div class="col-12">
+            <Campo Etiqueta="Motivo" Id="motivo" Obligatorio="true">
+                <textarea id="motivo" class="form-control" rows="2" maxlength="200"
+                          placeholder="Ejemplo: devolución de producto por defecto de fábrica"></textarea>
+            </Campo>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body pb-0">
+        <h2 class="h6 fw-semibold mb-1">Productos devueltos</h2>
+        <p class="small text-muted">
+            Indique la cantidad a devolver de cada línea de la venta. No se puede devolver más de lo vendido menos lo ya acreditado.
+            El importe usa el precio efectivamente cobrado, con el descuento de la venta.
+        </p>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 3rem;">#</th>
+                    <th>Producto</th>
+                    <th class="text-end">Vendido</th>
+                    <th class="text-end">Ya acreditado</th>
+                    <th class="text-end" style="width: 9rem;">A devolver</th>
+                    <th class="text-end">Precio unit. (S/)</th>
+                    <th class="text-end">Descuento (S/)</th>
+                    <th class="text-end">Importe (S/)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Venta.Detalles.Length; i++)
+                {
+                    var idx = i;
+                    var l = Venta.Detalles[idx];
+                    var acreditado = MuestrasVentas.CantidadAcreditada(Venta.Id, l.NumeroLinea);
+                    var disponible = l.Cantidad - acreditado;
+                    <tr>
+                        <td>@l.NumeroLinea</td>
+                        <td><span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto</td>
+                        <td class="text-end">@l.Cantidad.ToString("0.###")</td>
+                        <td class="text-end">@acreditado.ToString("0.###")</td>
+                        <td>
+                            <input type="number" min="0" max="@disponible" step="0.001" class="form-control form-control-sm text-end"
+                                   @bind="devolver[idx]" disabled="@(disponible <= 0)" aria-label="Cantidad a devolver" />
+                        </td>
+                        <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
+                        <td class="text-end">@DescuentoDevuelto(l, devolver[idx]).ToString("N2")</td>
+                        <td class="text-end fw-semibold">@ImporteDevuelto(l, devolver[idx]).ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="7" class="text-end text-muted">Subtotal</td>
+                    <td class="text-end">@SubTotal.ToString("N2")</td>
+                </tr>
+                <tr>
+                    <td colspan="7" class="text-end text-muted">IGV (18 %)</td>
+                    <td class="text-end">@Igv.ToString("N2")</td>
+                </tr>
+                <tr>
+                    <td colspan="7" class="text-end fw-bold">Total S/</td>
+                    <td class="text-end fw-bold">@((SubTotal + Igv).ToString("N2"))</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<div class="alert alert-secondary">
+    Al registrar la nota: los productos devueltos <strong>reingresan al inventario</strong>;
+    @if (Venta.CondicionPago == "CREDITO")
+    {
+        <span>se <strong>rebaja el saldo de la cuenta por cobrar</strong> del cliente;</span>
+    }
+    else
+    {
+        <span>si la venta ya se cobró, la devolución sale como <strong>egreso de la caja</strong> abierta;</span>
+    }
+    y la nota <strong>no cuenta como cobro válido</strong> en el cierre de caja.
+</div>
+
+<div class="card card-body mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="/notas-credito">Cancelar</a>
+            <button class="btn btn-primary" @onclick="Volver">Registrar nota de crédito</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Estas variables solo controlan lo que se muestra (Lab 9: sin consultas).
+    private int idComprobante = MuestrasVentas.Comprobantes[0].Id;
+    private decimal[] devolver = new decimal[LineasDe(MuestrasVentas.Comprobantes[0]).Length];
+
+    // Al cambiar el comprobante de origen se reinician las cantidades a devolver
+    private int IdComprobante
+    {
+        get => idComprobante;
+        set
+        {
+            idComprobante = value;
+            devolver = new decimal[Venta.Detalles.Length];
+        }
+    }
+
+    private ComprobanteFila Comprobante =>
+        MuestrasVentas.Comprobantes.FirstOrDefault(c => c.Id == idComprobante) ?? MuestrasVentas.Comprobantes[0];
+    private VentaFila Venta => MuestrasVentas.Venta(Comprobante.IdVenta) ?? MuestrasVentas.Ventas[0];
+
+    private static LineaFila[] LineasDe(ComprobanteFila c) =>
+        (MuestrasVentas.Venta(c.IdVenta) ?? MuestrasVentas.Ventas[0]).Detalles;
+
+    // Mismo cálculo que ComprobanteBOImpl.registrarNotaCredito:
+    // importe = importe de la línea (con descuento) × cantidad devuelta ÷ cantidad vendida
+    private static decimal ImporteDevuelto(LineaFila l, decimal cantidad) =>
+        l.Cantidad == 0 ? 0 : Math.Round(l.Importe * cantidad / l.Cantidad, 2);
+
+    // descuento = bruto − importe (la parte proporcional del descuento de la línea)
+    private static decimal DescuentoDevuelto(LineaFila l, decimal cantidad) =>
+        Math.Round(cantidad * l.PrecioUnitario, 2) - ImporteDevuelto(l, cantidad);
+
+    private decimal SubTotal => Venta.Detalles.Select((l, i) => ImporteDevuelto(l, devolver[i])).Sum();
+    private decimal Igv => Math.Round(SubTotal * MuestrasVentas.TasaIgv, 2);
+
+    // Lab 9: no se registra nada, solo se navega.
+    private void Volver() => Nav.NavigateTo("/notas-credito");
+}

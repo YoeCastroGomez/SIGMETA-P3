@@ -1,0 +1,79 @@
+@page "/ordenes/nueva"
+@inject NavigationManager Nav
+
+<PageTitle>Nueva orden de compra de cliente · SIGMETA</PageTitle>
+
+@* RF007 · Registrar la orden de compra del cliente a partir de una cotización aceptada.
+   Solo visual (Lab 9): Guardar no registra, solo vuelve a la lista. *@
+<Encabezado Rf="RF007" Titulo="Nueva orden de compra de cliente">
+    <a class="btn btn-outline-secondary" href="/ordenes">Volver a la lista</a>
+</Encabezado>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Datos de la orden</h2>
+    <div class="row">
+        <div class="col-md-6">
+            <Campo Etiqueta="Cotización aceptada" Id="cotizacion" Obligatorio="true"
+                   Ayuda="Solo se listan cotizaciones en estado Aceptada que aún no tienen orden.">
+                <select id="cotizacion" class="form-select" @bind="idCotizacion">
+                    @foreach (var c in MuestrasVentas.CotizacionesAceptadas)
+                    {
+                        <option value="@c.Id">@c.Numero · @c.Cliente</option>
+                    }
+                </select>
+            </Campo>
+        </div>
+        <div class="col-md-6">
+            <Campo Etiqueta="Nº de orden de compra del cliente" Id="numOrdenCliente" Obligatorio="true"
+                   Ayuda="El número que figura en el documento que envió el cliente.">
+                <input id="numOrdenCliente" class="form-control" maxlength="30" />
+            </Campo>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="small text-muted text-uppercase">Cliente</div>
+            <div class="fw-semibold">@Cotizacion.Cliente</div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Fecha de emisión</div>
+            <div class="fw-semibold">@DateTime.Today.ToString("dd/MM/yyyy")</div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Estado inicial</div>
+            <div><Estado Texto="Pendiente" /></div>
+        </div>
+        <div class="col-12">
+            <Campo Etiqueta="Observaciones" Id="observaciones">
+                <textarea id="observaciones" class="form-control" rows="2" maxlength="300"></textarea>
+            </Campo>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body pb-0">
+        <h2 class="h6 fw-semibold mb-1">Detalle</h2>
+        <p class="small text-muted">Copiado de la cotización @Cotizacion.Numero. No se edita aquí.</p>
+    </div>
+    <TablaLineas Lineas="@Cotizacion.Detalles" />
+</div>
+
+<div class="card card-body mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="/ordenes">Cancelar</a>
+            <button class="btn btn-primary" @onclick="Volver">Guardar</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Solo cambia qué cotización se muestra (Lab 9: sin consultas).
+    private int idCotizacion = MuestrasVentas.CotizacionesAceptadas[0].Id;
+
+    private CotizacionFila Cotizacion =>
+        MuestrasVentas.CotizacionesAceptadas.FirstOrDefault(c => c.Id == idCotizacion) ?? MuestrasVentas.CotizacionesAceptadas[0];
+
+    // Lab 9: no se registra nada, solo se navega.
+    private void Volver() => Nav.NavigateTo("/ordenes");
+}
