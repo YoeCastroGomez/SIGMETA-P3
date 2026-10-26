@@ -4,13 +4,17 @@
 
 <Encabezado Titulo="Inicio" Subtitulo="@($"Accesos rápidos · {Rol}")" />
 
-<div class="accesos">
+<div class="row g-3">
     @foreach (var a in AccesosActuales)
     {
-        <a class="acceso" href="@a.Ruta">
-            <div class="acceso-titulo">@a.Titulo</div>
-            <div class="acceso-desc">@a.Desc</div>
-        </a>
+        <div class="col-sm-6 col-lg-3">
+            <a class="card h-100 text-decoration-none" href="@a.Ruta">
+                <div class="card-body">
+                    <div class="fw-semibold text-body">@a.Titulo</div>
+                    <div class="small text-muted">@a.Desc</div>
+                </div>
+            </a>
+        </div>
     }
 </div>
 

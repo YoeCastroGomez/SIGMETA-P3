@@ -8,21 +8,21 @@
     <a class="btn btn-outline-secondary" href="/autorizaciones/mias">Volver a mis solicitudes</a>
 </Encabezado>
 
-<div class="panel" style="max-width: 720px;">
+<div class="card card-body mb-3" style="max-width: 720px;">
     <div class="row">
-        <div class="col-md-6 dato">
-            <div class="dato-etiqueta">Solicitante</div>
-            <div class="dato-valor">@MuestrasSeguridad.UsuarioPorRol.GetValueOrDefault(Rol, "—") (@Rol)</div>
+        <div class="col-md-6 mb-3">
+            <div class="small text-muted text-uppercase">Solicitante</div>
+            <div class="fw-semibold">@MuestrasSeguridad.UsuarioPorRol.GetValueOrDefault(Rol, "—") (@Rol)</div>
         </div>
-        <div class="col-md-6 dato">
-            <div class="dato-etiqueta">Fecha y hora</div>
-            <div class="dato-valor">Se registra al enviar</div>
+        <div class="col-md-6 mb-3">
+            <div class="small text-muted text-uppercase">Fecha y hora</div>
+            <div class="fw-semibold">Se registra al enviar</div>
         </div>
     </div>
 
     <Campo Etiqueta="Operación restringida" Id="operacion" Obligatorio="true"
            Ayuda="Máximo 60 caracteres. No puedes tener dos solicitudes pendientes de la misma operación.">
-        <input id="operacion" class="form-control mono" maxlength="60" list="operaciones" />
+        <input id="operacion" class="form-control" maxlength="60" list="operaciones" />
         <datalist id="operaciones">
             @foreach (var o in MuestrasSeguridad.OperacionesSugeridas.GetValueOrDefault(Rol, Array.Empty<string>()))
             {
@@ -35,8 +35,8 @@
         <textarea id="motivo" class="form-control" rows="4" maxlength="200"></textarea>
     </Campo>
 
-    <div class="pie-form">
-        <span class="leyenda-req"><span class="req">*</span> Campo obligatorio</span>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
         <div class="d-flex gap-2">
             <a class="btn btn-outline-secondary" href="/autorizaciones/mias">Cancelar</a>
             <button class="btn btn-primary" @onclick="Volver">Enviar solicitud</button>

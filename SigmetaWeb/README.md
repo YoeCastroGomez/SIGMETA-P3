@@ -23,8 +23,9 @@ Components/
     Ventas/     Sebastian  RF007 (órdenes), RF008, RF013, despachos
     Caja/       Adriano    RF009, RF010
     Reportes/   Adriano    RF015
-wwwroot/app.css            estilos comunes (no tocar sin avisar)
+wwwroot/app.css            solo los colores del tema y el marco (no tocar sin avisar)
 ```
 Cada carpeta tiene un `Pendientes.razor` con las rutas que faltan. Al hacer una pantalla real, se borra su `@page` de ese archivo.
 
-Reglas completas: ver el documento de reparto del Lab 9.
+Las pantallas usan solo clases de Bootstrap (card, row, col, btn, table, badge, alert).
+Reglas completas y tabla de clases: ver el documento de reparto del Lab 9.

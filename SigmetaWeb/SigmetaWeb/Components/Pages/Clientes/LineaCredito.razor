@@ -8,19 +8,19 @@
     <a class="btn btn-outline-secondary" href="/clientes">Volver a la lista</a>
 </Encabezado>
 
-<div class="panel" style="max-width: 760px;">
+<div class="card card-body mb-3" style="max-width: 760px;">
     <div class="row">
-        <div class="col-sm-7 dato">
-            <div class="dato-etiqueta">Cliente</div>
-            <div class="dato-valor">@ejemplo.NombreMostrado</div>
+        <div class="col-sm-7 mb-3">
+            <div class="small text-muted text-uppercase">Cliente</div>
+            <div class="fw-semibold">@ejemplo.NombreMostrado</div>
         </div>
-        <div class="col-sm-5 dato">
-            <div class="dato-etiqueta">@MuestrasClientes.Texto(ejemplo.TipoDocumento)</div>
-            <div class="dato-valor mono">@ejemplo.NumeroDocumento</div>
+        <div class="col-sm-5 mb-3">
+            <div class="small text-muted text-uppercase">@MuestrasClientes.Texto(ejemplo.TipoDocumento)</div>
+            <div class="fw-semibold">@ejemplo.NumeroDocumento</div>
         </div>
-        <div class="col-sm-7 dato">
-            <div class="dato-etiqueta">Condición actual</div>
-            <div class="dato-valor">@MuestrasClientes.Texto(ejemplo.CondicionPago)</div>
+        <div class="col-sm-7 mb-3">
+            <div class="small text-muted text-uppercase">Condición actual</div>
+            <div class="fw-semibold">@MuestrasClientes.Texto(ejemplo.CondicionPago)</div>
         </div>
     </div>
 
@@ -29,12 +29,12 @@
     <div class="row">
         <div class="col-md-4">
             <Campo Etiqueta="Límite de crédito (S/)" Id="limite" Obligatorio="true" Ayuda="Mayor a 0.">
-                <input id="limite" type="number" min="0.01" step="0.01" class="form-control mono" value="@ejemplo.LimiteCredito" />
+                <input id="limite" type="number" min="0.01" step="0.01" class="form-control" value="@ejemplo.LimiteCredito" />
             </Campo>
         </div>
         <div class="col-md-4">
             <Campo Etiqueta="Plazo (días)" Id="plazo" Obligatorio="true" Ayuda="Mayor a 0. Máximo por venta.">
-                <input id="plazo" type="number" min="1" class="form-control mono" value="@ejemplo.PlazoCreditoDias" />
+                <input id="plazo" type="number" min="1" class="form-control" value="@ejemplo.PlazoCreditoDias" />
             </Campo>
         </div>
         <div class="col-md-4">
@@ -49,7 +49,7 @@
         </div>
     </div>
 
-    <div class="pie-form">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
         <div>
             <button class="btn btn-outline-danger" @onclick="Volver">Retirar línea</button>
             <div class="form-text">El cliente pasa a contado. Se conserva su calificación.</div>

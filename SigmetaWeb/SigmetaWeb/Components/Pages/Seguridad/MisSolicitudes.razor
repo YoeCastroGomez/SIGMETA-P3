@@ -8,10 +8,10 @@
     <a class="btn btn-primary" href="/autorizaciones/nueva">Nueva solicitud</a>
 </Encabezado>
 
-<div class="panel p-0">
-    <div class="tabla-envoltura">
-        <table class="table table-hover">
-            <thead>
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
                 <tr>
                     <th>Operación</th>
                     <th>Motivo</th>
@@ -25,16 +25,18 @@
                 @foreach (var s in MuestrasSeguridad.MisSolicitudes.GetValueOrDefault(Rol, Array.Empty<SolicitudFila>()))
                 {
                     <tr>
-                        <td class="mono">@s.OperacionRestringida</td>
+                        <td>@s.OperacionRestringida</td>
                         <td>@s.Motivo</td>
-                        <td class="mono">@s.FechaSolicitud</td>
+                        <td>@s.FechaSolicitud</td>
                         <td><Estado Texto="@MuestrasSeguridad.Texto(s.Estado)" /></td>
-                        <td class="mono">@(s.FechaVencimiento ?? "—")</td>
-                        <td class="acciones-fila">
-                            @if (s.Estado == "PENDIENTE" || s.Estado == "APROBADA")
-                            {
-                                <button class="btn btn-sm btn-outline-danger">Anular</button>
-                            }
+                        <td>@(s.FechaVencimiento ?? "—")</td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1 text-nowrap">
+                                @if (s.Estado == "PENDIENTE" || s.Estado == "APROBADA")
+                                {
+                                    <button class="btn btn-sm btn-outline-danger">Anular</button>
+                                }
+                            </div>
                         </td>
                     </tr>
                 }

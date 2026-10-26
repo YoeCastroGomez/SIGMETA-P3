@@ -1,6 +1,7 @@
-@* Etiqueta + control + ayuda. El asterisco marca los obligatorios (RNF004). *@
-<div class="campo @Clase">
-    <label class="form-label" for="@Id">@Etiqueta @if (Obligatorio) {<span class="req" title="Obligatorio">*</span>}</label>
+@* Etiqueta + control + ayuda. El * marca los obligatorios (RNF004).
+   Clase: clases de Bootstrap para el contenedor (por defecto "mb-3"; en filas de filtros, una columna "col-…"). *@
+<div class="@(Clase ?? "mb-3")">
+    <label class="form-label fw-semibold small" for="@Id">@Etiqueta @if (Obligatorio) {<span class="text-danger" title="Obligatorio">*</span>}</label>
     @ChildContent
     @if (!string.IsNullOrEmpty(Ayuda))
     {

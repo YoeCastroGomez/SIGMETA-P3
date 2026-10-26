@@ -3,20 +3,20 @@
 @inject NavigationManager Nav
 
 <CascadingValue Value="rol" Name="Rol">
-    <div class="app">
-        <aside class="sidebar @(menuAbierto ? "abierto" : "")">
-            <div class="marca">
-                <span class="marca-logo">SM</span>
+    <div class="d-flex min-vh-100">
+        <aside class="sigmeta-sidebar d-flex flex-column @(menuAbierto ? "abierto" : "")">
+            <div class="d-flex align-items-center gap-2 px-3 py-3 border-bottom border-secondary">
+                <span class="sigmeta-logo rounded d-flex align-items-center justify-content-center text-white fw-bold">SM</span>
                 <div>
-                    <div class="marca-nombre">SIGMETA</div>
-                    <div class="marca-sub">Grupo Meta</div>
+                    <div class="text-white fw-bold">SIGMETA</div>
+                    <div class="small text-white-50">Grupo Meta</div>
                 </div>
             </div>
             <NavMenu Rol="@rol" AlNavegar="() => menuAbierto = false" />
         </aside>
 
-        <div class="principal">
-            <header class="barra">
+        <div class="flex-grow-1 d-flex flex-column" style="min-width: 0;">
+            <header class="d-flex align-items-center gap-3 bg-white border-bottom px-4 py-2">
                 <button class="btn btn-sm btn-outline-secondary d-xl-none" @onclick="() => menuAbierto = !menuAbierto">Menú</button>
                 <div class="ms-auto d-flex align-items-center gap-3">
                     <a class="small text-decoration-none" href="/mi-clave" title="Cambiar mi clave">
@@ -26,7 +26,7 @@
                 </div>
             </header>
 
-            <main class="contenido">
+            <main class="container-fluid p-3 p-md-4" style="max-width: 1200px;">
                 @Body
             </main>
         </div>

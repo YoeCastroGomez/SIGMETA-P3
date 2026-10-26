@@ -9,7 +9,7 @@
     <a class="btn btn-outline-secondary" href="/usuarios">Volver a la lista</a>
 </Encabezado>
 
-<div class="panel">
+<div class="card card-body mb-3">
     <div class="row">
         <div class="col-md-6">
             <Campo Etiqueta="Nombre de usuario" Id="nombreUsuario" Obligatorio="true" Ayuda="Único. Letras, números, punto, guion y guion bajo.">
@@ -62,16 +62,16 @@
                 </Campo>
             </div>
             <div class="col-md-3">
-                <div class="dato">
-                    <div class="dato-etiqueta">Fecha de registro</div>
-                    <div class="dato-valor mono">@ejemplo?.FechaRegistro</div>
+                <div class="mb-3">
+                    <div class="small text-muted text-uppercase">Fecha de registro</div>
+                    <div class="fw-semibold">@ejemplo?.FechaRegistro</div>
                 </div>
             </div>
         }
     </div>
 
-    <div class="pie-form">
-        <span class="leyenda-req"><span class="req">*</span> Campo obligatorio</span>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
         <div class="d-flex gap-2">
             <a class="btn btn-outline-secondary" href="/usuarios">Cancelar</a>
             <button class="btn btn-primary" @onclick="Volver">Guardar</button>
@@ -82,20 +82,18 @@
 @if (!EsNuevo)
 {
     @* Bloque aparte para restablecer la clave (solo visual). *@
-    <div class="panel">
-        <div class="panel-titulo">Restablecer clave</div>
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Restablecer clave</h2>
         <p class="text-muted small">Para el usuario que olvidó su clave.</p>
-        <div class="row align-items-end">
-            <div class="col-md-6">
-                <Campo Etiqueta="Clave nueva" Id="claveNueva" Obligatorio="true" Ayuda="Mínimo 8 caracteres, con al menos una letra y un número.">
-                    <input id="claveNueva" type="password" class="form-control" autocomplete="new-password" />
-                </Campo>
-            </div>
+        <div class="row g-3 align-items-end">
+            <Campo Etiqueta="Clave nueva" Id="claveNueva" Obligatorio="true" Clase="col-md-6">
+                <input id="claveNueva" type="password" class="form-control" autocomplete="new-password" />
+            </Campo>
             <div class="col-md-3">
-                <div class="campo"><button class="btn btn-oscuro w-100" @onclick="Volver">Restablecer</button></div>
-                <div class="form-text">&nbsp;</div>
+                <button class="btn btn-dark w-100" @onclick="Volver">Restablecer</button>
             </div>
         </div>
+        <div class="form-text">Mínimo 8 caracteres, con al menos una letra y un número.</div>
     </div>
 }
 

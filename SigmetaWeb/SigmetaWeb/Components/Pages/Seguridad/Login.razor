@@ -4,13 +4,13 @@
 
 <PageTitle>Iniciar sesión · SIGMETA</PageTitle>
 
-@* RF001. Lab 9: no se valida la clave; "Ingresar" solo navega. *@
-<div class="login-caja">
-    <div class="marca">
-        <span class="marca-logo">SM</span>
+@* RF001 · Login. Solo visual (Lab 9): no se valida la clave, "Ingresar" solo navega. *@
+<div class="card shadow-sm p-4 w-100" style="max-width: 380px;">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <span class="sigmeta-logo rounded d-flex align-items-center justify-content-center text-white fw-bold">SM</span>
         <div>
-            <div class="marca-nombre">SIGMETA</div>
-            <div class="marca-sub">Grupo Meta · Sistema comercial</div>
+            <div class="fw-bold">SIGMETA</div>
+            <div class="small text-muted">Grupo Meta · Sistema comercial</div>
         </div>
     </div>
 
@@ -26,18 +26,18 @@
 
     <button class="btn btn-primary w-100 mt-2" @onclick="@(() => Entrar("Administrador"))">Ingresar</button>
 
-    <p class="text-muted small mt-3 mb-0">
-        Si olvidaste tu clave, solicita al Administrador que la restablezca.
-    </p>
+    <p class="small text-muted mt-3 mb-0">Si olvidaste tu clave, solicita al Administrador que la restablezca.</p>
 
     @* Solo para la demostración: entra con el menú de cada rol. *@
-    <div class="demo-roles">
-        <div class="demo-titulo">Demostración: entrar como</div>
-        <div class="demo-botones">
-            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Entrar("Administrador"))">Administrador</button>
-            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Entrar("Vendedor"))">Vendedor</button>
-            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Entrar("Cajero"))">Cajero</button>
-            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Entrar("Almacenero"))">Almacenero</button>
+    <div class="border-top mt-4 pt-3">
+        <div class="small text-muted text-uppercase mb-2">Demostración: entrar como</div>
+        <div class="row g-2">
+            @foreach (var r in new[] { "Administrador", "Vendedor", "Cajero", "Almacenero" })
+            {
+                <div class="col-6">
+                    <button class="btn btn-sm btn-outline-secondary w-100" @onclick="@(() => Entrar(r))">@r</button>
+                </div>
+            }
         </div>
     </div>
 </div>

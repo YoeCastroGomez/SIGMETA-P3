@@ -7,25 +7,25 @@
     <a class="btn btn-primary" href="/usuarios/nuevo">Nuevo usuario</a>
 </Encabezado>
 
-<div class="panel">
-    <div class="filtros">
-        <Campo Etiqueta="Estado" Id="fEstado" Clase="angosto">
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-3">
             <select id="fEstado" class="form-select">
                 <option>Todos</option>
                 <option>Activos</option>
                 <option>Inactivos</option>
             </select>
         </Campo>
-        <div class="campo">
-            <button class="btn btn-oscuro">Buscar</button>
+        <div class="col-auto">
+            <button class="btn btn-dark">Buscar</button>
         </div>
     </div>
 </div>
 
-<div class="panel p-0">
-    <div class="tabla-envoltura">
-        <table class="table table-hover">
-            <thead>
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
                 <tr>
                     <th>Usuario</th>
                     <th>Nombres</th>
@@ -46,12 +46,14 @@
                         <td>@(u.Correo ?? "—")</td>
                         <td>@MuestrasSeguridad.Texto(u.Rol)</td>
                         <td><Estado Texto="@(u.Estado ? "Activo" : "Inactivo")" /></td>
-                        <td class="acciones-fila">
-                            <a class="btn btn-sm btn-outline-secondary" href="@($"/usuarios/editar/{u.Id}")">Editar</a>
-                            @if (u.Estado)
-                            {
-                                <button class="btn btn-sm btn-outline-danger">Desactivar</button>
-                            }
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1 text-nowrap">
+                                <a class="btn btn-sm btn-outline-secondary" href="@($"/usuarios/editar/{u.Id}")">Editar</a>
+                                @if (u.Estado)
+                                {
+                                    <button class="btn btn-sm btn-outline-danger">Desactivar</button>
+                                }
+                            </div>
                         </td>
                     </tr>
                 }

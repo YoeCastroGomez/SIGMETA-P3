@@ -9,8 +9,8 @@
     <a class="btn btn-outline-secondary" href="/clientes">Volver a la lista</a>
 </Encabezado>
 
-<div class="panel">
-    <div class="panel-titulo">Identificación</div>
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Identificación</h2>
 
     @* Solo cambia qué campos se ven: JURIDICA = razón social, NATURAL = nombres y apellidos. *@
     <Campo Etiqueta="Tipo de persona" Obligatorio="true">
@@ -42,7 +42,7 @@
         <div class="col-md-8">
             <Campo Etiqueta="Número de documento" Id="numDoc" Obligatorio="true"
                    Ayuda="Único. RUC: 11 dígitos · DNI: 8 dígitos · Carné: 9 a 12 · Pasaporte: 6 a 12.">
-                <input id="numDoc" class="form-control mono" maxlength="20" value="@ejemplo?.NumeroDocumento" />
+                <input id="numDoc" class="form-control" maxlength="20" value="@ejemplo?.NumeroDocumento" />
             </Campo>
         </div>
 
@@ -70,8 +70,8 @@
     </div>
 </div>
 
-<div class="panel">
-    <div class="panel-titulo">Datos de contacto</div>
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Datos de contacto</h2>
     <div class="row">
         <div class="col-12">
             <Campo Etiqueta="Dirección" Id="direccion">
@@ -96,11 +96,11 @@
     </div>
 </div>
 
-<div class="panel">
-    <div class="panel-titulo">Condición comercial</div>
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Condición comercial</h2>
     @if (EsNuevo)
     {
-        <div class="aviso">
+        <div class="alert alert-secondary">
             Todo cliente nuevo empieza al <strong>contado</strong>. La línea de crédito, el plazo y la calificación
             los asigna el Administrador desde la opción Crédito de la lista.
         </div>
@@ -109,21 +109,21 @@
     {
         @* Solo lectura: el crédito se cambia en la pantalla Línea de crédito. *@
         <div class="row">
-            <div class="col-sm-3 dato">
-                <div class="dato-etiqueta">Condición de pago</div>
-                <div class="dato-valor">@MuestrasClientes.Texto(ejemplo!.CondicionPago)</div>
+            <div class="col-sm-3 mb-3">
+                <div class="small text-muted text-uppercase">Condición de pago</div>
+                <div class="fw-semibold">@MuestrasClientes.Texto(ejemplo!.CondicionPago)</div>
             </div>
-            <div class="col-sm-3 dato">
-                <div class="dato-etiqueta">Límite de crédito</div>
-                <div class="dato-valor mono">S/ @ejemplo.LimiteCredito.ToString("N2")</div>
+            <div class="col-sm-3 mb-3">
+                <div class="small text-muted text-uppercase">Límite de crédito</div>
+                <div class="fw-semibold">S/ @ejemplo.LimiteCredito.ToString("N2")</div>
             </div>
-            <div class="col-sm-3 dato">
-                <div class="dato-etiqueta">Plazo</div>
-                <div class="dato-valor mono">@ejemplo.PlazoCreditoDias días</div>
+            <div class="col-sm-3 mb-3">
+                <div class="small text-muted text-uppercase">Plazo</div>
+                <div class="fw-semibold">@ejemplo.PlazoCreditoDias días</div>
             </div>
-            <div class="col-sm-3 dato">
-                <div class="dato-etiqueta">Calificación</div>
-                <div class="dato-valor">@MuestrasClientes.Texto(ejemplo.CalificacionCrediticia)</div>
+            <div class="col-sm-3 mb-3">
+                <div class="small text-muted text-uppercase">Calificación</div>
+                <div class="fw-semibold">@MuestrasClientes.Texto(ejemplo.CalificacionCrediticia)</div>
             </div>
             <div class="col-sm-3">
                 <Campo Etiqueta="Estado" Id="estado">
@@ -136,8 +136,8 @@
         </div>
     }
 
-    <div class="pie-form">
-        <span class="leyenda-req"><span class="req">*</span> Campo obligatorio</span>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
         <div class="d-flex gap-2">
             <a class="btn btn-outline-secondary" href="/clientes">Cancelar</a>
             <button class="btn btn-primary" @onclick="Volver">Guardar</button>
