@@ -143,6 +143,8 @@ DROP PROCEDURE IF EXISTS sp_comprobante_actualizar_estado;
 DROP PROCEDURE IF EXISTS sp_comprobante_siguiente_correlativo;
 DROP PROCEDURE IF EXISTS sp_comprobante_revertir_saldo_cpc;
 DROP PROCEDURE IF EXISTS sp_comprobante_restaurar_saldo_cpc;
+DROP PROCEDURE IF EXISTS sp_comprobante_registrar_envio;
+DROP PROCEDURE IF EXISTS sp_comprobante_buscar_nc;
 DROP PROCEDURE IF EXISTS sp_detalle_nota_credito_insertar;
 DROP PROCEDURE IF EXISTS sp_detalle_nota_credito_modificar;
 DROP PROCEDURE IF EXISTS sp_detalle_nota_credito_eliminar;
