@@ -1,0 +1,241 @@
+@page "/reportes"
+@using SigmetaWeb.Components.Pages.Caja
+
+<PageTitle>Reportes · SIGMETA</PageTitle>
+
+@* RF015 · Reportes del Administrador dentro de un periodo: comercial (ventas y crédito), abastecimiento e inventario
+   (compras y rotación) y caja (cierres, diferencias y responsables).
+   Solo visual (Lab 9): Generar no consulta nada; las pestañas solo cambian lo que se muestra. *@
+<Encabezado Rf="RF015" Titulo="Reportes" Subtitulo="Elige el periodo y el reporte. Importes en soles." />
+
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <Campo Etiqueta="Desde" Id="fDesde" Obligatorio="true" Clase="col-sm-6 col-md-3">
+            <input id="fDesde" type="date" class="form-control" value="2026-09-01" />
+        </Campo>
+        <Campo Etiqueta="Hasta" Id="fHasta" Obligatorio="true" Clase="col-sm-6 col-md-3">
+            <input id="fHasta" type="date" class="form-control" value="2026-10-27" />
+        </Campo>
+        <div class="col-auto">
+            <button class="btn btn-dark">Generar</button>
+        </div>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-3">
+    @foreach (var (clave, texto) in Pestanas)
+    {
+        <li class="nav-item">
+            <button class="nav-link @(pestana == clave ? "active fw-semibold" : "")" @onclick="() => pestana = clave">@texto</button>
+        </li>
+    }
+</ul>
+
+@if (pestana == "comercial")
+{
+    @* Reporte comercial: ventas y crédito de clientes *@
+    <div class="row">
+        <div class="col-sm-4">
+            <div class="card card-body mb-3">
+                <div class="small text-muted text-uppercase">Ventas al contado</div>
+                <div class="h5 fw-bold mb-0">S/ @MuestrasReportes.TotalVentas("CONTADO").ToString("N2")</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card card-body mb-3">
+                <div class="small text-muted text-uppercase">Ventas al crédito</div>
+                <div class="h5 fw-bold mb-0">S/ @MuestrasReportes.TotalVentas("CREDITO").ToString("N2")</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card card-body mb-3">
+                <div class="small text-muted text-uppercase">Saldo de crédito por cobrar</div>
+                <div class="h5 fw-bold mb-0">S/ @(MuestrasReportes.Creditos.Sum(c => c.SaldoPendiente).ToString("N2"))</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body pb-0"><h2 class="h6 fw-semibold mb-3">Ventas del periodo</h2></div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Número</th><th>Fecha</th><th>Cliente</th><th>Condición</th><th class="text-end">Total</th><th>Estado</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var v in MuestrasReportes.Ventas)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@v.Numero</td>
+                            <td class="text-nowrap">@v.FechaEmision.ToString("dd/MM/yyyy")</td>
+                            <td>@v.Cliente</td>
+                            <td>@MuestrasReportes.Texto(v.CondicionPago)</td>
+                            <td class="text-end text-nowrap">S/ @v.Total.ToString("N2")</td>
+                            <td><Estado Texto="@v.Estado" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-body small text-muted">Las ventas anuladas se muestran, pero no suman en los totales.</div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body pb-0"><h2 class="h6 fw-semibold mb-3">Crédito de clientes</h2></div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Cliente</th><th class="text-end">Límite</th><th class="text-end">Saldo pendiente</th><th class="text-end">Disponible</th><th class="text-end">Vencido</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in MuestrasReportes.Creditos)
+                    {
+                        <tr>
+                            <td><strong>@c.Cliente</strong></td>
+                            <td class="text-end text-nowrap">S/ @c.LimiteCredito.ToString("N2")</td>
+                            <td class="text-end text-nowrap">S/ @c.SaldoPendiente.ToString("N2")</td>
+                            <td class="text-end text-nowrap">S/ @c.Disponible.ToString("N2")</td>
+                            <td class="text-end text-nowrap @(c.SaldoVencido > 0 ? "text-danger fw-semibold" : "")">S/ @c.SaldoVencido.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else if (pestana == "abastecimiento")
+{
+    @* Reporte de abastecimiento e inventario: compras y rotación de productos *@
+    <div class="card mb-3">
+        <div class="card-body pb-0"><h2 class="h6 fw-semibold mb-3">Compras a proveedores</h2></div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Número</th><th>Fecha</th><th>Proveedor</th><th class="text-end">Total</th><th>Estado</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in MuestrasReportes.Compras)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@c.Numero</td>
+                            <td class="text-nowrap">@c.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td>@c.Proveedor</td>
+                            <td class="text-end text-nowrap">S/ @c.Total.ToString("N2")</td>
+                            <td><Estado Texto="@c.Estado" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card mb-3">
+                <div class="card-body pb-0"><h2 class="h6 fw-semibold mb-3">Productos de mayor movimiento</h2></div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr><th>Código</th><th>Producto</th><th class="text-end">Salidas</th><th class="text-end">Stock</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in MuestrasReportes.MayorRotacion)
+                            {
+                                <tr>
+                                    <td class="text-nowrap">@p.Codigo</td>
+                                    <td>@p.Producto</td>
+                                    <td class="text-end">@p.UnidadesSalida.ToString("N0")</td>
+                                    <td class="text-end">@p.Stock.ToString("N0")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card mb-3">
+                <div class="card-body pb-0"><h2 class="h6 fw-semibold mb-3">Productos sin movimiento</h2></div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr><th>Código</th><th>Producto</th><th class="text-end">Stock</th><th>Último movimiento</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in MuestrasReportes.SinMovimiento)
+                            {
+                                <tr>
+                                    <td class="text-nowrap">@p.Codigo</td>
+                                    <td>@p.Producto</td>
+                                    <td class="text-end">@p.Stock.ToString("N0")</td>
+                                    <td class="text-nowrap">@(p.UltimoMovimiento?.ToString("dd/MM/yyyy") ?? "Nunca")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    @* Reporte de caja: cierres realizados, sus diferencias y responsables *@
+    <div class="row">
+        <div class="col-sm-4">
+            <div class="card card-body mb-3">
+                <div class="small text-muted text-uppercase">Cierres vigentes</div>
+                <div class="h5 fw-bold mb-0">@(MuestrasCaja.Cierres.Count(c => c.Estado == "VIGENTE"))</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card card-body mb-3">
+                <div class="small text-muted text-uppercase">Cierres revertidos</div>
+                <div class="h5 fw-bold mb-0">@(MuestrasCaja.Cierres.Count(c => c.Estado == "REVERTIDO"))</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card card-body mb-3">
+                <div class="small text-muted text-uppercase">Diferencia neta (vigentes)</div>
+                <div class="h5 fw-bold mb-0">S/ @(MuestrasCaja.Cierres.Where(c => c.Estado == "VIGENTE").Sum(c => c.Diferencia).ToString("N2"))</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body pb-0"><h2 class="h6 fw-semibold mb-3">Cierres de caja</h2></div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Fecha de cierre</th><th>Caja</th><th>Responsable</th><th class="text-end">Calculado</th><th class="text-end">Declarado</th><th class="text-end">Diferencia</th><th>Estado</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in MuestrasCaja.Cierres)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@c.FechaCierre.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>N.º @c.IdCaja</td>
+                            <td>@c.UsuarioCierre</td>
+                            <td class="text-end text-nowrap">S/ @c.MontoCalculado.ToString("N2")</td>
+                            <td class="text-end text-nowrap">S/ @c.MontoDeclarado.ToString("N2")</td>
+                            <td class="text-end text-nowrap @(c.Diferencia < 0 ? "text-danger" : "")">S/ @c.Diferencia.ToString("N2")</td>
+                            <td><Estado Texto="@MuestrasCaja.Texto(c.Estado)" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    // Pestaña visible: solo cambia lo que se muestra.
+    private string pestana = "comercial";
+
+    private static readonly (string Clave, string Texto)[] Pestanas =
+    {
+        ("comercial", "Comercial"),
+        ("abastecimiento", "Abastecimiento e inventario"),
+        ("caja", "Caja"),
+    };
+}
