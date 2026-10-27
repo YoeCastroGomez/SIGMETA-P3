@@ -1,0 +1,116 @@
+@page "/cobranzas"
+
+<PageTitle>Cuentas por cobrar · SIGMETA</PageTitle>
+
+@* RF009 · Cuentas por cobrar (Cajero y Administrador). La cuenta se genera sola al registrar una venta al crédito
+   y su saldo baja con cada cobro. Solo visual (Lab 9): los filtros no filtran. *@
+<Encabezado Rf="RF009" Titulo="Cuentas por cobrar"
+            Subtitulo="Se generan al registrar una venta al crédito. Importes en soles." />
+
+<div class="row">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-body mb-3">
+            <div class="small text-muted text-uppercase">Saldo pendiente</div>
+            <div class="h5 fw-bold mb-0">S/ @(Cuentas.Sum(c => c.SaldoPendiente).ToString("N2"))</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-body mb-3">
+            <div class="small text-muted text-uppercase">Saldo vencido</div>
+            <div class="h5 fw-bold text-danger mb-0">S/ @(Cuentas.Where(c => c.Estado == "VENCIDA").Sum(c => c.SaldoPendiente).ToString("N2"))</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-body mb-3">
+            <div class="small text-muted text-uppercase">Cuentas con saldo</div>
+            <div class="h5 fw-bold mb-0">@(Cuentas.Count(c => c.SaldoPendiente > 0))</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-body mb-3">
+            <div class="small text-muted text-uppercase">Cuentas vencidas</div>
+            <div class="h5 fw-bold mb-0">@(Cuentas.Count(c => c.Estado == "VENCIDA"))</div>
+        </div>
+    </div>
+</div>
+
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
+            <input id="fCliente" class="form-control" maxlength="150" placeholder="Razón social, nombre o documento" />
+        </Campo>
+        <Campo Etiqueta="Comprobante" Id="fComprobante" Clase="col-sm-6 col-md-2">
+            <input id="fComprobante" class="form-control" maxlength="13" placeholder="F001-00000123" />
+        </Campo>
+        <Campo Etiqueta="Vence desde" Id="fDesde" Clase="col-sm-6 col-md-2">
+            <input id="fDesde" type="date" class="form-control" />
+        </Campo>
+        <Campo Etiqueta="Vence hasta" Id="fHasta" Clase="col-sm-6 col-md-2">
+            <input id="fHasta" type="date" class="form-control" />
+        </Campo>
+        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-2">
+            <select id="fEstado" class="form-select">
+                <option>Todos</option>
+                <option>Pendiente</option>
+                <option>Pagada parcial</option>
+                <option>Pagada</option>
+                <option>Vencida</option>
+            </select>
+        </Campo>
+        <div class="col-auto">
+            <button class="btn btn-dark">Buscar</button>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Cliente</th>
+                    <th>Venta</th>
+                    <th>Vencimiento</th>
+                    <th class="text-end">Monto</th>
+                    <th class="text-end">Pagado</th>
+                    <th class="text-end">Saldo</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Cuentas)
+                {
+                    <tr>
+                        <td><strong>@c.Cliente</strong></td>
+                        <td class="text-nowrap">
+                            @c.Venta
+                            <div class="small text-muted">@(c.Comprobante ?? "Sin comprobante")</div>
+                        </td>
+                        <td class="text-nowrap @(c.Estado == "VENCIDA" ? "text-danger" : "")">@c.FechaVencimiento.ToString("dd/MM/yyyy")</td>
+                        <td class="text-end text-nowrap">S/ @c.MontoOriginal.ToString("N2")</td>
+                        <td class="text-end text-nowrap">S/ @c.MontoPagado.ToString("N2")</td>
+                        <td class="text-end text-nowrap fw-semibold">S/ @c.SaldoPendiente.ToString("N2")</td>
+                        <td><Estado Texto="@MuestrasCaja.Texto(c.Estado)" /></td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1 text-nowrap">
+                                <a class="btn btn-sm btn-outline-secondary" href="@($"/cobranzas/{c.Id}")">Ver</a>
+                                @if (Rol == "Cajero" && c.SaldoPendiente > 0)
+                                {
+                                    @* RF009: el cobro lo registra el Cajero (CobroBOImpl exige el rol CAJERO) *@
+                                    <a class="btn btn-sm btn-primary" href="@($"/cobranzas/{c.Id}/cobro")">Cobrar</a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
+
+    private static CuentaFila[] Cuentas => MuestrasCaja.Cuentas;
+}

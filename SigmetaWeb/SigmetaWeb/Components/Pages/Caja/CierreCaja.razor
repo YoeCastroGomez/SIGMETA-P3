@@ -1,0 +1,97 @@
+@page "/caja/cierre"
+@inject NavigationManager Nav
+
+<PageTitle>Cierre de caja · SIGMETA</PageTitle>
+
+@* RF010 · Cierre diario (Cajero): compara el monto calculado por el sistema con el declarado y registra la diferencia.
+   Solo visual (Lab 9): Cerrar no registra nada, solo lleva al historial de cierres. *@
+<Encabezado Rf="RF010" Titulo="Cierre de caja"
+            Subtitulo="Solo el cajero que abrió la caja puede cerrarla.">
+    <a class="btn btn-outline-secondary" href="/caja">Volver a la caja</a>
+    <a class="btn btn-outline-secondary" href="/caja/cierres">Historial de cierres</a>
+</Encabezado>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Caja a cerrar</h2>
+    <div class="row">
+        <div class="col-sm-6 col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Caja</div>
+            <div class="fw-semibold">N.º @caja.Id</div>
+        </div>
+        <div class="col-sm-6 col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Apertura</div>
+            <div class="fw-semibold">@caja.FechaApertura.ToString("dd/MM/yyyy HH:mm")</div>
+        </div>
+        <div class="col-sm-6 col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Cajero</div>
+            <div class="fw-semibold">@caja.UsuarioApertura</div>
+        </div>
+        <div class="col-sm-6 col-md-3 mb-3">
+            <div class="small text-muted text-uppercase">Monto inicial</div>
+            <div class="fw-semibold">S/ @caja.MontoInicial.ToString("N2")</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-body pb-0">
+                <h2 class="h6 fw-semibold mb-3">Cálculo del sistema</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <tbody>
+                        <tr><td>Monto inicial</td><td class="text-end">S/ @caja.MontoInicial.ToString("N2")</td></tr>
+                        <tr><td>(+) Cobros al contado</td><td class="text-end">S/ @MuestrasCaja.Total("COBRO_CONTADO").ToString("N2")</td></tr>
+                        <tr><td>(+) Cobros de crédito</td><td class="text-end">S/ @MuestrasCaja.Total("COBRO_CREDITO").ToString("N2")</td></tr>
+                        <tr><td>(+) Ingresos manuales</td><td class="text-end">S/ @MuestrasCaja.Total("INGRESO_MANUAL").ToString("N2")</td></tr>
+                        <tr><td>(−) Egresos manuales</td><td class="text-end">S/ @MuestrasCaja.Total("EGRESO_MANUAL").ToString("N2")</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-body small text-muted">
+                No se consideran las ventas anuladas ni las operaciones revertidas con nota de crédito.
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card card-body mb-3">
+            <h2 class="h6 fw-semibold mb-3">Cierre</h2>
+
+            <Campo Etiqueta="Monto calculado por el sistema (S/)" Id="calculado">
+                <input id="calculado" class="form-control" readonly value="@calculado.ToString("N2")" />
+            </Campo>
+
+            <Campo Etiqueta="Monto declarado (S/)" Id="declarado" Obligatorio="true"
+                   Ayuda="Dinero contado al final de la jornada. No puede ser negativo.">
+                <input id="declarado" type="number" min="0" step="0.01" class="form-control"
+                       @bind="declarado" @bind:event="oninput" />
+            </Campo>
+
+            @* Solo para mostrar: la diferencia real la calcula y guarda el backend (declarado − calculado). *@
+            <Campo Etiqueta="Diferencia (S/)" Id="diferencia" Ayuda="Negativa = faltante · positiva = sobrante.">
+                <input id="diferencia" class="form-control" readonly
+                       value="@(declarado is null ? "—" : (declarado.Value - calculado).ToString("N2"))" />
+            </Campo>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+                <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-outline-secondary" href="/caja">Cancelar</a>
+                    <button class="btn btn-primary" @onclick="Cerrar">Cerrar caja</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly CajaFila caja = MuestrasCaja.CajaActual;
+    private readonly decimal calculado = MuestrasCaja.MontoCalculado;
+    private decimal? declarado;
+
+    // Lab 9: no se registra nada, solo se navega.
+    private void Cerrar() => Nav.NavigateTo("/caja/cierres");
+}

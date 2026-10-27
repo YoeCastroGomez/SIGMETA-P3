@@ -1,0 +1,128 @@
+@page "/caja/cierres"
+
+<PageTitle>Cierres de caja · SIGMETA</PageTitle>
+
+@* RF010 · Historial de cierres. Solo el Administrador puede reabrir una caja cerrada.
+   Reabrir no borra el cierre: lo deja REVERTIDO con fecha, usuario y motivo, y al cerrar de nuevo se crea otro cierre.
+   Solo visual (Lab 9): los filtros no filtran y Confirmar no registra nada. *@
+<Encabezado Rf="RF010" Titulo="Cierres de caja"
+            Subtitulo="Un cierre reabierto queda como revertido; al cerrar de nuevo se registra un cierre nuevo." />
+
+@if (cierreAReabrir is not null)
+{
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Reabrir caja N.º @cierreAReabrir.IdCaja</h2>
+        <div class="row">
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Fecha de cierre</div>
+                <div class="fw-semibold">@cierreAReabrir.FechaCierre.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Responsable</div>
+                <div class="fw-semibold">@cierreAReabrir.UsuarioCierre</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Declarado</div>
+                <div class="fw-semibold">S/ @cierreAReabrir.MontoDeclarado.ToString("N2")</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Diferencia</div>
+                <div class="fw-semibold">S/ @cierreAReabrir.Diferencia.ToString("N2")</div>
+            </div>
+            <div class="col-12">
+                <Campo Etiqueta="Motivo de la reapertura" Id="motivo" Obligatorio="true"
+                       Ayuda="Queda registrado junto con la fecha y el usuario que reabre.">
+                    <textarea id="motivo" class="form-control" rows="2" maxlength="200"></textarea>
+                </Campo>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary" @onclick="() => cierreAReabrir = null">Cancelar</button>
+                @* Lab 9: no se registra nada, solo se cierra el panel. *@
+                <button class="btn btn-primary" @onclick="() => cierreAReabrir = null">Confirmar reapertura</button>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <Campo Etiqueta="Desde" Id="fDesde" Clase="col-sm-6 col-md-3">
+            <input id="fDesde" type="date" class="form-control" />
+        </Campo>
+        <Campo Etiqueta="Hasta" Id="fHasta" Clase="col-sm-6 col-md-3">
+            <input id="fHasta" type="date" class="form-control" />
+        </Campo>
+        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-3">
+            <select id="fEstado" class="form-select">
+                <option>Todos</option>
+                <option>Vigente</option>
+                <option>Revertido</option>
+            </select>
+        </Campo>
+        <div class="col-auto">
+            <button class="btn btn-dark">Buscar</button>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Fecha de cierre</th>
+                    <th>Caja</th>
+                    <th class="text-end">Calculado</th>
+                    <th class="text-end">Declarado</th>
+                    <th class="text-end">Diferencia</th>
+                    <th>Responsable</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in MuestrasCaja.Cierres)
+                {
+                    <tr>
+                        <td class="text-nowrap">@c.FechaCierre.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>N.º @c.IdCaja</td>
+                        <td class="text-end text-nowrap">S/ @c.MontoCalculado.ToString("N2")</td>
+                        <td class="text-end text-nowrap">S/ @c.MontoDeclarado.ToString("N2")</td>
+                        <td class="text-end text-nowrap @(c.Diferencia < 0 ? "text-danger" : "")">S/ @c.Diferencia.ToString("N2")</td>
+                        <td>@c.UsuarioCierre</td>
+                        <td>
+                            <Estado Texto="@MuestrasCaja.Texto(c.Estado)" />
+                            @if (c.Estado == "REVERTIDO")
+                            {
+                                <div class="small text-muted">
+                                    Reabierta el @(c.FechaReapertura?.ToString("dd/MM/yyyy HH:mm")) por @c.UsuarioReapertura
+                                </div>
+                                <div class="small text-muted">@c.MotivoReapertura</div>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1 text-nowrap">
+                                @if (Rol == "Administrador" && c.Estado == "VIGENTE")
+                                {
+                                    @* RF010: solo el Administrador reabre una caja ya cerrada *@
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => cierreAReabrir = c">Reabrir</button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
+
+    // Cierre elegido para reabrir: solo muestra u oculta el panel del motivo.
+    private CierreFila? cierreAReabrir;
+}

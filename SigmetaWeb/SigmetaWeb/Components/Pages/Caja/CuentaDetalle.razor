@@ -1,0 +1,120 @@
+@page "/cobranzas/{Id:int}"
+
+<PageTitle>Detalle de cuenta por cobrar · SIGMETA</PageTitle>
+
+@* RF009 · Detalle de una cuenta por cobrar con sus cobros. Un cobro no se borra: Anular lo marca como anulado
+   (baja lógica) y devuelve su monto al saldo. Solo visual (Lab 9): muestra una cuenta de ejemplo fija y Anular no hace nada. *@
+<Encabezado Rf="RF009" Titulo="Cuenta por cobrar" Subtitulo="@($"{cuenta.Venta} · {cuenta.Cliente}")">
+    <a class="btn btn-outline-secondary" href="/cobranzas">Volver a la lista</a>
+    @if (Rol == "Cajero" && cuenta.SaldoPendiente > 0)
+    {
+        <a class="btn btn-primary" href="@($"/cobranzas/{Id}/cobro")">Registrar cobro</a>
+    }
+</Encabezado>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Datos de la cuenta</h2>
+    <div class="row">
+        <div class="col-sm-6 col-md-4 mb-3">
+            <div class="small text-muted text-uppercase">Cliente</div>
+            <div class="fw-semibold">@cuenta.Cliente</div>
+        </div>
+        <div class="col-sm-6 col-md-4 mb-3">
+            <div class="small text-muted text-uppercase">Venta</div>
+            <div class="fw-semibold">@cuenta.Venta</div>
+        </div>
+        <div class="col-sm-6 col-md-4 mb-3">
+            <div class="small text-muted text-uppercase">Comprobante</div>
+            <div class="fw-semibold">@(cuenta.Comprobante ?? "Sin comprobante")</div>
+        </div>
+        <div class="col-sm-6 col-md-4 mb-3">
+            <div class="small text-muted text-uppercase">Emisión</div>
+            <div class="fw-semibold">@cuenta.FechaEmision.ToString("dd/MM/yyyy")</div>
+        </div>
+        <div class="col-sm-6 col-md-4 mb-3">
+            <div class="small text-muted text-uppercase">Vencimiento</div>
+            <div class="fw-semibold">@cuenta.FechaVencimiento.ToString("dd/MM/yyyy")</div>
+        </div>
+        <div class="col-sm-6 col-md-4 mb-3">
+            <div class="small text-muted text-uppercase">Estado</div>
+            <div><Estado Texto="@MuestrasCaja.Texto(cuenta.Estado)" /></div>
+        </div>
+        <div class="col-sm-4 mb-3">
+            <div class="small text-muted text-uppercase">Monto original</div>
+            <div class="fw-semibold">S/ @cuenta.MontoOriginal.ToString("N2")</div>
+        </div>
+        <div class="col-sm-4 mb-3">
+            <div class="small text-muted text-uppercase">Pagado</div>
+            <div class="fw-semibold">S/ @cuenta.MontoPagado.ToString("N2")</div>
+        </div>
+        <div class="col-sm-4 mb-3">
+            <div class="small text-muted text-uppercase">Saldo pendiente</div>
+            <div class="fw-semibold">S/ @cuenta.SaldoPendiente.ToString("N2")</div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body pb-0">
+        <h2 class="h6 fw-semibold mb-3">Cobros</h2>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Fecha</th>
+                    <th class="text-end">Monto</th>
+                    <th>Medio de pago</th>
+                    <th>Referencia</th>
+                    <th>Registrado por</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in cobros)
+                {
+                    <tr>
+                        <td class="text-nowrap">@c.FechaCobro.ToString("dd/MM/yyyy")</td>
+                        <td class="text-end text-nowrap">S/ @c.Monto.ToString("N2")</td>
+                        <td>@MuestrasCaja.Texto(c.MedioPago)</td>
+                        <td>@(c.Referencia ?? "—")</td>
+                        <td>
+                            @c.UsuarioRegistro
+                            <div class="small text-muted">@c.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</div>
+                        </td>
+                        <td>
+                            <Estado Texto="@(c.Anulado ? "Anulado" : "Vigente")" />
+                            @if (c.Anulado)
+                            {
+                                <div class="small text-muted">@(c.FechaAnulacion?.ToString("dd/MM/yyyy HH:mm"))</div>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1 text-nowrap">
+                                @if (!c.Anulado && (Rol == "Cajero" || Rol == "Administrador"))
+                                {
+                                    @* RF009: Cajero o Administrador anulan un cobro (baja lógica, no se borra) *@
+                                    <button class="btn btn-sm btn-outline-danger">Anular</button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="alert alert-secondary">
+    Para cambiar el monto o el medio de pago de un cobro se anula y se registra uno nuevo.
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
+
+    // Cuenta de ejemplo fija (Lab 9: sin consultas, no se busca por id).
+    private readonly CuentaFila cuenta = MuestrasCaja.Cuentas[0];
+    private CobroFila[] cobros => MuestrasCaja.Cobros.Where(c => c.IdCuenta == cuenta.Id).ToArray();
+}

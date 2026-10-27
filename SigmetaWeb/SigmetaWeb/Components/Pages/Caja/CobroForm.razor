@@ -1,0 +1,79 @@
+@page "/cobranzas/{Id:int}/cobro"
+@inject NavigationManager Nav
+
+<PageTitle>Registrar cobro · SIGMETA</PageTitle>
+
+@* RF009 · Registro de un cobro sobre una cuenta por cobrar (Cajero, con su caja abierta).
+   Solo visual (Lab 9): Guardar no registra, solo vuelve al detalle de la cuenta. *@
+<Encabezado Rf="RF009" Titulo="Registrar cobro" Subtitulo="El cobro entra a la caja abierta del cajero.">
+    <a class="btn btn-outline-secondary" href="@($"/cobranzas/{Id}")">Volver a la cuenta</a>
+</Encabezado>
+
+<div class="card card-body mb-3" style="max-width: 760px;">
+    <div class="row">
+        <div class="col-sm-7 mb-3">
+            <div class="small text-muted text-uppercase">Cliente</div>
+            <div class="fw-semibold">@cuenta.Cliente</div>
+        </div>
+        <div class="col-sm-5 mb-3">
+            <div class="small text-muted text-uppercase">Venta</div>
+            <div class="fw-semibold">@cuenta.Venta</div>
+        </div>
+        <div class="col-sm-7 mb-3">
+            <div class="small text-muted text-uppercase">Vencimiento</div>
+            <div class="fw-semibold">@cuenta.FechaVencimiento.ToString("dd/MM/yyyy")</div>
+        </div>
+        <div class="col-sm-5 mb-3">
+            <div class="small text-muted text-uppercase">Saldo pendiente</div>
+            <div class="fw-semibold">S/ @cuenta.SaldoPendiente.ToString("N2")</div>
+        </div>
+    </div>
+
+    <hr />
+
+    <div class="row">
+        <div class="col-md-6">
+            <Campo Etiqueta="Monto (S/)" Id="monto" Obligatorio="true" Ayuda="Mayor a 0 y no mayor al saldo pendiente.">
+                <input id="monto" type="number" min="0.01" step="0.01" class="form-control" />
+            </Campo>
+        </div>
+        <div class="col-md-6">
+            <Campo Etiqueta="Medio de pago" Id="medio" Obligatorio="true">
+                <select id="medio" class="form-select">
+                    @foreach (var m in MuestrasCaja.MediosPago)
+                    {
+                        <option value="@m">@MuestrasCaja.Texto(m)</option>
+                    }
+                </select>
+            </Campo>
+        </div>
+        <div class="col-md-6">
+            <Campo Etiqueta="Fecha del cobro" Id="fecha" Obligatorio="true" Ayuda="No puede ser futura.">
+                <input id="fecha" type="date" class="form-control" />
+            </Campo>
+        </div>
+        <div class="col-md-6">
+            <Campo Etiqueta="Referencia" Id="referencia" Ayuda="N.º de operación, depósito o cheque.">
+                <input id="referencia" class="form-control" maxlength="50" />
+            </Campo>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="@($"/cobranzas/{Id}")">Cancelar</a>
+            <button class="btn btn-primary" @onclick="Volver">Guardar</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    // Cuenta de ejemplo fija (Lab 9: sin consultas).
+    private readonly CuentaFila cuenta = MuestrasCaja.Cuentas[0];
+
+    // Lab 9: no se registra nada, solo se navega.
+    private void Volver() => Nav.NavigateTo($"/cobranzas/{Id}");
+}

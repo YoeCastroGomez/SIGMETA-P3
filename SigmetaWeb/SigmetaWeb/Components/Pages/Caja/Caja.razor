@@ -1,0 +1,98 @@
+@page "/caja"
+
+<PageTitle>Caja · SIGMETA</PageTitle>
+
+@* RF010 · Apertura de caja y resumen de la jornada (Cajero). Solo visual (Lab 9): Abrir no registra nada,
+   solo cambia lo que se muestra para enseñar las dos vistas. *@
+<Encabezado Rf="RF010" Titulo="Caja"
+            Subtitulo="@(abierta ? "Resumen de la jornada de la caja abierta." : "No tienes una caja abierta. Ábrela para registrar cobros y movimientos.")">
+    @if (abierta)
+    {
+        <a class="btn btn-outline-secondary" href="/caja/movimientos">Movimientos</a>
+        <a class="btn btn-primary" href="/caja/cierre">Cerrar caja</a>
+    }
+</Encabezado>
+
+@if (!abierta)
+{
+    <div class="card card-body mb-3" style="max-width: 560px;">
+        <h2 class="h6 fw-semibold mb-3">Apertura de caja</h2>
+        <div class="row">
+            <div class="col-sm-6 mb-3">
+                <div class="small text-muted text-uppercase">Cajero</div>
+                <div class="fw-semibold">mvargas</div>
+            </div>
+            <div class="col-sm-6 mb-3">
+                <div class="small text-muted text-uppercase">Fecha y hora</div>
+                <div class="fw-semibold">Se toma al abrir</div>
+            </div>
+            <div class="col-12">
+                <Campo Etiqueta="Monto inicial (S/)" Id="montoInicial" Obligatorio="true"
+                       Ayuda="Efectivo con el que empieza la jornada. No puede ser negativo.">
+                    <input id="montoInicial" type="number" min="0" step="0.01" class="form-control" />
+                </Campo>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+            <button class="btn btn-primary" @onclick="() => abierta = true">Abrir caja</button>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Datos de la caja</h2>
+        <div class="row">
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Caja</div>
+                <div class="fw-semibold">N.º @caja.Id</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Apertura</div>
+                <div class="fw-semibold">@caja.FechaApertura.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Cajero</div>
+                <div class="fw-semibold">@caja.UsuarioApertura</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Estado</div>
+                <div><Estado Texto="Abierta" /></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body pb-0">
+            <h2 class="h6 fw-semibold mb-3">Resumen de la jornada</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <tbody>
+                    <tr><td>Monto inicial</td><td class="text-end">S/ @caja.MontoInicial.ToString("N2")</td></tr>
+                    <tr><td>(+) Cobros al contado</td><td class="text-end">S/ @MuestrasCaja.Total("COBRO_CONTADO").ToString("N2")</td></tr>
+                    <tr><td>(+) Cobros de crédito</td><td class="text-end">S/ @MuestrasCaja.Total("COBRO_CREDITO").ToString("N2")</td></tr>
+                    <tr><td>(+) Ingresos manuales</td><td class="text-end">S/ @MuestrasCaja.Total("INGRESO_MANUAL").ToString("N2")</td></tr>
+                    <tr><td>(−) Egresos manuales</td><td class="text-end">S/ @MuestrasCaja.Total("EGRESO_MANUAL").ToString("N2")</td></tr>
+                    <tr class="table-light fw-semibold">
+                        <td>Monto calculado por el sistema</td>
+                        <td class="text-end">S/ @MuestrasCaja.MontoCalculado.ToString("N2")</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="alert alert-secondary">
+        Las ventas anuladas y las operaciones revertidas con nota de crédito no cuentan como cobros válidos en el cierre.
+    </div>
+}
+
+@code {
+    // Solo controla qué vista se muestra (Lab 9: sin consultas).
+    private bool abierta;
+
+    private readonly CajaFila caja = MuestrasCaja.CajaActual;
+}
