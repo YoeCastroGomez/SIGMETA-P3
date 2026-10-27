@@ -1,0 +1,158 @@
+﻿@page "/compras/nueva"
+@page "/compras/editar/{Id:int}"
+@inject NavigationManager Nav
+
+@* RF011 - Registro y edición de compras.
+   Solo presentación visual para el Laboratorio 9. *@
+
+<PageTitle>@Titulo · SIGMETA</PageTitle>
+
+<Encabezado Rf="RF011" Titulo="@Titulo">
+    <a class="btn btn-outline-secondary" href="/compras">
+        Volver a la lista
+    </a>
+</Encabezado>
+
+@* Cabecera de la compra *@
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Datos de la compra</h2>
+
+    <div class="row">
+        <div class="col-md-6">
+            <Campo Etiqueta="Proveedor" Id="proveedor"
+                   Obligatorio="true">
+                <select id="proveedor" class="form-select">
+                    <option value="">Seleccione un proveedor</option>
+                    <option selected="@(!EsNuevo)">
+                        Ferretería Industrial SAC
+                    </option>
+                    <option>Distribuidora Lima SAC</option>
+                </select>
+            </Campo>
+        </div>
+
+        <div class="col-md-3">
+            <Campo Etiqueta="Fecha" Id="fecha"
+                   Obligatorio="true">
+                <input id="fecha" type="date"
+                       class="form-control"
+                       value="2026-10-20" />
+            </Campo>
+        </div>
+
+        <div class="col-md-3">
+            <Campo Etiqueta="Fecha estimada de recepción"
+                   Id="fechaEstimada">
+                <input id="fechaEstimada" type="date"
+                       class="form-control"
+                       value="2026-10-27" />
+            </Campo>
+        </div>
+    </div>
+</div>
+
+@* Detalle de productos *@
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Detalle de compra</h2>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Producto</th>
+                    <th>Unidad de compra</th>
+                    <th>Cantidad</th>
+                    <th>Costo unitario (S/)</th>
+                    <th>Importe (S/)</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr>
+                    <td>
+                        <select class="form-select">
+                            <option selected>Taladro industrial</option>
+                            <option>Martillo</option>
+                            <option>Tornillos</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="form-select">
+                            <option>Unidad</option>
+                            <option>Caja</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number"
+                               class="form-control"
+                               min="0.001" step="0.001"
+                               value="2" />
+                    </td>
+                    <td>
+                        <input type="number"
+                               class="form-control"
+                               min="0" step="0.01"
+                               value="250" />
+                    </td>
+                    <td class="text-end">S/ 500.00</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div>
+        <button class="btn btn-outline-secondary">
+            Agregar producto
+        </button>
+    </div>
+</div>
+
+@* Totales de ejemplo *@
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Resumen de compra</h2>
+
+    <div class="row justify-content-end">
+        <div class="col-md-4">
+            <div class="d-flex justify-content-between mb-2">
+                <span>Subtotal:</span>
+                <strong>S/ 500.00</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>IGV (18 %):</span>
+                <strong>S/ 90.00</strong>
+            </div>
+            <hr />
+            <div class="d-flex justify-content-between">
+                <strong>Total:</strong>
+                <strong>S/ 590.00</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Acciones: solo navegación, sin registrar datos *@
+<div class="d-flex justify-content-end gap-2">
+    <a class="btn btn-outline-secondary" href="/compras">
+        Cancelar
+    </a>
+
+    <button class="btn btn-primary" @onclick="Volver">
+        Guardar
+    </button>
+</div>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private bool EsNuevo => Id is null;
+
+    private string Titulo =>
+        EsNuevo ? "Nueva compra" : "Editar compra";
+
+    // Lab 9: Guardar no registra información.
+    private void Volver()
+    {
+        Nav.NavigateTo("/compras");
+    }
+}

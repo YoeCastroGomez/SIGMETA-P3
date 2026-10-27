@@ -1,0 +1,84 @@
+﻿@page "/almacen/ajuste"
+@inject NavigationManager Nav
+
+@* RF012 - Ajuste por conteo físico.
+   Solo presentación visual para el Laboratorio 9. *@
+
+<PageTitle>Ajuste por conteo físico · SIGMETA</PageTitle>
+
+<Encabezado Rf="RF012"
+            Titulo="Ajuste por conteo físico"
+            Subtitulo="Registrar visualmente la cantidad encontrada durante el conteo de inventario.">
+    <a class="btn btn-outline-secondary"
+       href="/almacen/movimientos">
+        Ver movimientos
+    </a>
+</Encabezado>
+
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3">Datos del ajuste</h2>
+
+    <div class="row">
+        <div class="col-md-6">
+            <Campo Etiqueta="Producto" Id="producto"
+                   Obligatorio="true">
+                <select id="producto" class="form-select">
+                    <option value="">Seleccione un producto</option>
+                    <option>Taladro industrial</option>
+                    <option>Martillo de acero</option>
+                    <option>Tornillos</option>
+                </select>
+            </Campo>
+        </div>
+
+        <div class="col-md-6">
+            <Campo Etiqueta="Cantidad contada" Id="cantidad"
+                   Obligatorio="true"
+                   Ayuda="Cantidad física encontrada en el almacén.">
+                <input id="cantidad"
+                       type="number"
+                       class="form-control"
+                       min="0"
+                       step="0.001"
+                       placeholder="Ingrese la cantidad contada" />
+            </Campo>
+        </div>
+
+        <div class="col-12">
+            <Campo Etiqueta="Motivo del ajuste" Id="motivo"
+                   Obligatorio="true">
+                <textarea id="motivo"
+                          class="form-control"
+                          rows="3"
+                          maxlength="250"
+                          placeholder="Explique el motivo del ajuste"></textarea>
+            </Campo>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+        <span class="small text-muted">
+            <span class="text-danger">*</span> Campo obligatorio
+        </span>
+
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary"
+               href="/almacen/movimientos">
+                Cancelar
+            </a>
+
+            <button class="btn btn-primary"
+                    @onclick="Volver">
+                Registrar ajuste
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Lab 9: el ajuste no modifica el inventario.
+    private void Volver()
+    {
+        Nav.NavigateTo("/almacen/movimientos");
+    }
+}
