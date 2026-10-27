@@ -145,6 +145,9 @@
 </div>
 
 @code {
+    // Llega desde el botón "Nota de crédito" del comprobante: /notas-credito/nueva?comprobante=ID
+    [SupplyParameterFromQuery(Name = "comprobante")] public int? ComprobanteSolicitado { get; set; }
+
     // Estas variables solo controlan lo que se muestra (Lab 9: sin consultas).
     private int idComprobante = MuestrasVentas.Comprobantes[0].Id;
     private decimal[] devolver = new decimal[LineasDe(MuestrasVentas.Comprobantes[0]).Length];
@@ -157,6 +160,15 @@
         {
             idComprobante = value;
             devolver = new decimal[Venta.Detalles.Length];
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        // Si viene desde un comprobante existente, se muestra ya seleccionado (y se reinician las cantidades)
+        if (ComprobanteSolicitado is int id && MuestrasVentas.Comprobantes.Any(c => c.Id == id))
+        {
+            IdComprobante = id;
         }
     }
 

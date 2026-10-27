@@ -5,7 +5,11 @@
 @* RF007 · Órdenes de compra de clientes (Vendedor). Solo visual (Lab 9): filtros y botones no consultan nada. *@
 <Encabezado Rf="RF007" Titulo="Órdenes de compra de clientes"
             Subtitulo="Cada orden se genera desde una cotización aceptada y toma su detalle sin volver a digitarlo.">
-    <a class="btn btn-primary" href="/ordenes/nueva">Nueva orden</a>
+    @if (Rol == "Vendedor")
+    {
+        @* RF007: la orden la genera el Vendedor (OrdenCompraClienteBOImpl.generarDesdeCotizacion exige el rol VENDEDOR) *@
+        <a class="btn btn-primary" href="/ordenes/nueva">Nueva orden</a>
+    }
 </Encabezado>
 
 <div class="card card-body mb-3">
@@ -56,13 +60,15 @@
                         <td><Estado Texto="@MuestrasVentas.Texto(o.Estado)" /></td>
                         <td class="text-end">
                             <div class="d-inline-flex gap-1 text-nowrap">
-                                @if (o.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL")
+                                @if (Rol == "Vendedor" && (o.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL"))
                                 {
-                                    @* RF008: la venta se registra a partir de una orden pendiente o atendida parcialmente *@
-                                    <a class="btn btn-sm btn-outline-secondary" href="/ventas/nueva">Registrar venta</a>
+                                    @* RF008: la venta la registra el Vendedor a partir de una orden pendiente o atendida parcialmente *@
+                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/ventas/nueva?orden={o.Id}")">Registrar venta</a>
                                 }
-                                @if (o.Estado == "PENDIENTE")
+                                @if ((Rol is "Vendedor" or "Administrador") && o.Estado == "PENDIENTE"
+                                     && !MuestrasVentas.OrdenTieneVentasVigentes(o.Numero))
                                 {
+                                    @* OrdenCompraClienteBOImpl.anular: Vendedor o Administrador, solo PENDIENTE y sin ventas vigentes *@
                                     <button class="btn btn-sm btn-outline-danger">Anular</button>
                                 }
                             </div>
@@ -73,3 +79,7 @@
         </table>
     </div>
 </div>
+
+@code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
+}

@@ -1,5 +1,6 @@
 @page "/ventas/nueva"
 @inject NavigationManager Nav
+@using DatosClientes = SigmetaWeb.Components.Pages.Clientes.MuestrasClientes
 
 <PageTitle>Nueva venta · SIGMETA</PageTitle>
 
@@ -53,10 +54,10 @@
                 <Campo Etiqueta="Cliente" Id="cliente" Obligatorio="true"
                        Ayuda="Solo clientes activos. Busque por documento, razón social o nombre.">
                     <select id="cliente" class="form-select">
-                        <option>Constructora Andina S.A.C. · RUC 20512345678</option>
-                        <option>Metalmecánica Chosica E.I.R.L. · RUC 20601122334</option>
-                        <option>Pedro Huamaní Flores · DNI 45678912</option>
-                        <option>Andrea Morales Pérez · CE 001234567</option>
+                        @foreach (var c in ClientesActivos)
+                        {
+                            <option value="@c.Id">@c.NombreMostrado · @DatosClientes.Texto(c.TipoDocumento) @c.NumeroDocumento</option>
+                        }
                     </select>
                 </Campo>
             </div>
@@ -134,6 +135,9 @@
 </div>
 
 @code {
+    // Llega desde "Registrar venta" en la lista de órdenes: /ventas/nueva?orden=ID
+    [SupplyParameterFromQuery(Name = "orden")] public int? OrdenSolicitada { get; set; }
+
     // Estas variables solo controlan qué se muestra (Lab 9: sin consultas).
     private bool desdeOrden = true;
     private string condicionPago = "CONTADO";
@@ -146,6 +150,20 @@
 
     // Líneas de ejemplo de una venta directa de mostrador
     private static readonly LineaFila[] LineasDirecta = MuestrasVentas.Ventas[2].Detalles;
+
+    // RF003 / VentaBOImpl.registrar: solo clientes activos (mismos datos que la lista de clientes)
+    private static readonly global::SigmetaWeb.Components.Pages.Clientes.ClienteFila[] ClientesActivos =
+        DatosClientes.Clientes.Where(c => c.Activo).ToArray();
+
+    protected override void OnInitialized()
+    {
+        // Si viene de una orden abierta, se muestra esa orden ya seleccionada
+        if (OrdenSolicitada is int id && OrdenesAbiertas.Any(o => o.Id == id))
+        {
+            idOrden = id;
+            desdeOrden = true;
+        }
+    }
 
     // Lab 9: no se registra nada, solo se navega.
     private void Volver() => Nav.NavigateTo("/ventas");

@@ -56,7 +56,11 @@
                         </td>
                         <td><Estado Texto="@MuestrasVentas.Texto(v.Estado)" /></td>
                         <td class="text-end">
-                            <a class="btn btn-sm btn-primary" href="@($"/despachos/{v.Id}")">Despachar</a>
+                            @if (EsAlmacenero)
+                            {
+                                @* DespachoBOImpl.registrar exige el rol ALMACENERO *@
+                                <a class="btn btn-sm btn-primary" href="@($"/despachos/{v.Id}")">Despachar</a>
+                            }
                         </td>
                     </tr>
                 }
@@ -91,7 +95,7 @@
                         <td>@(d.Transportista ?? "—")</td>
                         <td><Estado Texto="@(d.Anulado ? "Anulada" : "Vigente")" /></td>
                         <td class="text-end">
-                            @if (!d.Anulado)
+                            @if (EsAlmacenero && !d.Anulado)
                             {
                                 @* El despacho no se borra: anularlo repone el stock con un movimiento compensatorio *@
                                 <button class="btn btn-sm btn-outline-danger">Anular</button>
@@ -105,6 +109,11 @@
 </div>
 
 @code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
+
+    // DespachoBOImpl: registrar y anular reciben al Almacenero responsable
+    private bool EsAlmacenero => Rol == "Almacenero";
+
     // Ventas con líneas pendientes de despacho (Lab 9: datos de ejemplo)
     private static readonly VentaFila[] PorDespachar =
         MuestrasVentas.Ventas.Where(v => v.Estado is "REGISTRADA" or "DESPACHADA_PARCIAL").ToArray();

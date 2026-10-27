@@ -116,6 +116,29 @@ public static class MuestrasCatalogo
             {
                 new(1, "INT-006 · Fierro Corrugado", 20m, 32.00m, 0m, 640.00m),
             }),
+
+        // Agregadas por Sebastian (rama lab09_sebastian_correcciones) para el flujo de Ventas:
+        // COT-0006 y COT-0007 ya tienen orden de compra de cliente; COT-0008 todavía no. Pendiente revisar con Claudia.
+        new(6, "COT-2026-0006", "Constructora Andina S.A.C.", "25/09/2026", "09/10/2026", "ACEPTADA",
+            "Entrega en almacén del cliente, Ate.", 1080.00m, 194.40m, 1274.40m,
+            new LineaCotizacionFila[]
+            {
+                new(1, "INT-005 · Bolsa Cemento Sol", 30m, 28.50m, 25.00m, 830.00m),
+                new(2, "INT-003 · Cable Mellizo 2x14", 100m, 2.50m, 0m, 250.00m),
+            }),
+        new(7, "COT-2026-0007", "Metalmecánica Chosica E.I.R.L.", "05/10/2026", "19/10/2026", "ACEPTADA",
+            null, 210.00m, 37.80m, 247.80m,
+            new LineaCotizacionFila[]
+            {
+                new(1, "INT-002 · Alicate de Presión", 6m, 35.00m, 0m, 210.00m),
+            }),
+        new(8, "COT-2026-0008", "Constructora Andina S.A.C.", "20/10/2026", "03/11/2026", "ACEPTADA",
+            null, 790.00m, 142.20m, 932.20m,
+            new LineaCotizacionFila[]
+            {
+                new(1, "INT-004 · Enchufe Mennekes", 4m, 85.00m, 0m, 340.00m),
+                new(2, "INT-001 · Martillo de Acero", 10m, 45.00m, 0m, 450.00m),
+            }),
     };
 
     // Texto que se muestra en pantalla para los valores de los enums del Java.

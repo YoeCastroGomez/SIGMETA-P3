@@ -88,9 +88,9 @@
                                 {
                                     <a class="btn btn-sm btn-outline-secondary" href="@($"/ventas/{v.Id}/comprobante")">Comprobante</a>
                                 }
-                                @if (v.Estado == "REGISTRADA" && v.Comprobante is null)
+                                @if ((Rol is "Vendedor" or "Administrador") && v.Estado == "REGISTRADA" && v.Comprobante is null)
                                 {
-                                    @* RF008: solo se anula una venta sin comprobante vigente ni despachos *@
+                                    @* RF008: VentaBOImpl.anular acepta Vendedor o Administrador; solo una venta sin comprobante vigente ni despachos *@
                                     <button class="btn btn-sm btn-outline-danger">Anular</button>
                                 }
                             </div>

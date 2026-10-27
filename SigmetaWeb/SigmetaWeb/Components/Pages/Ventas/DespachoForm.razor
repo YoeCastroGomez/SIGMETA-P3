@@ -86,13 +86,18 @@
         <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
         <div class="d-flex gap-2">
             <a class="btn btn-outline-secondary" href="/despachos">Cancelar</a>
-            <button class="btn btn-primary" @onclick="Volver">Registrar despacho</button>
+            @if (Rol == "Almacenero")
+            {
+                @* DespachoBOImpl.registrar exige el rol ALMACENERO *@
+                <button class="btn btn-primary" @onclick="Volver">Registrar despacho</button>
+            }
         </div>
     </div>
 </div>
 
 @code {
     [Parameter] public int Id { get; set; }
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
 
     // Lab 9: sin consultas; si el id no existe se muestra la primera venta de ejemplo.
     private VentaFila venta => MuestrasVentas.Venta(Id) ?? MuestrasVentas.Ventas[0];
