@@ -52,7 +52,7 @@
                     <tr>
                         <td>PROD-001</td>
                         <td>Taladro industrial</td>
-                        <td>30</td>
+                        <td>25</td>
                         <td class="text-end">
                             <a class="btn btn-sm btn-outline-secondary"
                                href="/almacen/kardex/1">
@@ -70,6 +70,14 @@
                                href="/almacen/kardex/2">
                                 Ver Kardex
                             </a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>PROD-003</td>
+                        <td>Caja de tornillos</td>
+                        <td>8</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" href="/almacen/kardex/3">Ver Kardex</a>
                         </td>
                     </tr>
                 </tbody>
@@ -115,32 +123,22 @@ else
                 </thead>
 
                 <tbody>
-                    <tr>
-                        <td>20/10/2026</td>
-                        <td><Estado Texto="ENTRADA" /></td>
-                        <td>20</td>
-                        <td>—</td>
-                        <td>20</td>
-                        <td>COMP-001</td>
-                    </tr>
-
-                    <tr>
-                        <td>23/10/2026</td>
-                        <td><Estado Texto="SALIDA" /></td>
-                        <td>—</td>
-                        <td>5</td>
-                        <td>15</td>
-                        <td>VENT-001</td>
-                    </tr>
-
-                    <tr>
-                        <td>26/10/2026</td>
-                        <td><Estado Texto="ENTRADA" /></td>
-                        <td>10</td>
-                        <td>—</td>
-                        <td>25</td>
-                        <td>REC-002</td>
-                    </tr>
+                    @if (Id == 2)
+                    {
+                        <tr><td>20/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>20</td><td>—</td><td>20</td><td>COMP-002</td></tr>
+                        <tr><td>23/10/2026</td><td><Estado Texto="SALIDA" /></td><td>—</td><td>5</td><td>15</td><td>VENT-002</td></tr>
+                    }
+                    else if (Id == 3)
+                    {
+                        <tr><td>21/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>12</td><td>—</td><td>12</td><td>COMP-003</td></tr>
+                        <tr><td>24/10/2026</td><td><Estado Texto="SALIDA" /></td><td>—</td><td>4</td><td>8</td><td>VENT-003</td></tr>
+                    }
+                    else
+                    {
+                        <tr><td>20/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>20</td><td>—</td><td>20</td><td>COMP-001</td></tr>
+                        <tr><td>23/10/2026</td><td><Estado Texto="SALIDA" /></td><td>—</td><td>5</td><td>15</td><td>VENT-001</td></tr>
+                        <tr><td>26/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>10</td><td>—</td><td>25</td><td>REC-002</td></tr>
+                    }
                 </tbody>
             </table>
         </div>
@@ -158,5 +156,5 @@ else
 
     // Datos ficticios para la demostración del Lab 9.
     private string NombreProducto =>
-        Id == 2 ? "Martillo de acero" : "Taladro industrial";
+        Id == 2 ? "Martillo de acero" : Id == 3 ? "Caja de tornillos" : "Taladro industrial";
 }
