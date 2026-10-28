@@ -1,5 +1,5 @@
 @using SigmetaWeb.Components.Pages.Catalogo
-﻿@page "/almacen/kardex"
+@page "/almacen/kardex"
 @page "/almacen/kardex/{Id:int}"
 
 @* RF012 - Kardex de inventario.
@@ -111,9 +111,13 @@ else
                         <tr><td>21/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>49</td><td>—</td><td>49</td><td>INV-INICIAL-INT-002</td></tr>
                         <tr><td>26/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>1</td><td>—</td><td>50</td><td><a href="/compras/editar/2" title="Consultar compra COMP-002">REC-COMP-002</a></td></tr>
                     }
+                    else if (Id == 3 || Id == 4 || Id == 5)
+                    {
+                        <tr><td>19/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>@ProductoSeleccionado?.StockActual</td><td>—</td><td>@ProductoSeleccionado?.StockActual</td><td>INV-INICIAL-@ProductoSeleccionado?.CodigoInterno</td></tr>
+                    }
                     else
                     {
-                        <tr><td colspan="6" class="text-center text-muted py-4">Historial de ejemplo no disponible para este producto.</td></tr>
+                        <tr><td colspan="6" class="text-center text-muted py-4">Producto no encontrado.</td></tr>
                     }
                 </tbody>
             </table>
@@ -131,6 +135,8 @@ else
     public int? Id { get; set; }
 
     // Datos ficticios para la demostración del Lab 9.
-    private string NombreProducto =>
-        MuestrasCatalogo.Productos.FirstOrDefault(p => p.Id == Id)?.Nombre ?? "Producto no encontrado";
+    private ProductoFila? ProductoSeleccionado =>
+        MuestrasCatalogo.Productos.FirstOrDefault(p => p.Id == Id);
+
+    private string NombreProducto => ProductoSeleccionado?.Nombre ?? "Producto no encontrado";
 }
