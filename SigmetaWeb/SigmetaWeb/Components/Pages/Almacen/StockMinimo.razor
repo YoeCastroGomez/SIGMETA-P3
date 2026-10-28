@@ -1,5 +1,5 @@
 @using SigmetaWeb.Components.Pages.Catalogo
-﻿@page "/almacen/stock-minimo"
+@page "/almacen/stock-minimo"
 
 @* RF012 - Consulta de productos con stock mínimo.
    Solo presentación visual para el Laboratorio 9. *@
@@ -21,8 +21,8 @@
                 <tr>
                     <th>Código</th>
                     <th>Producto</th>
-                    <th>Stock actual</th>
-                    <th>Stock mínimo</th>
+                    <th class="text-end">Stock actual</th>
+                    <th class="text-end">Stock mínimo</th>
                     <th>Estado</th>
                     <th class="text-end">Acciones</th>
                 </tr>
@@ -34,11 +34,24 @@
                     <tr>
                         <td>@producto.CodigoInterno</td>
                         <td>@producto.Nombre</td>
-                        <td>@producto.StockActual</td>
-                        <td>@producto.StockMinimo</td>
-                        <td><span class="badge bg-danger">Bajo el mínimo</span></td>
+                        <td class="text-end">@producto.StockActual.ToString("0.###")</td>
+                        <td class="text-end">@producto.StockMinimo.ToString("0.###")</td>
+                        <td>
+                            @if (producto.StockActual < producto.StockMinimo)
+                            {
+                                <span class="badge bg-danger">Bajo el mínimo</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">En el mínimo</span>
+                            }
+                        </td>
                         <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="@($"/almacen/kardex/{producto.Id}")">Ver Kardex</a></td>
                     </tr>
+                }
+                @if (!MuestrasCatalogo.Productos.Any(p => p.Activo && p.StockActual <= p.StockMinimo))
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-4">No hay productos activos con stock mínimo o inferior.</td></tr>
                 }
             </tbody>
         </table>
