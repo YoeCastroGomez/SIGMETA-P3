@@ -1,6 +1,5 @@
 @using SigmetaWeb.Components.Pages.Catalogo
-@using SigmetaWeb.Components.Pages.Catalogo
-﻿@page "/compras/nueva"
+@page "/compras/nueva"
 @page "/compras/editar/{Id:int}"
 @inject NavigationManager Nav
 
@@ -18,6 +17,13 @@
 @* Cabecera de la compra *@
 <div class="card card-body mb-3">
     <h2 class="h6 fw-semibold mb-3">Datos de la compra</h2>
+    @if (!EsNuevo)
+    {
+        <div class="d-flex flex-wrap gap-3 mb-3">
+            <span><strong>Número:</strong> @NumeroCompra</span>
+            <span><strong>Estado:</strong> <Estado Texto="@EstadoCompra" /></span>
+        </div>
+    }
 
     <div class="row">
         <div class="col-md-6">
@@ -27,7 +33,7 @@
                     <option value="">Seleccione un proveedor</option>
                     @foreach (var proveedor in MuestrasCatalogo.Proveedores.Where(p => p.Activo))
                     {
-                        <option value="@proveedor.Id" selected="@(proveedor.Id == (Id == 2 ? 2 : 1))">@proveedor.RazonSocial</option>
+                        <option value="@proveedor.Id" selected="@(Id.HasValue && proveedor.Id == Id.Value)">@proveedor.RazonSocial</option>
                     }
                 </select>
             </Campo>
@@ -73,9 +79,13 @@
                 <tr>
                     <td>
                         <select class="form-select">
+                            @if (EsNuevo)
+                            {
+                                <option value="" selected>Seleccione un producto</option>
+                            }
                             @foreach (var producto in MuestrasCatalogo.Productos.Where(p => p.Activo))
                             {
-                                <option value="@producto.Id" selected="@(producto.Id == (Id == 2 ? 2 : 1))">@producto.CodigoInterno · @producto.Nombre</option>
+                                <option value="@producto.Id" selected="@(Id.HasValue && producto.Id == Id.Value)">@producto.CodigoInterno · @producto.Nombre</option>
                             }
                         </select>
                     </td>
@@ -152,6 +162,10 @@
 
     private string Titulo =>
         EsNuevo ? "Nueva compra" : "Editar compra";
+
+    // Los datos de COMP-001 y COMP-002 coinciden con el listado y la recepción.
+    private string NumeroCompra => $"COMP-{Id:000}";
+    private string EstadoCompra => Id == 2 ? "RECIBIDA_PARCIAL" : "REGISTRADA";
 
     // Muestras coherentes con Compras y Recepciones, sin acceso a la BD.
     private string FechaCompra => Id == 2 ? "2026-10-22" : "2026-10-20";
