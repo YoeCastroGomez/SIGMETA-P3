@@ -50,37 +50,15 @@
                 </thead>
 
                 <tbody>
-                    <tr>
-                        <td>@MuestrasCatalogo.Productos[0].CodigoInterno</td>
-                        <td>@MuestrasCatalogo.Productos[0].Nombre</td>
-                        <td>@MuestrasCatalogo.Productos[0].StockActual</td>
-                        <td class="text-end">
-                            <a class="btn btn-sm btn-outline-secondary"
-                               href="/almacen/kardex/1">
-                                Ver Kardex
-                            </a>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>@MuestrasCatalogo.Productos[1].CodigoInterno</td>
-                        <td>@MuestrasCatalogo.Productos[1].Nombre</td>
-                        <td>@MuestrasCatalogo.Productos[1].StockActual</td>
-                        <td class="text-end">
-                            <a class="btn btn-sm btn-outline-secondary"
-                               href="/almacen/kardex/2">
-                                Ver Kardex
-                            </a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>@MuestrasCatalogo.Productos[4].CodigoInterno</td>
-                        <td>@MuestrasCatalogo.Productos[4].Nombre</td>
-                        <td>@MuestrasCatalogo.Productos[4].StockActual</td>
-                        <td class="text-end">
-                            <a class="btn btn-sm btn-outline-secondary" href="/almacen/kardex/3">Ver Kardex</a>
-                        </td>
-                    </tr>
+                    @foreach (var producto in MuestrasCatalogo.Productos.Where(p => p.Activo))
+                    {
+                        <tr>
+                            <td>@producto.CodigoInterno</td>
+                            <td>@producto.Nombre</td>
+                            <td>@producto.StockActual</td>
+                            <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="@($"/almacen/kardex/{producto.Id}")">Ver Kardex</a></td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>
@@ -124,21 +102,20 @@ else
                 </thead>
 
                 <tbody>
-                    @if (Id == 2)
-                    {
-                        <tr><td>20/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>54</td><td>—</td><td>54</td><td>COMP-002</td></tr>
-                        <tr><td>23/10/2026</td><td><Estado Texto="SALIDA" /></td><td>—</td><td>4</td><td>50</td><td>VENT-002</td></tr>
-                    }
-                    else if (Id == 3)
-                    {
-                        <tr><td>21/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>45</td><td>—</td><td>45</td><td>COMP-003</td></tr>
-                        <tr><td>24/10/2026</td><td><Estado Texto="SALIDA" /></td><td>—</td><td>5</td><td>40</td><td>VENT-003</td></tr>
-                    }
-                    else
+                    @if (Id == 1)
                     {
                         <tr><td>20/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>95</td><td>—</td><td>95</td><td>COMP-001</td></tr>
                         <tr><td>23/10/2026</td><td><Estado Texto="SALIDA" /></td><td>—</td><td>5</td><td>90</td><td>VENT-001</td></tr>
                         <tr><td>26/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>10</td><td>—</td><td>100</td><td>REC-002</td></tr>
+                    }
+                    else if (Id == 2)
+                    {
+                        <tr><td>20/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>54</td><td>—</td><td>54</td><td>COMP-002</td></tr>
+                        <tr><td>23/10/2026</td><td><Estado Texto="SALIDA" /></td><td>—</td><td>4</td><td>50</td><td>VENT-002</td></tr>
+                    }
+                    else
+                    {
+                        <tr><td colspan="6" class="text-center text-muted py-4">Historial de ejemplo no disponible para este producto.</td></tr>
                     }
                 </tbody>
             </table>
@@ -157,5 +134,5 @@ else
 
     // Datos ficticios para la demostración del Lab 9.
     private string NombreProducto =>
-        Id == 2 ? MuestrasCatalogo.Productos[1].Nombre : Id == 3 ? MuestrasCatalogo.Productos[4].Nombre : MuestrasCatalogo.Productos[0].Nombre;
+        MuestrasCatalogo.Productos.FirstOrDefault(p => p.Id == Id)?.Nombre ?? "Producto no encontrado";
 }
