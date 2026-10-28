@@ -1,6 +1,5 @@
 @using SigmetaWeb.Components.Pages.Catalogo
-@using SigmetaWeb.Components.Pages.Catalogo
-﻿@page "/compras/{Id:int}/recepcion"
+@page "/compras/{Id:int}/recepcion"
 @inject NavigationManager Nav
 
 @* RF012 - Recepción de compra.
@@ -60,7 +59,7 @@
                 <input id="fechaRecepcion"
                        type="date"
                        class="form-control"
-                       value="@(Id == 2 ? "2026-10-26" : "2026-10-27")" />
+                       value="2026-10-27" min="@FechaMinimaRecepcion" />
             </Campo>
         </div>
 
@@ -78,6 +77,14 @@
 </div>
 
 <div class="card card-body mb-3">
+    @if (Id == 2)
+    {
+        <div class="alert alert-info mb-3">Recepción anterior: 1 unidad del alicate de presión recibida el 26/10/2026 (REC-COMP-002). Quedan 3 unidades por recibir. El historial ya está reflejado en Kardex.</div>
+    }
+    else
+    {
+        <div class="alert alert-secondary mb-3">Esta compra todavía no tiene recepciones registradas. No existe una entrada asociada en Kardex.</div>
+    }
     <h2 class="h6 fw-semibold mb-3">
         Productos de la compra
     </h2>
@@ -154,6 +161,9 @@
         Id == 2
             ? "RECIBIDA_PARCIAL"
             : "REGISTRADA";
+
+    // No permitir una fecha de recepción anterior a la compra ni a una recepción ya realizada.
+    private string FechaMinimaRecepcion => Id == 2 ? "2026-10-27" : "2026-10-20";
 
     // Lab 9: no se registra ninguna recepción.
     private void Volver()
