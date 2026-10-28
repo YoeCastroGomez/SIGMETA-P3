@@ -1,5 +1,5 @@
 @using SigmetaWeb.Components.Pages.Catalogo
-﻿@page "/recepciones"
+@page "/recepciones"
 
 @* RF012 - Compras pendientes de recepción.
    Solo presentación visual para el Laboratorio 9. *@
@@ -8,7 +8,7 @@
 
 <Encabezado Rf="RF012"
             Titulo="Compras por recibir"
-            Subtitulo="Compras con mercadería pendiente de recepción." />
+            Subtitulo="COMP-001: sin recepciones; COMP-002: una unidad recibida el 26/10/2026 y tres pendientes." />
 
 <div class="card mb-3">
     <div class="table-responsive">
@@ -19,6 +19,9 @@
                     <th>Proveedor</th>
                     <th>Fecha</th>
                     <th>Estado</th>
+                    <th class="text-end">Pedido</th>
+                    <th class="text-end">Recibido</th>
+                    <th class="text-end">Pendiente</th>
                     <th class="text-end">Acciones</th>
                 </tr>
             </thead>
@@ -29,6 +32,9 @@
                     <td>@MuestrasCatalogo.Proveedores[0].RazonSocial</td>
                     <td>20/10/2026</td>
                     <td><Estado Texto="REGISTRADA" /></td>
+                    <td class="text-end">2</td>
+                    <td class="text-end">0</td>
+                    <td class="text-end">2</td>
                     <td class="text-end">
                         <a class="btn btn-sm btn-primary"
                            href="/compras/1/recepcion">
@@ -42,6 +48,9 @@
                     <td>@MuestrasCatalogo.Proveedores[1].RazonSocial</td>
                     <td>22/10/2026</td>
                     <td><Estado Texto="RECIBIDA_PARCIAL" /></td>
+                    <td class="text-end">4</td>
+                    <td class="text-end">1</td>
+                    <td class="text-end">3</td>
                     <td class="text-end">
                         <a class="btn btn-sm btn-primary"
                            href="/compras/2/recepcion">
