@@ -1,3 +1,4 @@
+@using SigmetaWeb.Components.Pages.Catalogo
 ﻿@page "/almacen/kardex"
 @page "/almacen/kardex/{Id:int}"
 
@@ -50,9 +51,9 @@
 
                 <tbody>
                     <tr>
-                        <td>PROD-001</td>
-                        <td>Taladro industrial</td>
-                        <td>25</td>
+                        <td>@MuestrasCatalogo.Productos[0].CodigoInterno</td>
+                        <td>@MuestrasCatalogo.Productos[0].Nombre</td>
+                        <td>@MuestrasCatalogo.Productos[0].StockActual</td>
                         <td class="text-end">
                             <a class="btn btn-sm btn-outline-secondary"
                                href="/almacen/kardex/1">
@@ -62,9 +63,9 @@
                     </tr>
 
                     <tr>
-                        <td>PROD-002</td>
-                        <td>Martillo de acero</td>
-                        <td>15</td>
+                        <td>@MuestrasCatalogo.Productos[1].CodigoInterno</td>
+                        <td>@MuestrasCatalogo.Productos[1].Nombre</td>
+                        <td>@MuestrasCatalogo.Productos[1].StockActual</td>
                         <td class="text-end">
                             <a class="btn btn-sm btn-outline-secondary"
                                href="/almacen/kardex/2">
@@ -73,9 +74,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>PROD-003</td>
-                        <td>Caja de tornillos</td>
-                        <td>8</td>
+                        <td>@MuestrasCatalogo.Productos[4].CodigoInterno</td>
+                        <td>@MuestrasCatalogo.Productos[4].Nombre</td>
+                        <td>@MuestrasCatalogo.Productos[4].StockActual</td>
                         <td class="text-end">
                             <a class="btn btn-sm btn-outline-secondary" href="/almacen/kardex/3">Ver Kardex</a>
                         </td>
@@ -125,19 +126,19 @@ else
                 <tbody>
                     @if (Id == 2)
                     {
-                        <tr><td>20/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>20</td><td>—</td><td>20</td><td>COMP-002</td></tr>
-                        <tr><td>23/10/2026</td><td><Estado Texto="SALIDA" /></td><td>—</td><td>5</td><td>15</td><td>VENT-002</td></tr>
+                        <tr><td>20/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>54</td><td>—</td><td>54</td><td>COMP-002</td></tr>
+                        <tr><td>23/10/2026</td><td><Estado Texto="SALIDA" /></td><td>—</td><td>4</td><td>50</td><td>VENT-002</td></tr>
                     }
                     else if (Id == 3)
                     {
-                        <tr><td>21/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>12</td><td>—</td><td>12</td><td>COMP-003</td></tr>
-                        <tr><td>24/10/2026</td><td><Estado Texto="SALIDA" /></td><td>—</td><td>4</td><td>8</td><td>VENT-003</td></tr>
+                        <tr><td>21/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>45</td><td>—</td><td>45</td><td>COMP-003</td></tr>
+                        <tr><td>24/10/2026</td><td><Estado Texto="SALIDA" /></td><td>—</td><td>5</td><td>40</td><td>VENT-003</td></tr>
                     }
                     else
                     {
-                        <tr><td>20/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>20</td><td>—</td><td>20</td><td>COMP-001</td></tr>
-                        <tr><td>23/10/2026</td><td><Estado Texto="SALIDA" /></td><td>—</td><td>5</td><td>15</td><td>VENT-001</td></tr>
-                        <tr><td>26/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>10</td><td>—</td><td>25</td><td>REC-002</td></tr>
+                        <tr><td>20/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>95</td><td>—</td><td>95</td><td>COMP-001</td></tr>
+                        <tr><td>23/10/2026</td><td><Estado Texto="SALIDA" /></td><td>—</td><td>5</td><td>90</td><td>VENT-001</td></tr>
+                        <tr><td>26/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>10</td><td>—</td><td>100</td><td>REC-002</td></tr>
                     }
                 </tbody>
             </table>
@@ -156,5 +157,5 @@ else
 
     // Datos ficticios para la demostración del Lab 9.
     private string NombreProducto =>
-        Id == 2 ? "Martillo de acero" : Id == 3 ? "Caja de tornillos" : "Taladro industrial";
+        Id == 2 ? MuestrasCatalogo.Productos[1].Nombre : Id == 3 ? MuestrasCatalogo.Productos[4].Nombre : MuestrasCatalogo.Productos[0].Nombre;
 }
