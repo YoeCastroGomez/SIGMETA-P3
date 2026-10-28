@@ -1,3 +1,4 @@
+@using SigmetaWeb.Components.Pages.Catalogo
 ﻿@page "/almacen/ajuste"
 @inject NavigationManager Nav
 
@@ -24,9 +25,10 @@
                    Obligatorio="true">
                 <select id="producto" class="form-select">
                     <option value="">Seleccione un producto</option>
-                    <option>Taladro industrial</option>
-                    <option>Martillo de acero</option>
-                    <option>Tornillos</option>
+                    @foreach (var producto in MuestrasCatalogo.Productos.Where(p => p.Activo))
+                    {
+                        <option value="@producto.Id">@producto.CodigoInterno · @producto.Nombre</option>
+                    }
                 </select>
             </Campo>
         </div>
