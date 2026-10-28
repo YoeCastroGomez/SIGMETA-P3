@@ -1,4 +1,5 @@
 @using SigmetaWeb.Components.Pages.Catalogo
+@using SigmetaWeb.Components.Pages.Catalogo
 ﻿@page "/compras/nueva"
 @page "/compras/editar/{Id:int}"
 @inject NavigationManager Nav
@@ -24,8 +25,10 @@
                    Obligatorio="true">
                 <select id="proveedor" class="form-select">
                     <option value="">Seleccione un proveedor</option>
-                    <option selected="@(Id == 1)">Ferretería Industrial SAC</option>
-                    <option selected="@(Id == 2)">Distribuidora Lima SAC</option>
+                    @foreach (var proveedor in MuestrasCatalogo.Proveedores.Where(p => p.Activo))
+                    {
+                        <option value="@proveedor.Id" selected="@(proveedor.Id == (Id == 2 ? 2 : 1))">@proveedor.RazonSocial</option>
+                    }
                 </select>
             </Campo>
         </div>
