@@ -23,10 +23,8 @@
                    Obligatorio="true">
                 <select id="proveedor" class="form-select">
                     <option value="">Seleccione un proveedor</option>
-                    <option selected="@(!EsNuevo)">
-                        Ferretería Industrial SAC
-                    </option>
-                    <option>Distribuidora Lima SAC</option>
+                    <option selected="@(Id == 1)">Ferretería Industrial SAC</option>
+                    <option selected="@(Id == 2)">Distribuidora Lima SAC</option>
                 </select>
             </Campo>
         </div>
@@ -36,7 +34,7 @@
                    Obligatorio="true">
                 <input id="fecha" type="date"
                        class="form-control"
-                       value="2026-10-20" />
+                       value="@FechaCompra" />
             </Campo>
         </div>
 
@@ -45,7 +43,7 @@
                    Id="fechaEstimada">
                 <input id="fechaEstimada" type="date"
                        class="form-control"
-                       value="2026-10-27" />
+                       value="@FechaEstimada" />
             </Campo>
         </div>
     </div>
@@ -71,8 +69,8 @@
                 <tr>
                     <td>
                         <select class="form-select">
-                            <option selected>Taladro industrial</option>
-                            <option>Martillo</option>
+                            <option selected="@(Id != 2)">Taladro industrial</option>
+                            <option selected="@(Id == 2)">Martillo de acero</option>
                             <option>Tornillos</option>
                         </select>
                     </td>
@@ -86,15 +84,15 @@
                         <input type="number"
                                class="form-control"
                                min="0.001" step="0.001"
-                               value="2" />
+                               value="@Cantidad" />
                     </td>
                     <td>
                         <input type="number"
                                class="form-control"
                                min="0" step="0.01"
-                               value="250" />
+                               value="@CostoUnitario" />
                     </td>
-                    <td class="text-end">S/ 500.00</td>
+                    <td class="text-end">S/ @Subtotal.ToString("N2")</td>
                 </tr>
             </tbody>
         </table>
@@ -115,16 +113,16 @@
         <div class="col-md-4">
             <div class="d-flex justify-content-between mb-2">
                 <span>Subtotal:</span>
-                <strong>S/ 500.00</strong>
+                <strong>S/ @Subtotal.ToString("N2")</strong>
             </div>
             <div class="d-flex justify-content-between mb-2">
                 <span>IGV (18 %):</span>
-                <strong>S/ 90.00</strong>
+                <strong>S/ @Igv.ToString("N2")</strong>
             </div>
             <hr />
             <div class="d-flex justify-content-between">
                 <strong>Total:</strong>
-                <strong>S/ 590.00</strong>
+                <strong>S/ @Total.ToString("N2")</strong>
             </div>
         </div>
     </div>
@@ -149,6 +147,15 @@
 
     private string Titulo =>
         EsNuevo ? "Nueva compra" : "Editar compra";
+
+    // Muestras coherentes con Compras y Recepciones, sin acceso a la BD.
+    private string FechaCompra => Id == 2 ? "2026-10-22" : "2026-10-20";
+    private string FechaEstimada => Id == 2 ? "2026-10-29" : "2026-10-27";
+    private int Cantidad => Id == 2 ? 4 : 2;
+    private decimal CostoUnitario => 250m;
+    private decimal Subtotal => Cantidad * CostoUnitario;
+    private decimal Igv => Subtotal * 0.18m;
+    private decimal Total => Subtotal + Igv;
 
     // Lab 9: Guardar no registra información.
     private void Volver()
