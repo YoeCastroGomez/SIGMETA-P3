@@ -1,8 +1,9 @@
-@using SigmetaWeb.Components.Pages.Catalogo
 ﻿@page "/almacen/movimientos"
+@using SigmetaWeb.Components.Pages.Compras
 
 @* RF012 - Movimientos de inventario.
-   Solo presentación visual para el Laboratorio 9. *@
+   Solo presentación visual para el Laboratorio 9. Son los mismos movimientos del Kardex;
+   Revertir agrega un movimiento compensatorio solo en esta pantalla (no modifica el inventario). *@
 
 <PageTitle>Movimientos de almacén · SIGMETA</PageTitle>
 
@@ -14,6 +15,7 @@
     Los movimientos de inventario se conservan en el historial.
     Una operación incorrecta se corrige mediante un movimiento
     de reversión, sin eliminar el movimiento original.
+    En esta demostración la reversión no se guarda: al recargar la página vuelve a mostrarse el historial original.
 </div>
 
 <div class="card mb-3">
@@ -33,41 +35,60 @@
             </thead>
 
             <tbody>
-                @* Datos de muestra coherentes con el catálogo y las recepciones:
-                   COMP-001 aún no recibida: no genera entrada.
-                   COMP-002: 4 alicates solicitados, 1 recibido y 3 pendientes.
-                   El inventario inicial explica las existencias anteriores a estas compras. *@
-                <tr>
-                    <td>26/10/2026</td>
-                    <td>@MuestrasCatalogo.Productos[1].Nombre</td>
-                    <td><Estado Texto="ENTRADA" /></td>
-                    <td>1</td>
-                    <td>50</td>
-                    <td><a href="/compras/editar/2" title="Consultar compra COMP-002">REC-COMP-002</a></td>
-                    <td>lpaucar</td>
-                    <td class="text-end"><button class="btn btn-sm btn-outline-danger">Revertir</button></td>
-                </tr>
-                <tr>
-                    <td>21/10/2026</td>
-                    <td>@MuestrasCatalogo.Productos[1].Nombre</td>
-                    <td><Estado Texto="ENTRADA" /></td>
-                    <td>49</td>
-                    <td>49</td>
-                    <td>INV-INICIAL-INT-002</td>
-                    <td>lpaucar</td>
-                    <td class="text-end">—</td>
-                </tr>
-                <tr>
-                    <td>19/10/2026</td>
-                    <td>@MuestrasCatalogo.Productos[0].Nombre</td>
-                    <td><Estado Texto="ENTRADA" /></td>
-                    <td>100</td>
-                    <td>100</td>
-                    <td>INV-INICIAL-INT-001</td>
-                    <td>lpaucar</td>
-                    <td class="text-end">—</td>
-                </tr>
+                @foreach (var m in historial)
+                {
+                    <tr>
+                        <td>@m.Fecha.ToString("dd/MM/yyyy")</td>
+                        <td>@MuestrasCompras.NombreProducto(m.CodigoInterno)</td>
+                        <td><Estado Texto="@m.Tipo" /></td>
+                        <td>@m.Cantidad.ToString("0.###")</td>
+                        <td>@m.StockResultante.ToString("0.###")</td>
+                        <td>@m.Referencia</td>
+                        <td>@m.Usuario</td>
+                        <td class="text-end">
+                            @if (m.Tipo == "REVERSION")
+                            {
+                                <span class="text-muted small">Movimiento compensatorio</span>
+                            }
+                            else if (revertidos.Contains(m.Id))
+                            {
+                                <Estado Texto="Revertido" />
+                            }
+                            else if (m.Referencia == "Saldo inicial")
+                            {
+                                <span class="text-muted small">No reversible</span>
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-outline-danger"
+                                        @onclick="() => Revertir(m)">
+                                    Revertir
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
 </div>
+
+@code {
+    private readonly HashSet<int> revertidos = new();
+
+    // Más reciente primero. Las reversiones agregadas en pantalla quedan arriba.
+    private List<MovimientoFila> historial =
+        MuestrasCompras.Movimientos.OrderByDescending(m => m.Fecha).ThenByDescending(m => m.Id).ToList();
+
+    private void Revertir(MovimientoFila original)
+    {
+        // El stock resultante parte del último movimiento del producto en la lista.
+        var stockActual = historial.First(m => m.CodigoInterno == original.CodigoInterno).StockResultante;
+        var stock = original.Tipo == "ENTRADA" ? stockActual - original.Cantidad : stockActual + original.Cantidad;
+
+        revertidos.Add(original.Id);
+        historial.Insert(0, new MovimientoFila(
+            historial.Max(m => m.Id) + 1, new DateOnly(2026, 10, 27), original.CodigoInterno,
+            "REVERSION", original.Cantidad, stock, $"Reversión de {original.Referencia}", "admin"));
+    }
+}

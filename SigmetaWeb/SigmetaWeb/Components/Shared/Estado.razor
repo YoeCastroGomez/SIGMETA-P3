@@ -6,9 +6,9 @@
 
     private string Color => Texto.ToLowerInvariant() switch
     {
-        "activo" or "aprobada" or "vigente" or "atendida" => "bg-success-subtle text-success-emphasis border-success-subtle",
+        "activo" or "aprobada" or "vigente" or "atendida" or "recibida" or "entrada" => "bg-success-subtle text-success-emphasis border-success-subtle",
         "inactivo" or "rechazada" or "anulada" or "revertido" => "bg-danger-subtle text-danger-emphasis border-danger-subtle",
-        "pendiente" or "atendida parcial" => "bg-warning-subtle text-warning-emphasis border-warning-subtle",
+        "pendiente" or "atendida parcial" or "recibida_parcial" => "bg-warning-subtle text-warning-emphasis border-warning-subtle",
         _ => "bg-secondary-subtle text-secondary-emphasis border-secondary-subtle",
     };
 }

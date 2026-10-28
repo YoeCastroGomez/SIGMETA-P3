@@ -1,4 +1,4 @@
-namespace SigmetaWeb.Components.Pages.Catalogo;
+﻿namespace SigmetaWeb.Components.Pages.Catalogo;
 
 // Datos de ejemplo fijos (Lab 9: sin BD ni servicios). Se reemplazan al integrar con Java.
 // Los nombres de los campos son los mismos que en las clases Proveedor, Categoria, Producto y Cotizacion del Java.
@@ -83,19 +83,20 @@ public static class MuestrasCatalogo
 
     public static readonly CotizacionFila[] Cotizaciones =
     {
-        new(1, "COT-2026-0001", "Metalmecánica Chosica E.I.R.L.", "01/09/2026", "15/09/2026", "ACEPTADA",
-            "Entrega en obra, Chosica.", 1300.00m, 234.00m, 1534.00m,
+        new(1, "COT-2026-0001", "Constructora Andina S.A.C.", "01/09/2026", "15/09/2026", "ACEPTADA",
+            "Entrega en obra, Ate.", 1300.00m, 234.00m, 1534.00m,
             new LineaCotizacionFila[]
             {
                 new(1, "INT-001 · Martillo de Acero", 20m, 45.00m, 0m, 900.00m),
                 new(2, "INT-002 · Alicate de Presión", 10m, 35.00m, 0m, 350.00m),
                 new(3, "INT-003 · Cable Mellizo 2x14", 20m, 2.50m, 0m, 50.00m),
             }),
-        new(2, "COT-2026-0002", "Constructora Andina S.A.C.", "10/09/2026", "24/09/2026", "ENVIADA",
-            null, 570.00m, 102.60m, 672.60m,
+        new(2, "COT-2026-0002", "Metalmecánica Chosica E.I.R.L.", "10/09/2026", "24/09/2026", "ACEPTADA",
+            null, 633.60m, 114.05m, 747.65m,
             new LineaCotizacionFila[]
             {
-                new(1, "INT-005 · Bolsa Cemento Sol", 20m, 28.50m, 0m, 570.00m),
+                new(1, "INT-002 · Alicate de Presión", 2m, 35.00m, 0m, 70.00m),
+                new(2, "INT-005 · Bolsa Cemento Sol", 20m, 28.50m, 6.40m, 563.60m),
             }),
         new(3, "COT-2026-0003", "Pedro Huamaní Flores", "14/09/2026", "28/09/2026", "REGISTRADA",
             "Cliente pide precio por mayor.", 325.00m, 58.50m, 383.50m,
@@ -115,6 +116,25 @@ public static class MuestrasCatalogo
             new LineaCotizacionFila[]
             {
                 new(1, "INT-006 · Fierro Corrugado", 20m, 32.00m, 0m, 640.00m),
+            }),
+        new(6, "COT-2026-0006", "Constructora Andina S.A.C.", "20/10/2026", "03/11/2026", "ACEPTADA",
+            null, 1005.00m, 180.90m, 1185.90m,
+            new LineaCotizacionFila[]
+            {
+                new(1, "INT-003 · Cable Mellizo 2x14", 200m, 2.50m, 20.00m, 480.00m),
+                new(2, "INT-002 · Alicate de Presión", 15m, 35.00m, 0m, 525.00m),
+            }),
+        new(7, "COT-2026-0007", "Metalmecánica Chosica E.I.R.L.", "24/10/2026", "07/11/2026", "ACEPTADA",
+            null, 850.00m, 153.00m, 1003.00m,
+            new LineaCotizacionFila[]
+            {
+                new(1, "INT-004 · Enchufe Mennekes", 10m, 85.00m, 0m, 850.00m),
+            }),
+        new(8, "COT-2026-0008", "Pedro Huamaní Flores", "25/10/2026", "08/11/2026", "ENVIADA",
+            null, 285.00m, 51.30m, 336.30m,
+            new LineaCotizacionFila[]
+            {
+                new(1, "INT-005 · Bolsa Cemento Sol", 10m, 28.50m, 0m, 285.00m),
             }),
     };
 

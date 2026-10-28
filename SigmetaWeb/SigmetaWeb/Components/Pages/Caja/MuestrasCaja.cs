@@ -1,4 +1,4 @@
-namespace SigmetaWeb.Components.Pages.Caja;
+﻿namespace SigmetaWeb.Components.Pages.Caja;
 
 // Datos de ejemplo fijos (Lab 9: sin BD ni servicios). Se reemplazan al integrar con Java.
 // Los nombres de los campos siguen las clases Java Caja, MovimientoCaja, CierreCaja (model.caja)
@@ -80,9 +80,9 @@ public static class MuestrasCaja
         new(2, "VTA-2026-0002", null, "Metalmecánica Chosica E.I.R.L.",
             new DateOnly(2026, 10, 16), new DateOnly(2026, 10, 31), 747.65m, 300.00m, "PAGADA_PARCIAL"),
         new(3, "VTA-2026-0006", "F001-00000141", "Metalmecánica Chosica E.I.R.L.",
-            new DateOnly(2026, 10, 25), new DateOnly(2026, 11, 9), 412.90m, 0m, "PENDIENTE"),
+            new DateOnly(2026, 10, 25), new DateOnly(2026, 11, 9), 413.00m, 0m, "PENDIENTE"),
         new(4, "VTA-2026-0005", "F001-00000130", "Constructora Andina S.A.C.",
-            new DateOnly(2026, 8, 20), new DateOnly(2026, 9, 19), 980.00m, 980.00m, "PAGADA"),
+            new DateOnly(2026, 8, 20), new DateOnly(2026, 9, 19), 944.00m, 944.00m, "PAGADA"),
     };
 
     public static readonly CobroFila[] Cobros =
@@ -95,7 +95,7 @@ public static class MuestrasCaja
             new DateTime(2026, 10, 24, 10, 40, 0), false, null),
         new(4, 2, new DateOnly(2026, 10, 24), "DEPOSITO", 300.00m, "DEP-80231", "mvargas",
             new DateTime(2026, 10, 24, 16, 20, 0), false, null),
-        new(5, 4, new DateOnly(2026, 8, 30), "EFECTIVO", 980.00m, null, "mvargas",
+        new(5, 4, new DateOnly(2026, 8, 30), "EFECTIVO", 944.00m, null, "mvargas",
             new DateTime(2026, 8, 30, 12, 15, 0), false, null),
     };
 

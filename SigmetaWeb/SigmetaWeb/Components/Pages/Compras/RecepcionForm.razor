@@ -1,5 +1,4 @@
-@using SigmetaWeb.Components.Pages.Catalogo
-@page "/compras/{Id:int}/recepcion"
+﻿@page "/compras/{Id:int}/recepcion"
 @inject NavigationManager Nav
 
 @* RF012 - Recepción de compra.
@@ -59,7 +58,7 @@
                 <input id="fechaRecepcion"
                        type="date"
                        class="form-control"
-                       value="2026-10-27" min="@FechaMinimaRecepcion" />
+                       value="2026-10-26" />
             </Campo>
         </div>
 
@@ -77,14 +76,6 @@
 </div>
 
 <div class="card card-body mb-3">
-    @if (Id == 2)
-    {
-        <div class="alert alert-info mb-3">Recepción anterior: 1 unidad del alicate de presión recibida el 26/10/2026 (REC-COMP-002). Quedan 3 unidades por recibir. El historial ya está reflejado en Kardex.</div>
-    }
-    else
-    {
-        <div class="alert alert-secondary mb-3">Esta compra todavía no tiene recepciones registradas. No existe una entrada asociada en Kardex.</div>
-    }
     <h2 class="h6 fw-semibold mb-3">
         Productos de la compra
     </h2>
@@ -101,24 +92,21 @@
                 </tr>
             </thead>
             <tbody>
-                @if (Id == 2)
+                @foreach (var l in Lineas)
                 {
                     <tr>
-                        <td>@MuestrasCatalogo.Productos[1].CodigoInterno · @MuestrasCatalogo.Productos[1].Nombre</td>
-                        <td>4</td>
-                        <td>1</td>
-                        <td>3</td>
-                        <td><input type="number" class="form-control" min="0" max="3" step="1" value="3" /></td>
-                    </tr>
-                }
-                else
-                {
-                    <tr>
-                        <td>@MuestrasCatalogo.Productos[0].CodigoInterno · @MuestrasCatalogo.Productos[0].Nombre</td>
-                        <td>2</td>
-                        <td>0</td>
-                        <td>2</td>
-                        <td><input type="number" class="form-control" min="0" max="2" step="1" value="2" /></td>
+                        <td>@MuestrasCompras.NombreProducto(l.Linea.CodigoInterno)</td>
+                        <td>@l.Linea.Cantidad.ToString("0.###")</td>
+                        <td>@l.Linea.Recibido.ToString("0.###")</td>
+                        <td>@l.Linea.Pendiente.ToString("0.###")</td>
+                        <td>
+                            <input type="number"
+                                   class="form-control"
+                                   min="0"
+                                   max="@l.Linea.Pendiente"
+                                   step="1"
+                                   @bind="l.Ahora" @bind:event="oninput" />
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -148,22 +136,30 @@
     [Parameter]
     public int Id { get; set; }
 
-    // Datos de demostración. No se consulta la BD.
-    private string NumeroCompra =>
-        $"COMP-{Id:000}";
+    private class LineaRecepcion
+    {
+        public LineaCompraFila Linea { get; init; } = default!;
+        public decimal Ahora { get; set; }
+    }
 
-    private string Proveedor =>
-        Id == 2
-            ? MuestrasCatalogo.Proveedores[1].RazonSocial
-            : MuestrasCatalogo.Proveedores[0].RazonSocial;
+    // Datos de demostración (los mismos de Compras). No se consulta la BD.
+    private CompraFila? Compra => MuestrasCompras.Compras.FirstOrDefault(c => c.Id == Id);
 
-    private string EstadoCompra =>
-        Id == 2
-            ? "RECIBIDA_PARCIAL"
-            : "REGISTRADA";
+    private string NumeroCompra => Compra?.Numero ?? $"COMP-{Id:000}";
 
-    // No permitir una fecha de recepción anterior a la compra ni a una recepción ya realizada.
-    private string FechaMinimaRecepcion => Id == 2 ? "2026-10-27" : "2026-10-20";
+    private string Proveedor => Compra?.Proveedor ?? "—";
+
+    private string EstadoCompra => Compra?.Estado ?? "REGISTRADA";
+
+    private List<LineaRecepcion> Lineas = new();
+
+    // Por defecto se propone recibir todo lo pendiente.
+    protected override void OnParametersSet()
+    {
+        Lineas = (Compra?.Lineas ?? Array.Empty<LineaCompraFila>())
+            .Select(l => new LineaRecepcion { Linea = l, Ahora = l.Pendiente })
+            .ToList();
+    }
 
     // Lab 9: no se registra ninguna recepción.
     private void Volver()

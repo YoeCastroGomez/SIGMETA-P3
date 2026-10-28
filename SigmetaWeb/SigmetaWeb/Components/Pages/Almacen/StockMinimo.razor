@@ -1,8 +1,8 @@
+﻿@page "/almacen/stock-minimo"
 @using SigmetaWeb.Components.Pages.Catalogo
-@page "/almacen/stock-minimo"
 
 @* RF012 - Consulta de productos con stock mínimo.
-   Solo presentación visual para el Laboratorio 9. *@
+   Solo presentación visual para el Laboratorio 9. Las existencias y mínimos vienen del Catálogo. *@
 
 <PageTitle>Stock mínimo · SIGMETA</PageTitle>
 
@@ -11,7 +11,8 @@
             Subtitulo="Productos cuyo stock actual es menor o igual al mínimo establecido." />
 
 <div class="alert alert-secondary">
-    Se muestran únicamente los productos cuyo stock alcanzó el mínimo o está por debajo.
+    Los productos mostrados requieren atención porque su
+    stock actual alcanzó o está por debajo del mínimo.
 </div>
 
 <div class="card mb-3">
@@ -21,23 +22,23 @@
                 <tr>
                     <th>Código</th>
                     <th>Producto</th>
-                    <th class="text-end">Stock actual</th>
-                    <th class="text-end">Stock mínimo</th>
+                    <th>Stock actual</th>
+                    <th>Stock mínimo</th>
                     <th>Estado</th>
                     <th class="text-end">Acciones</th>
                 </tr>
             </thead>
 
             <tbody>
-                @foreach (var producto in MuestrasCatalogo.Productos.Where(p => p.Activo && p.StockActual <= p.StockMinimo))
+                @foreach (var p in MuestrasCatalogo.Productos.Where(p => p.Activo && p.StockActual <= p.StockMinimo))
                 {
                     <tr>
-                        <td>@producto.CodigoInterno</td>
-                        <td>@producto.Nombre</td>
-                        <td class="text-end">@producto.StockActual.ToString("0.###")</td>
-                        <td class="text-end">@producto.StockMinimo.ToString("0.###")</td>
+                        <td>@p.CodigoInterno</td>
+                        <td>@p.Nombre</td>
+                        <td>@p.StockActual.ToString("0.###")</td>
+                        <td>@p.StockMinimo.ToString("0.###")</td>
                         <td>
-                            @if (producto.StockActual < producto.StockMinimo)
+                            @if (p.StockActual < p.StockMinimo)
                             {
                                 <span class="badge bg-danger">Bajo el mínimo</span>
                             }
@@ -46,12 +47,13 @@
                                 <span class="badge bg-warning text-dark">En el mínimo</span>
                             }
                         </td>
-                        <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="@($"/almacen/kardex/{producto.Id}")">Ver Kardex</a></td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary"
+                               href="/almacen/kardex/@p.Id">
+                                Ver Kardex
+                            </a>
+                        </td>
                     </tr>
-                }
-                @if (!MuestrasCatalogo.Productos.Any(p => p.Activo && p.StockActual <= p.StockMinimo))
-                {
-                    <tr><td colspan="6" class="text-center text-muted py-4">No hay productos activos con stock mínimo o inferior.</td></tr>
                 }
             </tbody>
         </table>

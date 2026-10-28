@@ -1,5 +1,5 @@
-@using SigmetaWeb.Components.Pages.Catalogo
 ﻿@page "/almacen/ajuste"
+@using SigmetaWeb.Components.Pages.Catalogo
 @inject NavigationManager Nav
 
 @* RF012 - Ajuste por conteo físico.
@@ -25,9 +25,9 @@
                    Obligatorio="true">
                 <select id="producto" class="form-select">
                     <option value="">Seleccione un producto</option>
-                    @foreach (var producto in MuestrasCatalogo.Productos.Where(p => p.Activo))
+                    @foreach (var p in MuestrasCatalogo.Productos.Where(p => p.Activo))
                     {
-                        <option value="@producto.Id">@producto.CodigoInterno · @producto.Nombre</option>
+                        <option>@p.CodigoInterno · @p.Nombre (stock @p.StockActual.ToString("0.###"))</option>
                     }
                 </select>
             </Campo>
