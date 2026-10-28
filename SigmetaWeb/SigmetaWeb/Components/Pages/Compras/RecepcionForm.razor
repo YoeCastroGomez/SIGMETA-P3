@@ -58,7 +58,7 @@
                 <input id="fechaRecepcion"
                        type="date"
                        class="form-control"
-                       value="2026-10-26" />
+                       value="@(Id == 2 ? "2026-10-26" : "2026-10-27")" />
             </Campo>
         </div>
 
@@ -92,34 +92,26 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>Taladro industrial</td>
-                    <td>10</td>
-                    <td>4</td>
-                    <td>6</td>
-                    <td>
-                        <input type="number"
-                               class="form-control"
-                               min="0"
-                               max="6"
-                               step="1"
-                               value="3" />
-                    </td>
-                </tr>
-                <tr>
-                    <td>Martillo de acero</td>
-                    <td>20</td>
-                    <td>0</td>
-                    <td>20</td>
-                    <td>
-                        <input type="number"
-                               class="form-control"
-                               min="0"
-                               max="20"
-                               step="1"
-                               value="10" />
-                    </td>
-                </tr>
+                @if (Id == 2)
+                {
+                    <tr>
+                        <td>Martillo de acero</td>
+                        <td>4</td>
+                        <td>1</td>
+                        <td>3</td>
+                        <td><input type="number" class="form-control" min="0" max="3" step="1" value="3" /></td>
+                    </tr>
+                }
+                else
+                {
+                    <tr>
+                        <td>Taladro industrial</td>
+                        <td>2</td>
+                        <td>0</td>
+                        <td>2</td>
+                        <td><input type="number" class="form-control" min="0" max="2" step="1" value="2" /></td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
