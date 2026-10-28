@@ -26,13 +26,14 @@
                    Clase="col-sm-6 col-md-6">
                 <input id="buscarProducto"
                        class="form-control"
-                       placeholder="Buscar producto" />
+                       placeholder="Buscar producto" @bind="busquedaTexto" />
             </Campo>
 
             <div class="col-auto">
-                <button class="btn btn-dark">
+                <button class="btn btn-dark" @onclick="Buscar">
                     Buscar
                 </button>
+                <button class="btn btn-outline-secondary ms-2" @onclick="Limpiar">Limpiar</button>
             </div>
         </div>
     </div>
@@ -50,7 +51,7 @@
                 </thead>
 
                 <tbody>
-                    @foreach (var producto in MuestrasCatalogo.Productos.Where(p => p.Activo))
+                    @foreach (var producto in ProductosFiltrados)
                     {
                         <tr>
                             <td>@producto.CodigoInterno</td>
@@ -58,6 +59,10 @@
                             <td>@producto.StockActual</td>
                             <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="@($"/almacen/kardex/{producto.Id}")">Ver Kardex</a></td>
                         </tr>
+                    }
+                    @if (ProductosFiltrados.Count == 0)
+                    {
+                        <tr><td colspan="4" class="text-center text-muted py-4">No se encontraron productos.</td></tr>
                     }
                 </tbody>
             </table>
@@ -133,6 +138,17 @@ else
 @code {
     [Parameter]
     public int? Id { get; set; }
+
+    // Filtro local para la demostración del Lab 9.
+    private string busquedaTexto = "";
+    private string busquedaAplicada = "";
+    private List<ProductoFila> ProductosFiltrados => MuestrasCatalogo.Productos
+        .Where(p => p.Activo && (string.IsNullOrWhiteSpace(busquedaAplicada)
+            || p.Nombre.Contains(busquedaAplicada.Trim(), StringComparison.OrdinalIgnoreCase)
+            || p.CodigoInterno.Contains(busquedaAplicada.Trim(), StringComparison.OrdinalIgnoreCase)))
+        .ToList();
+    private void Buscar() => busquedaAplicada = busquedaTexto;
+    private void Limpiar() => busquedaTexto = busquedaAplicada = "";
 
     // Datos ficticios para la demostración del Lab 9.
     private ProductoFila? ProductoSeleccionado =>
