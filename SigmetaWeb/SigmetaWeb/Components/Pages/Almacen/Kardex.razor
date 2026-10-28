@@ -1,9 +1,11 @@
-@using SigmetaWeb.Components.Pages.Catalogo
-@page "/almacen/kardex"
+﻿@page "/almacen/kardex"
 @page "/almacen/kardex/{Id:int}"
+@using SigmetaWeb.Components.Pages.Catalogo
+@using SigmetaWeb.Components.Pages.Compras
 
 @* RF012 - Kardex de inventario.
-   Solo presentación visual para el Laboratorio 9. *@
+   Solo presentación visual para el Laboratorio 9. Usa los productos del Catálogo
+   (mismos códigos y existencias) y los movimientos de MuestrasCompras. *@
 
 <PageTitle>Kardex · SIGMETA</PageTitle>
 
@@ -26,14 +28,14 @@
                    Clase="col-sm-6 col-md-6">
                 <input id="buscarProducto"
                        class="form-control"
-                       placeholder="Buscar producto" @bind="busquedaTexto" />
+                       placeholder="Buscar producto"
+                       @bind="filtro" @bind:event="oninput" />
             </Campo>
 
             <div class="col-auto">
                 <button class="btn btn-dark" @onclick="Buscar">
                     Buscar
                 </button>
-                <button class="btn btn-outline-secondary ms-2" @onclick="Limpiar">Limpiar</button>
             </div>
         </div>
     </div>
@@ -51,18 +53,27 @@
                 </thead>
 
                 <tbody>
-                    @foreach (var producto in ProductosFiltrados)
+                    @foreach (var p in resultado)
                     {
                         <tr>
-                            <td>@producto.CodigoInterno</td>
-                            <td>@producto.Nombre</td>
-                            <td>@producto.StockActual</td>
-                            <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="@($"/almacen/kardex/{producto.Id}")">Ver Kardex</a></td>
+                            <td>@p.CodigoInterno</td>
+                            <td>@p.Nombre</td>
+                            <td>@p.StockActual.ToString("0.###")</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   href="/almacen/kardex/@p.Id">
+                                    Ver Kardex
+                                </a>
+                            </td>
                         </tr>
                     }
-                    @if (ProductosFiltrados.Count == 0)
+                    @if (resultado.Count == 0)
                     {
-                        <tr><td colspan="4" class="text-center text-muted py-4">No se encontraron productos.</td></tr>
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                No hay productos que coincidan con la búsqueda.
+                            </td>
+                        </tr>
                     }
                 </tbody>
             </table>
@@ -81,7 +92,10 @@ else
                 </div>
 
                 <div class="fw-semibold">
-                    @NombreProducto
+                    @producto?.CodigoInterno · @producto?.Nombre
+                </div>
+                <div class="small text-muted">
+                    Stock actual: @producto?.StockActual.ToString("0.###")
                 </div>
             </div>
 
@@ -107,22 +121,16 @@ else
                 </thead>
 
                 <tbody>
-                    @if (Id == 1)
+                    @foreach (var m in movimientos)
                     {
-                        <tr><td>19/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>100</td><td>—</td><td>100</td><td>INV-INICIAL-INT-001</td></tr>
-                    }
-                    else if (Id == 2)
-                    {
-                        <tr><td>21/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>49</td><td>—</td><td>49</td><td>INV-INICIAL-INT-002</td></tr>
-                        <tr><td>26/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>1</td><td>—</td><td>50</td><td><a href="/compras/editar/2" title="Consultar compra COMP-002">REC-COMP-002</a></td></tr>
-                    }
-                    else if (Id == 3 || Id == 4 || Id == 5)
-                    {
-                        <tr><td>19/10/2026</td><td><Estado Texto="ENTRADA" /></td><td>@ProductoSeleccionado?.StockActual</td><td>—</td><td>@ProductoSeleccionado?.StockActual</td><td>INV-INICIAL-@ProductoSeleccionado?.CodigoInterno</td></tr>
-                    }
-                    else
-                    {
-                        <tr><td colspan="6" class="text-center text-muted py-4">Producto no encontrado.</td></tr>
+                        <tr>
+                            <td>@m.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td><Estado Texto="@m.Tipo" /></td>
+                            <td>@(m.Tipo == "ENTRADA" ? m.Cantidad.ToString("0.###") : "—")</td>
+                            <td>@(m.Tipo == "SALIDA" ? m.Cantidad.ToString("0.###") : "—")</td>
+                            <td>@m.StockResultante.ToString("0.###")</td>
+                            <td>@m.Referencia</td>
+                        </tr>
                     }
                 </tbody>
             </table>
@@ -139,20 +147,26 @@ else
     [Parameter]
     public int? Id { get; set; }
 
-    // Filtro local para la demostración del Lab 9.
-    private string busquedaTexto = "";
-    private string busquedaAplicada = "";
-    private List<ProductoFila> ProductosFiltrados => MuestrasCatalogo.Productos
-        .Where(p => p.Activo && (string.IsNullOrWhiteSpace(busquedaAplicada)
-            || p.Nombre.Contains(busquedaAplicada.Trim(), StringComparison.OrdinalIgnoreCase)
-            || p.CodigoInterno.Contains(busquedaAplicada.Trim(), StringComparison.OrdinalIgnoreCase)))
-        .ToList();
-    private void Buscar() => busquedaAplicada = busquedaTexto;
-    private void Limpiar() => busquedaTexto = busquedaAplicada = "";
+    private string filtro = "";
+    private List<ProductoFila> resultado = MuestrasCatalogo.Productos.ToList();
+    private ProductoFila? producto;
+    private List<MovimientoFila> movimientos = new();
 
-    // Datos ficticios para la demostración del Lab 9.
-    private ProductoFila? ProductoSeleccionado =>
-        MuestrasCatalogo.Productos.FirstOrDefault(p => p.Id == Id);
+    protected override void OnParametersSet()
+    {
+        producto = MuestrasCatalogo.Productos.FirstOrDefault(p => p.Id == Id);
+        movimientos = producto is null
+            ? new()
+            : MuestrasCompras.MovimientosDe(producto.CodigoInterno).ToList();
+    }
 
-    private string NombreProducto => ProductoSeleccionado?.Nombre ?? "Producto no encontrado";
+    private void Buscar()
+    {
+        var texto = filtro.Trim();
+        resultado = MuestrasCatalogo.Productos
+            .Where(p => texto.Length == 0
+                        || p.CodigoInterno.Contains(texto, StringComparison.OrdinalIgnoreCase)
+                        || p.Nombre.Contains(texto, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
 }

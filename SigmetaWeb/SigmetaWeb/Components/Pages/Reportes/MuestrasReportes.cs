@@ -1,3 +1,6 @@
+﻿using SigmetaWeb.Components.Pages.Catalogo;
+using SigmetaWeb.Components.Pages.Compras;
+
 namespace SigmetaWeb.Components.Pages.Reportes;
 
 // Datos de ejemplo fijos para los reportes (Lab 9: sin BD ni servicios). Se reemplazan al integrar con Java.
@@ -26,7 +29,8 @@ public static class MuestrasReportes
         new("VTA-2026-0002", new DateOnly(2026, 10, 16), "Metalmecánica Chosica E.I.R.L.", "CREDITO", 747.65m, "Registrada"),
         new("VTA-2026-0003", new DateOnly(2026, 10, 24), "Pedro Huamaní Flores", "CONTADO", 94.40m, "Despachada"),
         new("VTA-2026-0004", new DateOnly(2026, 10, 24), "Andrea Morales Pérez", "CONTADO", 94.40m, "Anulada"),
-        new("VTA-2026-0006", new DateOnly(2026, 10, 25), "Metalmecánica Chosica E.I.R.L.", "CREDITO", 412.90m, "Registrada"),
+        new("VTA-2026-0005", new DateOnly(2026, 8, 20), "Constructora Andina S.A.C.", "CREDITO", 944.00m, "Despachada"),
+        new("VTA-2026-0006", new DateOnly(2026, 10, 25), "Metalmecánica Chosica E.I.R.L.", "CREDITO", 413.00m, "Registrada"),
     };
 
     // Las ventas anuladas no suman en el reporte.
@@ -36,30 +40,27 @@ public static class MuestrasReportes
     public static readonly CreditoClienteFila[] Creditos =
     {
         new("Constructora Andina S.A.C.", 25000.00m, 234.00m, 234.00m),
-        new("Metalmecánica Chosica E.I.R.L.", 8000.00m, 860.55m, 0m),
+        new("Metalmecánica Chosica E.I.R.L.", 8000.00m, 860.65m, 0m),
     };
 
-    public static readonly CompraReporteFila[] Compras =
-    {
-        new("COM-2026-0001", new DateOnly(2026, 10, 1), "Distribuidora Ferretera Lima S.A.C.", 3540.00m, "Recibida"),
-        new("COM-2026-0002", new DateOnly(2026, 10, 12), "Aceros del Pacífico S.A.", 5782.00m, "Recibida parcial"),
-        new("COM-2026-0003", new DateOnly(2026, 10, 20), "Importaciones Industriales Norte E.I.R.L.", 1298.00m, "Registrada"),
-    };
+    // Mismas compras de la pantalla Compras (MuestrasCompras).
+    public static readonly CompraReporteFila[] Compras = MuestrasCompras.Compras
+        .Select(c => new CompraReporteFila(c.Numero, c.Fecha, c.Proveedor, c.Total, c.Estado))
+        .ToArray();
 
-    public static readonly RotacionFila[] MayorRotacion =
+    // Rotación calculada con los movimientos del Kardex y las existencias del Catálogo.
+    private static RotacionFila Rotacion(ProductoFila p)
     {
-        new("INT-0003", "Perno hexagonal 3/8\" x 2\"", 40m, 260m, new DateOnly(2026, 10, 24)),
-        new("INT-0005", "Cinta aislante 3M negra", 30m, 85m, new DateOnly(2026, 10, 16)),
-        new("INT-0004", "Guante anticorte nivel 5", 24m, 36m, new DateOnly(2026, 10, 16)),
-        new("INT-0001", "Martillo de acero 16 oz", 22m, 18m, new DateOnly(2026, 10, 24)),
-    };
+        var movs = MuestrasCompras.MovimientosDe(p.CodigoInterno).ToList();
+        var salidas = movs.Where(m => m.Tipo == "SALIDA").Sum(m => m.Cantidad);
+        return new RotacionFila(p.CodigoInterno, p.Nombre, salidas, p.StockActual, movs.Max(m => m.Fecha));
+    }
 
-    public static readonly RotacionFila[] SinMovimiento =
-    {
-        new("INT-0110", "Llave de impacto neumática 1/2\"", 0m, 4m, new DateOnly(2026, 6, 12)),
-        new("INT-0087", "Escalera telescópica 3.8 m", 0m, 2m, new DateOnly(2026, 5, 3)),
-        new("INT-0142", "Juego de brocas cobalto 19 piezas", 0m, 6m, null),
-    };
+    public static readonly RotacionFila[] MayorRotacion = MuestrasCatalogo.Productos
+        .Select(Rotacion).Where(r => r.UnidadesSalida > 0).OrderByDescending(r => r.UnidadesSalida).ToArray();
+
+    public static readonly RotacionFila[] SinMovimiento = MuestrasCatalogo.Productos
+        .Select(Rotacion).Where(r => r.UnidadesSalida == 0).OrderBy(r => r.UltimoMovimiento).ToArray();
 
     public static string Texto(string valor) => valor switch
     {

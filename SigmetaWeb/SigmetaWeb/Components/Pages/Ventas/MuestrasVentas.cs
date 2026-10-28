@@ -1,4 +1,4 @@
-namespace SigmetaWeb.Components.Pages.Ventas;
+﻿namespace SigmetaWeb.Components.Pages.Ventas;
 
 // Datos de ejemplo fijos (Lab 9: sin BD ni servicios). Se reemplazan al integrar con Java.
 // Los nombres de los campos siguen las clases Java: OrdenCompraCliente, Venta, DetalleVenta,
@@ -57,33 +57,45 @@ public static class MuestrasVentas
     public static decimal Igv(IEnumerable<LineaFila> lineas) => Math.Round(SubTotal(lineas) * TasaIgv, 2);
     public static decimal Total(IEnumerable<LineaFila> lineas) => SubTotal(lineas) + Igv(lineas);
 
+    // Productos, nombres, unidades y precios del Catálogo (MuestrasCatalogo).
     private static readonly LineaFila[] LineasAndina =
     {
-        new(1, "INT-0001", "Martillo de acero 16 oz", "Unidad", 20m, 45.00m, 0m),
-        new(2, "INT-0002", "Disco de corte 7\" para metal", "Unidad", 10m, 35.00m, 50.00m),
-        new(3, "INT-0003", "Perno hexagonal 3/8\" x 2\"", "Unidad", 40m, 2.50m, 0m),
+        new(1, "INT-001", "Martillo de Acero", "Unidad", 20m, 45.00m, 0m),
+        new(2, "INT-002", "Alicate de Presión", "Unidad", 10m, 35.00m, 0m),
+        new(3, "INT-003", "Cable Mellizo 2x14", "Metro", 20m, 2.50m, 0m),
     };
 
     private static readonly LineaFila[] LineasChosica =
     {
-        new(1, "INT-0004", "Guante anticorte nivel 5", "Par", 24m, 18.90m, 0m),
-        new(2, "INT-0005", "Cinta aislante 3M negra", "Unidad", 30m, 6.50m, 15.00m),
+        new(1, "INT-002", "Alicate de Presión", "Unidad", 2m, 35.00m, 0m),
+        new(2, "INT-005", "Bolsa Cemento Sol", "Unidad", 20m, 28.50m, 6.40m),
     };
 
     private static readonly LineaFila[] LineasMostrador =
     {
-        new(1, "INT-0001", "Martillo de acero 16 oz", "Unidad", 1m, 45.00m, 0m),
-        new(2, "INT-0006", "Llave francesa 10\"", "Unidad", 1m, 38.00m, 3.00m),
+        new(1, "INT-001", "Martillo de Acero", "Unidad", 1m, 45.00m, 0m),
+        new(2, "INT-002", "Alicate de Presión", "Unidad", 1m, 35.00m, 0m),
     };
 
+    private static readonly LineaFila[] LineasAndina2 =
+    {
+        new(1, "INT-001", "Martillo de Acero", "Unidad", 10m, 45.00m, 0m),
+        new(2, "INT-002", "Alicate de Presión", "Unidad", 10m, 35.00m, 0m),
+    };
+
+    private static readonly LineaFila[] LineasChosica2 =
+    {
+        new(1, "INT-004", "Enchufe Mennekes", "Unidad", 2m, 85.00m, 0m),
+        new(2, "INT-001", "Martillo de Acero", "Unidad", 4m, 45.00m, 0m),
+    };
+
+    // Cotizaciones ACEPTADA del Catálogo que aún no tienen orden de compra del cliente.
     public static readonly CotizacionFila[] CotizacionesAceptadas =
     {
-        new(3, "COT-2026-0003", "Metalmecánica Chosica E.I.R.L.", new DateOnly(2026, 10, 20), LineasChosica),
-        new(4, "COT-2026-0004", "Constructora Andina S.A.C.", new DateOnly(2026, 10, 22),
+        new(7, "COT-2026-0007", "Metalmecánica Chosica E.I.R.L.", new DateOnly(2026, 10, 24),
             new LineaFila[]
             {
-                new(1, "INT-0003", "Perno hexagonal 3/8\" x 2\"", "Unidad", 200m, 2.50m, 20.00m),
-                new(2, "INT-0002", "Disco de corte 7\" para metal", "Unidad", 15m, 35.00m, 0m),
+                new(1, "INT-004", "Enchufe Mennekes", "Unidad", 10m, 85.00m, 0m),
             }),
     };
 
@@ -93,12 +105,12 @@ public static class MuestrasVentas
             new DateOnly(2026, 9, 2), "ATENDIDA", LineasAndina),
         new(2, "OCC-2026-0002", "OC-MCH-0087", "Metalmecánica Chosica E.I.R.L.", "COT-2026-0002",
             new DateOnly(2026, 10, 15), "ATENDIDA_PARCIAL", LineasChosica),
-        new(3, "OCC-2026-0003", "OC-ANDINA-4630", "Constructora Andina S.A.C.", "COT-2026-0004",
+        new(3, "OCC-2026-0003", "OC-ANDINA-4630", "Constructora Andina S.A.C.", "COT-2026-0006",
             new DateOnly(2026, 10, 23), "PENDIENTE",
             new LineaFila[]
             {
-                new(1, "INT-0003", "Perno hexagonal 3/8\" x 2\"", "Unidad", 200m, 2.50m, 20.00m),
-                new(2, "INT-0002", "Disco de corte 7\" para metal", "Unidad", 15m, 35.00m, 0m),
+                new(1, "INT-003", "Cable Mellizo 2x14", "Metro", 200m, 2.50m, 20.00m),
+                new(2, "INT-002", "Alicate de Presión", "Unidad", 15m, 35.00m, 0m),
             }),
     };
 
@@ -112,12 +124,18 @@ public static class MuestrasVentas
             "CONTADO", 0, "DESPACHADA", "B001-00000045", LineasMostrador),
         new(4, "VTA-2026-0004", "Andrea Morales Pérez", null, new DateOnly(2026, 10, 24),
             "CONTADO", 0, "ANULADA", null, LineasMostrador),
+        new(5, "VTA-2026-0005", "Constructora Andina S.A.C.", null, new DateOnly(2026, 8, 20),
+            "CREDITO", 30, "DESPACHADA", "F001-00000130", LineasAndina2),
+        new(6, "VTA-2026-0006", "Metalmecánica Chosica E.I.R.L.", null, new DateOnly(2026, 10, 25),
+            "CREDITO", 15, "REGISTRADA", "F001-00000141", LineasChosica2),
     };
 
     public static readonly ComprobanteFila[] Comprobantes =
     {
         new(1, 1, "FACTURA", "F001", "00000123", new DateOnly(2026, 9, 2), "EMITIDO", "CORREO", new DateTime(2026, 9, 2, 10, 20, 0)),
         new(3, 3, "BOLETA", "B001", "00000045", new DateOnly(2026, 10, 24), "EMITIDO", null, null),
+        new(5, 5, "FACTURA", "F001", "00000130", new DateOnly(2026, 8, 20), "EMITIDO", "CORREO", new DateTime(2026, 8, 20, 11, 0, 0)),
+        new(6, 6, "FACTURA", "F001", "00000141", new DateOnly(2026, 10, 25), "EMITIDO", null, null),
     };
 
     public static readonly DespachoFila[] Despachos =
@@ -125,23 +143,26 @@ public static class MuestrasVentas
         new(1, 1, "T001", "00000045", new DateOnly(2026, 9, 3), "Jr. Huaraz 1180, Cercado de Lima",
             "Transportes Rápidos del Centro S.A.C.", false),
         new(2, 3, "T001", "00000052", new DateOnly(2026, 10, 24), null, "Recojo en tienda", false),
+        new(3, 5, "T001", "00000030", new DateOnly(2026, 8, 21), "Av. Nicolás Ayllón 4520, Ate",
+            "Transportes Rápidos del Centro S.A.C.", false),
     };
 
     // DetalleVenta.cantidadDespachada por (venta, numero de linea)
     private static readonly Dictionary<(int Venta, int Linea), decimal> Despachado = new()
     {
-        [(1, 1)] = 12m, [(1, 2)] = 6m, [(1, 3)] = 25m,
+        [(1, 1)] = 12m, [(1, 2)] = 6m, [(1, 3)] = 10m,
         [(3, 1)] = 1m, [(3, 2)] = 1m,
+        [(5, 1)] = 10m, [(5, 2)] = 10m,
     };
 
     public static readonly NotaCreditoFila[] NotasCredito =
     {
         new(2, "FC01", "00000012", "F001-00000123", "Constructora Andina S.A.C.", new DateOnly(2026, 9, 4),
             "Devolución de producto por defecto de fábrica", "aquispe", "EMITIDO",
-            new DetalleNotaCreditoFila[] { new(1, 1, "Martillo de acero 16 oz", 2m, 45.00m, 0m, 90.00m) }),
-        new(5, "BC01", "00000003", "B001-00000045", "Pedro Huamání Flores", new DateOnly(2026, 10, 25),
-            "Llave con falla en la rosca", "aquispe", "ANULADO",
-            new DetalleNotaCreditoFila[] { new(1, 2, "Llave francesa 10\"", 1m, 38.00m, 3.00m, 35.00m) }),
+            new DetalleNotaCreditoFila[] { new(1, 1, "Martillo de Acero", 2m, 45.00m, 0m, 90.00m) }),
+        new(5, "BC01", "00000003", "B001-00000045", "Pedro Huamaní Flores", new DateOnly(2026, 10, 25),
+            "Alicate con falla en el mecanismo", "aquispe", "ANULADO",
+            new DetalleNotaCreditoFila[] { new(1, 2, "Alicate de Presión", 1m, 35.00m, 0m, 35.00m) }),
     };
 
     // Cantidad ya acreditada por (venta, numero de linea) en notas de credito vigentes

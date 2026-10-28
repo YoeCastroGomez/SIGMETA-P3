@@ -1,6 +1,6 @@
-@using SigmetaWeb.Components.Pages.Catalogo
-@page "/compras/nueva"
+﻿@page "/compras/nueva"
 @page "/compras/editar/{Id:int}"
+@using SigmetaWeb.Components.Pages.Catalogo
 @inject NavigationManager Nav
 
 @* RF011 - Registro y edición de compras.
@@ -17,23 +17,17 @@
 @* Cabecera de la compra *@
 <div class="card card-body mb-3">
     <h2 class="h6 fw-semibold mb-3">Datos de la compra</h2>
-    @if (!EsNuevo)
-    {
-        <div class="d-flex flex-wrap gap-3 mb-3">
-            <span><strong>Número:</strong> @NumeroCompra</span>
-            <span><strong>Estado:</strong> <Estado Texto="@EstadoCompra" /></span>
-        </div>
-    }
 
     <div class="row">
         <div class="col-md-6">
             <Campo Etiqueta="Proveedor" Id="proveedor"
-                   Obligatorio="true">
-                <select id="proveedor" class="form-select">
-                    <option value="">Seleccione un proveedor</option>
-                    @foreach (var proveedor in MuestrasCatalogo.Proveedores.Where(p => p.Activo))
+                   Obligatorio="true"
+                   Ayuda="Proveedores activos del catálogo.">
+                <select id="proveedor" class="form-select" @bind="proveedorId">
+                    <option value="0">Seleccione un proveedor</option>
+                    @foreach (var p in MuestrasCompras.ProveedoresActivos)
                     {
-                        <option value="@proveedor.Id" selected="@(Id.HasValue && proveedor.Id == Id.Value)">@proveedor.RazonSocial</option>
+                        <option value="@p.Id">@p.RazonSocial</option>
                     }
                 </select>
             </Campo>
@@ -44,7 +38,7 @@
                    Obligatorio="true">
                 <input id="fecha" type="date"
                        class="form-control"
-                       value="@FechaCompra" />
+                       @bind="fecha" />
             </Campo>
         </div>
 
@@ -53,7 +47,7 @@
                    Id="fechaEstimada">
                 <input id="fechaEstimada" type="date"
                        class="form-control"
-                       value="@FechaEstimada" />
+                       @bind="fechaEstimada" />
             </Campo>
         </div>
     </div>
@@ -72,41 +66,43 @@
                     <th>Cantidad</th>
                     <th>Costo unitario (S/)</th>
                     <th class="text-end">Importe (S/)</th>
-                    <th class="text-end">Acciones</th>
+                    <th></th>
                 </tr>
             </thead>
 
             <tbody>
-                @foreach (var linea in Lineas)
+                @foreach (var l in lineas)
                 {
-                    <tr @key="linea">
+                    <tr>
                         <td>
-                            <select class="form-select" @bind="linea.ProductoId">
-                                <option value="0">Seleccione un producto</option>
-                                @foreach (var producto in MuestrasCatalogo.Productos.Where(p => p.Activo))
+                            <select class="form-select" value="@l.Codigo"
+                                    @onchange="e => CambiarProducto(l, e.Value?.ToString())">
+                                @foreach (var p in MuestrasCompras.ProductosActivos)
                                 {
-                                    <option value="@producto.Id">@producto.CodigoInterno · @producto.Nombre</option>
+                                    <option value="@p.CodigoInterno">@p.CodigoInterno · @p.Nombre</option>
                                 }
                             </select>
                         </td>
+                        <td>@MuestrasCatalogo.Texto(MuestrasCompras.Producto(l.Codigo)?.UnidadCompra ?? "")</td>
                         <td>
-                            <select class="form-select" @bind="linea.UnidadCompra">
-                                <option value="UNIDAD">Unidad</option>
-                                <option value="CAJA">Caja</option>
-                            </select>
+                            <input type="number"
+                                   class="form-control"
+                                   min="0.001" step="0.001"
+                                   @bind="l.Cantidad" @bind:event="oninput" />
                         </td>
                         <td>
-                            <input type="number" class="form-control" min="0.001" step="0.001"
-                                   @bind="linea.Cantidad" @bind:event="oninput" />
+                            <input type="number"
+                                   class="form-control"
+                                   min="0" step="0.01"
+                                   @bind="l.Costo" @bind:event="oninput" />
                         </td>
-                        <td>
-                            <input type="number" class="form-control" min="0" step="0.01"
-                                   @bind="linea.CostoUnitario" @bind:event="oninput" />
-                        </td>
-                        <td class="text-end text-nowrap">S/ @linea.Importe.ToString("N2")</td>
+                        <td class="text-end">S/ @((l.Cantidad * l.Costo).ToString("N2"))</td>
                         <td class="text-end">
-                            <button type="button" class="btn btn-sm btn-outline-danger"
-                                    @onclick="() => QuitarLinea(linea)">Quitar</button>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    disabled="@(lineas.Count == 1)"
+                                    @onclick="() => Quitar(l)">
+                                Quitar
+                            </button>
                         </td>
                     </tr>
                 }
@@ -115,13 +111,13 @@
     </div>
 
     <div>
-        <button type="button" class="btn btn-outline-secondary" @onclick="AgregarLinea">
+        <button class="btn btn-outline-secondary" @onclick="Agregar">
             Agregar producto
         </button>
     </div>
 </div>
 
-@* Totales de ejemplo *@
+@* Totales: se recalculan al cambiar cantidades o costos *@
 <div class="card card-body mb-3">
     <h2 class="h6 fw-semibold mb-3">Resumen de compra</h2>
 
@@ -129,7 +125,7 @@
         <div class="col-md-4">
             <div class="d-flex justify-content-between mb-2">
                 <span>Subtotal:</span>
-                <strong>S/ @Subtotal.ToString("N2")</strong>
+                <strong>S/ @SubTotal.ToString("N2")</strong>
             </div>
             <div class="d-flex justify-content-between mb-2">
                 <span>IGV (18 %):</span>
@@ -142,6 +138,11 @@
             </div>
         </div>
     </div>
+</div>
+
+<div class="alert alert-secondary">
+    Vista de demostración: Guardar no registra la compra; la persistencia
+    se integrará con los servicios Java.
 </div>
 
 @* Acciones: solo navegación, sin registrar datos *@
@@ -159,53 +160,65 @@
     [Parameter]
     public int? Id { get; set; }
 
+    private class LineaEdicion
+    {
+        public string Codigo { get; set; } = "";
+        public decimal Cantidad { get; set; } = 1m;
+        public decimal Costo { get; set; }
+    }
+
+    private int proveedorId;
+    private DateTime fecha = new(2026, 10, 20);
+    private DateTime fechaEstimada = new(2026, 10, 27);
+    private List<LineaEdicion> lineas = new();
+
     private bool EsNuevo => Id is null;
 
     private string Titulo =>
         EsNuevo ? "Nueva compra" : "Editar compra";
 
-    // Los datos de COMP-001 y COMP-002 coinciden con el listado y la recepción.
-    private string NumeroCompra => $"COMP-{Id:000}";
-    private string EstadoCompra => Id == 2 ? "RECIBIDA_PARCIAL" : "REGISTRADA";
-
-    // Muestras coherentes con Compras y Recepciones, sin acceso a la BD.
-    private string FechaCompra => Id == 2 ? "2026-10-22" : "2026-10-20";
-    private string FechaEstimada => Id == 2 ? "2026-10-29" : "2026-10-27";
-    private sealed class LineaCompra
-    {
-        public int ProductoId { get; set; }
-        public string UnidadCompra { get; set; } = "UNIDAD";
-        public decimal Cantidad { get; set; } = 1m;
-        public decimal CostoUnitario { get; set; }
-        public decimal Importe => Math.Max(0m, Cantidad) * Math.Max(0m, CostoUnitario);
-    }
-
-    private List<LineaCompra> Lineas { get; set; } = new();
+    private decimal SubTotal => lineas.Sum(l => l.Cantidad * l.Costo);
+    private decimal Igv => Math.Round(SubTotal * MuestrasCompras.TasaIgv, 2);
+    private decimal Total => SubTotal + Igv;
 
     protected override void OnParametersSet()
     {
-        // Se recargan datos de muestra solo cuando se navega a una compra diferente.
-        if (idCargado == Id && Lineas.Count > 0) return;
-        idCargado = Id;
-        Lineas = Id switch
+        var compra = MuestrasCompras.Compras.FirstOrDefault(c => c.Id == Id);
+        if (compra is null)
         {
-            1 => new() { new() { ProductoId = 1, Cantidad = 2m, CostoUnitario = 250m } },
-            2 => new() { new() { ProductoId = 2, Cantidad = 4m, CostoUnitario = 250m } },
-            _ => new() { new() { ProductoId = 0, Cantidad = 1m, CostoUnitario = 0m } }
-        };
+            lineas = new() { NuevaLinea() };
+            return;
+        }
+
+        proveedorId = compra.ProveedorId;
+        fecha = compra.Fecha.ToDateTime(TimeOnly.MinValue);
+        fechaEstimada = compra.FechaEstimada.ToDateTime(TimeOnly.MinValue);
+        lineas = compra.Lineas
+            .Select(l => new LineaEdicion { Codigo = l.CodigoInterno, Cantidad = l.Cantidad, Costo = l.CostoUnitario })
+            .ToList();
     }
 
-    private int? idCargado;
-    private void AgregarLinea() => Lineas.Add(new LineaCompra { ProductoId = 0 });
-    private void QuitarLinea(LineaCompra linea)
+    // El costo se propone desde el catálogo al elegir el producto, y puede editarse.
+    private static LineaEdicion NuevaLinea()
     {
-        Lineas.Remove(linea);
-        if (Lineas.Count == 0) Lineas.Add(new LineaCompra { ProductoId = 0 });
+        var p = MuestrasCompras.ProductosActivos.First();
+        return new LineaEdicion { Codigo = p.CodigoInterno, Costo = p.CostoUnitario };
     }
 
-    private decimal Subtotal => Lineas.Sum(l => l.Importe);
-    private decimal Igv => Math.Round(Subtotal * 0.18m, 2);
-    private decimal Total => Subtotal + Igv;
+    private void CambiarProducto(LineaEdicion l, string? codigo)
+    {
+        var p = MuestrasCompras.ProductosActivos.FirstOrDefault(x => x.CodigoInterno == codigo);
+        if (p is null) return;
+        l.Codigo = p.CodigoInterno;
+        l.Costo = p.CostoUnitario;
+    }
+
+    private void Agregar() => lineas.Add(NuevaLinea());
+
+    private void Quitar(LineaEdicion l)
+    {
+        if (lineas.Count > 1) lineas.Remove(l);
+    }
 
     // Lab 9: Guardar no registra información.
     private void Volver()

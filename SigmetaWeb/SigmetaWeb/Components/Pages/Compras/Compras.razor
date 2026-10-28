@@ -1,5 +1,4 @@
-@using SigmetaWeb.Components.Pages.Catalogo
-@page "/compras"
+﻿@page "/compras"
 
 @* RF011 - Listado de compras a proveedores.
    Solo interfaz visual para el Laboratorio 9. *@
@@ -19,30 +18,30 @@
         <Campo Etiqueta="Proveedor" Id="proveedor"
                Clase="col-sm-6 col-md-4">
             <input id="proveedor" class="form-control"
-                   placeholder="Buscar proveedor" @bind="proveedorFiltro" />
+                   placeholder="Buscar proveedor"
+                   @bind="filtroProveedor" @bind:event="oninput" />
         </Campo>
 
         <Campo Etiqueta="Desde" Id="fechaDesde"
                Clase="col-sm-6 col-md-3">
             <input id="fechaDesde" type="date"
-                   class="form-control" @bind="desdeFiltro" />
+                   class="form-control" @bind="filtroDesde" />
         </Campo>
 
         <Campo Etiqueta="Hasta" Id="fechaHasta"
                Clase="col-sm-6 col-md-3">
             <input id="fechaHasta" type="date"
-                   class="form-control" @bind="hastaFiltro" />
+                   class="form-control" @bind="filtroHasta" />
         </Campo>
 
         <div class="col-auto">
             <button class="btn btn-dark" @onclick="Buscar">Buscar</button>
-            <button class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
         </div>
 
     </div>
 </div>
 
-@* Listado de ejemplo *@
+@* Listado de ejemplo (mismos datos que Recepciones y Kardex) *@
 <div class="card mb-3">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
@@ -59,22 +58,29 @@
             </thead>
 
             <tbody>
-                @foreach (var compra in ComprasFiltradas)
+                @foreach (var c in resultado)
                 {
                     <tr>
-                        <td>@compra.Numero</td>
-                        <td>@compra.Proveedor</td>
-                        <td>@compra.Fecha.ToString("dd/MM/yyyy")</td>
-                        <td>S/ @compra.Total.ToString("N2")</td>
-                        <td><Estado Texto="@compra.Estado" /></td>
+                        <td>@c.Numero</td>
+                        <td>@c.Proveedor</td>
+                        <td>@c.Fecha.ToString("dd/MM/yyyy")</td>
+                        <td>S/ @c.Total.ToString("N2")</td>
+                        <td><Estado Texto="@c.Estado" /></td>
                         <td class="text-end">
-                            <a class="btn btn-sm btn-outline-secondary" href="@($"/compras/editar/{compra.Id}")">Editar</a>
+                            <a class="btn btn-sm btn-outline-secondary"
+                               href="/compras/editar/@c.Id">
+                                Editar
+                            </a>
                         </td>
                     </tr>
                 }
-                @if (ComprasFiltradas.Count == 0)
+                @if (resultado.Count == 0)
                 {
-                    <tr><td colspan="6" class="text-center text-muted py-4">No se encontraron compras con estos filtros.</td></tr>
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            No hay compras que coincidan con la búsqueda.
+                        </td>
+                    </tr>
                 }
             </tbody>
 
@@ -83,38 +89,18 @@
 </div>
 
 @code {
-    // Datos de demostración (Lab 9). El filtro no consulta la base de datos.
-    private sealed record CompraFila(int Id, string Numero, string Proveedor, DateTime Fecha, decimal Total, string Estado);
-    private IEnumerable<CompraFila> ComprasEjemplo => new[]
-    {
-        new CompraFila(1, "COMP-001", MuestrasCatalogo.Proveedores[0].RazonSocial, new DateTime(2026, 10, 20), 590m, "REGISTRADA"),
-        new CompraFila(2, "COMP-002", MuestrasCatalogo.Proveedores[1].RazonSocial, new DateTime(2026, 10, 22), 1180m, "RECIBIDA_PARCIAL")
-    };
-
-    private string proveedorFiltro = "";
-    private DateTime? desdeFiltro;
-    private DateTime? hastaFiltro;
-    private string proveedorAplicado = "";
-    private DateTime? desdeAplicado;
-    private DateTime? hastaAplicado;
-
-    private List<CompraFila> ComprasFiltradas => ComprasEjemplo
-        .Where(c => string.IsNullOrWhiteSpace(proveedorAplicado)
-            || c.Proveedor.Contains(proveedorAplicado.Trim(), StringComparison.OrdinalIgnoreCase))
-        .Where(c => !desdeAplicado.HasValue || c.Fecha.Date >= desdeAplicado.Value.Date)
-        .Where(c => !hastaAplicado.HasValue || c.Fecha.Date <= hastaAplicado.Value.Date)
-        .ToList();
+    private string filtroProveedor = "";
+    private DateTime? filtroDesde;
+    private DateTime? filtroHasta;
+    private List<CompraFila> resultado = MuestrasCompras.Compras.ToList();
 
     private void Buscar()
     {
-        proveedorAplicado = proveedorFiltro;
-        desdeAplicado = desdeFiltro;
-        hastaAplicado = hastaFiltro;
-    }
-
-    private void Limpiar()
-    {
-        proveedorFiltro = proveedorAplicado = "";
-        desdeFiltro = hastaFiltro = desdeAplicado = hastaAplicado = null;
+        resultado = MuestrasCompras.Compras
+            .Where(c => string.IsNullOrWhiteSpace(filtroProveedor)
+                        || c.Proveedor.Contains(filtroProveedor.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Where(c => filtroDesde is null || c.Fecha >= DateOnly.FromDateTime(filtroDesde.Value))
+            .Where(c => filtroHasta is null || c.Fecha <= DateOnly.FromDateTime(filtroHasta.Value))
+            .ToList();
     }
 }
