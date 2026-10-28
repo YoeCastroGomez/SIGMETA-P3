@@ -71,50 +71,51 @@
                     <th>Unidad de compra</th>
                     <th>Cantidad</th>
                     <th>Costo unitario (S/)</th>
-                    <th>Importe (S/)</th>
+                    <th class="text-end">Importe (S/)</th>
+                    <th class="text-end">Acciones</th>
                 </tr>
             </thead>
 
             <tbody>
-                <tr>
-                    <td>
-                        <select class="form-select">
-                            @if (EsNuevo)
-                            {
-                                <option value="" selected>Seleccione un producto</option>
-                            }
-                            @foreach (var producto in MuestrasCatalogo.Productos.Where(p => p.Activo))
-                            {
-                                <option value="@producto.Id" selected="@(Id.HasValue && producto.Id == Id.Value)">@producto.CodigoInterno · @producto.Nombre</option>
-                            }
-                        </select>
-                    </td>
-                    <td>
-                        <select class="form-select">
-                            <option>Unidad</option>
-                            <option>Caja</option>
-                        </select>
-                    </td>
-                    <td>
-                        <input type="number"
-                               class="form-control"
-                               min="0.001" step="0.001"
-                               value="@Cantidad" />
-                    </td>
-                    <td>
-                        <input type="number"
-                               class="form-control"
-                               min="0" step="0.01"
-                               value="@CostoUnitario" />
-                    </td>
-                    <td class="text-end">S/ @Subtotal.ToString("N2")</td>
-                </tr>
+                @foreach (var linea in Lineas)
+                {
+                    <tr @key="linea">
+                        <td>
+                            <select class="form-select" @bind="linea.ProductoId">
+                                <option value="0">Seleccione un producto</option>
+                                @foreach (var producto in MuestrasCatalogo.Productos.Where(p => p.Activo))
+                                {
+                                    <option value="@producto.Id">@producto.CodigoInterno · @producto.Nombre</option>
+                                }
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-select" @bind="linea.UnidadCompra">
+                                <option value="UNIDAD">Unidad</option>
+                                <option value="CAJA">Caja</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="number" class="form-control" min="0.001" step="0.001"
+                                   @bind="linea.Cantidad" @bind:event="oninput" />
+                        </td>
+                        <td>
+                            <input type="number" class="form-control" min="0" step="0.01"
+                                   @bind="linea.CostoUnitario" @bind:event="oninput" />
+                        </td>
+                        <td class="text-end text-nowrap">S/ @linea.Importe.ToString("N2")</td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    @onclick="() => QuitarLinea(linea)">Quitar</button>
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
 
     <div>
-        <button class="btn btn-outline-secondary">
+        <button type="button" class="btn btn-outline-secondary" @onclick="AgregarLinea">
             Agregar producto
         </button>
     </div>
@@ -170,10 +171,40 @@
     // Muestras coherentes con Compras y Recepciones, sin acceso a la BD.
     private string FechaCompra => Id == 2 ? "2026-10-22" : "2026-10-20";
     private string FechaEstimada => Id == 2 ? "2026-10-29" : "2026-10-27";
-    private int Cantidad => Id == 2 ? 4 : 2;
-    private decimal CostoUnitario => 250m;
-    private decimal Subtotal => Cantidad * CostoUnitario;
-    private decimal Igv => Subtotal * 0.18m;
+    private sealed class LineaCompra
+    {
+        public int ProductoId { get; set; }
+        public string UnidadCompra { get; set; } = "UNIDAD";
+        public decimal Cantidad { get; set; } = 1m;
+        public decimal CostoUnitario { get; set; }
+        public decimal Importe => Math.Max(0m, Cantidad) * Math.Max(0m, CostoUnitario);
+    }
+
+    private List<LineaCompra> Lineas { get; set; } = new();
+
+    protected override void OnParametersSet()
+    {
+        // Se recargan datos de muestra solo cuando se navega a una compra diferente.
+        if (idCargado == Id && Lineas.Count > 0) return;
+        idCargado = Id;
+        Lineas = Id switch
+        {
+            1 => new() { new() { ProductoId = 1, Cantidad = 2m, CostoUnitario = 250m } },
+            2 => new() { new() { ProductoId = 2, Cantidad = 4m, CostoUnitario = 250m } },
+            _ => new() { new() { ProductoId = 0, Cantidad = 1m, CostoUnitario = 0m } }
+        };
+    }
+
+    private int? idCargado;
+    private void AgregarLinea() => Lineas.Add(new LineaCompra { ProductoId = 0 });
+    private void QuitarLinea(LineaCompra linea)
+    {
+        Lineas.Remove(linea);
+        if (Lineas.Count == 0) Lineas.Add(new LineaCompra { ProductoId = 0 });
+    }
+
+    private decimal Subtotal => Lineas.Sum(l => l.Importe);
+    private decimal Igv => Math.Round(Subtotal * 0.18m, 2);
     private decimal Total => Subtotal + Igv;
 
     // Lab 9: Guardar no registra información.
