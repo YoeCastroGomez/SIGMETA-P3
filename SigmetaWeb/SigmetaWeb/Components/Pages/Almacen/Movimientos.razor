@@ -33,89 +33,39 @@
             </thead>
 
             <tbody>
+                @* Datos de muestra coherentes con el catálogo y las recepciones:
+                   COMP-001 aún no recibida: no genera entrada.
+                   COMP-002: 4 alicates solicitados, 1 recibido y 3 pendientes.
+                   El inventario inicial explica las existencias anteriores a estas compras. *@
                 <tr>
                     <td>26/10/2026</td>
-                    <td>@MuestrasCatalogo.Productos[0].Nombre</td>
-                    <td><Estado Texto="ENTRADA" /></td>
-                    <td>10</td>
-                    <td>100</td>
-                    <td>REC-002</td>
-                    <td>lpaucar</td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-danger">Revertir</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>24/10/2026</td>
-                    <td>@MuestrasCatalogo.Productos[4].Nombre</td>
-                    <td><Estado Texto="SALIDA" /></td>
-                    <td>4</td>
-                    <td>8</td>
-                    <td>VENT-003</td>
-                    <td>lpaucar</td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-danger">Revertir</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>23/10/2026</td>
-                    <td>@MuestrasCatalogo.Productos[0].Nombre</td>
-                    <td><Estado Texto="SALIDA" /></td>
-                    <td>5</td>
-                    <td>90</td>
-                    <td>VENT-001</td>
-                    <td>lpaucar</td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-danger">Revertir</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>23/10/2026</td>
                     <td>@MuestrasCatalogo.Productos[1].Nombre</td>
-                    <td><Estado Texto="SALIDA" /></td>
-                    <td>4</td>
+                    <td><Estado Texto="ENTRADA" /></td>
+                    <td>1</td>
                     <td>50</td>
-                    <td>VENT-002</td>
+                    <td>REC-COMP-002</td>
                     <td>lpaucar</td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-danger">Revertir</button>
-                    </td>
+                    <td class="text-end"><button class="btn btn-sm btn-outline-danger">Revertir</button></td>
                 </tr>
                 <tr>
                     <td>21/10/2026</td>
-                    <td>@MuestrasCatalogo.Productos[4].Nombre</td>
-                    <td><Estado Texto="ENTRADA" /></td>
-                    <td>12</td>
-                    <td>12</td>
-                    <td>COMP-003</td>
-                    <td>lpaucar</td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-danger">Revertir</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>20/10/2026</td>
-                    <td>@MuestrasCatalogo.Productos[0].Nombre</td>
-                    <td><Estado Texto="ENTRADA" /></td>
-                    <td>95</td>
-                    <td>95</td>
-                    <td>COMP-001</td>
-                    <td>lpaucar</td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-danger">Revertir</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>20/10/2026</td>
                     <td>@MuestrasCatalogo.Productos[1].Nombre</td>
                     <td><Estado Texto="ENTRADA" /></td>
-                    <td>54</td>
-                    <td>54</td>
-                    <td>COMP-002</td>
+                    <td>49</td>
+                    <td>49</td>
+                    <td>INVENTARIO-INICIAL</td>
                     <td>lpaucar</td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-danger">Revertir</button>
-                    </td>
+                    <td class="text-end">—</td>
+                </tr>
+                <tr>
+                    <td>19/10/2026</td>
+                    <td>@MuestrasCatalogo.Productos[0].Nombre</td>
+                    <td><Estado Texto="ENTRADA" /></td>
+                    <td>100</td>
+                    <td>100</td>
+                    <td>INVENTARIO-INICIAL</td>
+                    <td>lpaucar</td>
+                    <td class="text-end">—</td>
                 </tr>
             </tbody>
         </table>
