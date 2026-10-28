@@ -1,3 +1,4 @@
+@using SigmetaWeb.Components.Pages.Catalogo
 ﻿@page "/compras/{Id:int}/recepcion"
 @inject NavigationManager Nav
 
@@ -95,7 +96,7 @@
                 @if (Id == 2)
                 {
                     <tr>
-                        <td>Martillo de acero</td>
+                        <td>@MuestrasCatalogo.Productos[1].CodigoInterno · @MuestrasCatalogo.Productos[1].Nombre</td>
                         <td>4</td>
                         <td>1</td>
                         <td>3</td>
@@ -105,7 +106,7 @@
                 else
                 {
                     <tr>
-                        <td>Taladro industrial</td>
+                        <td>@MuestrasCatalogo.Productos[0].CodigoInterno · @MuestrasCatalogo.Productos[0].Nombre</td>
                         <td>2</td>
                         <td>0</td>
                         <td>2</td>
