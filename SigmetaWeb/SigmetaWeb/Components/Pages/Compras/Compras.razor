@@ -1,3 +1,4 @@
+@using SigmetaWeb.Components.Pages.Catalogo
 ﻿@page "/compras"
 
 @* RF011 - Listado de compras a proveedores.
@@ -59,7 +60,7 @@
             <tbody>
                 <tr>
                     <td>COMP-001</td>
-                    <td>Ferretería Industrial SAC</td>
+                    <td>@MuestrasCatalogo.Proveedores[0].RazonSocial</td>
                     <td>20/10/2026</td>
                     <td>S/ 590.00</td>
                     <td><Estado Texto="REGISTRADA" /></td>
@@ -73,7 +74,7 @@
 
                 <tr>
                     <td>COMP-002</td>
-                    <td>Distribuidora Lima SAC</td>
+                    <td>@MuestrasCatalogo.Proveedores[1].RazonSocial</td>
                     <td>22/10/2026</td>
                     <td>S/ 1,180.00</td>
                     <td><Estado Texto="RECIBIDA_PARCIAL" /></td>
