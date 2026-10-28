@@ -1,3 +1,4 @@
+@using SigmetaWeb.Components.Pages.Catalogo
 ﻿@page "/almacen/movimientos"
 
 @* RF012 - Movimientos de inventario.
@@ -34,10 +35,10 @@
             <tbody>
                 <tr>
                     <td>26/10/2026</td>
-                    <td>Taladro industrial</td>
+                    <td>@MuestrasCatalogo.Productos[0].Nombre</td>
                     <td><Estado Texto="ENTRADA" /></td>
                     <td>10</td>
-                    <td>25</td>
+                    <td>100</td>
                     <td>REC-002</td>
                     <td>lpaucar</td>
                     <td class="text-end">
@@ -46,7 +47,7 @@
                 </tr>
                 <tr>
                     <td>24/10/2026</td>
-                    <td>Caja de tornillos</td>
+                    <td>@MuestrasCatalogo.Productos[4].Nombre</td>
                     <td><Estado Texto="SALIDA" /></td>
                     <td>4</td>
                     <td>8</td>
@@ -58,10 +59,10 @@
                 </tr>
                 <tr>
                     <td>23/10/2026</td>
-                    <td>Taladro industrial</td>
+                    <td>@MuestrasCatalogo.Productos[0].Nombre</td>
                     <td><Estado Texto="SALIDA" /></td>
                     <td>5</td>
-                    <td>15</td>
+                    <td>90</td>
                     <td>VENT-001</td>
                     <td>lpaucar</td>
                     <td class="text-end">
@@ -70,10 +71,10 @@
                 </tr>
                 <tr>
                     <td>23/10/2026</td>
-                    <td>Martillo de acero</td>
+                    <td>@MuestrasCatalogo.Productos[1].Nombre</td>
                     <td><Estado Texto="SALIDA" /></td>
-                    <td>5</td>
-                    <td>15</td>
+                    <td>4</td>
+                    <td>50</td>
                     <td>VENT-002</td>
                     <td>lpaucar</td>
                     <td class="text-end">
@@ -82,7 +83,7 @@
                 </tr>
                 <tr>
                     <td>21/10/2026</td>
-                    <td>Caja de tornillos</td>
+                    <td>@MuestrasCatalogo.Productos[4].Nombre</td>
                     <td><Estado Texto="ENTRADA" /></td>
                     <td>12</td>
                     <td>12</td>
@@ -94,10 +95,10 @@
                 </tr>
                 <tr>
                     <td>20/10/2026</td>
-                    <td>Taladro industrial</td>
+                    <td>@MuestrasCatalogo.Productos[0].Nombre</td>
                     <td><Estado Texto="ENTRADA" /></td>
-                    <td>20</td>
-                    <td>20</td>
+                    <td>95</td>
+                    <td>95</td>
                     <td>COMP-001</td>
                     <td>lpaucar</td>
                     <td class="text-end">
@@ -106,10 +107,10 @@
                 </tr>
                 <tr>
                     <td>20/10/2026</td>
-                    <td>Martillo de acero</td>
+                    <td>@MuestrasCatalogo.Productos[1].Nombre</td>
                     <td><Estado Texto="ENTRADA" /></td>
-                    <td>20</td>
-                    <td>20</td>
+                    <td>54</td>
+                    <td>54</td>
                     <td>COMP-002</td>
                     <td>lpaucar</td>
                     <td class="text-end">
