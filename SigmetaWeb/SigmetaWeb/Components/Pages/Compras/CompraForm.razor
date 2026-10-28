@@ -1,3 +1,4 @@
+@using SigmetaWeb.Components.Pages.Catalogo
 ﻿@page "/compras/nueva"
 @page "/compras/editar/{Id:int}"
 @inject NavigationManager Nav
@@ -69,9 +70,10 @@
                 <tr>
                     <td>
                         <select class="form-select">
-                            <option selected="@(Id != 2)">Taladro industrial</option>
-                            <option selected="@(Id == 2)">Martillo de acero</option>
-                            <option>Tornillos</option>
+                            @foreach (var producto in MuestrasCatalogo.Productos.Where(p => p.Activo))
+                            {
+                                <option value="@producto.Id" selected="@(producto.Id == (Id == 2 ? 2 : 1))">@producto.CodigoInterno · @producto.Nombre</option>
+                            }
                         </select>
                     </td>
                     <td>
