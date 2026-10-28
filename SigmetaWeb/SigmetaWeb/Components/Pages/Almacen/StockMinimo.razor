@@ -1,3 +1,4 @@
+@using SigmetaWeb.Components.Pages.Catalogo
 ﻿@page "/almacen/stock-minimo"
 
 @* RF012 - Consulta de productos con stock mínimo.
@@ -6,12 +7,11 @@
 <PageTitle>Stock mínimo · SIGMETA</PageTitle>
 
 <Encabezado Rf="RF012"
-            Titulo="Productos con stock mínimo"
-            Subtitulo="Productos cuyo stock actual es menor o igual al mínimo establecido." />
+            Titulo="Consulta de stock por producto"
+            Subtitulo="Consulta de productos y sus existencias según el catálogo de demostración." />
 
 <div class="alert alert-secondary">
-    Los productos mostrados requieren atención porque su
-    stock actual alcanzó o está por debajo del mínimo.
+    Los productos se muestran con las existencias registradas en el catálogo de demostración.
 </div>
 
 <div class="card mb-3">
@@ -30,13 +30,13 @@
 
             <tbody>
                 <tr>
-                    <td>PROD-001</td>
-                    <td>Taladro industrial</td>
-                    <td>25</td>
-                    <td>30</td>
+                    <td>@MuestrasCatalogo.Productos[0].CodigoInterno</td>
+                    <td>@MuestrasCatalogo.Productos[0].Nombre</td>
+                    <td>@MuestrasCatalogo.Productos[0].StockActual</td>
+                    <td>@MuestrasCatalogo.Productos[0].StockMinimo</td>
                     <td>
-                        <span class="badge bg-danger">
-                            Bajo el mínimo
+                        <span class="badge bg-success">
+                            Stock bajo
                         </span>
                     </td>
                     <td class="text-end">
@@ -48,13 +48,13 @@
                 </tr>
 
                 <tr>
-                    <td>PROD-002</td>
-                    <td>Martillo de acero</td>
-                    <td>15</td>
-                    <td>15</td>
+                    <td>@MuestrasCatalogo.Productos[1].CodigoInterno</td>
+                    <td>@MuestrasCatalogo.Productos[1].Nombre</td>
+                    <td>@MuestrasCatalogo.Productos[1].StockActual</td>
+                    <td>@MuestrasCatalogo.Productos[1].StockMinimo</td>
                     <td>
-                        <span class="badge bg-warning text-dark">
-                            En el mínimo
+                        <span class="badge bg-success">
+                            Stock disponible
                         </span>
                     </td>
                     <td class="text-end">
@@ -66,13 +66,13 @@
                 </tr>
 
                 <tr>
-                    <td>PROD-003</td>
-                    <td>Caja de tornillos</td>
-                    <td>8</td>
-                    <td>15</td>
+                    <td>@MuestrasCatalogo.Productos[4].CodigoInterno</td>
+                    <td>@MuestrasCatalogo.Productos[4].Nombre</td>
+                    <td>@MuestrasCatalogo.Productos[4].StockActual</td>
+                    <td>@MuestrasCatalogo.Productos[4].StockMinimo</td>
                     <td>
-                        <span class="badge bg-danger">
-                            Bajo el mínimo
+                        <span class="badge bg-success">
+                            Stock bajo
                         </span>
                     </td>
                     <td class="text-end">
