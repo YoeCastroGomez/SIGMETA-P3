@@ -92,34 +92,23 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>Taladro industrial</td>
-                    <td>10</td>
-                    <td>4</td>
-                    <td>6</td>
-                    <td>
-                        <input type="number"
-                               class="form-control"
-                               min="0"
-                               max="6"
-                               step="1"
-                               value="3" />
-                    </td>
-                </tr>
-                <tr>
-                    <td>Martillo de acero</td>
-                    <td>20</td>
-                    <td>0</td>
-                    <td>20</td>
-                    <td>
-                        <input type="number"
-                               class="form-control"
-                               min="0"
-                               max="20"
-                               step="1"
-                               value="10" />
-                    </td>
-                </tr>
+                @foreach (var l in Lineas)
+                {
+                    <tr>
+                        <td>@MuestrasCompras.NombreProducto(l.Linea.CodigoInterno)</td>
+                        <td>@l.Linea.Cantidad.ToString("0.###")</td>
+                        <td>@l.Linea.Recibido.ToString("0.###")</td>
+                        <td>@l.Linea.Pendiente.ToString("0.###")</td>
+                        <td>
+                            <input type="number"
+                                   class="form-control"
+                                   min="0"
+                                   max="@l.Linea.Pendiente"
+                                   step="1"
+                                   @bind="l.Ahora" @bind:event="oninput" />
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
@@ -147,19 +136,30 @@
     [Parameter]
     public int Id { get; set; }
 
-    // Datos de demostración. No se consulta la BD.
-    private string NumeroCompra =>
-        $"COMP-{Id:000}";
+    private class LineaRecepcion
+    {
+        public LineaCompraFila Linea { get; init; } = default!;
+        public decimal Ahora { get; set; }
+    }
 
-    private string Proveedor =>
-        Id == 2
-            ? "Distribuidora Lima SAC"
-            : "Ferretería Industrial SAC";
+    // Datos de demostración (los mismos de Compras). No se consulta la BD.
+    private CompraFila? Compra => MuestrasCompras.Compras.FirstOrDefault(c => c.Id == Id);
 
-    private string EstadoCompra =>
-        Id == 2
-            ? "RECIBIDA_PARCIAL"
-            : "REGISTRADA";
+    private string NumeroCompra => Compra?.Numero ?? $"COMP-{Id:000}";
+
+    private string Proveedor => Compra?.Proveedor ?? "—";
+
+    private string EstadoCompra => Compra?.Estado ?? "REGISTRADA";
+
+    private List<LineaRecepcion> Lineas = new();
+
+    // Por defecto se propone recibir todo lo pendiente.
+    protected override void OnParametersSet()
+    {
+        Lineas = (Compra?.Lineas ?? Array.Empty<LineaCompraFila>())
+            .Select(l => new LineaRecepcion { Linea = l, Ahora = l.Pendiente })
+            .ToList();
+    }
 
     // Lab 9: no se registra ninguna recepción.
     private void Volver()

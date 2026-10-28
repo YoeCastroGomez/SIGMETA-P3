@@ -23,31 +23,21 @@
             </thead>
 
             <tbody>
-                <tr>
-                    <td>COMP-001</td>
-                    <td>Ferretería Industrial SAC</td>
-                    <td>20/10/2026</td>
-                    <td><Estado Texto="REGISTRADA" /></td>
-                    <td class="text-end">
-                        <a class="btn btn-sm btn-primary"
-                           href="/compras/1/recepcion">
-                            Recibir
-                        </a>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td>COMP-002</td>
-                    <td>Distribuidora Lima SAC</td>
-                    <td>22/10/2026</td>
-                    <td><Estado Texto="RECIBIDA_PARCIAL" /></td>
-                    <td class="text-end">
-                        <a class="btn btn-sm btn-primary"
-                           href="/compras/2/recepcion">
-                            Recibir
-                        </a>
-                    </td>
-                </tr>
+                @foreach (var c in MuestrasCompras.Compras.Where(c => c.Estado is "REGISTRADA" or "RECIBIDA_PARCIAL"))
+                {
+                    <tr>
+                        <td>@c.Numero</td>
+                        <td>@c.Proveedor</td>
+                        <td>@c.Fecha.ToString("dd/MM/yyyy")</td>
+                        <td><Estado Texto="@c.Estado" /></td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-primary"
+                               href="/compras/@c.Id/recepcion">
+                                Recibir
+                            </a>
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>

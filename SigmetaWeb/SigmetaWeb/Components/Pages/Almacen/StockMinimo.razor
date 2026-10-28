@@ -1,7 +1,8 @@
 ﻿@page "/almacen/stock-minimo"
+@using SigmetaWeb.Components.Pages.Catalogo
 
 @* RF012 - Consulta de productos con stock mínimo.
-   Solo presentación visual para el Laboratorio 9. *@
+   Solo presentación visual para el Laboratorio 9. Las existencias y mínimos vienen del Catálogo. *@
 
 <PageTitle>Stock mínimo · SIGMETA</PageTitle>
 
@@ -29,59 +30,31 @@
             </thead>
 
             <tbody>
-                <tr>
-                    <td>PROD-001</td>
-                    <td>Taladro industrial</td>
-                    <td>25</td>
-                    <td>30</td>
-                    <td>
-                        <span class="badge bg-danger">
-                            Bajo el mínimo
-                        </span>
-                    </td>
-                    <td class="text-end">
-                        <a class="btn btn-sm btn-outline-secondary"
-                           href="/almacen/kardex/1">
-                            Ver Kardex
-                        </a>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td>PROD-002</td>
-                    <td>Martillo de acero</td>
-                    <td>15</td>
-                    <td>15</td>
-                    <td>
-                        <span class="badge bg-warning text-dark">
-                            En el mínimo
-                        </span>
-                    </td>
-                    <td class="text-end">
-                        <a class="btn btn-sm btn-outline-secondary"
-                           href="/almacen/kardex/2">
-                            Ver Kardex
-                        </a>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td>PROD-003</td>
-                    <td>Caja de tornillos</td>
-                    <td>8</td>
-                    <td>15</td>
-                    <td>
-                        <span class="badge bg-danger">
-                            Bajo el mínimo
-                        </span>
-                    </td>
-                    <td class="text-end">
-                        <a class="btn btn-sm btn-outline-secondary"
-                           href="/almacen/kardex/3">
-                            Ver Kardex
-                        </a>
-                    </td>
-                </tr>
+                @foreach (var p in MuestrasCatalogo.Productos.Where(p => p.Activo && p.StockActual <= p.StockMinimo))
+                {
+                    <tr>
+                        <td>@p.CodigoInterno</td>
+                        <td>@p.Nombre</td>
+                        <td>@p.StockActual.ToString("0.###")</td>
+                        <td>@p.StockMinimo.ToString("0.###")</td>
+                        <td>
+                            @if (p.StockActual < p.StockMinimo)
+                            {
+                                <span class="badge bg-danger">Bajo el mínimo</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">En el mínimo</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary"
+                               href="/almacen/kardex/@p.Id">
+                                Ver Kardex
+                            </a>
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>

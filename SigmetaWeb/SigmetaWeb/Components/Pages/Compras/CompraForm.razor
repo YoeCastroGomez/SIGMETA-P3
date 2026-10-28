@@ -1,5 +1,6 @@
 ﻿@page "/compras/nueva"
 @page "/compras/editar/{Id:int}"
+@using SigmetaWeb.Components.Pages.Catalogo
 @inject NavigationManager Nav
 
 @* RF011 - Registro y edición de compras.
@@ -20,13 +21,14 @@
     <div class="row">
         <div class="col-md-6">
             <Campo Etiqueta="Proveedor" Id="proveedor"
-                   Obligatorio="true">
-                <select id="proveedor" class="form-select">
-                    <option value="">Seleccione un proveedor</option>
-                    <option selected="@(!EsNuevo)">
-                        Ferretería Industrial SAC
-                    </option>
-                    <option>Distribuidora Lima SAC</option>
+                   Obligatorio="true"
+                   Ayuda="Proveedores activos del catálogo.">
+                <select id="proveedor" class="form-select" @bind="proveedorId">
+                    <option value="0">Seleccione un proveedor</option>
+                    @foreach (var p in MuestrasCompras.ProveedoresActivos)
+                    {
+                        <option value="@p.Id">@p.RazonSocial</option>
+                    }
                 </select>
             </Campo>
         </div>
@@ -36,7 +38,7 @@
                    Obligatorio="true">
                 <input id="fecha" type="date"
                        class="form-control"
-                       value="2026-10-20" />
+                       @bind="fecha" />
             </Campo>
         </div>
 
@@ -45,7 +47,7 @@
                    Id="fechaEstimada">
                 <input id="fechaEstimada" type="date"
                        class="form-control"
-                       value="2026-10-27" />
+                       @bind="fechaEstimada" />
             </Campo>
         </div>
     </div>
@@ -63,51 +65,59 @@
                     <th>Unidad de compra</th>
                     <th>Cantidad</th>
                     <th>Costo unitario (S/)</th>
-                    <th>Importe (S/)</th>
+                    <th class="text-end">Importe (S/)</th>
+                    <th></th>
                 </tr>
             </thead>
 
             <tbody>
-                <tr>
-                    <td>
-                        <select class="form-select">
-                            <option selected>Taladro industrial</option>
-                            <option>Martillo</option>
-                            <option>Tornillos</option>
-                        </select>
-                    </td>
-                    <td>
-                        <select class="form-select">
-                            <option>Unidad</option>
-                            <option>Caja</option>
-                        </select>
-                    </td>
-                    <td>
-                        <input type="number"
-                               class="form-control"
-                               min="0.001" step="0.001"
-                               value="2" />
-                    </td>
-                    <td>
-                        <input type="number"
-                               class="form-control"
-                               min="0" step="0.01"
-                               value="250" />
-                    </td>
-                    <td class="text-end">S/ 500.00</td>
-                </tr>
+                @foreach (var l in lineas)
+                {
+                    <tr>
+                        <td>
+                            <select class="form-select" value="@l.Codigo"
+                                    @onchange="e => CambiarProducto(l, e.Value?.ToString())">
+                                @foreach (var p in MuestrasCompras.ProductosActivos)
+                                {
+                                    <option value="@p.CodigoInterno">@p.CodigoInterno · @p.Nombre</option>
+                                }
+                            </select>
+                        </td>
+                        <td>@MuestrasCatalogo.Texto(MuestrasCompras.Producto(l.Codigo)?.UnidadCompra ?? "")</td>
+                        <td>
+                            <input type="number"
+                                   class="form-control"
+                                   min="0.001" step="0.001"
+                                   @bind="l.Cantidad" @bind:event="oninput" />
+                        </td>
+                        <td>
+                            <input type="number"
+                                   class="form-control"
+                                   min="0" step="0.01"
+                                   @bind="l.Costo" @bind:event="oninput" />
+                        </td>
+                        <td class="text-end">S/ @((l.Cantidad * l.Costo).ToString("N2"))</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-danger"
+                                    disabled="@(lineas.Count == 1)"
+                                    @onclick="() => Quitar(l)">
+                                Quitar
+                            </button>
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
 
     <div>
-        <button class="btn btn-outline-secondary">
+        <button class="btn btn-outline-secondary" @onclick="Agregar">
             Agregar producto
         </button>
     </div>
 </div>
 
-@* Totales de ejemplo *@
+@* Totales: se recalculan al cambiar cantidades o costos *@
 <div class="card card-body mb-3">
     <h2 class="h6 fw-semibold mb-3">Resumen de compra</h2>
 
@@ -115,19 +125,24 @@
         <div class="col-md-4">
             <div class="d-flex justify-content-between mb-2">
                 <span>Subtotal:</span>
-                <strong>S/ 500.00</strong>
+                <strong>S/ @SubTotal.ToString("N2")</strong>
             </div>
             <div class="d-flex justify-content-between mb-2">
                 <span>IGV (18 %):</span>
-                <strong>S/ 90.00</strong>
+                <strong>S/ @Igv.ToString("N2")</strong>
             </div>
             <hr />
             <div class="d-flex justify-content-between">
                 <strong>Total:</strong>
-                <strong>S/ 590.00</strong>
+                <strong>S/ @Total.ToString("N2")</strong>
             </div>
         </div>
     </div>
+</div>
+
+<div class="alert alert-secondary">
+    Vista de demostración: Guardar no registra la compra; la persistencia
+    se integrará con los servicios Java.
 </div>
 
 @* Acciones: solo navegación, sin registrar datos *@
@@ -145,10 +160,65 @@
     [Parameter]
     public int? Id { get; set; }
 
+    private class LineaEdicion
+    {
+        public string Codigo { get; set; } = "";
+        public decimal Cantidad { get; set; } = 1m;
+        public decimal Costo { get; set; }
+    }
+
+    private int proveedorId;
+    private DateTime fecha = new(2026, 10, 20);
+    private DateTime fechaEstimada = new(2026, 10, 27);
+    private List<LineaEdicion> lineas = new();
+
     private bool EsNuevo => Id is null;
 
     private string Titulo =>
         EsNuevo ? "Nueva compra" : "Editar compra";
+
+    private decimal SubTotal => lineas.Sum(l => l.Cantidad * l.Costo);
+    private decimal Igv => Math.Round(SubTotal * MuestrasCompras.TasaIgv, 2);
+    private decimal Total => SubTotal + Igv;
+
+    protected override void OnParametersSet()
+    {
+        var compra = MuestrasCompras.Compras.FirstOrDefault(c => c.Id == Id);
+        if (compra is null)
+        {
+            lineas = new() { NuevaLinea() };
+            return;
+        }
+
+        proveedorId = compra.ProveedorId;
+        fecha = compra.Fecha.ToDateTime(TimeOnly.MinValue);
+        fechaEstimada = compra.FechaEstimada.ToDateTime(TimeOnly.MinValue);
+        lineas = compra.Lineas
+            .Select(l => new LineaEdicion { Codigo = l.CodigoInterno, Cantidad = l.Cantidad, Costo = l.CostoUnitario })
+            .ToList();
+    }
+
+    // El costo se propone desde el catálogo al elegir el producto, y puede editarse.
+    private static LineaEdicion NuevaLinea()
+    {
+        var p = MuestrasCompras.ProductosActivos.First();
+        return new LineaEdicion { Codigo = p.CodigoInterno, Costo = p.CostoUnitario };
+    }
+
+    private void CambiarProducto(LineaEdicion l, string? codigo)
+    {
+        var p = MuestrasCompras.ProductosActivos.FirstOrDefault(x => x.CodigoInterno == codigo);
+        if (p is null) return;
+        l.Codigo = p.CodigoInterno;
+        l.Costo = p.CostoUnitario;
+    }
+
+    private void Agregar() => lineas.Add(NuevaLinea());
+
+    private void Quitar(LineaEdicion l)
+    {
+        if (lineas.Count > 1) lineas.Remove(l);
+    }
 
     // Lab 9: Guardar no registra información.
     private void Volver()

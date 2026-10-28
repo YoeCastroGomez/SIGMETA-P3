@@ -18,29 +18,30 @@
         <Campo Etiqueta="Proveedor" Id="proveedor"
                Clase="col-sm-6 col-md-4">
             <input id="proveedor" class="form-control"
-                   placeholder="Buscar proveedor" />
+                   placeholder="Buscar proveedor"
+                   @bind="filtroProveedor" @bind:event="oninput" />
         </Campo>
 
         <Campo Etiqueta="Desde" Id="fechaDesde"
                Clase="col-sm-6 col-md-3">
             <input id="fechaDesde" type="date"
-                   class="form-control" />
+                   class="form-control" @bind="filtroDesde" />
         </Campo>
 
         <Campo Etiqueta="Hasta" Id="fechaHasta"
                Clase="col-sm-6 col-md-3">
             <input id="fechaHasta" type="date"
-                   class="form-control" />
+                   class="form-control" @bind="filtroHasta" />
         </Campo>
 
         <div class="col-auto">
-            <button class="btn btn-dark">Buscar</button>
+            <button class="btn btn-dark" @onclick="Buscar">Buscar</button>
         </div>
 
     </div>
 </div>
 
-@* Listado de ejemplo *@
+@* Listado de ejemplo (mismos datos que Recepciones y Kardex) *@
 <div class="card mb-3">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
@@ -57,35 +58,49 @@
             </thead>
 
             <tbody>
-                <tr>
-                    <td>COMP-001</td>
-                    <td>Ferretería Industrial SAC</td>
-                    <td>20/10/2026</td>
-                    <td>S/ 590.00</td>
-                    <td><Estado Texto="REGISTRADA" /></td>
-                    <td class="text-end">
-                        <a class="btn btn-sm btn-outline-secondary"
-                           href="/compras/editar/1">
-                            Editar
-                        </a>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td>COMP-002</td>
-                    <td>Distribuidora Lima SAC</td>
-                    <td>22/10/2026</td>
-                    <td>S/ 1,180.00</td>
-                    <td><Estado Texto="RECIBIDA_PARCIAL" /></td>
-                    <td class="text-end">
-                        <a class="btn btn-sm btn-outline-secondary"
-                           href="/compras/editar/2">
-                            Editar
-                        </a>
-                    </td>
-                </tr>
+                @foreach (var c in resultado)
+                {
+                    <tr>
+                        <td>@c.Numero</td>
+                        <td>@c.Proveedor</td>
+                        <td>@c.Fecha.ToString("dd/MM/yyyy")</td>
+                        <td>S/ @c.Total.ToString("N2")</td>
+                        <td><Estado Texto="@c.Estado" /></td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary"
+                               href="/compras/editar/@c.Id">
+                                Editar
+                            </a>
+                        </td>
+                    </tr>
+                }
+                @if (resultado.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            No hay compras que coincidan con la búsqueda.
+                        </td>
+                    </tr>
+                }
             </tbody>
 
         </table>
     </div>
 </div>
+
+@code {
+    private string filtroProveedor = "";
+    private DateTime? filtroDesde;
+    private DateTime? filtroHasta;
+    private List<CompraFila> resultado = MuestrasCompras.Compras.ToList();
+
+    private void Buscar()
+    {
+        resultado = MuestrasCompras.Compras
+            .Where(c => string.IsNullOrWhiteSpace(filtroProveedor)
+                        || c.Proveedor.Contains(filtroProveedor.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Where(c => filtroDesde is null || c.Fecha >= DateOnly.FromDateTime(filtroDesde.Value))
+            .Where(c => filtroHasta is null || c.Fecha <= DateOnly.FromDateTime(filtroHasta.Value))
+            .ToList();
+    }
+}
