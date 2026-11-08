@@ -4,6 +4,11 @@ import pe.edu.pucp.sigmeta.bo.almacen.DespachoBO;
 import pe.edu.pucp.sigmeta.bo.caja.CajaBO;
 import pe.edu.pucp.sigmeta.bo.caja.CierreCajaBO;
 import pe.edu.pucp.sigmeta.bo.ventas.ComprobanteBO;
+import pe.edu.pucp.sigmeta.bo.seguridad.SolicitudAutorizacionBO;
+import pe.edu.pucp.sigmeta.boimpl.seguridad.SolicitudAutorizacionBOImpl;
+import pe.edu.pucp.sigmeta.model.enums.EstadoAutorizacion;
+import pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion;
+import pe.edu.pucp.sigmeta.seguridad.SesionServicio;
 import pe.edu.pucp.sigmeta.bo.compras.CompraBO;
 import pe.edu.pucp.sigmeta.bo.socio.ClienteBO;
 import pe.edu.pucp.sigmeta.bo.socio.ProveedorBO;
@@ -67,6 +72,8 @@ import java.util.List;
  * la prueba de esa entidad falla. La prueba 7 comprueba el rollback de una transaccion (RNF002).
  * Las pruebas 8 a 11 demuestran las correcciones del Laboratorio 4: razon social unica, despacho por
  * linea de venta, nota de credito sobre el precio con descuento y cierre de caja persistente.
+ * La prueba 10 corre dentro de sesiones reales (SesionServicio) del Cajero, el Administrador y el
+ * Almacenero: la nota de credito usa la autorizacion aprobada (RF014) y solo devuelve lo entregado (RF013).
  * Las pruebas 12 y 13 demuestran las nuevas funcionalidades del Laboratorio 9 (estudiante 4):
  * registro de envio de comprobante (RF008) y busqueda de notas de credito autorizadas (RF013).
  * Requiere la base cargada con sigmeta.sql y los procedimientos de sql_sp.
@@ -85,6 +92,10 @@ public class PruebaCrud {
     private static final CierreCajaBO cierreCajaBO = new CierreCajaBOImpl();
     private static final DespachoBO despachoBO = new DespachoBOImpl();
     private static final ComprobanteBO comprobanteBO = new ComprobanteBOImpl();
+    private static final SolicitudAutorizacionBO solicitudBO = new SolicitudAutorizacionBOImpl();
+
+    // clave de los usuarios de prueba del script (sigmeta.sql). Si en la base cambiaron, actualizarla aqui
+    private static final String CLAVE_PRUEBA = "Meta2026";
 
     // datos base tomados de la BD (sigmeta.sql)
     private static Usuario admin;
@@ -124,7 +135,7 @@ public class PruebaCrud {
         probar("7. ROLLBACK DE UNA TRANSACCION (RNF002)", PruebaCrud::pruebaRollback);
         probar("8. RAZON SOCIAL UNICA (correccion Lab 4)", PruebaCrud::pruebaRazonSocialUnica);
         probar("9. DESPACHO POR LINEA DE VENTA (correccion Lab 4)", PruebaCrud::pruebaDespachoPorLinea);
-        probar("10. NOTA DE CREDITO CON DESCUENTO (correccion Lab 4)", PruebaCrud::pruebaNotaCreditoConDescuento);
+        probar("10. NOTA DE CREDITO EN SESION (correccion Lab 4 y Lab 9)", PruebaCrud::pruebaNotaCreditoConDescuento);
         probar("11. CIERRE Y REAPERTURA DE CAJA (correccion Lab 4)", PruebaCrud::pruebaReaperturaCaja);
         probar("12. ENVIO DE COMPROBANTE (RF008) - estudiante 4", PruebaCrud::pruebaEnvioComprobante);
         probar("13. BUSQUEDA DE NOTAS DE CREDITO (RF013) - estudiante 4", PruebaCrud::pruebaBusquedaNotasCredito);
@@ -503,29 +514,65 @@ public class PruebaCrud {
     }
 
     // ==========================================
-    // 10. NOTA DE CREDITO CON DESCUENTO
+    // 10. NOTA DE CREDITO CON DESCUENTO, DENTRO DE UNA SESION (correccion Lab 9)
     // ==========================================
-    // La devolucion se calcula sobre el precio efectivamente cobrado en la linea (precio menos descuento)
+    // La devolucion se calcula sobre el precio efectivamente cobrado en la linea (precio menos descuento).
+    // Todo corre en sesiones reales: el Cajero emite en su sesion con la autorizacion que el Administrador
+    // aprobo en la suya (RF014). Solo se devuelve lo entregado (despachado) menos lo ya acreditado.
     private static void pruebaNotaCreditoConDescuento() throws SQLException {
         if (ventaFlujo == null) {
             throw new IllegalStateException("Requiere la venta de la prueba 9");
         }
+        SesionServicio sesionCajero = SesionServicio.iniciar(cajero.getNombreUsuario(), CLAVE_PRUEBA);
+        SesionServicio sesionAdmin = SesionServicio.iniciar(admin.getNombreUsuario(), CLAVE_PRUEBA);
+        SesionServicio sesionAlmacenero = SesionServicio.iniciar(almacenero.getNombreUsuario(), CLAVE_PRUEBA);
+        String operacion = ComprobanteBOImpl.OPERACION_NOTA_CREDITO;
+        // si una corrida anterior dejo solicitudes abiertas, se anulan para empezar sin autorizacion
+        sesionCajero.ejecutar(id -> {
+            for (SolicitudAutorizacion s : solicitudBO.listarPorSolicitante(id)) {
+                if (operacion.equals(s.getOperacionRestringida())
+                        && (s.getEstado() == EstadoAutorizacion.PENDIENTE || s.getEstado() == EstadoAutorizacion.APROBADA)) {
+                    solicitudBO.anular(s.getId(), id);
+                }
+            }
+            return null;
+        });
+
         TipoComprobante tipo = clienteBase.getTipoDocumento() == TipoDocumentoIdentidad.RUC ? TipoComprobante.FACTURA : TipoComprobante.BOLETA;
         Comprobante comprobante = comprobanteBO.emitir(ventaFlujo.getId(), tipo, vendedor.getId());
         ok("Comprobante", comprobante.getId() > 0, tipo + " " + comprobante.getSerie() + "-" + comprobante.getNumero());
 
+        DetalleVenta linea1 = linea(ventaFlujo, 1);
         DetalleVenta linea2 = linea(ventaFlujo, 2);
-        Comprobante nc = new Comprobante();
-        nc.setComprobanteRelacionado(comprobante);
-        nc.setMotivo("Devolucion de una unidad con descuento");
-        nc.setDetalles(new ArrayList<>());
-        DetalleNotaCredito dnc = new DetalleNotaCredito();
-        dnc.setNumeroLinea(1);
-        dnc.setDetalleVenta(linea2);
-        dnc.setCantidad(1);
-        nc.getDetalles().add(dnc);
-        comprobanteBO.registrarNotaCredito(nc, admin.getId(), cajero.getId());
 
+        // a. sin solicitud aprobada el Cajero no puede emitir
+        boolean sinAutorizacion = false;
+        try {
+            sesionCajero.ejecutar(id -> comprobanteBO.registrarNotaCredito(notaCredito(comprobante, linea2, 1, "Sin autorizacion"), id));
+        } catch (IllegalStateException e) {
+            sinAutorizacion = true;
+            System.out.println("   Rechazado como se esperaba: " + e.getMessage());
+        }
+        ok("SinAutorizacion", sinAutorizacion, "sin solicitud aprobada el Cajero no puede emitir la nota de credito");
+
+        // b. el Cajero pide y el Administrador aprueba, cada uno en su sesion
+        SolicitudAutorizacion autorizacion = autorizar(sesionCajero, sesionAdmin, "Devolucion de mercaderia del cliente");
+
+        // c. la linea 1 se vendio pero no se despacho: no hay nada entregado que devolver
+        boolean noEntregado = false;
+        try {
+            sesionCajero.ejecutar(id -> comprobanteBO.registrarNotaCredito(notaCredito(comprobante, linea1, 1, "Linea no despachada"), id));
+        } catch (IllegalArgumentException e) {
+            noEntregado = true;
+            System.out.println("   Rechazado como se esperaba: " + e.getMessage());
+        }
+        boolean sigueAprobada = solicitudBO.obtener(autorizacion.getId()).getEstado() == EstadoAutorizacion.APROBADA;
+        ok("NoEntregado", noEntregado && sigueAprobada,
+                "no se devuelve una linea vendida que todavia no se despacho (rollback: la autorizacion sigue APROBADA)");
+
+        // d. devolver 1 de la linea 2 (2 despachadas) en la sesion del Cajero
+        Comprobante nc = sesionCajero.ejecutar(id ->
+                comprobanteBO.registrarNotaCredito(notaCredito(comprobante, linea2, 1, "Devolucion de una unidad con descuento"), id));
         Comprobante ncLeida = comprobanteBO.obtener(nc.getId());
         DetalleNotaCredito lineaNc = ncLeida.getDetalles().get(0);
         double esperado = redondear(linea2.getImporte() / linea2.getCantidad());
@@ -533,33 +580,80 @@ public class PruebaCrud {
                 "devuelve S/ " + formato(lineaNc.getImporte()) + " (precio S/ " + formato(linea2.getPrecioUnitario())
                         + " menos S/ " + formato(lineaNc.getDescuento()) + " de descuento), no el precio de lista");
         ok("AdminAutoriza", ncLeida.getAdministradorAutoriza() != null && ncLeida.getAdministradorAutoriza().getId() == admin.getId(),
-                "NC autorizada por admin id " + admin.getId() + " (" + admin.getNombreUsuario() + ")");
+                "NC autorizada por admin id " + admin.getId() + " (" + admin.getNombreUsuario() + ") mediante su solicitud aprobada");
 
-        // la linea 2 vendio 2 y ya se acredito 1: devolver 2 mas debe rechazarse
-        Comprobante exceso = new Comprobante();
-        exceso.setComprobanteRelacionado(comprobante);
-        exceso.setMotivo("Devolucion excesiva");
-        exceso.setDetalles(new ArrayList<>());
-        DetalleNotaCredito dncExceso = new DetalleNotaCredito();
-        dncExceso.setNumeroLinea(1);
-        dncExceso.setDetalleVenta(linea2);
-        dncExceso.setCantidad(2);
-        exceso.getDetalles().add(dncExceso);
+        // e. la autorizacion es de un solo uso
+        EstadoAutorizacion estado = solicitudBO.obtener(autorizacion.getId()).getEstado();
+        ok("Consumida", estado == EstadoAutorizacion.VENCIDA, "la autorizacion se uso una vez y quedo " + estado);
+
+        // f. la linea 2 entrego 2 y ya se devolvio 1: devolver 2 mas debe rechazarse (con una autorizacion nueva)
+        SolicitudAutorizacion segunda = autorizar(sesionCajero, sesionAdmin, "Segunda devolucion del cliente");
         boolean rechazado = false;
         try {
-            comprobanteBO.registrarNotaCredito(exceso, admin.getId(), cajero.getId());
+            sesionCajero.ejecutar(id -> comprobanteBO.registrarNotaCredito(notaCredito(comprobante, linea2, 2, "Devolucion excesiva"), id));
         } catch (IllegalArgumentException e) {
             rechazado = true;
             System.out.println("   Rechazado como se esperaba: " + e.getMessage());
         }
-        ok("Exceso", rechazado, "no se devuelve mas de lo vendido en la linea");
+        ok("Exceso", rechazado, "no se devuelve mas de lo entregado en la linea");
+        // la segunda autorizacion no se uso: el Cajero la anula para no dejarla abierta
+        sesionCajero.ejecutar(id -> {
+            solicitudBO.anular(segunda.getId(), id);
+            return null;
+        });
+
+        // g. anular el despacho dejaria la linea 2 con menos entregado que lo devuelto
+        boolean despachoProtegido = false;
+        try {
+            sesionAlmacenero.ejecutar(id -> {
+                despachoBO.anular(despachoFlujo.getId(), "Prueba de correcciones", id);
+                return null;
+            });
+        } catch (IllegalStateException e) {
+            despachoProtegido = true;
+            System.out.println("   Rechazado como se esperaba: " + e.getMessage());
+        }
+        ok("AnularDespacho", despachoProtegido, "no se anula un despacho con devoluciones vigentes");
 
         // se revierte todo el flujo con anulaciones (stock y documentos vuelven a su estado)
-        comprobanteBO.anular(nc.getId(), "Prueba de correcciones", admin.getId());
-        despachoBO.anular(despachoFlujo.getId(), "Prueba de correcciones", almacenero.getId());
+        sesionCajero.ejecutar(id -> {
+            comprobanteBO.anular(nc.getId(), "Prueba de correcciones", id);
+            return null;
+        });
+        sesionAlmacenero.ejecutar(id -> {
+            despachoBO.anular(despachoFlujo.getId(), "Prueba de correcciones", id);
+            return null;
+        });
         comprobanteBO.anular(comprobante.getId(), "Prueba de correcciones", admin.getId());
         ventaBO.anular(ventaFlujo.getId(), "Prueba de correcciones", vendedor.getId());
         ok("Anulacion", ventaBO.obtener(ventaFlujo.getId()).isAnulado(), "NC, despacho, comprobante y venta anulados (baja logica)");
+
+        sesionCajero.cerrar();
+        sesionAdmin.cerrar();
+        sesionAlmacenero.cerrar();
+    }
+
+    // RF014: el Cajero solicita en su sesion y el Administrador aprueba en la suya
+    private static SolicitudAutorizacion autorizar(SesionServicio sesionCajero, SesionServicio sesionAdmin, String motivo) throws SQLException {
+        SolicitudAutorizacion solicitud = sesionCajero.ejecutar(id ->
+                solicitudBO.solicitar(id, ComprobanteBOImpl.OPERACION_NOTA_CREDITO, motivo));
+        SolicitudAutorizacion aprobada = sesionAdmin.ejecutar(id -> solicitudBO.aprobar(solicitud.getId(), id, 15));
+        ok("Autorizacion", aprobada.getEstado() == EstadoAutorizacion.APROBADA,
+                "solicitud " + solicitud.getId() + " del Cajero aprobada por " + admin.getNombreUsuario() + " por 15 minutos");
+        return aprobada;
+    }
+
+    private static Comprobante notaCredito(Comprobante origen, DetalleVenta lineaVenta, double cantidad, String motivo) {
+        Comprobante nc = new Comprobante();
+        nc.setComprobanteRelacionado(origen);
+        nc.setMotivo(motivo);
+        nc.setDetalles(new ArrayList<>());
+        DetalleNotaCredito d = new DetalleNotaCredito();
+        d.setNumeroLinea(1);
+        d.setDetalleVenta(lineaVenta);
+        d.setCantidad(cantidad);
+        nc.getDetalles().add(d);
+        return nc;
     }
 
     // ==========================================

@@ -153,6 +153,42 @@ public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
         });
     }
 
+    // RF013/RF014: la autorizacion se toma de la solicitud que el Administrador aprobo en su propia sesion,
+    // asi la operacion se ejecuta en la sesion del solicitante sin que el Administrador este conectado
+    @Override
+    public SolicitudAutorizacion obtenerAutorizacionVigente(int idUsuario, String operacionRestringida) throws SQLException {
+        return Transaccion.ejecutar(() -> {
+            String operacion = Validador.textoObligatorio(operacionRestringida, "operacion restringida", 60);
+            SolicitudAutorizacion vigente = solicitudDAO.buscarVigente(idUsuario, operacion);
+            if(vigente == null || vigente.getAdministrador() == null){
+                return null;
+            }
+            Usuario administrador = usuarioBO.obtener(vigente.getAdministrador().getId());
+            if(administrador == null || !administrador.isEstado() || !administrador.getRol().isEstado()
+                    || administrador.getRol().getTipo() != TipoRol.ADMINISTRADOR){
+                // el administrador que aprobo ya no esta activo: la autorizacion no sirve
+                return null;
+            }
+            vigente.setAdministrador(administrador);
+            vigente.setSolicitante(usuarioBO.obtener(idUsuario));
+            return vigente;
+        });
+    }
+
+    // RF014: APROBADA -> VENCIDA (sp_solicitud_autorizacion_eliminar). Corre dentro de la transaccion
+    // de quien la usa: si esa operacion falla hay rollback y la autorizacion sigue APROBADA
+    @Override
+    public void consumir(int idSolicitud) throws SQLException {
+        Transaccion.ejecutar(() -> {
+            SolicitudAutorizacion solicitud = obtenerExistente(idSolicitud);
+            if(solicitud.getEstado() != EstadoAutorizacion.APROBADA){
+                throw new IllegalStateException("Solo se puede consumir una autorizacion aprobada (estado: " + solicitud.getEstado() + ")");
+            }
+            solicitudDAO.remove(solicitud);
+            return null;
+        });
+    }
+
     private SolicitudAutorizacion obtenerExistente(int idSolicitud) throws SQLException {
         SolicitudAutorizacion solicitud = solicitudDAO.load(idSolicitud);
         if(solicitud == null){

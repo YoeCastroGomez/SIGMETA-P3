@@ -5,6 +5,9 @@ import pe.edu.pucp.sigmeta.boimpl.caja.CompensacionCaja;
 import pe.edu.pucp.sigmeta.model.caja.MovimientoCaja;
 import pe.edu.pucp.sigmeta.bo.usuario.UsuarioBO;
 import pe.edu.pucp.sigmeta.bo.ventas.ComprobanteBO;
+import pe.edu.pucp.sigmeta.bo.seguridad.SolicitudAutorizacionBO;
+import pe.edu.pucp.sigmeta.boimpl.seguridad.SolicitudAutorizacionBOImpl;
+import pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion;
 import pe.edu.pucp.sigmeta.boimpl.Validador;
 import pe.edu.pucp.sigmeta.boimpl.usuario.UsuarioBOImpl;
 import pe.edu.pucp.sigmeta.dao.almacen.MovimientoInventarioDAO;
@@ -51,6 +54,8 @@ import java.util.Set;
 public class ComprobanteBOImpl implements ComprobanteBO {
 
     private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
+    // RF013/RF014: operacion restringida que el Administrador autoriza para emitir una nota de credito
+    public static final String OPERACION_NOTA_CREDITO = "EMITIR_NOTA_CREDITO";
 
     private final ComprobanteDAO comprobanteDAO;
     private final DetalleNotaCreditoDAO detalleNotaCreditoDAO;
@@ -62,6 +67,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
     private final MovimientoInventarioDAO movimientoDAO;
     private final UsuarioBO usuarioBO;
     private final CompensacionCaja compensacionCaja;
+    private final SolicitudAutorizacionBO autorizacionBO;
 
     public ComprobanteBOImpl() {
         this.comprobanteDAO = new ComprobanteDAOImpl();
@@ -74,6 +80,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
         this.movimientoDAO = new MovimientoInventarioDAOImpl();
         this.usuarioBO = new UsuarioBOImpl();
         this.compensacionCaja = new CompensacionCaja();
+        this.autorizacionBO = new SolicitudAutorizacionBOImpl();
     }
 
     // RF008: Emision de factura o boleta
@@ -133,11 +140,12 @@ public class ComprobanteBOImpl implements ComprobanteBO {
         });
     }
 
-    // RF013: Emision de nota de credito autorizada por administrador
+    // RF013: Emision de nota de credito autorizada por administrador.
+    // La sesion es del Cajero; la autorizacion del Administrador es la solicitud que aprobo en su propia
+    // sesion (RF014). De ahi se toma quien autorizo y la autorizacion se consume (un solo uso).
     @Override
-    public Comprobante registrarNotaCredito(Comprobante notaCredito, int idAdministradorAutoriza, int idResponsable) throws SQLException {
+    public Comprobante registrarNotaCredito(Comprobante notaCredito, int idResponsable) throws SQLException {
         Usuario responsable = usuarioBO.verificarRol(idResponsable, TipoRol.CAJERO);
-        Usuario admin = usuarioBO.obtenerAdministradorActivo(idAdministradorAutoriza);
 
         Validador.obligatorio(notaCredito, "nota de credito");
         Validador.obligatorio(notaCredito.getComprobanteRelacionado(), "comprobante origen");
@@ -150,6 +158,12 @@ public class ComprobanteBOImpl implements ComprobanteBO {
         }
 
         return Transaccion.ejecutar(() -> {
+            SolicitudAutorizacion autorizacion = autorizacionBO.obtenerAutorizacionVigente(idResponsable, OPERACION_NOTA_CREDITO);
+            if (autorizacion == null) {
+                throw new IllegalStateException("Para emitir la nota de credito se necesita una autorizacion vigente del Administrador");
+            }
+            Usuario admin = autorizacion.getAdministrador();
+
             int idOrigen = notaCredito.getComprobanteRelacionado().getId();
             Comprobante origen = comprobanteDAO.load(idOrigen);
             if (origen == null) {
@@ -201,11 +215,13 @@ public class ComprobanteBOImpl implements ComprobanteBO {
                     throw new IllegalArgumentException("La cantidad devuelta debe ser mayor a 0");
                 }
 
-                // no se devuelve mas de lo vendido en esa linea (descontando lo ya acreditado)
+                // solo se devuelve lo ENTREGADO al cliente (despachado), descontando lo ya acreditado:
+                // asi el reingreso al stock siempre tiene una salida previa (SALIDA_DESPACHO)
                 double yaAcreditado = yaAcreditadoPorLinea.getOrDefault(idLinea, 0.0);
-                if (yaAcreditado + d.getCantidad() > lineaVenta.getCantidad() + 0.0001) {
-                    throw new IllegalArgumentException("La cantidad a devolver excede lo vendido menos lo ya acreditado en la linea "
-                            + lineaVenta.getNumeroLinea() + " (Vendido: " + lineaVenta.getCantidad() + ", Acreditado: "
+                double entregado = lineaVenta.getCantidadDespachada();
+                if (yaAcreditado + d.getCantidad() > entregado + 0.0001) {
+                    throw new IllegalArgumentException("Solo se puede devolver lo entregado al cliente en la linea "
+                            + lineaVenta.getNumeroLinea() + " (Entregado: " + entregado + ", Ya acreditado: "
                             + yaAcreditado + ", Devuelto: " + d.getCantidad() + ")");
                 }
 
@@ -286,6 +302,9 @@ public class ComprobanteBOImpl implements ComprobanteBO {
                             CompensacionCaja.DOCUMENTO_NOTA_CREDITO, notaCredito.getId(), responsable);
                 }
             }
+
+            // RF014: la autorizacion es de un solo uso. Si algo falla antes, el rollback la deja APROBADA
+            autorizacionBO.consumir(autorizacion.getId());
 
             return notaCredito;
         });

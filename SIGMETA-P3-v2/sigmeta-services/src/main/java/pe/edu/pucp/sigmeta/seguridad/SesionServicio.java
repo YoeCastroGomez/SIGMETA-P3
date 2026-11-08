@@ -15,7 +15,7 @@ public final class SesionServicio {
     private static final ThreadLocal<Integer> ACTUAL = new ThreadLocal<>();
     private SesionServicio(int id) {
         idUsuario = id;
-        expira = System.currentTimeMillis() + 30L * 60 * 1000;
+        expira = System.currentTimeMillis() + 20L * 60 * 1000;
     }
     public static SesionServicio iniciar(String nombre, String clave) throws SQLException {
         Usuario usuario = new UsuarioBOImpl().iniciarSesion(nombre, clave);

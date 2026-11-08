@@ -20,12 +20,16 @@ import pe.edu.pucp.sigmeta.daoimpl.ventas.*;
 import pe.edu.pucp.sigmeta.model.almacen.Despacho;
 import pe.edu.pucp.sigmeta.model.almacen.DetalleDespacho;
 import pe.edu.pucp.sigmeta.model.almacen.MovimientoInventario;
+import pe.edu.pucp.sigmeta.model.enums.EstadoComprobante;
 import pe.edu.pucp.sigmeta.model.enums.EstadoOrdenCompraCliente;
+import pe.edu.pucp.sigmeta.model.enums.TipoComprobante;
 import pe.edu.pucp.sigmeta.model.enums.EstadoVenta;
 import pe.edu.pucp.sigmeta.model.enums.TipoMovimientoInventario;
 import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.model.producto.Producto;
 import pe.edu.pucp.sigmeta.model.usuario.Usuario;
+import pe.edu.pucp.sigmeta.model.ventas.Comprobante;
+import pe.edu.pucp.sigmeta.model.ventas.DetalleNotaCredito;
 import pe.edu.pucp.sigmeta.model.ventas.DetalleOrdenCompraCliente;
 import pe.edu.pucp.sigmeta.model.ventas.DetalleVenta;
 import pe.edu.pucp.sigmeta.model.ventas.Venta;
@@ -53,6 +57,8 @@ public class DespachoBOImpl implements DespachoBO {
     private final MovimientoInventarioDAO movimientoDAO;
     private final MovimientoInventarioBO movimientoBO;
     private final UsuarioBO usuarioBO;
+    private final ComprobanteDAO comprobanteDAO;
+    private final DetalleNotaCreditoDAO detalleNotaCreditoDAO;
 
     public DespachoBOImpl() {
         this.despachoDAO = new DespachoDAOImpl();
@@ -65,6 +71,8 @@ public class DespachoBOImpl implements DespachoBO {
         this.movimientoDAO = new MovimientoInventarioDAOImpl();
         this.movimientoBO = new MovimientoInventarioBOImpl();
         this.usuarioBO = new UsuarioBOImpl();
+        this.comprobanteDAO = new ComprobanteDAOImpl();
+        this.detalleNotaCreditoDAO = new DetalleNotaCreditoDAOImpl();
     }
 
     // RF012: Despacho parcial o total con SALIDA_DESPACHO y actualizacion de stock
@@ -268,6 +276,10 @@ public class DespachoBOImpl implements DespachoBO {
             int idVenta = despacho.getVenta().getId();
             ventaDAO.bloquearVenta(idVenta);
 
+            // RF013: si una linea ya tiene devoluciones por nota de credito, al anular el despacho
+            // no puede quedar menos entregado que lo ya devuelto (el stock se contaria dos veces)
+            validarSinDevolucionesPendientes(idDespacho, idVenta);
+
             // 1. Revertir cada movimiento SALIDA_DESPACHO asociado a este despacho
             List<MovimientoInventario> todosMovimientos = movimientoDAO.listAll();
             for (MovimientoInventario m : todosMovimientos) {
@@ -350,6 +362,39 @@ public class DespachoBOImpl implements DespachoBO {
             }
             return null;
         });
+    }
+
+    private void validarSinDevolucionesPendientes(int idDespacho, int idVenta) throws SQLException {
+        // lo ya acreditado por linea de venta en notas de credito vigentes de los comprobantes de la venta
+        Map<Integer, Double> acreditado = new HashMap<>();
+        for (Comprobante c : comprobanteDAO.listarPorVenta(idVenta)) {
+            if (c.getTipo() == TipoComprobante.NOTA_CREDITO || c.getEstado() == EstadoComprobante.ANULADO) {
+                continue;
+            }
+            for (Comprobante nc : comprobanteDAO.listarNotasCreditoPorComprobante(c.getId())) {
+                for (DetalleNotaCredito dnc : detalleNotaCreditoDAO.listarPorComprobante(nc.getId())) {
+                    acreditado.merge(dnc.getDetalleVenta().getId(), dnc.getCantidad(), Double::sum);
+                }
+            }
+        }
+        if (acreditado.isEmpty()) {
+            return;
+        }
+        Map<Integer, DetalleVenta> lineas = new HashMap<>();
+        for (DetalleVenta dv : detalleVentaDAO.listarPorVenta(idVenta)) {
+            lineas.put(dv.getId(), dv);
+        }
+        for (DetalleDespacho dd : detalleDespachoDAO.listarPorDespacho(idDespacho)) {
+            DetalleVenta dv = lineas.get(dd.getDetalleVenta().getId());
+            if (dv == null) {
+                continue;
+            }
+            double quedaEntregado = dv.getCantidadDespachada() - dd.getCantidadDespachada();
+            if (quedaEntregado + EPSILON < acreditado.getOrDefault(dv.getId(), 0.0)) {
+                throw new IllegalStateException("No se puede anular el despacho: la linea " + dv.getNumeroLinea()
+                        + " ya tiene devoluciones por nota de credito. Primero anule la nota de credito");
+            }
+        }
     }
 
     @Override
