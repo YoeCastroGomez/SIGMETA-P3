@@ -40,6 +40,8 @@ public final class SesionServicio {
         } finally { ACTUAL.remove(); }
     }
     public void cerrar() { cerrada = true; }
+    // para el adaptador web (sigmeta-ws): saber si el ticket sigue sirviendo
+    public boolean estaVigente() { return !cerrada && System.currentTimeMillis() < expira; }
     public static void verificarResponsable(int id) {
         Integer autenticado = ACTUAL.get();
         if (autenticado != null && autenticado != id) {

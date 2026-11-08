@@ -14,6 +14,11 @@ public class DBManager {
 
 
     static {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver"); // carga el driver de MySQL (necesario dentro de GlassFish)
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("No se encontro el driver de MySQL", e);
+        }
         ResourceBundle db = ResourceBundle.getBundle("db");
         host = System.getProperty("sigmeta.db.host", db.getString("db.host"));
         port = Integer.parseInt(System.getProperty("sigmeta.db.port", db.getString("db.port")));
@@ -24,7 +29,9 @@ public class DBManager {
     }
 
     public Connection getConnection() throws SQLException{
-        String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
+        // dentro de GlassFish (sigmeta-ws) el conector no debe usar el almacen de certificados del servidor;
+        // la conexion con la base sigue cifrada (SSL)
+        String url = "jdbc:mysql://" + host + ":" + port + "/" + database + "?fallbackToSystemKeyStore=false";
         return DriverManager.getConnection(url,username,password);
     }
 
