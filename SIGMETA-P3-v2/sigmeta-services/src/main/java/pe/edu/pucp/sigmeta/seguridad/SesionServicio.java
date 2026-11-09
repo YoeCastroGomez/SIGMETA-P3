@@ -23,6 +23,14 @@ public final class SesionServicio {
         Usuario usuario = new UsuarioBOImpl().iniciarSesion(nombre, clave);
         return new SesionServicio(usuario.getId());
     }
+    /** Para el adaptador web: vuelve a abrir la sesion de un usuario cuyo ticket FIRMADO por el
+     * servidor sigue vigente (por ejemplo despues de reiniciar o redesplegar GlassFish).
+     * Solo se debe llamar despues de verificar la firma del ticket. En cada pedido se vuelve a
+     * revisar que el usuario y su rol sigan activos. */
+    public static SesionServicio reanudar(int idUsuario) {
+        return new SesionServicio(idUsuario);
+    }
+    public int getIdUsuario() { return idUsuario; }
     @FunctionalInterface
     public interface Accion<T> { T ejecutar(int idAutenticado) throws SQLException; }
     public <T> T ejecutar(Accion<T> accion) throws SQLException {
