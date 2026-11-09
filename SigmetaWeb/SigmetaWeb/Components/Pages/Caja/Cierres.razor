@@ -2,11 +2,12 @@
 
 <PageTitle>Cierres de caja · SIGMETA</PageTitle>
 
-@* RF010 · Historial de cierres. Solo el Administrador puede reabrir una caja cerrada.
+@* RF010 · Historial de cierres. Solo el Administrador puede reabrir o corregir una caja cerrada.
+   Corregir cambia el monto declarado y recalcula la diferencia (CierreCajaBO.modificar); el calculado es del sistema.
    Reabrir no borra el cierre: lo deja REVERTIDO con fecha, usuario y motivo, y al cerrar de nuevo se crea otro cierre.
    Solo visual (Lab 9): los filtros no filtran y Confirmar no registra nada. *@
 <Encabezado Rf="RF010" Titulo="Cierres de caja"
-            Subtitulo="Un cierre reabierto queda como revertido; al cerrar de nuevo se registra un cierre nuevo." />
+            Subtitulo="Un cierre reabierto queda como revertido; al cerrar de nuevo se registra un cierre nuevo. Corregir solo cambia el monto declarado." />
 
 @if (cierreAReabrir is not null)
 {
@@ -43,6 +44,54 @@
                 <button class="btn btn-outline-secondary" @onclick="() => cierreAReabrir = null">Cancelar</button>
                 @* Lab 9: no se registra nada, solo se cierra el panel. *@
                 <button class="btn btn-primary" @onclick="() => cierreAReabrir = null">Confirmar reapertura</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (cierreACorregir is not null)
+{
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Corregir cierre de la caja N.º @cierreACorregir.IdCaja</h2>
+        <div class="row">
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Fecha de cierre</div>
+                <div class="fw-semibold">@cierreACorregir.FechaCierre.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Responsable</div>
+                <div class="fw-semibold">@cierreACorregir.UsuarioCierre</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Calculado por el sistema</div>
+                <div class="fw-semibold">S/ @cierreACorregir.MontoCalculado.ToString("N2")</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Declarado actual</div>
+                <div class="fw-semibold">S/ @cierreACorregir.MontoDeclarado.ToString("N2")</div>
+            </div>
+            <div class="col-md-6">
+                <Campo Etiqueta="Monto declarado corregido (S/)" Id="declaradoCorregido" Obligatorio="true"
+                       Ayuda="No puede ser negativo. El monto calculado no se modifica.">
+                    <input id="declaradoCorregido" type="number" min="0" step="0.01" class="form-control"
+                           @bind="declaradoCorregido" @bind:event="oninput" />
+                </Campo>
+            </div>
+            <div class="col-md-6">
+                @* Solo para mostrar: la diferencia la recalcula y guarda el backend (declarado − calculado). *@
+                <Campo Etiqueta="Nueva diferencia (S/)" Id="nuevaDiferencia" Ayuda="Negativa = faltante · positiva = sobrante.">
+                    <input id="nuevaDiferencia" class="form-control" readonly
+                           value="@(declaradoCorregido is null ? "—" : (declaradoCorregido.Value - cierreACorregir.MontoCalculado).ToString("N2"))" />
+                </Campo>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary" @onclick="() => cierreACorregir = null">Cancelar</button>
+                @* Lab 9: no se registra nada, solo se cierra el panel. *@
+                <button class="btn btn-primary" @onclick="() => cierreACorregir = null">Guardar corrección</button>
             </div>
         </div>
     </div>
@@ -108,8 +157,9 @@
                             <div class="d-inline-flex gap-1 text-nowrap">
                                 @if (Rol == "Administrador" && c.Estado == "VIGENTE")
                                 {
-                                    @* RF010: solo el Administrador reabre una caja ya cerrada *@
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => cierreAReabrir = c">Reabrir</button>
+                                    @* RF010: solo el Administrador reabre o corrige una caja ya cerrada *@
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => Corregir(c)">Corregir</button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => Reabrir(c)">Reabrir</button>
                                 }
                             </div>
                         </td>
@@ -125,4 +175,22 @@
 
     // Cierre elegido para reabrir: solo muestra u oculta el panel del motivo.
     private CierreFila? cierreAReabrir;
+
+    // Cierre elegido para corregir y el nuevo monto declarado (solo para mostrar la nueva diferencia).
+    private CierreFila? cierreACorregir;
+    private decimal? declaradoCorregido;
+
+    // Solo un panel abierto a la vez.
+    private void Reabrir(CierreFila c)
+    {
+        cierreACorregir = null;
+        cierreAReabrir = c;
+    }
+
+    private void Corregir(CierreFila c)
+    {
+        cierreAReabrir = null;
+        cierreACorregir = c;
+        declaradoCorregido = c.MontoDeclarado;
+    }
 }

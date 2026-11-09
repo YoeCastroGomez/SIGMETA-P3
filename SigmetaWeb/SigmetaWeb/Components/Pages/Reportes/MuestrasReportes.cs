@@ -31,6 +31,7 @@ public static class MuestrasReportes
         new("VTA-2026-0004", new DateOnly(2026, 10, 24), "Andrea Morales Pérez", "CONTADO", 94.40m, "Anulada"),
         new("VTA-2026-0005", new DateOnly(2026, 8, 20), "Constructora Andina S.A.C.", "CREDITO", 944.00m, "Despachada"),
         new("VTA-2026-0006", new DateOnly(2026, 10, 25), "Metalmecánica Chosica E.I.R.L.", "CREDITO", 413.00m, "Registrada"),
+        new("VTA-2026-0007", new DateOnly(2026, 10, 24), "Instalaciones Eléctricas del Sur S.A.", "CONTADO", 300.90m, "Registrada"),
     };
 
     // Las ventas anuladas no suman en el reporte.

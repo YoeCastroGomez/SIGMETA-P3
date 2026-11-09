@@ -3,9 +3,11 @@
 <PageTitle>Detalle de cuenta por cobrar · SIGMETA</PageTitle>
 
 @* RF009 · Detalle de una cuenta por cobrar con sus cobros. Un cobro no se borra: Anular lo marca como anulado
-   (baja lógica) y devuelve su monto al saldo. Solo visual (Lab 9): muestra una cuenta de ejemplo fija y Anular no hace nada. *@
+   (baja lógica) y devuelve su monto al saldo. Modificar corrige la fecha y la referencia (CobroBOImpl.modificar).
+   Solo visual (Lab 9): muestra la cuenta de los datos de ejemplo y Anular no hace nada. *@
 <Encabezado Rf="RF009" Titulo="Cuenta por cobrar" Subtitulo="@($"{cuenta.Venta} · {cuenta.Cliente}")">
     <a class="btn btn-outline-secondary" href="/cobranzas">Volver a la lista</a>
+    <a class="btn btn-outline-secondary" href="/cobros">Todos los cobros</a>
     @if (Rol == "Cajero" && cuenta.SaldoPendiente > 0)
     {
         <a class="btn btn-primary" href="@($"/cobranzas/{Id}/cobro")">Registrar cobro</a>
@@ -94,7 +96,8 @@
                             <div class="d-inline-flex gap-1 text-nowrap">
                                 @if (!c.Anulado && (Rol == "Cajero" || Rol == "Administrador"))
                                 {
-                                    @* RF009: Cajero o Administrador anulan un cobro (baja lógica, no se borra) *@
+                                    @* RF009: Cajero o Administrador modifican (fecha y referencia) o anulan un cobro (baja lógica, no se borra) *@
+                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/cobranzas/{cuenta.Id}/cobros/{c.Id}")">Modificar</a>
                                     <button class="btn btn-sm btn-outline-danger">Anular</button>
                                 }
                             </div>
@@ -107,14 +110,14 @@
 </div>
 
 <div class="alert alert-secondary">
-    Para cambiar el monto o el medio de pago de un cobro se anula y se registra uno nuevo.
+    Modificar un cobro solo corrige su fecha y su referencia. Para cambiar el monto o el medio de pago se anula y se registra uno nuevo.
 </div>
 
 @code {
     [Parameter] public int Id { get; set; }
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
 
-    // Cuenta de ejemplo fija (Lab 9: sin consultas, no se busca por id).
-    private readonly CuentaFila cuenta = MuestrasCaja.Cuentas[0];
+    // Cuenta de los datos de ejemplo (Lab 9: sin consultas).
+    private CuentaFila cuenta => MuestrasCaja.Cuenta(Id);
     private CobroFila[] cobros => MuestrasCaja.Cobros.Where(c => c.IdCuenta == cuenta.Id).ToArray();
 }

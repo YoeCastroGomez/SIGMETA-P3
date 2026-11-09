@@ -3,9 +3,11 @@
 <PageTitle>Cuentas por cobrar · SIGMETA</PageTitle>
 
 @* RF009 · Cuentas por cobrar (Cajero y Administrador). La cuenta se genera sola al registrar una venta al crédito
-   y su saldo baja con cada cobro. Solo visual (Lab 9): los filtros no filtran. *@
+   y su saldo baja con cada cobro. Solo visual (Lab 9): los filtros trabajan sobre los datos de ejemplo. *@
 <Encabezado Rf="RF009" Titulo="Cuentas por cobrar"
-            Subtitulo="Se generan al registrar una venta al crédito. Importes en soles." />
+            Subtitulo="Se generan al registrar una venta al crédito. Importes en soles.">
+    <a class="btn btn-outline-secondary" href="/cobros">Consultar cobros</a>
+</Encabezado>
 
 <div class="row">
     <div class="col-sm-6 col-lg-3">
@@ -34,33 +36,45 @@
     </div>
 </div>
 
+@* RF009: búsqueda por cliente, comprobante y rango de fechas (de emisión o de vencimiento). Filtra en memoria. *@
 <div class="card card-body mb-3">
     <div class="row g-3 align-items-end">
         <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
-            <input id="fCliente" class="form-control" maxlength="150" placeholder="Razón social, nombre o documento" />
+            <input id="fCliente" class="form-control" maxlength="150" placeholder="Razón social, nombre o documento" @bind="fCliente" />
         </Campo>
         <Campo Etiqueta="Comprobante" Id="fComprobante" Clase="col-sm-6 col-md-2">
-            <input id="fComprobante" class="form-control" maxlength="13" placeholder="F001-00000123" />
+            <input id="fComprobante" class="form-control" maxlength="13" placeholder="F001-00000123" @bind="fComprobante" />
         </Campo>
-        <Campo Etiqueta="Vence desde" Id="fDesde" Clase="col-sm-6 col-md-2">
-            <input id="fDesde" type="date" class="form-control" />
-        </Campo>
-        <Campo Etiqueta="Vence hasta" Id="fHasta" Clase="col-sm-6 col-md-2">
-            <input id="fHasta" type="date" class="form-control" />
-        </Campo>
-        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-2">
-            <select id="fEstado" class="form-select">
-                <option>Todos</option>
-                <option>Pendiente</option>
-                <option>Pagada parcial</option>
-                <option>Pagada</option>
-                <option>Vencida</option>
+        <Campo Etiqueta="Buscar por" Id="fTipoFecha" Clase="col-sm-6 col-md-2">
+            <select id="fTipoFecha" class="form-select" @bind="fTipoFecha">
+                <option value="EMISION">Fecha de emisión</option>
+                <option value="VENCIMIENTO">Fecha de vencimiento</option>
             </select>
         </Campo>
-        <div class="col-auto">
-            <button class="btn btn-dark">Buscar</button>
+        <Campo Etiqueta="Desde" Id="fDesde" Clase="col-sm-6 col-md-2">
+            <input id="fDesde" type="date" class="form-control" @bind="fDesde" />
+        </Campo>
+        <Campo Etiqueta="Hasta" Id="fHasta" Clase="col-sm-6 col-md-2">
+            <input id="fHasta" type="date" class="form-control" @bind="fHasta" />
+        </Campo>
+        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-2">
+            <select id="fEstado" class="form-select" @bind="fEstado">
+                <option value="">Todos</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="PAGADA_PARCIAL">Pagada parcial</option>
+                <option value="PAGADA">Pagada</option>
+                <option value="VENCIDA">Vencida</option>
+            </select>
+        </Campo>
+        <div class="col-auto d-flex gap-2">
+            <button class="btn btn-dark" @onclick="Buscar">Buscar</button>
+            <button class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
         </div>
     </div>
+    @if (error is not null)
+    {
+        <div class="text-danger small mt-2">@error</div>
+    }
 </div>
 
 <div class="card mb-3">
@@ -70,6 +84,7 @@
                 <tr>
                     <th>Cliente</th>
                     <th>Venta</th>
+                    <th>Emisión</th>
                     <th>Vencimiento</th>
                     <th class="text-end">Monto</th>
                     <th class="text-end">Pagado</th>
@@ -79,7 +94,11 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var c in Cuentas)
+                @if (resultado.Length == 0)
+                {
+                    <tr><td colspan="9" class="text-center text-muted py-4">No hay cuentas que coincidan con la búsqueda.</td></tr>
+                }
+                @foreach (var c in resultado)
                 {
                     <tr>
                         <td><strong>@c.Cliente</strong></td>
@@ -87,6 +106,7 @@
                             @c.Venta
                             <div class="small text-muted">@(c.Comprobante ?? "Sin comprobante")</div>
                         </td>
+                        <td class="text-nowrap">@c.FechaEmision.ToString("dd/MM/yyyy")</td>
                         <td class="text-nowrap @(c.Estado == "VENCIDA" ? "text-danger" : "")">@c.FechaVencimiento.ToString("dd/MM/yyyy")</td>
                         <td class="text-end text-nowrap">S/ @c.MontoOriginal.ToString("N2")</td>
                         <td class="text-end text-nowrap">S/ @c.MontoPagado.ToString("N2")</td>
@@ -112,5 +132,41 @@
 @code {
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
 
+    // Las tarjetas de totales siempre muestran todas las cuentas (vista del Administrador y del Cajero).
     private static CuentaFila[] Cuentas => MuestrasCaja.Cuentas;
+
+    // Filtros (en memoria, como en Compras y Kardex).
+    private string? fCliente, fComprobante, fEstado;
+    private string fTipoFecha = "VENCIMIENTO";
+    private DateOnly? fDesde, fHasta;
+    private string? error;
+    private CuentaFila[] resultado = MuestrasCaja.Cuentas;
+
+    private void Buscar()
+    {
+        error = null;
+        if (fDesde is not null && fHasta is not null && fDesde > fHasta)
+        {
+            error = "La fecha Desde no puede ser posterior a Hasta.";
+            return;
+        }
+        resultado = Cuentas.Where(c =>
+        {
+            var fecha = fTipoFecha == "EMISION" ? c.FechaEmision : c.FechaVencimiento;
+            return (string.IsNullOrWhiteSpace(fCliente) || c.Cliente.Contains(fCliente.Trim(), StringComparison.OrdinalIgnoreCase))
+                && (string.IsNullOrWhiteSpace(fComprobante) || (c.Comprobante ?? "").Contains(fComprobante.Trim(), StringComparison.OrdinalIgnoreCase))
+                && (string.IsNullOrEmpty(fEstado) || c.Estado == fEstado)
+                && (fDesde is null || fecha >= fDesde)
+                && (fHasta is null || fecha <= fHasta);
+        }).ToArray();
+    }
+
+    private void Limpiar()
+    {
+        fCliente = fComprobante = fEstado = null;
+        fTipoFecha = "VENCIMIENTO";
+        fDesde = fHasta = null;
+        error = null;
+        resultado = Cuentas;
+    }
 }

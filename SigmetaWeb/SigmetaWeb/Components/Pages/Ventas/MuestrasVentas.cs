@@ -128,6 +128,10 @@ public static class MuestrasVentas
             "CREDITO", 30, "DESPACHADA", "F001-00000130", LineasAndina2),
         new(6, "VTA-2026-0006", "Metalmecánica Chosica E.I.R.L.", null, new DateOnly(2026, 10, 25),
             "CREDITO", 15, "REGISTRADA", "F001-00000141", LineasChosica2),
+        // Venta al contado que todavía no se cobra: el Cajero la cobra desde Ventas o desde Caja (RF010)
+        new(7, "VTA-2026-0007", "Instalaciones Eléctricas del Sur S.A.", null, new DateOnly(2026, 10, 24),
+            "CONTADO", 0, "REGISTRADA", "F001-00000142",
+            new LineaFila[] { new(1, "INT-004", "Enchufe Mennekes", "Unidad", 3m, 85.00m, 0m) }),
     };
 
     public static readonly ComprobanteFila[] Comprobantes =
@@ -136,6 +140,7 @@ public static class MuestrasVentas
         new(3, 3, "BOLETA", "B001", "00000045", new DateOnly(2026, 10, 24), "EMITIDO", null, null),
         new(5, 5, "FACTURA", "F001", "00000130", new DateOnly(2026, 8, 20), "EMITIDO", "CORREO", new DateTime(2026, 8, 20, 11, 0, 0)),
         new(6, 6, "FACTURA", "F001", "00000141", new DateOnly(2026, 10, 25), "EMITIDO", null, null),
+        new(7, 7, "FACTURA", "F001", "00000142", new DateOnly(2026, 10, 24), "EMITIDO", null, null),
     };
 
     public static readonly DespachoFila[] Despachos =
@@ -176,6 +181,14 @@ public static class MuestrasVentas
 
     public static decimal CantidadDespachada(int idVenta, int numeroLinea) =>
         Despachado.GetValueOrDefault((idVenta, numeroLinea));
+
+    // RF010: una venta al contado está cobrada si tiene su movimiento COBRO_CONTADO en la caja
+    public static bool CobradaAlContado(int idVenta) =>
+        global::SigmetaWeb.Components.Pages.Caja.MuestrasCaja.Movimientos.Any(m => m.Tipo == "COBRO_CONTADO" && m.IdVenta == idVenta);
+
+    // Ventas al contado vigentes que el Cajero todavía tiene que cobrar
+    public static IEnumerable<VentaFila> PorCobrarAlContado =>
+        Ventas.Where(v => v.CondicionPago == "CONTADO" && v.Estado != "ANULADA" && !CobradaAlContado(v.Id));
 
     public static VentaFila? Venta(int id) => Ventas.FirstOrDefault(v => v.Id == id);
     public static ComprobanteFila? ComprobanteDeVenta(int idVenta) =>
