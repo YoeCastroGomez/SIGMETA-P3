@@ -1,0 +1,17 @@
+@* Aviso rojo con el mensaje de error que devolvió el Java (el texto del BO).
+   Uso: <AvisoError Mensaje="@error" />   (si error es null o vacío no se muestra nada) *@
+@if (!string.IsNullOrWhiteSpace(Mensaje))
+{
+    <div class="alert alert-danger d-flex justify-content-between align-items-start gap-2" role="alert">
+        <span>@Mensaje</span>
+        @if (AlCerrar.HasDelegate)
+        {
+            <button type="button" class="btn-close" aria-label="Cerrar" @onclick="AlCerrar"></button>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string? Mensaje { get; set; }
+    [Parameter] public EventCallback AlCerrar { get; set; }
+}

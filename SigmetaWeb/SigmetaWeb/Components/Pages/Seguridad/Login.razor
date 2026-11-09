@@ -1,10 +1,13 @@
 @page "/login"
 @layout LoginLayout
-@inject NavigationManager Nav
+@attribute [AllowAnonymous]
 
 <PageTitle>Iniciar sesión · SIGMETA</PageTitle>
 
-@* RF001 · Login. Solo visual (Lab 9): no se valida la clave, "Ingresar" solo navega. *@
+@* RF001 · Login.
+   El formulario se envía a /auth/login (AuthEndpoints -> ServicioSesionAuth), que le pregunta al Java
+   (POST /api/sesion -> iniciarSesion del BO). Si los datos son correctos se crea la cookie de sesión
+   con el usuario, su rol y el ticket; si no, vuelve aquí con el mensaje del BO en ?error=... *@
 <div class="card shadow-sm p-4 w-100" style="max-width: 380px;">
     <div class="d-flex align-items-center gap-2 mb-4">
         <span class="sigmeta-logo rounded d-flex align-items-center justify-content-center text-white fw-bold">SM</span>
@@ -16,33 +19,26 @@
 
     <h1 class="h5 mb-3">Iniciar sesión</h1>
 
-    <Campo Etiqueta="Usuario" Id="usuario" Obligatorio="true">
-        <input id="usuario" class="form-control" autocomplete="username" />
-    </Campo>
+    @* "Usuario o clave incorrectos", "El usuario se encuentra desactivado", "El rol del usuario se encuentra desactivado" *@
+    <AvisoError Mensaje="@Error" />
 
-    <Campo Etiqueta="Clave" Id="clave" Obligatorio="true">
-        <input id="clave" type="password" class="form-control" autocomplete="current-password" />
-    </Campo>
+    <form method="post" action="/auth/login">
+        <Campo Etiqueta="Usuario" Id="usuario" Obligatorio="true">
+            <input id="usuario" name="usuario" class="form-control" autocomplete="username" required />
+        </Campo>
 
-    <button class="btn btn-primary w-100 mt-2" @onclick="@(() => Entrar("Administrador"))">Ingresar</button>
+        <Campo Etiqueta="Clave" Id="clave" Obligatorio="true">
+            <input id="clave" name="clave" type="password" class="form-control" autocomplete="current-password" required />
+        </Campo>
+
+        <button type="submit" class="btn btn-primary w-100 mt-2">Ingresar</button>
+    </form>
 
     <p class="small text-muted mt-3 mb-0">Si olvidaste tu clave, solicita al Administrador que la restablezca.</p>
-
-    @* Solo para la demostración: entra con el menú de cada rol. *@
-    <div class="border-top mt-4 pt-3">
-        <div class="small text-muted text-uppercase mb-2">Demostración: entrar como</div>
-        <div class="row g-2">
-            @foreach (var r in new[] { "Administrador", "Vendedor", "Cajero", "Almacenero" })
-            {
-                <div class="col-6">
-                    <button class="btn btn-sm btn-outline-secondary w-100" @onclick="@(() => Entrar(r))">@r</button>
-                </div>
-            }
-        </div>
-    </div>
 </div>
 
 @code {
-    // forceLoad recrea el layout para que tome el rol elegido.
-    private void Entrar(string rol) => Nav.NavigateTo($"/?rol={Uri.EscapeDataString(rol)}", forceLoad: true);
+    // mensaje del BO cuando el login falla: /login?error=Usuario%20o%20clave%20incorrectos
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? Error { get; set; }
 }

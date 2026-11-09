@@ -1,26 +1,87 @@
 @page "/caja"
+@using SigmetaWeb.Components.Pages.Ventas
 
 <PageTitle>Caja · SIGMETA</PageTitle>
 
-@* RF010 · Apertura de caja y resumen de la jornada (Cajero). Solo visual (Lab 9): Abrir no registra nada,
-   solo cambia lo que se muestra para enseñar las dos vistas. *@
+@* RF010 · Flujo de la caja del Cajero en el orden del requisito:
+   1. Apertura con monto inicial  2. Movimientos de la jornada  3. Cobro de las ventas al contado  4. Cierre.
+   Cada paso solo ofrece su botón cuando corresponde: Abrir solo sin caja abierta; el resto solo con la caja abierta.
+   Solo visual (Lab 9): Abrir no registra nada, solo cambia lo que se muestra para enseñar las dos vistas. *@
 <Encabezado Rf="RF010" Titulo="Caja"
-            Subtitulo="@(abierta ? "Resumen de la jornada de la caja abierta." : "No tienes una caja abierta. Ábrela para registrar cobros y movimientos.")">
-    @if (abierta)
-    {
-        <a class="btn btn-outline-secondary" href="/caja/movimientos">Movimientos</a>
-        <a class="btn btn-primary" href="/caja/cierre">Cerrar caja</a>
-    }
-</Encabezado>
+            Subtitulo="@(abierta ? "Resumen de la jornada de la caja abierta." : "No tienes una caja abierta. Ábrela para registrar cobros y movimientos.")" />
+
+<div class="card mb-3">
+    <div class="card-body pb-2">
+        <h2 class="h6 fw-semibold mb-3">Flujo de la jornada</h2>
+    </div>
+    <ol class="list-group list-group-flush list-group-numbered">
+        <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="ms-2 me-auto">
+                <div class="fw-semibold">Abrir caja</div>
+                <div class="small text-muted">Monto inicial de efectivo. Un cajero solo tiene una caja abierta a la vez.</div>
+            </div>
+            @if (abierta)
+            {
+                <Estado Texto="Abierta" />
+            }
+            else
+            {
+                <a class="btn btn-sm btn-primary" href="#apertura">Abrir caja</a>
+            }
+        </li>
+        <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="ms-2 me-auto">
+                <div class="fw-semibold">Movimientos de la jornada</div>
+                <div class="small text-muted">Cobros al contado, cobros de crédito (RF009) e ingresos y egresos manuales.</div>
+            </div>
+            @if (abierta)
+            {
+                <a class="btn btn-sm btn-outline-secondary" href="/caja/movimientos">Ver movimientos</a>
+            }
+            else
+            {
+                <span class="small text-muted">Requiere caja abierta</span>
+            }
+        </li>
+        <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="ms-2 me-auto">
+                <div class="fw-semibold">Cobrar ventas al contado</div>
+                <div class="small text-muted">Cada cobro queda como movimiento <em>Cobro al contado</em> de la venta.</div>
+            </div>
+            @if (abierta)
+            {
+                <span class="badge text-bg-light border">@porCobrar.Length por cobrar</span>
+            }
+            else
+            {
+                <span class="small text-muted">Requiere caja abierta</span>
+            }
+        </li>
+        <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="ms-2 me-auto">
+                <div class="fw-semibold">Cerrar caja</div>
+                <div class="small text-muted">Compara el monto calculado con el declarado y registra la diferencia y el responsable.</div>
+            </div>
+            @if (abierta)
+            {
+                <a class="btn btn-sm btn-primary" href="/caja/cierre">Cerrar caja</a>
+            }
+            else
+            {
+                <span class="small text-muted">Requiere caja abierta</span>
+            }
+        </li>
+    </ol>
+</div>
 
 @if (!abierta)
 {
-    <div class="card card-body mb-3" style="max-width: 560px;">
-        <h2 class="h6 fw-semibold mb-3">Apertura de caja</h2>
+    <div id="apertura" class="card card-body mb-3" style="max-width: 560px;">
+        <h2 class="h6 fw-semibold mb-3">1. Apertura de caja</h2>
         <div class="row">
             <div class="col-sm-6 mb-3">
                 <div class="small text-muted text-uppercase">Cajero</div>
-                <div class="fw-semibold">mvargas</div>
+                <div class="fw-semibold">mchavez</div>
             </div>
             <div class="col-sm-6 mb-3">
                 <div class="small text-muted text-uppercase">Fecha y hora</div>
@@ -66,6 +127,47 @@ else
 
     <div class="card mb-3">
         <div class="card-body pb-0">
+            <h2 class="h6 fw-semibold mb-1">3. Ventas al contado por cobrar</h2>
+            <p class="small text-muted">Ventas al contado vigentes que todavía no tienen su cobro en la caja.</p>
+        </div>
+        @if (porCobrar.Length == 0)
+        {
+            <div class="card-body pt-0 small text-muted">No hay ventas al contado pendientes de cobro.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Venta</th>
+                            <th>Cliente</th>
+                            <th>Comprobante</th>
+                            <th class="text-end">Total (S/)</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var v in porCobrar)
+                        {
+                            <tr>
+                                <td><strong>@v.Numero</strong></td>
+                                <td>@v.Cliente</td>
+                                <td>@(v.Comprobante ?? "Sin emitir")</td>
+                                <td class="text-end">@MuestrasVentas.Total(v.Detalles).ToString("N2")</td>
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-primary" href="@($"/ventas/{v.Id}/cobro?volver=/caja")">Cobrar</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body pb-0">
             <h2 class="h6 fw-semibold mb-3">Resumen de la jornada</h2>
         </div>
         <div class="table-responsive">
@@ -76,6 +178,10 @@ else
                     <tr><td>(+) Cobros de crédito</td><td class="text-end">S/ @MuestrasCaja.Total("COBRO_CREDITO").ToString("N2")</td></tr>
                     <tr><td>(+) Ingresos manuales</td><td class="text-end">S/ @MuestrasCaja.Total("INGRESO_MANUAL").ToString("N2")</td></tr>
                     <tr><td>(−) Egresos manuales</td><td class="text-end">S/ @MuestrasCaja.Total("EGRESO_MANUAL").ToString("N2")</td></tr>
+                    <tr>
+                        <td>(−) Devoluciones por ventas anuladas y notas de crédito <span class="small text-muted">· no cuentan como cobro</span></td>
+                        <td class="text-end">S/ @((MuestrasCaja.TotalDevoluciones("ANULACION_VENTA") + MuestrasCaja.TotalDevoluciones("NOTA_CREDITO")).ToString("N2"))</td>
+                    </tr>
                     <tr class="table-light fw-semibold">
                         <td>Monto calculado por el sistema</td>
                         <td class="text-end">S/ @MuestrasCaja.MontoCalculado.ToString("N2")</td>
@@ -84,10 +190,6 @@ else
             </table>
         </div>
     </div>
-
-    <div class="alert alert-secondary">
-        Las ventas anuladas y las operaciones revertidas con nota de crédito no cuentan como cobros válidos en el cierre.
-    </div>
 }
 
 @code {
@@ -95,4 +197,5 @@ else
     private bool abierta;
 
     private readonly CajaFila caja = MuestrasCaja.CajaActual;
+    private readonly VentaFila[] porCobrar = MuestrasVentas.PorCobrarAlContado.ToArray();
 }

@@ -22,7 +22,7 @@
 
     <Campo Etiqueta="Operación restringida" Id="operacion" Obligatorio="true"
            Ayuda="Máximo 60 caracteres. No puedes tener dos solicitudes pendientes de la misma operación.">
-        <input id="operacion" class="form-control" maxlength="60" list="operaciones" />
+        <input id="operacion" class="form-control" maxlength="60" list="operaciones" value="@Operacion" />
         <datalist id="operaciones">
             @foreach (var o in MuestrasSeguridad.OperacionesSugeridas.GetValueOrDefault(Rol, Array.Empty<string>()))
             {
@@ -46,6 +46,9 @@
 
 @code {
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Vendedor";
+
+    // Llega elegida desde otra pantalla, p. ej. la nota de crédito: ?operacion=EMITIR_NOTA_CREDITO
+    [SupplyParameterFromQuery(Name = "operacion")] public string? Operacion { get; set; }
 
     // Lab 9: no se registra nada, solo se navega.
     private void Volver() => Nav.NavigateTo("/autorizaciones/mias");

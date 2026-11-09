@@ -1,5 +1,4 @@
 @inherits LayoutComponentBase
-@implements IDisposable
 @inject NavigationManager Nav
 
 <CascadingValue Value="rol" Name="Rol">
@@ -20,9 +19,10 @@
                 <button class="btn btn-sm btn-outline-secondary d-xl-none" @onclick="() => menuAbierto = !menuAbierto">Menú</button>
                 <div class="ms-auto d-flex align-items-center gap-3">
                     <a class="small text-decoration-none" href="/mi-clave" title="Cambiar mi clave">
-                        <strong>@Usuario</strong> <span class="text-muted d-none d-sm-inline">· @rol</span>
+                        <strong>@usuario</strong>
+                        <span class="text-muted d-none d-sm-inline">· @nombreCompleto · @rol</span>
                     </a>
-                    <a class="btn btn-sm btn-outline-secondary" href="/login">Cerrar sesión</a>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="CerrarSesion">Cerrar sesión</button>
                 </div>
             </header>
 
@@ -40,37 +40,25 @@
 </div>
 
 @code {
-    // Solo presentación (Lab 9): el rol llega del login como ?rol=... y decide qué menú fijo se ve.
-    // No hay sesión real ni validación de permisos; eso lo hará el backend Java.
+    // RF001: el usuario y su rol salen de la sesión iniciada (cookie creada en ServicioSesionAuth),
+    // no de la dirección. El rol decide cuál de los cuatro menús fijos se ve;
+    // los permisos de cada operación los valida el BO en el Java.
+    [CascadingParameter] private Task<AuthenticationState> EstadoAuth { get; set; } = default!;
+
     private bool menuAbierto;
-    private string rol = "Administrador";
+    private string usuario = "";
+    private string nombreCompleto = "";
+    private string rol = "";
 
-    private string Usuario => rol switch
+    protected override async Task OnParametersSetAsync()
     {
-        "Vendedor" => "jtorres",
-        "Cajero" => "mvargas",
-        "Almacenero" => "lpaucar",
-        _ => "admin",
-    };
-
-    protected override void OnInitialized()
-    {
-        LeerRol();
-        Nav.LocationChanged += AlCambiarRuta;
+        var estado = await EstadoAuth;
+        var user = estado.User;
+        usuario = user.Identity?.Name ?? "";
+        nombreCompleto = $"{user.FindFirst(ClaimTypes.GivenName)?.Value} {user.FindFirst(ClaimTypes.Surname)?.Value}";
+        rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
     }
 
-    private void LeerRol()
-    {
-        var query = new Uri(Nav.Uri).Query.TrimStart('?').Split('&');
-        var valor = query.FirstOrDefault(p => p.StartsWith("rol="))?.Substring(4);
-        if (!string.IsNullOrEmpty(valor)) rol = Uri.UnescapeDataString(valor);
-    }
-
-    private void AlCambiarRuta(object? sender, LocationChangedEventArgs e)
-    {
-        LeerRol();
-        InvokeAsync(StateHasChanged);
-    }
-
-    public void Dispose() => Nav.LocationChanged -= AlCambiarRuta;
+    // /auth/logout cierra la sesión del Java y borra la cookie (AuthEndpoints)
+    private void CerrarSesion() => Nav.NavigateTo("/auth/logout", forceLoad: true);
 }

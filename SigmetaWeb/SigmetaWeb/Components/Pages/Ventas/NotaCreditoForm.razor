@@ -1,9 +1,15 @@
 @page "/notas-credito/nueva"
+@using SigmetaWeb.Components.Pages.Seguridad
 @inject NavigationManager Nav
 
 <PageTitle>Nueva nota de crédito · SIGMETA</PageTitle>
 
 @* RF013 · Registrar una nota de crédito sobre una factura o boleta (Cajero, con autorización del Administrador).
+   La autorización no se elige aquí: es la solicitud EMITIR_NOTA_CREDITO que el Cajero pidió y el Administrador
+   aprobó en su propia sesión (RF014). El BO toma de ahí quién autorizó, lo guarda en la nota y consume la
+   autorización (APROBADA -> VENCIDA) para que no se use dos veces.
+   Solo se devuelve lo ENTREGADO al cliente (cantidad despachada) menos lo ya acreditado, así el reingreso
+   al stock siempre tiene una salida previa por despacho.
    Cada línea apunta a una línea concreta de la venta (DetalleNotaCredito.detalleVenta) y el importe
    se calcula con el precio efectivamente cobrado (con descuento), como en ComprobanteBOImpl.
    Solo visual (Lab 9): el cálculo es de pantalla y Guardar no registra nada, solo vuelve a la lista. *@
@@ -25,14 +31,27 @@
                 </select>
             </Campo>
         </div>
-        <div class="col-md-6">
-            <Campo Etiqueta="Administrador que autoriza" Id="admin" Obligatorio="true"
-                   Ayuda="Debe ser un Administrador activo. Queda registrado en la nota (RNF001).">
-                <select id="admin" class="form-select">
-                    <option value="">Seleccione…</option>
-                    <option value="1">aquispe · Administrador</option>
-                </select>
-            </Campo>
+        <div class="col-md-6 mb-3">
+            <div class="form-label">Autorización del Administrador</div>
+            @if (autorizacion is not null)
+            {
+                <div class="alert alert-success py-2 mb-1">
+                    Autorizado por <strong>@autorizacion.Administrador</strong>, vence a las
+                    <strong>@autorizacion.FechaVencimiento?.Split(' ').Last()</strong>
+                </div>
+                <div class="form-text">
+                    Solicitud N.º @autorizacion.Id (RF014). Al registrar la nota la autorización se consume y no sirve para otra.
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning py-2 mb-1 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span>No tiene autorización vigente</span>
+                    <a class="btn btn-sm btn-primary"
+                       href="@($"/autorizaciones/nueva?operacion={MuestrasSeguridad.OperacionNotaCredito}")">Solicitar autorización</a>
+                </div>
+                <div class="form-text">El Administrador la aprueba en su sesión con una vigencia en minutos.</div>
+            }
         </div>
         <div class="col-sm-6 col-md-3 mb-3">
             <div class="small text-muted text-uppercase">Venta</div>
@@ -63,7 +82,7 @@
     <div class="card-body pb-0">
         <h2 class="h6 fw-semibold mb-1">Productos devueltos</h2>
         <p class="small text-muted">
-            Indique la cantidad a devolver de cada línea de la venta. No se puede devolver más de lo vendido menos lo ya acreditado.
+            Indique la cantidad a devolver de cada línea de la venta. No se puede devolver más de lo entregado menos lo ya acreditado.
             El importe usa el precio efectivamente cobrado, con el descuento de la venta.
         </p>
     </div>
@@ -74,6 +93,7 @@
                     <th style="width: 3rem;">#</th>
                     <th>Producto</th>
                     <th class="text-end">Vendido</th>
+                    <th class="text-end">Entregado</th>
                     <th class="text-end">Ya acreditado</th>
                     <th class="text-end" style="width: 9rem;">A devolver</th>
                     <th class="text-end">Precio unit. (S/)</th>
@@ -86,16 +106,27 @@
                 {
                     var idx = i;
                     var l = Venta.Detalles[idx];
+                    var entregado = MuestrasVentas.CantidadDespachada(Venta.Id, l.NumeroLinea);
                     var acreditado = MuestrasVentas.CantidadAcreditada(Venta.Id, l.NumeroLinea);
-                    var disponible = l.Cantidad - acreditado;
+                    // Mismo límite que ComprobanteBOImpl.registrarNotaCredito: entregado − ya acreditado
+                    var disponible = Math.Max(0, entregado - acreditado);
                     <tr>
                         <td>@l.NumeroLinea</td>
                         <td><span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto</td>
                         <td class="text-end">@l.Cantidad.ToString("0.###")</td>
+                        <td class="text-end">@entregado.ToString("0.###")</td>
                         <td class="text-end">@acreditado.ToString("0.###")</td>
                         <td>
                             <input type="number" min="0" max="@disponible" step="0.001" class="form-control form-control-sm text-end"
                                    @bind="devolver[idx]" disabled="@(disponible <= 0)" aria-label="Cantidad a devolver" />
+                            @if (entregado == 0)
+                            {
+                                <div class="small text-muted text-end">Sin entregar</div>
+                            }
+                            else if (devolver[idx] > disponible)
+                            {
+                                <div class="small text-danger text-end">Máximo @disponible.ToString("0.###")</div>
+                            }
                         </td>
                         <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
                         <td class="text-end">@DescuentoDevuelto(l, devolver[idx]).ToString("N2")</td>
@@ -105,15 +136,15 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="7" class="text-end text-muted">Subtotal</td>
+                    <td colspan="8" class="text-end text-muted">Subtotal</td>
                     <td class="text-end">@SubTotal.ToString("N2")</td>
                 </tr>
                 <tr>
-                    <td colspan="7" class="text-end text-muted">IGV (18 %)</td>
+                    <td colspan="8" class="text-end text-muted">IGV (18 %)</td>
                     <td class="text-end">@Igv.ToString("N2")</td>
                 </tr>
                 <tr>
-                    <td colspan="7" class="text-end fw-bold">Total S/</td>
+                    <td colspan="8" class="text-end fw-bold">Total S/</td>
                     <td class="text-end fw-bold">@((SubTotal + Igv).ToString("N2"))</td>
                 </tr>
             </tfoot>
@@ -139,12 +170,18 @@
         <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
         <div class="d-flex gap-2">
             <a class="btn btn-outline-secondary" href="/notas-credito">Cancelar</a>
-            <button class="btn btn-primary" @onclick="Volver">Registrar nota de crédito</button>
+            <button class="btn btn-primary" @onclick="Volver" disabled="@(autorizacion is null)">Registrar nota de crédito</button>
         </div>
     </div>
 </div>
 
 @code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Cajero";
+
+    // Autorización vigente del Cajero de la sesión (SolicitudAutorizacionBO.obtenerAutorizacionVigente).
+    private SolicitudFila? autorizacion => MuestrasSeguridad.AutorizacionVigente(
+        MuestrasSeguridad.UsuarioPorRol.GetValueOrDefault(Rol, ""), MuestrasSeguridad.OperacionNotaCredito);
+
     // Estas variables solo controlan lo que se muestra (Lab 9: sin consultas).
     private int idComprobante = MuestrasVentas.Comprobantes[0].Id;
     private decimal[] devolver = new decimal[LineasDe(MuestrasVentas.Comprobantes[0]).Length];

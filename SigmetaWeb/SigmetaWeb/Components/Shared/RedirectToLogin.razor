@@ -1,0 +1,10 @@
+@inject NavigationManager Nav
+
+@* Se muestra cuando no hay sesión: manda al login. *@
+
+@code {
+    protected override void OnInitialized()
+    {
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+}

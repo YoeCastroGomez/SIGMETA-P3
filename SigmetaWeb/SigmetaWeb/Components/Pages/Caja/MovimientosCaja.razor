@@ -3,12 +3,19 @@
 <PageTitle>Movimientos de caja · SIGMETA</PageTitle>
 
 @* RF010 · Movimientos de la caja abierta (Cajero). Solo visual (Lab 9): Guardar y Eliminar no registran nada.
-   Los cobros entran solos desde la venta al contado o desde el cobro de una cuenta (RF009);
-   aquí el Cajero solo registra ingresos y egresos manuales con su concepto. *@
+   - Cobro al contado: lo registra el Cajero con "Cobrar" en la venta (Ventas o Caja), indicando la venta de origen.
+   - Cobro de crédito: entra al registrar el cobro de una cuenta por cobrar (RF009).
+   - Devoluciones: egresos que registra el sistema al anular una venta cobrada o emitir una nota de crédito.
+   - Ingresos y egresos manuales: los registra el Cajero aquí, con su concepto. Son los únicos que se eliminan,
+     y solo con la caja abierta (MovimientoCajaBOImpl.eliminar). *@
 <Encabezado Rf="RF010" Titulo="Movimientos de caja"
             Subtitulo="@($"Caja N.º {caja.Id} · abierta el {caja.FechaApertura:dd/MM/yyyy HH:mm} por {caja.UsuarioApertura}")">
     <a class="btn btn-outline-secondary" href="/caja">Volver a la caja</a>
-    @if (!mostrarFormulario)
+    @if (caja.Abierta)
+    {
+        <a class="btn btn-outline-secondary" href="/ventas">Cobrar ventas al contado</a>
+    }
+    @if (caja.Abierta && !mostrarFormulario)
     {
         <button class="btn btn-primary" @onclick="() => mostrarFormulario = true">Ingreso o egreso manual</button>
     }
@@ -108,9 +115,13 @@
                         <td>@MuestrasCaja.Texto(m.MedioPago)</td>
                         <td>
                             @m.Concepto
-                            @if (!string.IsNullOrEmpty(m.DocumentoOrigen))
+                            @if (m.DocumentoOrigen is not null)
                             {
-                                <div class="small text-muted">Origen: @m.DocumentoOrigen</div>
+                                <div class="small text-muted">Origen: @MuestrasCaja.Texto(m.DocumentoOrigen)</div>
+                            }
+                            @if (m.EsDevolucion)
+                            {
+                                <div><span class="badge text-bg-secondary">no cuenta como cobro</span></div>
                             }
                         </td>
                         <td class="text-end text-nowrap @(m.EsEgreso ? "text-danger" : "")">
@@ -118,9 +129,9 @@
                         </td>
                         <td class="text-end">
                             <div class="d-inline-flex gap-1 text-nowrap">
-                                @if (m.EsManual)
+                                @if (m.EsManual && caja.Abierta)
                                 {
-                                    @* Solo se elimina un movimiento manual de una caja abierta; los cobros se anulan desde su origen. *@
+                                    @* Solo se elimina un ingreso o egreso manual de una caja abierta; los cobros se anulan desde su origen. *@
                                     <button class="btn btn-sm btn-outline-danger">Eliminar</button>
                                 }
                             </div>

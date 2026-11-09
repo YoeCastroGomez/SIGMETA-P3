@@ -69,6 +69,10 @@
                             {
                                 <div class="small text-muted">@v.PlazoCreditoDias días</div>
                             }
+                            else if (v.Estado != "ANULADA")
+                            {
+                                <div class="small text-muted">@(MuestrasVentas.CobradaAlContado(v.Id) ? "Cobrada en caja" : "Por cobrar")</div>
+                            }
                         </td>
                         <td class="text-end">@MuestrasVentas.Total(v.Detalles).ToString("N2")</td>
                         <td>
@@ -87,6 +91,11 @@
                                 @if (v.Estado != "ANULADA")
                                 {
                                     <a class="btn btn-sm btn-outline-secondary" href="@($"/ventas/{v.Id}/comprobante")">Comprobante</a>
+                                }
+                                @if (Rol == "Cajero" && v.CondicionPago == "CONTADO" && v.Estado != "ANULADA" && !MuestrasVentas.CobradaAlContado(v.Id))
+                                {
+                                    @* RF010: el Cajero cobra la venta al contado; queda como movimiento COBRO_CONTADO de su caja *@
+                                    <a class="btn btn-sm btn-primary" href="@($"/ventas/{v.Id}/cobro?volver=/ventas")">Cobrar</a>
                                 }
                                 @if (v.Estado == "REGISTRADA" && v.Comprobante is null)
                                 {
