@@ -18,19 +18,25 @@
 
 <div class="card card-body mb-3">
     <form class="row g-3 align-items-end" @onsubmit="Buscar" @onsubmit:preventDefault>
-        <Campo Etiqueta="Proveedor" Id="proveedorCompra" Clase="col-sm-6 col-md-4">
-            <select id="proveedorCompra" class="form-select" @bind="filtroProveedorId">
-                <option value="0">Todos los proveedores</option>
-                @foreach (var p in proveedores)
-                {
-                    <option value="@p.Id">@p.RazonSocial</option>
-                }
-            </select>
+        <Campo Etiqueta="Número de compra" Id="numeroCompraFiltro" Clase="col-sm-6 col-md-3">
+            <input id="numeroCompraFiltro" type="text" class="form-control"
+                   placeholder="Ej. OC-LAB11" @bind="filtroNumero" />
         </Campo>
-        <Campo Etiqueta="Desde" Id="fechaDesdeCompra" Clase="col-sm-6 col-md-3">
+        <Campo Etiqueta="Proveedor" Id="proveedorCompra" Clase="col-sm-6 col-md-3">
+            <input id="proveedorCompra" type="text" class="form-control"
+                   list="sugerenciasProveedoresCompras" autocomplete="off"
+                   placeholder="Escribe o selecciona" @bind="filtroProveedorTexto" />
+            <datalist id="sugerenciasProveedoresCompras">
+                @foreach (var p in proveedores.OrderBy(p => p.RazonSocial))
+                {
+                    <option value="@p.RazonSocial"></option>
+                }
+            </datalist>
+        </Campo>
+        <Campo Etiqueta="Desde" Id="fechaDesdeCompra" Clase="col-sm-6 col-md-2">
             <input id="fechaDesdeCompra" type="date" class="form-control" @bind="filtroDesde" />
         </Campo>
-        <Campo Etiqueta="Hasta" Id="fechaHastaCompra" Clase="col-sm-6 col-md-3">
+        <Campo Etiqueta="Hasta" Id="fechaHastaCompra" Clase="col-sm-6 col-md-2">
             <input id="fechaHastaCompra" type="date" class="form-control" @bind="filtroHasta" />
         </Campo>
         <div class="col-auto d-flex gap-2">
@@ -98,7 +104,8 @@
     private List<CompraRest> compras = new();
     private List<CompraRest> resultado = new();
     private List<Proveedor> proveedores = new();
-    private int filtroProveedorId;
+    private string filtroProveedorTexto = "";
+    private string filtroNumero = "";
     private DateTime? filtroDesde;
     private DateTime? filtroHasta;
     private string? error;
@@ -135,7 +142,10 @@
     private void AplicarFiltros()
     {
         resultado = compras
-            .Where(c => filtroProveedorId == 0 || c.IdProveedor == filtroProveedorId)
+            .Where(c => string.IsNullOrWhiteSpace(filtroNumero) ||
+                c.Numero.Contains(filtroNumero.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Where(c => string.IsNullOrWhiteSpace(filtroProveedorTexto) ||
+                NombreProveedor(c.IdProveedor).Contains(filtroProveedorTexto.Trim(), StringComparison.OrdinalIgnoreCase))
             .Where(c => filtroDesde is null ||
                  (DateTime.TryParse(c.FechaEmision, out var fecha) && fecha.Date >= filtroDesde.Value.Date))
             .Where(c => filtroHasta is null ||
@@ -159,7 +169,8 @@
 
     private Task Limpiar()
     {
-        filtroProveedorId = 0;
+        filtroProveedorTexto = "";
+        filtroNumero = "";
         filtroDesde = filtroHasta = null;
         exito = null;
         error = null;
