@@ -89,7 +89,7 @@ else
             </table>
         </div>
         <datalist id="productosCompraDisponibles">
-            @foreach (var p in productos.Where(p => p.Activo))
+            @foreach (var p in productos.Where(p => p.Estado))
             {
                 <option value="@EtiquetaProducto(p)"></option>
             }
@@ -122,7 +122,7 @@ else
     private bool EsNuevo => Id is null;
     private string Titulo => EsNuevo ? "Nueva compra" : "Editar compra";
     private List<Proveedor> proveedores = new();
-    private List<ProductoFila> productos = new();
+    private List<ProductoCompraRest> productos = new();
     private List<SolicitudDetalleCompraRest> lineas = new();
     private readonly Dictionary<SolicitudDetalleCompraRest, string> textosProductos = new();
     private string numero = "";
@@ -147,9 +147,7 @@ else
         try
         {
             proveedores = await Api.Get<List<Proveedor>>("proveedores") ?? new();
-            // Catálogo temporal: RF005 todavía utiliza muestras. Se cambiará a REST
-            // cuando el módulo de Productos tenga su propio servicio disponible.
-            productos = MuestrasCatalogo.Productos.ToList();
+            productos = await Api.Get<List<ProductoCompraRest>>("productos?incluirInactivos=true") ?? new();
             if (EsNuevo)
             {
                 numero = "";
@@ -201,7 +199,7 @@ else
         finally { cargando = false; }
     }
 
-    private static string EtiquetaProducto(ProductoFila p) =>
+    private static string EtiquetaProducto(ProductoCompraRest p) =>
         $"{p.CodigoInterno} · {p.Nombre}";
 
     private string TextoProducto(SolicitudDetalleCompraRest linea) =>
@@ -212,7 +210,7 @@ else
         texto = texto?.Trim() ?? "";
         textosProductos[linea] = texto;
         // No enviamos el texto al Java: solo el ID de un producto elegido de la lista.
-        var producto = productos.FirstOrDefault(p => (p.Activo || p.Id == linea.IdProducto)
+        var producto = productos.FirstOrDefault(p => (p.Estado || p.Id == linea.IdProducto)
             && string.Equals(EtiquetaProducto(p), texto, StringComparison.OrdinalIgnoreCase));
         if (producto is null)
         {
