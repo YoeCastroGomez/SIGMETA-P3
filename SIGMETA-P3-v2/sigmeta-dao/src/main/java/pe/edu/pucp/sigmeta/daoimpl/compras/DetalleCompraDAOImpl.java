@@ -117,6 +117,22 @@ public class DetalleCompraDAOImpl implements DetalleCompraDAO {
         return detalles;
     }
 
+    // RF011: consulta los detalles vinculados a una compra.
+    // Primera version: reutiliza listAll() sin modificar los SP existentes.
+    @Override
+    public List<DetalleCompra> listarPorCompra(int idCompra) throws SQLException {
+        if (idCompra <= 0) {
+            throw new IllegalArgumentException("El ID de la compra debe ser positivo");
+        }
+        List<DetalleCompra> resultado = new ArrayList<>();
+        for (DetalleCompra detalle : listAll()) {
+            if (detalle.getCompra().getId() == idCompra) {
+                resultado.add(detalle);
+            }
+        }
+        return resultado;
+    }
+
     @Override
     public void descontarCantidadRecibida(int idDetalleCompra, double cantidad) throws SQLException {
         if (!Double.isFinite(cantidad) || cantidad <= 0) {
