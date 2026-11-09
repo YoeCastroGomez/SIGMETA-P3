@@ -1,0 +1,170 @@
+@page "/compras/detalle/{Id:int}"
+@using SigmetaWeb.Components.Pages.Compras
+@using SigmetaWeb.Components.Pages.Catalogo
+@inject ApiJava Api
+
+<PageTitle>Detalle de compra · SIGMETA</PageTitle>
+<Encabezado Rf="RF011" Titulo="Detalle de compra"
+            Subtitulo="Consulta de los productos y montos registrados. Esta vista es de solo lectura.">
+    <a class="btn btn-outline-secondary" href="/compras">Volver a la lista</a>
+</Encabezado>
+
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+
+@if (cargando)
+{
+    <p class="text-muted">Consultando detalle de compra...</p>
+}
+else if (compra is not null)
+{
+    <div class="card card-body mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <h2 class="h5 mb-0">@compra.Numero</h2>
+            <Estado Texto="@compra.Estado" />
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="small text-muted">Proveedor</div>
+                <strong>@NombreProveedor</strong>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Fecha de emisión</div>
+                <span>@MostrarFecha(compra.FechaEmision)</span>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Recepción estimada</div>
+                <span>@MostrarFecha(compra.FechaRecepcionEstimada)</span>
+            </div>
+            <div class="col-12">
+                <div class="small text-muted">Observaciones</div>
+                <span>@(string.IsNullOrWhiteSpace(compra.Observaciones) ? "—" : compra.Observaciones)</span>
+            </div>
+            @if (compra.Anulado)
+            {
+                <div class="col-12">
+                    <div class="alert alert-secondary mb-0">
+                        <strong>Compra anulada.</strong>
+                        Motivo: @(string.IsNullOrWhiteSpace(compra.MotivoAnulacion) ? "No registrado" : compra.MotivoAnulacion)
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Productos de la compra</h2>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Línea</th>
+                        <th>Producto</th>
+                        <th>Unidad</th>
+                        <th class="text-end">Cantidad</th>
+                        <th class="text-end">Recibida</th>
+                        <th class="text-end">Precio unitario</th>
+                        <th class="text-end">Descuento</th>
+                        <th class="text-end">Importe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in compra.Detalles.OrderBy(d => d.NumeroLinea))
+                    {
+                        <tr>
+                            <td>@d.NumeroLinea</td>
+                            <td>@NombreProducto(d.IdProducto)</td>
+                            <td>@MuestrasCatalogo.Texto(d.UnidadCompra)</td>
+                            <td class="text-end">@d.Cantidad.ToString("N3")</td>
+                            <td class="text-end">@d.CantidadRecibida.ToString("N3")</td>
+                            <td class="text-end">S/ @d.PrecioUnitario.ToString("N2")</td>
+                            <td class="text-end">S/ @d.Descuento.ToString("N2")</td>
+                            <td class="text-end">S/ @d.Importe.ToString("N2")</td>
+                        </tr>
+                    }
+                    @if (compra.Detalles.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">Esta compra no tiene detalles registrados.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="small text-muted mt-2">
+            Los identificadores y montos se consultan desde MySQL mediante Java REST.
+            Los nombres de productos se muestran desde el catálogo temporal mientras RF005 se integra con REST.
+        </div>
+    </div>
+
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Resumen de compra</h2>
+        <div class="row justify-content-end">
+            <div class="col-md-4">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal</span><strong>S/ @compra.SubTotal.ToString("N2")</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>IGV (18 %)</span><strong>S/ @compra.Igv.ToString("N2")</strong>
+                </div>
+                <hr />
+                <div class="d-flex justify-content-between">
+                    <strong>Total</strong><strong>S/ @compra.Total.ToString("N2")</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex justify-content-end gap-2">
+        <a class="btn btn-outline-secondary" href="/compras">Volver a la lista</a>
+        @if (compra.Estado == "REGISTRADA" && !compra.Anulado)
+        {
+            <a class="btn btn-primary" href="@($"/compras/editar/{compra.Id}")">Editar compra</a>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private CompraRest? compra;
+    private List<Proveedor> proveedores = new();
+    private string? error;
+    private bool cargando;
+
+    private string NombreProveedor =>
+        proveedores.FirstOrDefault(p => p.Id == compra?.IdProveedor)?.RazonSocial
+        ?? $"Proveedor #{compra?.IdProveedor}";
+
+    private static string MostrarFecha(string? valor) =>
+        DateTime.TryParse(valor, out var fecha) ? fecha.ToString("dd/MM/yyyy") : "—";
+
+    private static string NombreProducto(int id)
+    {
+        var producto = MuestrasCatalogo.Productos.FirstOrDefault(p => p.Id == id);
+        return producto is null ? $"Producto #{id}" : $"{producto.CodigoInterno} · {producto.Nombre}";
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        error = null;
+        compra = null;
+        try
+        {
+            compra = await Api.Get<CompraRest>($"compras/{Id}");
+            if (compra is null)
+            {
+                error = $"No existe la compra con ID {Id}.";
+                return;
+            }
+            // La consulta de proveedores incluye inactivos para preservar el historial.
+            proveedores = await Api.Get<List<Proveedor>>("proveedores") ?? new();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+}
