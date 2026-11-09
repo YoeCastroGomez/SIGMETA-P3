@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using SigmetaWeb.Components;
 using SigmetaWeb.Servicios;
 
@@ -17,10 +18,19 @@ builder.Services.AddScoped<ApiJava>();
 
 // RF001: autenticación con cookie. La cookie guarda el usuario, su rol y el ticket que dio el Java.
 // Dura 8 horas y se renueva mientras se use (SlidingExpiration), igual que la sesión del Java.
+// Las claves que cifran la cookie se guardan en disco: si Blazor se reinicia (dotnet watch, recompilar)
+// la cookie sigue sirviendo y no hay que volver a iniciar sesión.
+builder.Services.AddDataProtection()
+    .SetApplicationName("SigmetaWeb")
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".sigmeta", "claves-web")));
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(opciones =>
     {
         opciones.LoginPath = "/login";
+        // nombre propio: en localhost las cookies se comparten entre puertos, y otra app ASP.NET
+        // (otro proyecto del curso) con el nombre por defecto ".AspNetCore.Cookies" pisaría esta sesión
+        opciones.Cookie.Name = "SigmetaSesion";
         opciones.ExpireTimeSpan = TimeSpan.FromHours(8);
         opciones.SlidingExpiration = true;
     });
