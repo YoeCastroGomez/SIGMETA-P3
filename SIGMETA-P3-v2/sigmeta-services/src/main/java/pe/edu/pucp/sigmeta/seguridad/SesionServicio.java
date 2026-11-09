@@ -10,12 +10,14 @@ import pe.edu.pucp.sigmeta.model.usuario.Usuario;
  */
 public final class SesionServicio {
     private final int idUsuario;
-    private final long expira;
+    // RF001: la sesion vence tras 8 horas SIN USO; cada pedido la renueva
+    public static final long INACTIVIDAD_MAXIMA_MS = 8L * 60 * 60 * 1000;
+    private volatile long expira;
     private volatile boolean cerrada;
     private static final ThreadLocal<Integer> ACTUAL = new ThreadLocal<>();
     private SesionServicio(int id) {
         idUsuario = id;
-        expira = System.currentTimeMillis() + 20L * 60 * 1000;
+        renovar();
     }
     public static SesionServicio iniciar(String nombre, String clave) throws SQLException {
         Usuario usuario = new UsuarioBOImpl().iniciarSesion(nombre, clave);
@@ -27,6 +29,7 @@ public final class SesionServicio {
         if (cerrada || System.currentTimeMillis() >= expira) {
             throw new SecurityException("Sesion cerrada o expirada");
         }
+        renovar();
         if (ACTUAL.get() != null) throw new SecurityException("No se permite sustituir una sesion activa");
         ACTUAL.set(idUsuario);
         try {
@@ -39,6 +42,7 @@ public final class SesionServicio {
             });
         } finally { ACTUAL.remove(); }
     }
+    private void renovar() { expira = System.currentTimeMillis() + INACTIVIDAD_MAXIMA_MS; }
     public void cerrar() { cerrada = true; }
     // para el adaptador web (sigmeta-ws): saber si el ticket sigue sirviendo
     public boolean estaVigente() { return !cerrada && System.currentTimeMillis() < expira; }

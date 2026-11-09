@@ -16,13 +16,13 @@ builder.Services.AddHttpClient("ApiJava", cliente =>
 builder.Services.AddScoped<ApiJava>();
 
 // RF001: autenticación con cookie. La cookie guarda el usuario, su rol y el ticket que dio el Java.
-// Dura 20 minutos, lo mismo que la sesión del Java (RNF001).
+// Dura 8 horas y se renueva mientras se use (SlidingExpiration), igual que la sesión del Java.
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(opciones =>
     {
         opciones.LoginPath = "/login";
-        opciones.ExpireTimeSpan = TimeSpan.FromMinutes(20);
-        opciones.SlidingExpiration = false;
+        opciones.ExpireTimeSpan = TimeSpan.FromHours(8);
+        opciones.SlidingExpiration = true;
     });
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
