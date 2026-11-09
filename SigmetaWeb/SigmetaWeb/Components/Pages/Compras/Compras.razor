@@ -66,6 +66,7 @@
                         <td><Estado Texto="@c.Estado" /></td>
                         <td class="text-end">
                             <div class="d-inline-flex gap-1 text-nowrap">
+                                <a class="btn btn-sm btn-outline-primary" href="@($"/compras/detalle/{c.Id}")">Ver detalle</a>
                                 @if (c.Estado == "REGISTRADA" && !c.Anulado)
                                 {
                                     <a class="btn btn-sm btn-outline-secondary" href="@($"/compras/editar/{c.Id}")">Editar</a>
@@ -78,10 +79,6 @@
                                     {
                                         <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => confirmarId = c.Id">Anular</button>
                                     }
-                                }
-                                else
-                                {
-                                    <span class="small text-muted">Solo lectura</span>
                                 }
                             </div>
                         </td>
