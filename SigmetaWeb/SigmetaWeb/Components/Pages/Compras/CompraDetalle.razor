@@ -90,10 +90,6 @@ else if (compra is not null)
                 </tbody>
             </table>
         </div>
-        <div class="small text-muted mt-2">
-            Los identificadores y montos se consultan desde MySQL mediante Java REST.
-            Los nombres de productos se muestran desde el catálogo temporal mientras RF005 se integra con REST.
-        </div>
     </div>
 
     <div class="card card-body mb-3">
@@ -126,6 +122,7 @@ else if (compra is not null)
     [Parameter] public int Id { get; set; }
     private CompraRest? compra;
     private List<Proveedor> proveedores = new();
+    private List<ProductoCompraRest> productos = new();
     private string? error;
     private bool cargando;
 
@@ -136,9 +133,9 @@ else if (compra is not null)
     private static string MostrarFecha(string? valor) =>
         DateTime.TryParse(valor, out var fecha) ? fecha.ToString("dd/MM/yyyy") : "—";
 
-    private static string NombreProducto(int id)
+    private string NombreProducto(int id)
     {
-        var producto = MuestrasCatalogo.Productos.FirstOrDefault(p => p.Id == id);
+        var producto = productos.FirstOrDefault(p => p.Id == id);
         return producto is null ? $"Producto #{id}" : $"{producto.CodigoInterno} · {producto.Nombre}";
     }
 
@@ -157,6 +154,7 @@ else if (compra is not null)
             }
             // La consulta de proveedores incluye inactivos para preservar el historial.
             proveedores = await Api.Get<List<Proveedor>>("proveedores") ?? new();
+            productos = await Api.Get<List<ProductoCompraRest>>("productos?incluirInactivos=true") ?? new();
         }
         catch (ErrorApi e)
         {
