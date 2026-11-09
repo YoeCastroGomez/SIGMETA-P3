@@ -8,6 +8,7 @@
 <Encabezado Rf="RF010" Titulo="Cierre de caja"
             Subtitulo="Solo el cajero que abrió la caja puede cerrarla.">
     <a class="btn btn-outline-secondary" href="/caja">Volver a la caja</a>
+    <a class="btn btn-outline-secondary" href="/caja/movimientos">Movimientos</a>
     <a class="btn btn-outline-secondary" href="/caja/cierres">Historial de cierres</a>
 </Encabezado>
 
@@ -47,12 +48,52 @@
                         <tr><td>(+) Cobros de crédito</td><td class="text-end">S/ @MuestrasCaja.Total("COBRO_CREDITO").ToString("N2")</td></tr>
                         <tr><td>(+) Ingresos manuales</td><td class="text-end">S/ @MuestrasCaja.Total("INGRESO_MANUAL").ToString("N2")</td></tr>
                         <tr><td>(−) Egresos manuales</td><td class="text-end">S/ @MuestrasCaja.Total("EGRESO_MANUAL").ToString("N2")</td></tr>
+                        <tr><td>(−) Devoluciones (ver abajo)</td><td class="text-end">S/ @totalDevoluciones.ToString("N2")</td></tr>
+                        <tr class="table-light fw-semibold">
+                            <td>Monto calculado</td>
+                            <td class="text-end">S/ @calculado.ToString("N2")</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
-            <div class="card-body small text-muted">
-                No se consideran las ventas anuladas ni las operaciones revertidas con nota de crédito.
+        </div>
+
+        @* RF010: las ventas anuladas y las devoluciones por nota de crédito no son cobros válidos.
+           El sistema registra un egreso que compensa el cobro (CompensacionCaja), por eso se restan aparte. *@
+        <div class="card mb-3">
+            <div class="card-body pb-0">
+                <h2 class="h6 fw-semibold mb-1">No cuenta como cobro</h2>
+                <p class="small text-muted mb-2">Dinero devuelto al cliente en esta jornada. Se resta del cálculo para que el cobro original no quede sumado.</p>
             </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <tbody>
+                        <tr>
+                            <td>
+                                Ventas anuladas
+                                <div><span class="badge text-bg-secondary">no cuenta como cobro</span></div>
+                            </td>
+                            <td class="text-end">S/ @MuestrasCaja.TotalDevoluciones("ANULACION_VENTA").ToString("N2")</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Devoluciones por nota de crédito
+                                <div><span class="badge text-bg-secondary">no cuenta como cobro</span></div>
+                            </td>
+                            <td class="text-end">S/ @MuestrasCaja.TotalDevoluciones("NOTA_CREDITO").ToString("N2")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            @if (MuestrasCaja.Devoluciones.Any())
+            {
+                <ul class="list-unstyled small text-muted card-body mb-0 pt-2">
+                    @foreach (var d in MuestrasCaja.Devoluciones)
+                    {
+                        <li>@d.FechaMovimiento.ToString("HH:mm") · @d.Concepto · S/ @d.Monto.ToString("N2")</li>
+                    }
+                </ul>
+            }
         </div>
     </div>
 
@@ -90,6 +131,8 @@
 @code {
     private readonly CajaFila caja = MuestrasCaja.CajaActual;
     private readonly decimal calculado = MuestrasCaja.MontoCalculado;
+    private readonly decimal totalDevoluciones =
+        MuestrasCaja.TotalDevoluciones("ANULACION_VENTA") + MuestrasCaja.TotalDevoluciones("NOTA_CREDITO");
     private decimal? declarado;
 
     // Lab 9: no se registra nada, solo se navega.

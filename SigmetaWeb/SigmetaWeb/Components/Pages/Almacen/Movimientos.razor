@@ -89,6 +89,6 @@
         revertidos.Add(original.Id);
         historial.Insert(0, new MovimientoFila(
             historial.Max(m => m.Id) + 1, new DateOnly(2026, 10, 27), original.CodigoInterno,
-            "REVERSION", original.Cantidad, stock, $"Reversión de {original.Referencia}", "admin"));
+            "REVERSION", original.Cantidad, stock, $"Reversión de {original.Referencia}", "aquispe"));
     }
 }

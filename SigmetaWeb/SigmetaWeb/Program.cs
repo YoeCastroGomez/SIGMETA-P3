@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using SigmetaWeb.Components;
+using SigmetaWeb.Servicios;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,7 +8,36 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Conexión con el Java (sigmeta-ws). La dirección está en appsettings.json -> ApiJava:BaseUrl
+builder.Services.AddHttpClient("ApiJava", cliente =>
+{
+    cliente.BaseAddress = new Uri(builder.Configuration["ApiJava:BaseUrl"]!);
+});
+builder.Services.AddScoped<ApiJava>();
+
+// RF001: autenticación con cookie. La cookie guarda el usuario, su rol y el ticket que dio el Java.
+// Dura 20 minutos, lo mismo que la sesión del Java (RNF001).
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(opciones =>
+    {
+        opciones.LoginPath = "/login";
+        opciones.ExpireTimeSpan = TimeSpan.FromMinutes(20);
+        opciones.SlidingExpiration = false;
+    });
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IServicioSesionAuth, ServicioSesionAuth>();
+
 var app = builder.Build();
+
+// Fechas y montos en formato peruano (S/ 1,234.50 y 08/11/2026)
+string[] supportedCultures = ["es-PE"];
+var localizationOptions = new RequestLocalizationOptions()
+    .SetDefaultCulture(supportedCultures[0])
+    .AddSupportedCultures(supportedCultures)
+    .AddSupportedUICultures(supportedCultures);
+app.UseRequestLocalization(localizationOptions);
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -18,9 +49,13 @@ if (!app.Environment.IsDevelopment())
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+app.MapAuthEndpoints();   // /auth/login y /auth/logout
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

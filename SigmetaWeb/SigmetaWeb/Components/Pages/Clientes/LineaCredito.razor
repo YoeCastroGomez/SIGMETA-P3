@@ -1,72 +1,138 @@
 @page "/clientes/credito/{Id:int}"
+@inject ApiJava Api
 @inject NavigationManager Nav
 
 <PageTitle>Línea de crédito · SIGMETA</PageTitle>
 
-@* RF003 · Línea de crédito (Administrador). Solo visual (Lab 9). *@
+@* RF003 · Línea de crédito (solo Administrador).
+   Asignar: PUT /api/clientes/{Id}/linea-credito. Retirar: DELETE /api/clientes/{Id}/linea-credito.
+   Si otro rol llega aquí escribiendo la dirección, el BO lo rechaza con "El rol X no tiene permiso...". *@
 <Encabezado Rf="RF003" Titulo="Línea de crédito" Subtitulo="Solo el Administrador asigna o retira crédito.">
     <a class="btn btn-outline-secondary" href="/clientes">Volver a la lista</a>
 </Encabezado>
 
-<div class="card card-body mb-3" style="max-width: 760px;">
-    <div class="row">
-        <div class="col-sm-7 mb-3">
-            <div class="small text-muted text-uppercase">Cliente</div>
-            <div class="fw-semibold">@ejemplo.NombreMostrado</div>
-        </div>
-        <div class="col-sm-5 mb-3">
-            <div class="small text-muted text-uppercase">@MuestrasClientes.Texto(ejemplo.TipoDocumento)</div>
-            <div class="fw-semibold">@ejemplo.NumeroDocumento</div>
-        </div>
-        <div class="col-sm-7 mb-3">
-            <div class="small text-muted text-uppercase">Condición actual</div>
-            <div class="fw-semibold">@MuestrasClientes.Texto(ejemplo.CondicionPago)</div>
-        </div>
-    </div>
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 
-    <hr />
+@if (cliente is null)
+{
+    <p class="text-muted">Cargando cliente...</p>
+}
+else
+{
+    <div class="card card-body mb-3" style="max-width: 760px;">
+        <div class="row">
+            <div class="col-sm-7 mb-3">
+                <div class="small text-muted text-uppercase">Cliente</div>
+                <div class="fw-semibold">@cliente.NombreMostrado</div>
+            </div>
+            <div class="col-sm-5 mb-3">
+                <div class="small text-muted text-uppercase">@Cliente.Texto(cliente.TipoDocumento)</div>
+                <div class="fw-semibold">@cliente.NumeroDocumento</div>
+            </div>
+            <div class="col-sm-7 mb-3">
+                <div class="small text-muted text-uppercase">Condición actual</div>
+                <div class="fw-semibold">@Cliente.Texto(cliente.CondicionPago)</div>
+            </div>
+        </div>
 
-    <div class="row">
-        <div class="col-md-4">
-            <Campo Etiqueta="Límite de crédito (S/)" Id="limite" Obligatorio="true" Ayuda="Mayor a 0.">
-                <input id="limite" type="number" min="0.01" step="0.01" class="form-control" value="@ejemplo.LimiteCredito" />
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            <Campo Etiqueta="Plazo (días)" Id="plazo" Obligatorio="true" Ayuda="Mayor a 0. Máximo por venta.">
-                <input id="plazo" type="number" min="1" class="form-control" value="@ejemplo.PlazoCreditoDias" />
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            <Campo Etiqueta="Calificación crediticia" Id="calif" Ayuda="Escala interna del Administrador.">
-                <select id="calif" class="form-select">
-                    @foreach (var c in new[] { "A", "B", "C", "SIN_EVALUAR" })
+        <hr />
+
+        <EditForm Model="@linea" OnValidSubmit="Guardar">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="alert alert-warning" />
+
+            <div class="row">
+                <div class="col-md-4">
+                    <Campo Etiqueta="Límite de crédito (S/)" Id="limite" Obligatorio="true" Ayuda="Mayor a 0.">
+                        <InputNumber id="limite" class="form-control" step="0.01" @bind-Value="linea.LimiteCredito" />
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    <Campo Etiqueta="Plazo (días)" Id="plazo" Obligatorio="true" Ayuda="Mayor a 0. Máximo por venta.">
+                        <InputNumber id="plazo" class="form-control" @bind-Value="linea.PlazoCreditoDias" />
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    <Campo Etiqueta="Calificación crediticia" Id="calif" Ayuda="Escala interna del Administrador.">
+                        <InputSelect id="calif" class="form-select" @bind-Value="linea.CalificacionCrediticia">
+                            @foreach (var c in new[] { "A", "B", "C", "SIN_EVALUAR" })
+                            {
+                                <option value="@c">@Cliente.Texto(c)</option>
+                            }
+                        </InputSelect>
+                    </Campo>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+                <div>
+                    @if (cliente.CondicionPago == "CREDITO")
                     {
-                        <option value="@c" selected="@(ejemplo.CalificacionCrediticia == c)">@MuestrasClientes.Texto(c)</option>
+                        <button type="button" class="btn btn-outline-danger" @onclick="Retirar">Retirar línea</button>
+                        <div class="form-text">El cliente pasa a contado. Se conserva su calificación.</div>
                     }
-                </select>
-            </Campo>
-        </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-outline-secondary" href="/clientes">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </div>
+        </EditForm>
     </div>
-
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
-        <div>
-            <button class="btn btn-outline-danger" @onclick="Volver">Retirar línea</button>
-            <div class="form-text">El cliente pasa a contado. Se conserva su calificación.</div>
-        </div>
-        <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary" href="/clientes">Cancelar</a>
-            <button class="btn btn-primary" @onclick="Volver">Guardar</button>
-        </div>
-    </div>
-</div>
+}
 
 @code {
     [Parameter] public int Id { get; set; }
 
-    // Ejemplo fijo (Lab 9: sin consultas).
-    private readonly ClienteFila ejemplo = MuestrasClientes.Clientes[0];
+    private Cliente? cliente;
+    private LineaCreditoDatos linea = new();
+    private string? error;
 
-    // Lab 9: no se registra nada, solo se navega.
-    private void Volver() => Nav.NavigateTo("/clientes");
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            cliente = await Api.Get<Cliente>($"clientes/{Id}");   // GET /api/clientes/{Id}
+            linea = new LineaCreditoDatos
+            {
+                LimiteCredito = cliente!.LimiteCredito,
+                PlazoCreditoDias = cliente.PlazoCreditoDias,
+                CalificacionCrediticia = cliente.CalificacionCrediticia,
+            };
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+    }
+
+    // PUT /api/clientes/{Id}/linea-credito -> asignarLineaCredito del BO
+    private async Task Guardar()
+    {
+        error = null;
+        try
+        {
+            await Api.Put<Cliente>($"clientes/{Id}/linea-credito", linea);
+            Nav.NavigateTo("/clientes");
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "No se puede asignar credito a un cliente desactivado"
+        }
+    }
+
+    // DELETE /api/clientes/{Id}/linea-credito -> retirarLineaCredito del BO
+    private async Task Retirar()
+    {
+        error = null;
+        try
+        {
+            await Api.Delete<Cliente>($"clientes/{Id}/linea-credito");
+            Nav.NavigateTo("/clientes");
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+    }
 }

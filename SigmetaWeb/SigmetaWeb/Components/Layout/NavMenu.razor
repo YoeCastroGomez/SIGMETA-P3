@@ -45,8 +45,9 @@
             new("Notas de crédito", "/notas-credito"),         // RF013
         }),
         new("Caja y cobranza", new Enlace[] {
-            new("Cierres de caja", "/caja/cierres"),           // RF010 (reabrir)
-            new("Cuentas por cobrar", "/cobranzas"),           // RF009
+            new("Cierres de caja", "/caja/cierres"),           // RF010 (reabrir y corregir)
+            new("Cuentas por cobrar", "/cobranzas"),           // RF009 (saldo pendiente y vencido)
+            new("Cobros", "/cobros"),                          // RF009 (consulta por fechas)
         }),
         new("Compras e inventario", new Enlace[] {
             new("Proveedores", "/proveedores"),                // RF004
@@ -99,6 +100,7 @@
             new("Movimientos de caja", "/caja/movimientos"),   // RF010
             new("Cierre de caja", "/caja/cierre"),             // RF010
             new("Cuentas por cobrar", "/cobranzas"),           // RF009
+            new("Cobros", "/cobros"),                          // RF009 (consulta por fechas)
         }),
         new("Inventario", new Enlace[] {
             new("Kardex", "/almacen/kardex"),                  // RF012 (consulta)
