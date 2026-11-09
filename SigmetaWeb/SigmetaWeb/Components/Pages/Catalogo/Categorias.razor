@@ -1,100 +1,293 @@
 @page "/categorias"
+@inject ApiJava Api
+@inject IJSRuntime JS
 
 <PageTitle>Categorías · SIGMETA</PageTitle>
 
-@* RF006 · Lista y formulario de categorías en una sola pantalla. Solo visual (Lab 9): los filtros no filtran y
-   Guardar no registra; solo cierra el formulario. *@
+@* RF006 · Lista y formulario de categorías en una sola pantalla. Datos reales del Java:
+   GET /api/categorias (con filtros por nombre o estado), POST para registrar, PUT /api/categorias/{id}
+   para modificar y DELETE /api/categorias/{id} para desactivar (baja lógica).
+   Solo el Administrador las mantiene: si otro rol lo intenta, el BO lo rechaza y el mensaje sale en el aviso rojo. *@
 <Encabezado Rf="RF006" Titulo="Categorías"
             Subtitulo="Con las categorías se clasifican los productos. Una categoría con productos activos no puede desactivarse.">
     <button class="btn btn-primary" @onclick="Nueva">Nueva categoría</button>
 </Encabezado>
 
-@if (mostrarFormulario)
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
 {
-    <div class="card card-body mb-3">
-        <h2 class="h6 fw-semibold mb-3">@(editando is null ? "Nueva categoría" : "Editar categoría")</h2>
-        <div class="row">
-            <div class="col-md-6">
-                <Campo Etiqueta="Nombre" Id="nombre" Obligatorio="true">
-                    <input id="nombre" class="form-control" maxlength="100" value="@editando?.Nombre" />
-                </Campo>
+    <div class="alert alert-success">@exito</div>
+}
+
+@* Confirmación antes de desactivar: solo si se pulsa Desactivar en el cuadro se llama al Java *@
+<Confirmacion Visible="@(porDesactivar is not null)"
+              Titulo="Desactivar categoría"
+              TextoConfirmar="Desactivar"
+              AlConfirmar="ConfirmarDesactivar"
+              AlCancelar="() => porDesactivar = null">
+    <p class="mb-2">¿Seguro que desea desactivar la categoría <strong>@porDesactivar?.Nombre</strong>?</p>
+    <p class="small text-muted mb-0">
+        No se borra: queda inactiva. Solo se puede desactivar si ya no tiene productos activos.
+        Una categoría inactiva ya no se puede modificar ni elegir en productos nuevos.
+    </p>
+</Confirmacion>
+
+@if (formulario is not null)
+{
+    <EditForm Model="@formulario" OnValidSubmit="Guardar">
+        <DataAnnotationsValidator />
+        <div class="card card-body mb-3">
+            <h2 class="h6 fw-semibold mb-3">@(formulario.Id == 0 ? "Nueva categoría" : "Editar categoría")</h2>
+            <ValidationSummary class="alert alert-warning" />
+            <div class="row">
+                <div class="col-md-6">
+                    <Campo Etiqueta="Nombre" Id="nombre" Obligatorio="true" Ayuda="No puede repetirse.">
+                        <InputText id="nombre" class="form-control" maxlength="100" @bind-Value="formulario.Nombre" />
+                    </Campo>
+                </div>
+                <div class="col-md-6">
+                    <Campo Etiqueta="Descripción" Id="descripcion">
+                        <InputText id="descripcion" class="form-control" maxlength="255" @bind-Value="formulario.Descripcion" />
+                    </Campo>
+                </div>
             </div>
-            <div class="col-md-6">
-                <Campo Etiqueta="Descripción" Id="descripcion">
-                    <input id="descripcion" class="form-control" maxlength="255" value="@editando?.Descripcion" />
-                </Campo>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+                <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="Cerrar">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" disabled="@guardando">
+                        @(guardando ? "Guardando..." : "Guardar")
+                    </button>
+                </div>
             </div>
         </div>
+    </EditForm>
+}
 
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
-            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-            <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary" @onclick="Cerrar">Cancelar</button>
-                <button class="btn btn-primary" @onclick="Cerrar">Guardar</button>
-            </div>
+<div class="card card-body mb-3">
+    <form class="row g-3 align-items-end" @onsubmit="Buscar" @onsubmit:preventDefault>
+        <Campo Etiqueta="Nombre" Id="fNombre" Clase="col-sm-6 col-md">
+            <input id="fNombre" class="form-control" maxlength="100" @bind="filtroNombre" />
+        </Campo>
+        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-3">
+            <select id="fEstado" class="form-select" @bind="filtroEstado">
+                <option value="">Todas</option>
+                <option value="true">Activas</option>
+                <option value="false">Inactivas</option>
+            </select>
+        </Campo>
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-dark">Buscar</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
+        </div>
+    </form>
+    <div class="form-text">Se busca por nombre (parte del nombre); si está vacío, por estado.</div>
+</div>
+
+@if (categorias is null)
+{
+    <p class="text-muted">Cargando categorías...</p>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (categorias.Count == 0)
+                    {
+                        <tr><td colspan="4" class="text-center text-muted py-4">No se encontraron categorías.</td></tr>
+                    }
+                    @foreach (var c in categorias)
+                    {
+                        <tr>
+                            <td><strong>@c.Nombre</strong></td>
+                            <td>@(string.IsNullOrWhiteSpace(c.Descripcion) ? "—" : c.Descripcion)</td>
+                            <td><Estado Texto="@(c.Activo ? "Activo" : "Inactivo")" /></td>
+                            <td class="text-end">
+                                @* RF006: Editar se muestra siempre, también en las desactivadas, para que salga el mensaje
+                                   del BO "No se puede modificar una categoria desactivada". Desactivar solo en las activas. *@
+                                <div class="d-inline-flex gap-1 text-nowrap">
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(c)">Editar</button>
+                                    @if (c.Activo)
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirDesactivar(c)">Desactivar</button>
+                                    }
+                                </div>
+
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
 }
 
-<div class="card card-body mb-3">
-    <div class="row g-3 align-items-end">
-        <Campo Etiqueta="Nombre" Id="fNombre" Clase="col-sm-6 col-md">
-            <input id="fNombre" class="form-control" maxlength="100" />
-        </Campo>
-        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-3">
-            <select id="fEstado" class="form-select">
-                <option>Todos</option>
-                <option>Activas</option>
-                <option>Inactivas</option>
-            </select>
-        </Campo>
-        <div class="col-auto">
-            <button class="btn btn-dark">Buscar</button>
-        </div>
-    </div>
-</div>
-
-<div class="card mb-3">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Nombre</th>
-                    <th>Descripción</th>
-                    <th>Estado</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var c in MuestrasCatalogo.Categorias)
-                {
-                    <tr>
-                        <td><strong>@c.Nombre</strong></td>
-                        <td>@(c.Descripcion ?? "—")</td>
-                        <td><Estado Texto="@(c.Activo ? "Activo" : "Inactivo")" /></td>
-                        <td class="text-end">
-                            @* RF006: una categoría desactivada ya no se modifica. *@
-                            @if (c.Activo)
-                            {
-                                <div class="d-inline-flex gap-1 text-nowrap">
-                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(c)">Editar</button>
-                                    <button class="btn btn-sm btn-outline-danger">Desactivar</button>
-                                </div>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
-
 @code {
-    // Solo controla si el formulario se ve y con qué fila de ejemplo (Lab 9: sin consultas ni registros).
-    private bool mostrarFormulario;
-    private CategoriaFila? editando;
+    private List<Categoria>? categorias;
+    private Categoria? formulario;      // null = formulario cerrado; Id 0 = nueva
+    private string filtroNombre = "";
+    private string filtroEstado = "";
+    private string? error;
+    private string? exito;
+    private bool guardando;
 
-    private void Nueva() { editando = null; mostrarFormulario = true; }
-    private void Editar(CategoriaFila categoria) { editando = categoria; mostrarFormulario = true; }
-    private void Cerrar() { editando = null; mostrarFormulario = false; }
+    // al abrir la pantalla se piden las categorías al Java
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar("categorias");
+    }
+
+    private async Task Buscar()
+    {
+        exito = null;
+        if (!string.IsNullOrWhiteSpace(filtroNombre))
+        {
+            await Cargar($"categorias?nombre={Uri.EscapeDataString(filtroNombre.Trim())}");   // buscarPorNombre
+        }
+        else if (filtroEstado != "")
+        {
+            await Cargar($"categorias?estado={filtroEstado}");                                // listarPorEstado
+        }
+        else
+        {
+            await Cargar("categorias");                                                       // todas
+        }
+    }
+
+    private async Task Limpiar()
+    {
+        filtroNombre = filtroEstado = "";
+        exito = null;
+        await Cargar("categorias");
+    }
+
+    private async Task Cargar(string ruta)
+    {
+        error = null;
+        try
+        {
+            categorias = await Api.Get<List<Categoria>>(ruta) ?? new List<Categoria>();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+            categorias ??= new List<Categoria>();
+        }
+    }
+
+    // Desactivar pide confirmación: primero se guarda cuál es y se muestra el cuadro
+    private Categoria? porDesactivar;
+
+    private void PedirDesactivar(Categoria c)
+    {
+        error = exito = null;
+        porDesactivar = c;
+    }
+
+    private async Task ConfirmarDesactivar()
+    {
+        var c = porDesactivar;
+        porDesactivar = null;   // cierra el cuadro
+        if (c is not null)
+        {
+            await Desactivar(c);
+        }
+    }
+
+    private void Nueva()
+    {
+        error = exito = null;
+        formulario = new Categoria();
+    }
+
+    private void Editar(Categoria c)
+    {
+        error = exito = null;
+        formulario = c.Copia();
+    }
+
+    private void Cerrar() => formulario = null;
+
+    // POST /api/categorias o PUT /api/categorias/{id}. Solo se ejecuta si pasan las validaciones de la pantalla.
+    private async Task Guardar()
+    {
+        error = exito = null;
+        guardando = true;
+        try
+        {
+            var nueva = formulario!.Id == 0;
+            if (nueva)
+            {
+                await Api.Post<Categoria>("categorias", formulario);
+            }
+            else
+            {
+                await Api.Put<Categoria>($"categorias/{formulario.Id}", formulario);
+            }
+            var nombre = formulario.Nombre;
+            formulario = null;
+            await Buscar();   // vuelve a pedir la lista al Java para ver el cambio guardado
+            exito = nueva ? $"Se registró la categoría {nombre}." : $"Se modificó la categoría {nombre}.";
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "Ya existe la categoria Herramientas" o "El rol VENDEDOR no tiene permiso..."
+        }
+        catch (Exception e)
+        {
+            // cualquier otro error (por ejemplo al leer la respuesta del Java) también sale en el aviso rojo
+            error = "Error inesperado: " + e.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+        await SubirAlAviso();
+    }
+
+    // Sube la página hasta los avisos (están arriba de todo)
+    private async Task SubirAlAviso()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("window.scrollTo", 0, 0);
+        }
+        catch (Exception)
+        {
+            // si no se puede subir no pasa nada: el aviso igual está en pantalla
+        }
+    }
+
+    // DELETE /api/categorias/{id}: baja lógica. Si tiene productos activos el BO responde
+    // "La categoria tiene productos activos; reasignelos o desactivelos primero".
+    private async Task Desactivar(Categoria c)
+    {
+        error = exito = null;
+        try
+        {
+            await Api.Delete($"categorias/{c.Id}");
+            await Buscar();
+            exito = $"Se desactivó la categoría {c.Nombre}.";
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        catch (Exception e)
+        {
+            error = "Error inesperado: " + e.Message;
+        }
+        await SubirAlAviso();   // el botón Desactivar está en la tabla y el aviso arriba
+    }
 }

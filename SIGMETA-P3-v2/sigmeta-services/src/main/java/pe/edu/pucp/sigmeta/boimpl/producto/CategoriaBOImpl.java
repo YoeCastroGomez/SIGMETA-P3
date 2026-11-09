@@ -13,8 +13,10 @@ import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.model.producto.Categoria;
 
 import java.sql.SQLException;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class CategoriaBOImpl implements CategoriaBO {
 
@@ -126,16 +128,30 @@ public class CategoriaBOImpl implements CategoriaBO {
         return categoria;
     }
 
+    // Texto para comparar nombres: sin tildes, sin mayusculas y con un solo espacio entre palabras
+    private static String claveNombre(String nombre) {
+        if (nombre == null) {
+            return "";
+        }
+        String sinTildes = Normalizer.normalize(nombre, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return sinTildes.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+    }
+
     private void validarDatos(Categoria categoria) {
         Validador.obligatorio(categoria, "categoria");
         categoria.setNombre(Validador.textoObligatorio(categoria.getNombre(), "nombre", 100));
         categoria.setDescripcion(Validador.textoOpcional(categoria.getDescripcion(), "descripcion", 255));
     }
 
-    // la tabla no tiene UNIQUE en nombre; se controla entre las categorias activas
+    // la tabla no tiene UNIQUE en nombre; se controla entre las categorias activas y las desactivadas,
+    // sin distinguir mayusculas, tildes ni espacios de mas:
+    // "Construccion", "CONSTRUCCIÓN" y " construcción " son la misma categoria
     private void validarNombreUnico(Categoria categoria) throws SQLException {
-        for (Categoria otra : categoriaDAO.listarTodos()) {
-            if (otra.getNombre().equalsIgnoreCase(categoria.getNombre()) && otra.getId() != categoria.getId()) {
+        List<Categoria> todas = new ArrayList<>(categoriaDAO.listarPorEstado(true));
+        todas.addAll(categoriaDAO.listarPorEstado(false));
+        String nuevo = claveNombre(categoria.getNombre());
+        for (Categoria otra : todas) {
+            if (claveNombre(otra.getNombre()).equals(nuevo) && otra.getId() != categoria.getId()) {
                 throw new IllegalArgumentException("Ya existe la categoria " + categoria.getNombre());
             }
         }

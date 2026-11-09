@@ -1,0 +1,41 @@
+@* Cuadro de confirmación (ventana encima de la pantalla) con dos botones: Cancelar y el que confirma.
+   No necesita JavaScript: usa las clases "modal" de Bootstrap y se muestra o se oculta con Visible.
+
+   Uso:
+       <Confirmacion Visible="@(porDesactivar is not null)"
+                     Titulo="Desactivar categoría"
+                     TextoConfirmar="Desactivar"
+                     AlConfirmar="ConfirmarDesactivar"
+                     AlCancelar="() => porDesactivar = null">
+           ¿Seguro que desea desactivar <strong>@porDesactivar?.Nombre</strong>?
+       </Confirmacion>  *@
+@if (Visible)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="confirmacionTitulo">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="confirmacionTitulo">@Titulo</h2>
+                </div>
+                <div class="modal-body">
+                    @ChildContent
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="AlCancelar">Cancelar</button>
+                    <button type="button" class="btn @ClaseConfirmar" @onclick="AlConfirmar">@TextoConfirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public string Titulo { get; set; } = "¿Está seguro?";
+    [Parameter] public string TextoConfirmar { get; set; } = "Aceptar";
+    [Parameter] public string ClaseConfirmar { get; set; } = "btn-danger";
+    [Parameter] public EventCallback AlConfirmar { get; set; }
+    [Parameter] public EventCallback AlCancelar { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
