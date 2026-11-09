@@ -62,13 +62,10 @@ else
                     {
                         <tr @key="linea">
                             <td>
-                                <select class="form-select" @bind="linea.IdProducto">
-                                    <option value="0">Seleccione</option>
-                                    @foreach (var p in productos.Where(p => p.Activo || p.Id == linea.IdProducto))
-                                    {
-                                        <option value="@p.Id">@p.CodigoInterno · @p.Nombre</option>
-                                    }
-                                </select>
+                                <input type="text" class="form-control" list="productosCompraDisponibles"
+                                       autocomplete="off" placeholder="Código o nombre del producto"
+                                       value="@TextoProducto(linea)"
+                                       @oninput="e => CambiarProducto(linea, e.Value?.ToString())" />
                             </td>
                             <td>
                                 <select class="form-select" @bind="linea.UnidadCompra">
@@ -91,6 +88,12 @@ else
                 </tbody>
             </table>
         </div>
+        <datalist id="productosCompraDisponibles">
+            @foreach (var p in productos.Where(p => p.Activo))
+            {
+                <option value="@EtiquetaProducto(p)"></option>
+            }
+        </datalist>
         <button type="button" class="btn btn-outline-secondary align-self-start" @onclick="Agregar">Agregar producto</button>
     </div>
 
@@ -121,6 +124,7 @@ else
     private List<Proveedor> proveedores = new();
     private List<ProductoFila> productos = new();
     private List<SolicitudDetalleCompraRest> lineas = new();
+    private readonly Dictionary<SolicitudDetalleCompraRest, string> textosProductos = new();
     private string numero = "";
     private int proveedorId;
     private DateTime fecha = DateTime.Today;
@@ -153,6 +157,7 @@ else
                 fecha = DateTime.Today;
                 fechaEstimada = null;
                 observaciones = null;
+                textosProductos.Clear();
                 lineas = new() { NuevaLinea() };
             }
             else
@@ -173,6 +178,7 @@ else
                 fecha = DateTime.TryParse(compra.FechaEmision, out var f) ? f : DateTime.Today;
                 fechaEstimada = DateTime.TryParse(compra.FechaRecepcionEstimada, out var fe) ? fe : null;
                 observaciones = compra.Observaciones;
+                textosProductos.Clear();
                 lineas = compra.Detalles.Select(d => new SolicitudDetalleCompraRest
                 {
                     NumeroLinea = d.NumeroLinea,
@@ -183,28 +189,59 @@ else
                     UnidadCompra = d.UnidadCompra,
                     FactorConversion = d.FactorConversion
                 }).ToList();
+                foreach (var linea in lineas)
+                {
+                    textosProductos[linea] = productos.FirstOrDefault(p => p.Id == linea.IdProducto) is { } p
+                        ? EtiquetaProducto(p)
+                        : "";
+                }
             }
         }
         catch (ErrorApi e) { error = e.Message; }
         finally { cargando = false; }
     }
 
+    private static string EtiquetaProducto(ProductoFila p) =>
+        $"{p.CodigoInterno} · {p.Nombre}";
+
+    private string TextoProducto(SolicitudDetalleCompraRest linea) =>
+        textosProductos.TryGetValue(linea, out var texto) ? texto : "";
+
+    private void CambiarProducto(SolicitudDetalleCompraRest linea, string? texto)
+    {
+        texto = texto?.Trim() ?? "";
+        textosProductos[linea] = texto;
+        // No enviamos el texto al Java: solo el ID de un producto elegido de la lista.
+        var producto = productos.FirstOrDefault(p => (p.Activo || p.Id == linea.IdProducto)
+            && string.Equals(EtiquetaProducto(p), texto, StringComparison.OrdinalIgnoreCase));
+        if (producto is null)
+        {
+            linea.IdProducto = 0;
+            return;
+        }
+        if (linea.IdProducto != producto.Id)
+        {
+            linea.IdProducto = producto.Id;
+            linea.UnidadCompra = producto.UnidadCompra;
+            linea.FactorConversion = producto.FactorConversion;
+            linea.PrecioUnitario = producto.CostoUnitario;
+        }
+    }
+
     private SolicitudDetalleCompraRest NuevaLinea()
     {
-        ProductoFila? producto = productos.FirstOrDefault(p => p.Activo);
-        return new SolicitudDetalleCompraRest
-        {
-            IdProducto = producto?.Id ?? 0,
-            Cantidad = 1,
-            PrecioUnitario = producto?.CostoUnitario ?? 0,
-            UnidadCompra = producto?.UnidadCompra ?? "UNIDAD",
-            FactorConversion = producto?.FactorConversion ?? 1
-        };
+        var linea = new SolicitudDetalleCompraRest { Cantidad = 1, IdProducto = 0 };
+        textosProductos[linea] = "";
+        return linea;
     }
     private void Agregar() => lineas.Add(NuevaLinea());
     private void Quitar(SolicitudDetalleCompraRest linea)
     {
-        if (lineas.Count > 1) lineas.Remove(linea);
+        if (lineas.Count > 1)
+        {
+            lineas.Remove(linea);
+            textosProductos.Remove(linea);
+        }
     }
 
     private async Task Guardar()
@@ -221,7 +258,10 @@ else
             return;
         }
         if (lineas.Count == 0 || lineas.Any(l =>
-             l.IdProducto <= 0 || l.Cantidad <= 0 || l.PrecioUnitario < 0 ||
+             l.IdProducto <= 0 ||
+             !productos.Any(p => p.Id == l.IdProducto &&
+                 string.Equals(EtiquetaProducto(p), TextoProducto(l), StringComparison.OrdinalIgnoreCase)) ||
+             l.Cantidad <= 0 || l.PrecioUnitario < 0 ||
              l.Descuento < 0 || l.Descuento > l.Cantidad * l.PrecioUnitario ||
              l.FactorConversion <= 0))
         {
