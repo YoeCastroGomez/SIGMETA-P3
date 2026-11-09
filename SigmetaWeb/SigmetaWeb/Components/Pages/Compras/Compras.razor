@@ -1,106 +1,186 @@
-﻿@page "/compras"
-
-@* RF011 - Listado de compras a proveedores.
-   Solo interfaz visual para el Laboratorio 9. *@
+@page "/compras"
+@inject ApiJava Api
+@using SigmetaWeb.Components.Pages.Compras
+@using SigmetaWeb.Components.Pages.Catalogo
 
 <PageTitle>Compras · SIGMETA</PageTitle>
 
-<Encabezado Rf="RF011" Titulo="Compras a proveedores">
-    <a class="btn btn-primary" href="/compras/nueva">
-        Nueva compra
-    </a>
+<Encabezado Rf="RF011" Titulo="Compras a proveedores"
+            Subtitulo="Órdenes reales de compra, con historial de anulaciones.">
+    <a class="btn btn-primary" href="/compras/nueva">Nueva compra</a>
 </Encabezado>
 
-@* Filtros de búsqueda *@
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
+{
+    <div class="alert alert-success">@exito</div>
+}
+
 <div class="card card-body mb-3">
-    <div class="row g-3 align-items-end">
-
-        <Campo Etiqueta="Proveedor" Id="proveedor"
-               Clase="col-sm-6 col-md-4">
-            <input id="proveedor" class="form-control"
-                   placeholder="Buscar proveedor"
-                   @bind="filtroProveedor" @bind:event="oninput" />
+    <form class="row g-3 align-items-end" @onsubmit="Buscar" @onsubmit:preventDefault>
+        <Campo Etiqueta="Proveedor" Id="proveedorCompra" Clase="col-sm-6 col-md-4">
+            <select id="proveedorCompra" class="form-select" @bind="filtroProveedorId">
+                <option value="0">Todos los proveedores</option>
+                @foreach (var p in proveedores)
+                {
+                    <option value="@p.Id">@p.RazonSocial</option>
+                }
+            </select>
         </Campo>
-
-        <Campo Etiqueta="Desde" Id="fechaDesde"
-               Clase="col-sm-6 col-md-3">
-            <input id="fechaDesde" type="date"
-                   class="form-control" @bind="filtroDesde" />
+        <Campo Etiqueta="Desde" Id="fechaDesdeCompra" Clase="col-sm-6 col-md-3">
+            <input id="fechaDesdeCompra" type="date" class="form-control" @bind="filtroDesde" />
         </Campo>
-
-        <Campo Etiqueta="Hasta" Id="fechaHasta"
-               Clase="col-sm-6 col-md-3">
-            <input id="fechaHasta" type="date"
-                   class="form-control" @bind="filtroHasta" />
+        <Campo Etiqueta="Hasta" Id="fechaHastaCompra" Clase="col-sm-6 col-md-3">
+            <input id="fechaHastaCompra" type="date" class="form-control" @bind="filtroHasta" />
         </Campo>
-
-        <div class="col-auto">
-            <button class="btn btn-dark" @onclick="Buscar">Buscar</button>
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-dark" disabled="@cargando">Buscar</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar" disabled="@cargando">Limpiar</button>
         </div>
-
-    </div>
+    </form>
 </div>
 
-@* Listado de ejemplo (mismos datos que Recepciones y Kardex) *@
 <div class="card mb-3">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
-
             <thead class="table-light">
                 <tr>
-                    <th>Número</th>
-                    <th>Proveedor</th>
-                    <th>Fecha</th>
-                    <th>Total</th>
-                    <th>Estado</th>
+                    <th>Número</th><th>Proveedor</th><th>Fecha</th><th>Total</th><th>Estado</th>
                     <th class="text-end">Acciones</th>
                 </tr>
             </thead>
-
             <tbody>
                 @foreach (var c in resultado)
                 {
                     <tr>
                         <td>@c.Numero</td>
-                        <td>@c.Proveedor</td>
-                        <td>@c.Fecha.ToString("dd/MM/yyyy")</td>
+                        <td>@NombreProveedor(c.IdProveedor)</td>
+                        <td>@c.FechaEmision</td>
                         <td>S/ @c.Total.ToString("N2")</td>
                         <td><Estado Texto="@c.Estado" /></td>
                         <td class="text-end">
-                            <a class="btn btn-sm btn-outline-secondary"
-                               href="/compras/editar/@c.Id">
-                                Editar
-                            </a>
+                            <div class="d-inline-flex gap-1 text-nowrap">
+                                @if (c.Estado == "REGISTRADA" && !c.Anulado)
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/compras/editar/{c.Id}")">Editar</a>
+                                    @if (confirmarId == c.Id)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-danger" disabled="@cargando" @onclick="() => Anular(c)">Confirmar anulación</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => confirmarId = null">Cancelar</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => confirmarId = c.Id">Anular</button>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="small text-muted">Solo lectura</span>
+                                }
+                            </div>
                         </td>
                     </tr>
                 }
-                @if (resultado.Count == 0)
+                @if (!cargando && resultado.Count == 0)
                 {
-                    <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
-                            No hay compras que coincidan con la búsqueda.
-                        </td>
-                    </tr>
+                    <tr><td colspan="6" class="text-center text-muted py-4">No hay compras que coincidan con la búsqueda.</td></tr>
+                }
+                @if (cargando)
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-3">Consultando compras...</td></tr>
                 }
             </tbody>
-
         </table>
     </div>
 </div>
 
 @code {
-    private string filtroProveedor = "";
+    private List<CompraRest> compras = new();
+    private List<CompraRest> resultado = new();
+    private List<Proveedor> proveedores = new();
+    private int filtroProveedorId;
     private DateTime? filtroDesde;
     private DateTime? filtroHasta;
-    private List<CompraFila> resultado = MuestrasCompras.Compras.ToList();
+    private string? error;
+    private string? exito;
+    private int? confirmarId;
+    private bool cargando;
 
-    private void Buscar()
+    protected override async Task OnInitializedAsync()
     {
-        resultado = MuestrasCompras.Compras
-            .Where(c => string.IsNullOrWhiteSpace(filtroProveedor)
-                        || c.Proveedor.Contains(filtroProveedor.Trim(), StringComparison.OrdinalIgnoreCase))
-            .Where(c => filtroDesde is null || c.Fecha >= DateOnly.FromDateTime(filtroDesde.Value))
-            .Where(c => filtroHasta is null || c.Fecha <= DateOnly.FromDateTime(filtroHasta.Value))
+        try
+        {
+            proveedores = await Api.Get<List<Proveedor>>("proveedores") ?? new();
+        }
+        catch (ErrorApi e) { error = e.Message; }
+        await Cargar();
+    }
+
+    private string NombreProveedor(int id) =>
+        proveedores.FirstOrDefault(p => p.Id == id)?.RazonSocial ?? $"Proveedor #{id}";
+
+    private async Task Cargar()
+    {
+        cargando = true;
+        error = null;
+        try
+        {
+            compras = await Api.Get<List<CompraRest>>("compras") ?? new();
+            AplicarFiltros();
+        }
+        catch (ErrorApi e) { error = e.Message; }
+        finally { cargando = false; }
+    }
+
+    private void AplicarFiltros()
+    {
+        resultado = compras
+            .Where(c => filtroProveedorId == 0 || c.IdProveedor == filtroProveedorId)
+            .Where(c => filtroDesde is null ||
+                 (DateTime.TryParse(c.FechaEmision, out var fecha) && fecha.Date >= filtroDesde.Value.Date))
+            .Where(c => filtroHasta is null ||
+                 (DateTime.TryParse(c.FechaEmision, out var fecha) && fecha.Date <= filtroHasta.Value.Date))
+            .OrderByDescending(c => c.Id)
             .ToList();
+    }
+
+    private Task Buscar()
+    {
+        if (filtroDesde.HasValue && filtroHasta.HasValue && filtroDesde > filtroHasta)
+        {
+            error = "La fecha de inicio no puede ser posterior a la fecha de fin.";
+            return Task.CompletedTask;
+        }
+        error = null;
+        exito = null;
+        AplicarFiltros();
+        return Task.CompletedTask;
+    }
+
+    private Task Limpiar()
+    {
+        filtroProveedorId = 0;
+        filtroDesde = filtroHasta = null;
+        exito = null;
+        error = null;
+        confirmarId = null;
+        AplicarFiltros();
+        return Task.CompletedTask;
+    }
+
+    private async Task Anular(CompraRest compra)
+    {
+        cargando = true;
+        error = exito = null;
+        try
+        {
+            await Api.Delete($"compras/{compra.Id}");
+            confirmarId = null;
+            compras = await Api.Get<List<CompraRest>>("compras") ?? new();
+            AplicarFiltros();
+            exito = $"Se anuló la compra {compra.Numero}.";
+        }
+        catch (ErrorApi e) { error = e.Message; }
+        finally { cargando = false; }
     }
 }
