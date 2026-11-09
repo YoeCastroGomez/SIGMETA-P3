@@ -206,9 +206,9 @@ CREATE TABLE detalle_cotizacion (
 
 -- 3 Categorías
 INSERT INTO categoria (nombre, descripcion, estado) VALUES
-('Herramientas Manuales', 'Martillos, alicates, destornilladores', TRUE),
-('Materiales Eléctricos', 'Cables, enchufes industriales', TRUE),
-('Construcción', 'Cemento, fierro, agregados', TRUE);
+('HERRAMIENTAS MANUALES', 'Martillos, alicates, destornilladores', TRUE),
+('MATERIALES ELECTRICOS', 'Cables, enchufes industriales', TRUE),
+('CONSTRUCCION', 'Cemento, fierro, agregados', TRUE);
 
 -- 6 Productos (con sus tres códigos, precio, costo, stock y stock mínimo)
 INSERT INTO producto (codigo_interno, codigo_fabricante, codigo_proveedor, nombre, id_categoria, unidad_compra, unidad_venta, factor_conversion, precio_venta, costo_unitario, stock_actual, stock_minimo, estado) VALUES

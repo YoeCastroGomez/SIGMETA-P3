@@ -94,15 +94,16 @@ public class CategoriaBOImpl implements CategoriaBO {
         });
     }
 
-    // RF006: busqueda por coincidencia parcial entre las categorias activas y desactivadas
+    // RF006: busqueda por coincidencia parcial entre las categorias activas y desactivadas.
+    // Se compara con el nombre normalizado: "construcción", "CONSTRUCCION" y "Construccion" encuentran lo mismo.
     @Override
     public List<Categoria> buscarPorNombre(String nombre) throws SQLException {
-        String texto = Validador.textoObligatorio(nombre, "nombre", 100).toLowerCase();
+        String texto = normalizarNombre(Validador.textoObligatorio(nombre, "nombre", 100));
         return Transaccion.ejecutar(() -> {
             List<Categoria> categorias = new ArrayList<>(categoriaDAO.listarPorEstado(true));
             categorias.addAll(categoriaDAO.listarPorEstado(false));
             return categorias.stream()
-                    .filter(c -> c.getNombre().toLowerCase().contains(texto))
+                    .filter(c -> normalizarNombre(c.getNombre()).contains(texto))
                     .toList();
         });
     }
@@ -128,30 +129,36 @@ public class CategoriaBOImpl implements CategoriaBO {
         return categoria;
     }
 
-    // Texto para comparar nombres: sin tildes, sin mayusculas y con un solo espacio entre palabras
-    private static String claveNombre(String nombre) {
+    // Preprocesado del nombre: MAYUSCULAS, sin tildes y con un solo espacio entre palabras.
+    //   "martillo", "Martíllo" y "  MARTILLO " -> "MARTILLO"
+    //   "Látex y esmaltes" y "latex  y esmaltes" -> "LATEX Y ESMALTES"
+    // La Ñ se respeta ("Diseño" -> "DISEÑO"): solo se quitan las tildes de las vocales.
+    // Se usa al guardar (asi el nombre queda escrito siempre igual en la base) y al comparar.
+    static String normalizarNombre(String nombre) {
         if (nombre == null) {
             return "";
         }
-        String sinTildes = Normalizer.normalize(nombre, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
-        return sinTildes.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+        String texto = Normalizer.normalize(nombre, Normalizer.Form.NFC).trim().replaceAll("\\s+", " ").toUpperCase(Locale.ROOT);
+        texto = texto.replace('Ñ', '\u0001');   // se protege la Ñ para que no pierda su tilde
+        texto = Normalizer.normalize(texto, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return texto.replace('\u0001', 'Ñ');
     }
 
     private void validarDatos(Categoria categoria) {
         Validador.obligatorio(categoria, "categoria");
-        categoria.setNombre(Validador.textoObligatorio(categoria.getNombre(), "nombre", 100));
+        categoria.setNombre(normalizarNombre(Validador.textoObligatorio(categoria.getNombre(), "nombre", 100)));
         categoria.setDescripcion(Validador.textoOpcional(categoria.getDescripcion(), "descripcion", 255));
     }
 
-    // la tabla no tiene UNIQUE en nombre; se controla entre las categorias activas y las desactivadas,
-    // sin distinguir mayusculas, tildes ni espacios de mas:
+    // la tabla no tiene UNIQUE en nombre; se controla entre las categorias activas y las desactivadas.
+    // Se comparan los nombres normalizados (tambien los que ya estaban en la base escritos de otra forma):
     // "Construccion", "CONSTRUCCIÓN" y " construcción " son la misma categoria
     private void validarNombreUnico(Categoria categoria) throws SQLException {
         List<Categoria> todas = new ArrayList<>(categoriaDAO.listarPorEstado(true));
         todas.addAll(categoriaDAO.listarPorEstado(false));
-        String nuevo = claveNombre(categoria.getNombre());
+        String nuevo = normalizarNombre(categoria.getNombre());
         for (Categoria otra : todas) {
-            if (claveNombre(otra.getNombre()).equals(nuevo) && otra.getId() != categoria.getId()) {
+            if (normalizarNombre(otra.getNombre()).equals(nuevo) && otra.getId() != categoria.getId()) {
                 throw new IllegalArgumentException("Ya existe la categoria " + categoria.getNombre());
             }
         }
