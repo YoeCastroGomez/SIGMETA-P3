@@ -1,19 +1,27 @@
 USE sigmeta;
 
 -- =========================================================================
--- MIGRACION LAB 11 - CLAUDIA (RF006 CATEGORIAS)
--- Nombres de categoria escritos siempre igual: MAYUSCULAS, sin tildes y con
--- un solo espacio entre palabras ("Látex y esmaltes" -> "LATEX Y ESMALTES").
--- Desde ahora el BO (CategoriaBOImpl.normalizarNombre) guarda asi los nombres;
--- este script arregla las categorias que ya estaban en la base.
+-- MIGRACION LAB 11 - CLAUDIA (RF006 CATEGORIAS Y RF005 PRODUCTOS)
+-- Nombres de categorias y productos escritos siempre igual: MAYUSCULAS, sin
+-- tildes y con un solo espacio entre palabras ("Látex y esmaltes" -> "LATEX Y ESMALTES").
+-- Desde ahora los BO (TextoNormalizado) guardan asi los nombres;
+-- este script arregla los que ya estaban en la base.
 --
--- Que hace:
+-- PARTE A - CATEGORIAS:
 --   1. Junta las categorias repetidas (las que solo cambian en mayusculas,
 --      tildes o espacios, por ejemplo "Construcción", "CONSTRUCCION" y
 --      "Construccion"). Se queda una: la activa con el id mas bajo (si
 --      ninguna esta activa, la de id mas bajo). Los productos de las otras
 --      pasan a la que se queda y las repetidas se borran.
 --   2. Escribe todos los nombres en MAYUSCULAS y sin tildes.
+--
+-- PARTE B - PRODUCTOS:
+--   Los productos repetidos NO se juntan (tienen stock, ventas y movimientos).
+--   1. Escribe todos los nombres en MAYUSCULAS y sin tildes.
+--   2. Si dos productos quedan con el mismo nombre ("Martillo" y "MARTILLO"),
+--      el primero (el activo de id mas bajo) se queda con el nombre y a los
+--      otros se les agrega su codigo interno: "MARTILLO (INT-998)". Despues el
+--      Administrador los renombra o desactiva desde la pantalla Productos.
 --
 -- Se puede ejecutar mas de una vez: si ya no hay repetidos no cambia nada.
 -- Ejecutar en Workbench despues de tener la base con sus SP.
@@ -94,3 +102,60 @@ SET SQL_SAFE_UPDATES = 1;
 
 -- Resultado
 SELECT id, nombre, descripcion, estado FROM categoria ORDER BY id;
+
+-- =========================================================================
+-- PARTE B - PRODUCTOS
+-- =========================================================================
+SET SQL_SAFE_UPDATES = 0;
+
+START TRANSACTION;
+
+DROP TEMPORARY TABLE IF EXISTS tmp_prod_clave;
+CREATE TEMPORARY TABLE tmp_prod_clave AS
+SELECT p.id,
+       p.estado,
+       p.codigo_interno,
+       UPPER(TRIM(
+           REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+           REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+           REPLACE(REPLACE(REPLACE(p.nombre COLLATE utf8mb4_bin, '   ', ' '), '  ', ' '), '  ', ' '),
+               'á', 'a'), 'é', 'e'), 'í', 'i'), 'ó', 'o'), 'ú', 'u'), 'ü', 'u'),
+               'à', 'a'), 'è', 'e'), 'ì', 'i'), 'ò', 'o'), 'ù', 'u'),
+               'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U'), 'Ü', 'U'),
+               'À', 'A'), 'È', 'E'), 'Ì', 'I'), 'Ò', 'O'), 'Ù', 'U')
+       )) COLLATE utf8mb4_bin AS clave
+FROM producto p;
+
+-- El primero de cada nombre (el activo de id mas bajo) se queda con el nombre limpio
+DROP TEMPORARY TABLE IF EXISTS tmp_prod_queda;
+CREATE TEMPORARY TABLE tmp_prod_queda AS
+SELECT clave,
+       COALESCE(MIN(CASE WHEN estado THEN id END), MIN(id)) AS id_queda
+FROM tmp_prod_clave
+GROUP BY clave;
+
+-- Para revisar: productos que quedan con el codigo en el nombre
+SELECT c.id, p.nombre AS nombre_actual,
+       LEFT(CONCAT(c.clave, ' (', c.codigo_interno, ')'), 150) AS nombre_nuevo
+FROM tmp_prod_clave c
+JOIN tmp_prod_queda q ON q.clave = c.clave
+JOIN producto p ON p.id = c.id
+WHERE c.id <> q.id_queda;
+
+UPDATE producto p
+JOIN tmp_prod_clave c ON c.id = p.id
+JOIN tmp_prod_queda q ON q.clave = c.clave
+SET p.nombre = CASE
+                   WHEN c.id = q.id_queda THEN c.clave
+                   ELSE LEFT(CONCAT(c.clave, ' (', c.codigo_interno, ')'), 150)
+               END;
+
+COMMIT;
+
+DROP TEMPORARY TABLE IF EXISTS tmp_prod_queda;
+DROP TEMPORARY TABLE IF EXISTS tmp_prod_clave;
+
+SET SQL_SAFE_UPDATES = 1;
+
+-- Resultado
+SELECT id, codigo_interno, nombre, estado FROM producto ORDER BY id;

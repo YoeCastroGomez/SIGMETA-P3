@@ -13,10 +13,8 @@ import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.model.producto.Categoria;
 
 import java.sql.SQLException;
-import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 public class CategoriaBOImpl implements CategoriaBO {
 
@@ -129,19 +127,9 @@ public class CategoriaBOImpl implements CategoriaBO {
         return categoria;
     }
 
-    // Preprocesado del nombre: MAYUSCULAS, sin tildes y con un solo espacio entre palabras.
-    //   "martillo", "Martíllo" y "  MARTILLO " -> "MARTILLO"
-    //   "Látex y esmaltes" y "latex  y esmaltes" -> "LATEX Y ESMALTES"
-    // La Ñ se respeta ("Diseño" -> "DISEÑO"): solo se quitan las tildes de las vocales.
-    // Se usa al guardar (asi el nombre queda escrito siempre igual en la base) y al comparar.
+    // Preprocesado del nombre (MAYUSCULAS, sin tildes, un solo espacio): ver TextoNormalizado
     static String normalizarNombre(String nombre) {
-        if (nombre == null) {
-            return "";
-        }
-        String texto = Normalizer.normalize(nombre, Normalizer.Form.NFC).trim().replaceAll("\\s+", " ").toUpperCase(Locale.ROOT);
-        texto = texto.replace('Ñ', '\u0001');   // se protege la Ñ para que no pierda su tilde
-        texto = Normalizer.normalize(texto, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
-        return texto.replace('\u0001', 'Ñ');
+        return TextoNormalizado.nombre(nombre);
     }
 
     private void validarDatos(Categoria categoria) {
