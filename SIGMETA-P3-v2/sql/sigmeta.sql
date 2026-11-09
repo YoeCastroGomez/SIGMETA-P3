@@ -212,12 +212,12 @@ INSERT INTO categoria (nombre, descripcion, estado) VALUES
 
 -- 6 Productos (con sus tres códigos, precio, costo, stock y stock mínimo)
 INSERT INTO producto (codigo_interno, codigo_fabricante, codigo_proveedor, nombre, id_categoria, unidad_compra, unidad_venta, factor_conversion, precio_venta, costo_unitario, stock_actual, stock_minimo, estado) VALUES
-('INT-001', 'FAB-101', 'PROV-11', 'Martillo de Acero', 1, 'UNIDAD', 'UNIDAD', 1.000, 45.00, 25.00, 100.000, 10.000, TRUE),
-('INT-002', 'FAB-102', 'PROV-22', 'Alicate de Presión', 1, 'UNIDAD', 'UNIDAD', 1.000, 35.00, 18.00, 50.000, 5.000, TRUE),
-('INT-003', 'FAB-103', 'PROV-33', 'Cable Mellizo 2x14', 2, 'METRO', 'METRO', 1.000, 2.50, 1.20, 500.000, 100.000, TRUE),
-('INT-004', 'FAB-104', 'PROV-44', 'Enchufe Mennekes', 2, 'UNIDAD', 'UNIDAD', 1.000, 85.00, 50.00, 30.000, 5.000, TRUE),
-('INT-005', 'FAB-105', 'PROV-55', 'Bolsa Cemento Sol', 3, 'UNIDAD', 'UNIDAD', 1.000, 28.50, 24.00, 200.000, 50.000, TRUE),
-('INT-006', 'FAB-106', 'PROV-66', 'Fierro Corrugado', 3, 'UNIDAD', 'UNIDAD', 1.000, 32.00, 26.00, 150.000, 30.000, TRUE);
+('INT-001', 'FAB-101', 'PROV-11', 'MARTILLO DE ACERO', 1, 'UNIDAD', 'UNIDAD', 1.000, 45.00, 25.00, 100.000, 10.000, TRUE),
+('INT-002', 'FAB-102', 'PROV-22', 'ALICATE DE PRESION', 1, 'UNIDAD', 'UNIDAD', 1.000, 35.00, 18.00, 50.000, 5.000, TRUE),
+('INT-003', 'FAB-103', 'PROV-33', 'CABLE MELLIZO 2X14', 2, 'METRO', 'METRO', 1.000, 2.50, 1.20, 500.000, 100.000, TRUE),
+('INT-004', 'FAB-104', 'PROV-44', 'ENCHUFE MENNEKES', 2, 'UNIDAD', 'UNIDAD', 1.000, 85.00, 50.00, 30.000, 5.000, TRUE),
+('INT-005', 'FAB-105', 'PROV-55', 'BOLSA CEMENTO SOL', 3, 'UNIDAD', 'UNIDAD', 1.000, 28.50, 24.00, 200.000, 50.000, TRUE),
+('INT-006', 'FAB-106', 'PROV-66', 'FIERRO CORRUGADO', 3, 'UNIDAD', 'UNIDAD', 1.000, 32.00, 26.00, 150.000, 30.000, TRUE);
 
 -- 1 Cotización
 INSERT INTO cotizacion (numero, fecha_emision, sub_total, igv, total, fecha_registro, id_usuario_registro, anulado, id_cliente, estado) VALUES

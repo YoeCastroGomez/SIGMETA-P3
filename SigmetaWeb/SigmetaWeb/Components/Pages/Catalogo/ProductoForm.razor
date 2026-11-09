@@ -49,8 +49,11 @@ else
                     </Campo>
                 </div>
                 <div class="col-md-8">
-                    <Campo Etiqueta="Nombre" Id="nombre" Obligatorio="true">
-                        <InputText id="nombre" class="form-control" maxlength="150" @bind-Value="producto.Nombre" />
+                    @* El BO guarda el nombre en MAYUSCULAS y sin tildes ("Martíllo" -> "MARTILLO") y no deja repetirlo *@
+                    <Campo Etiqueta="Nombre" Id="nombre" Obligatorio="true"
+                           Ayuda="Se guarda en mayúsculas y sin tildes. No puede repetirse.">
+                        <InputText id="nombre" class="form-control" maxlength="150" style="text-transform: uppercase"
+                                   @bind-Value="producto.Nombre" />
                     </Campo>
                 </div>
                 <div class="col-md-4">

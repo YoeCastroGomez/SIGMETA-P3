@@ -41,6 +41,7 @@ public class ProductoBOImpl implements ProductoBO {
         return Transaccion.ejecutar(() -> {
             verificarCategoriaActiva(producto.getCategoria().getId());
             validarCodigoUnico(producto);
+            validarNombreUnico(producto);
             productoDAO.save(producto);
             producto.setEstado(true);
             return producto;
@@ -62,6 +63,7 @@ public class ProductoBOImpl implements ProductoBO {
             }
             verificarCategoriaActiva(producto.getCategoria().getId());
             validarCodigoUnico(producto);
+            validarNombreUnico(producto);
             // RF012: el stock no se edita a mano, lo mueven los movimientos de almacen
             producto.setStockActual(actual.getStockActual());
             // RNF001: quien modifica el producto (incluido el precio); la fecha y hora la registra el SP
@@ -116,13 +118,14 @@ public class ProductoBOImpl implements ProductoBO {
         });
     }
 
-    // RF005: coincidencia parcial entre los productos activos
+    // RF005: coincidencia parcial entre los productos activos, sin importar tildes ni mayusculas
+    // ("martíllo" encuentra "MARTILLO DE ACERO")
     @Override
     public List<Producto> buscarPorNombre(String nombre) throws SQLException {
-        String texto = Validador.textoObligatorio(nombre, "nombre", 150).toLowerCase();
+        String texto = TextoNormalizado.nombre(Validador.textoObligatorio(nombre, "nombre", 150));
         return Transaccion.ejecutar(() -> {
             return productoDAO.listarTodos().stream()
-                    .filter(p -> p.getNombre().toLowerCase().contains(texto))
+                    .filter(p -> TextoNormalizado.nombre(p.getNombre()).contains(texto))
                     .toList();
         });
     }
@@ -183,7 +186,8 @@ public class ProductoBOImpl implements ProductoBO {
         producto.setCodigoInterno(Validador.textoObligatorio(producto.getCodigoInterno(), "codigo interno", 50));
         producto.setCodigoFabricante(Validador.textoOpcional(producto.getCodigoFabricante(), "codigo de fabricante", 50));
         producto.setCodigoProveedor(Validador.textoOpcional(producto.getCodigoProveedor(), "codigo de proveedor", 50));
-        producto.setNombre(Validador.textoObligatorio(producto.getNombre(), "nombre", 150));
+        // el nombre se guarda en MAYUSCULAS y sin tildes: "Martíllo" -> "MARTILLO"
+        producto.setNombre(TextoNormalizado.nombre(Validador.textoObligatorio(producto.getNombre(), "nombre", 150)));
         producto.setDescripcion(Validador.textoOpcional(producto.getDescripcion(), "descripcion", 255));
         producto.setImagen(Validador.textoOpcional(producto.getImagen(), "imagen", 255));
 
@@ -216,6 +220,20 @@ public class ProductoBOImpl implements ProductoBO {
             if (otro.getCodigoInterno().equalsIgnoreCase(producto.getCodigoInterno())
                     && otro.getId() != producto.getId()) {
                 throw new IllegalArgumentException("Ya existe un producto con el codigo " + producto.getCodigoInterno());
+            }
+        }
+    }
+
+    // el nombre tampoco se repite, tambien frente a los productos desactivados. Se comparan los nombres
+    // normalizados: "Martillo", "MARTILLO" y "Martíllo" son el mismo producto
+    private void validarNombreUnico(Producto producto) throws SQLException {
+        List<Producto> productos = new ArrayList<>(productoDAO.listarPorEstado(true));
+        productos.addAll(productoDAO.listarPorEstado(false));
+        String nuevo = TextoNormalizado.nombre(producto.getNombre());
+        for (Producto otro : productos) {
+            if (TextoNormalizado.nombre(otro.getNombre()).equals(nuevo) && otro.getId() != producto.getId()) {
+                throw new IllegalArgumentException("Ya existe un producto con el nombre " + producto.getNombre()
+                        + " (codigo " + otro.getCodigoInterno() + ")");
             }
         }
     }
