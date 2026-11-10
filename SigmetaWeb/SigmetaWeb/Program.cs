@@ -17,7 +17,10 @@ builder.Services.AddHttpClient("ApiJava", cliente =>
 builder.Services.AddScoped<ApiJava>();
 
 // RF001: autenticación con cookie. La cookie guarda el usuario, su rol y el ticket que dio el Java.
-// Dura 8 horas y se renueva mientras se use (SlidingExpiration), igual que la sesión del Java.
+// La inactividad (30 minutos sin usar el sistema) la controla el Java: cada pedido renueva su sesión y,
+// cuando vence, responde 401 y ApiJava manda al login con el motivo. La cookie dura más (8 horas) a
+// propósito: en Blazor Server la cookie solo se renueva al recargar la página, no al trabajar dentro de
+// la app, así que con 30 minutos sacaría al usuario aunque estuviera trabajando.
 // Las claves que cifran la cookie se guardan en disco: si Blazor se reinicia (dotnet watch, recompilar)
 // la cookie sigue sirviendo y no hay que volver a iniciar sesión.
 builder.Services.AddDataProtection()

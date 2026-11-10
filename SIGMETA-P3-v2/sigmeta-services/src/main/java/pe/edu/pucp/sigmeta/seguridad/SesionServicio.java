@@ -10,8 +10,9 @@ import pe.edu.pucp.sigmeta.model.usuario.Usuario;
  */
 public final class SesionServicio {
     private final int idUsuario;
-    // RF001: la sesion vence tras 8 horas SIN USO; cada pedido la renueva
-    public static final long INACTIVIDAD_MAXIMA_MS = 8L * 60 * 60 * 1000;
+    // RF001: la sesion vence tras 30 minutos SIN USO; cada pedido la renueva
+    // (mientras el usuario siga trabajando no se cierra)
+    public static final long INACTIVIDAD_MAXIMA_MS = 30L * 60 * 1000;
     private volatile long expira;
     private volatile boolean cerrada;
     private static final ThreadLocal<Integer> ACTUAL = new ThreadLocal<>();
@@ -34,8 +35,11 @@ public final class SesionServicio {
     @FunctionalInterface
     public interface Accion<T> { T ejecutar(int idAutenticado) throws SQLException; }
     public <T> T ejecutar(Accion<T> accion) throws SQLException {
-        if (cerrada || System.currentTimeMillis() >= expira) {
-            throw new SecurityException("Sesion cerrada o expirada");
+        if (cerrada) {
+            throw new SecurityException("Su sesion fue cerrada. Vuelva a iniciar sesion");
+        }
+        if (System.currentTimeMillis() >= expira) {
+            throw new SecurityException("Su sesion vencio tras 30 minutos sin uso. Vuelva a iniciar sesion");
         }
         renovar();
         if (ACTUAL.get() != null) throw new SecurityException("No se permite sustituir una sesion activa");
@@ -44,7 +48,10 @@ public final class SesionServicio {
             return Transaccion.ejecutar(() -> {
                 Usuario usuario = new UsuarioBOImpl().obtener(idUsuario);
                 if (usuario == null || !usuario.isEstado() || !usuario.getRol().isEstado()) {
-                    throw new SecurityException("Usuario o rol inactivo");
+                    // RF001/RF002: si el Administrador desactivo al usuario (o a su rol) mientras estaba
+                    // conectado, se cierra su sesion: el adaptador web responde 401 y Blazor lo saca al login
+                    cerrar();
+                    throw new SecurityException("Su usuario o su rol fue desactivado. Consulte con el Administrador");
                 }
                 return accion.ejecutar(idUsuario);
             });
