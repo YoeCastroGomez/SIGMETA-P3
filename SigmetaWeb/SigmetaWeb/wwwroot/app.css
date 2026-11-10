@@ -79,3 +79,54 @@ h1:focus { outline: none; }
     position: fixed; width: 100%; z-index: 1000;
 }
 #blazor-error-ui .dismiss { cursor: pointer; position: absolute; right: 0.75rem; top: 0.5rem; }
+
+/* Navegacion persistente y panel lateral actualizado */
+@media (min-width: 1200px) {
+    .sigmeta-sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #59636e #23262b;
+        align-self: flex-start;
+    }
+}
+.sigmeta-sidebar { background: #20262d; border-right: 1px solid #353e48; }
+.sigmeta-sidebar .nav-link {
+    display: flex;
+    align-items: center;
+    border-left: none;
+    margin: 2px 11px;
+    padding: 10px 13px !important;
+    border-radius: 9px;
+    font-size: .84rem;
+    color: #cbd1d7;
+    transition: background-color .15s, color .15s;
+}
+.sigmeta-sidebar .nav-link:hover { background: #333c46; color: #fff; }
+.sigmeta-sidebar .nav-link.active {
+    background: #3b332b;
+    color: #ffbd80;
+    border-left: none;
+    box-shadow: inset 3px 0 0 #d78537;
+}
+.sigmeta-sidebar .menu-grupo {
+    color: #aeb8c2;
+    letter-spacing: .06em;
+    font-size: .72rem;
+    padding: 12px 16px !important;
+    margin: 4px 10px 1px;
+    border-radius: 8px;
+}
+.sigmeta-sidebar .menu-grupo:hover { background: #2e3740; }
+.sigmeta-sidebar .menu-grupo:focus-visible, .sigmeta-sidebar .nav-link:focus-visible {
+    outline: 2px solid #e9ac69; outline-offset: 2px;
+}
+.sigmeta-sidebar .menu-chevron { transition: transform .2s; opacity: .8; font-size: 1rem; }
+.sigmeta-sidebar .menu-chevron.abierto { transform: rotate(90deg); }
+.sigmeta-sidebar .nav-submenu { margin-bottom: 7px; }
+.sigmeta-sidebar .menu-footer { margin-top: auto; padding: 16px 18px 20px; color: #919daa; font-size: .72rem; border-top: 1px solid #38424b; }
+@media (max-width: 1199.98px) {
+    .sigmeta-sidebar { height: 100vh; overflow-y: auto; }
+}
