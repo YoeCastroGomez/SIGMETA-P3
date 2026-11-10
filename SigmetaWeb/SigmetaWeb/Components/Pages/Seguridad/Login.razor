@@ -4,41 +4,111 @@
 
 <PageTitle>Iniciar sesión · SIGMETA</PageTitle>
 
-@* RF001 · Login.
-   El formulario se envía a /auth/login (AuthEndpoints -> ServicioSesionAuth), que le pregunta al Java
-   (POST /api/sesion -> iniciarSesion del BO). Si los datos son correctos se crea la cookie de sesión
-   con el usuario, su rol y el ticket; si no, vuelve aquí con el mensaje del BO en ?error=... *@
-<div class="card shadow-sm p-4 w-100" style="max-width: 380px;">
-    <div class="d-flex align-items-center gap-2 mb-4">
-        <span class="sigmeta-logo rounded d-flex align-items-center justify-content-center text-white fw-bold">SM</span>
-        <div>
-            <div class="fw-bold">SIGMETA</div>
-            <div class="small text-muted">Grupo Meta · Sistema comercial</div>
+<div class="login-shell">
+    <section class="login-marca" aria-label="Presentación de SIGMETA">
+        <div class="login-marca-top">
+            <span class="login-emblema" aria-hidden="true">
+                <svg viewBox="0 0 48 48" width="34" height="34" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="5" y="5" width="38" height="38" rx="11" stroke="white" stroke-opacity=".28"/>
+                    <path d="M14 31V19L24 13L34 19V31L24 37L14 31Z" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
+                    <path d="M14 19L24 25L34 19M24 25V37" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+            </span>
+            <div class="login-marca-nombre">
+                <strong>SIGMETA<span>.</span></strong>
+                <small>GESTIÓN EMPRESARIAL</small>
+            </div>
         </div>
-    </div>
 
-    <h1 class="h5 mb-3">Iniciar sesión</h1>
+        <div class="login-marca-centro">
+            <span class="login-marca-etiqueta">GRUPO META · PLATAFORMA EMPRESARIAL</span>
+            <h1>Todo tu negocio.<br/><em>En un solo lugar.</em></h1>
+            <p>Organiza tus operaciones comerciales, compras e inventario desde un espacio de trabajo integrado.</p>
+            <div class="login-marca-modulos" aria-label="Módulos de SIGMETA">
+                <span>Ventas</span>
+                <span>Compras</span>
+                <span>Inventario</span>
+                <span>Administración</span>
+            </div>
+        </div>
 
-    @* "Usuario o clave incorrectos", "El usuario se encuentra desactivado", "El rol del usuario se encuentra desactivado" *@
-    <AvisoError Mensaje="@Error" />
+        <div class="login-marca-pie">
+            <span class="login-marca-punto" aria-hidden="true"></span>
+            Acceso para personal autorizado · Grupo Meta
+        </div>
+        <div class="login-marca-decoracion" aria-hidden="true"></div>
+    </section>
 
-    <form method="post" action="/auth/login">
-        <Campo Etiqueta="Usuario" Id="usuario" Obligatorio="true">
-            <input id="usuario" name="usuario" class="form-control" autocomplete="username" required />
-        </Campo>
+    <section class="login-formulario-zona" aria-label="Iniciar sesión">
+        <div class="login-formulario">
+            <div class="login-formulario-encabezado">
+                <span class="login-formulario-insignia">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="5" y="10" width="14" height="11" rx="2"/>
+                        <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+                    </svg>
+                </span>
+                <div class="login-formulario-bienvenida">BIENVENIDO A SIGMETA</div>
+                <h2>Iniciar sesión</h2>
+                <p>Ingresa tus credenciales para continuar a tu espacio de trabajo.</p>
+            </div>
 
-        <Campo Etiqueta="Clave" Id="clave" Obligatorio="true">
-            <input id="clave" name="clave" type="password" class="form-control" autocomplete="current-password" required />
-        </Campo>
+            <AvisoError Mensaje="@Error" />
 
-        <button type="submit" class="btn btn-primary w-100 mt-2">Ingresar</button>
-    </form>
-
-    <p class="small text-muted mt-3 mb-0">Si olvidaste tu clave, solicita al Administrador que la restablezca.</p>
+            <form method="post" action="/auth/login" class="login-campos">
+                <div>
+                    <label class="form-label fw-semibold" for="usuario">Usuario <span class="login-requerido">*</span></label>
+                    <input id="usuario" name="usuario" class="form-control login-input"
+                           autocomplete="username" placeholder="Escribe tu usuario" maxlength="100"
+                           autofocus required />
+                </div>
+                <div>
+                    <label class="form-label fw-semibold" for="clave">Contraseña <span class="login-requerido">*</span></label>
+                    <div class="login-clave-contenedor">
+                        <input id="clave" name="clave" type="@(mostrarClave ? "text" : "password")"
+                               class="form-control login-input login-clave-input"
+                               autocomplete="current-password" placeholder="Ingresa tu contraseña" required />
+                        <button type="button" class="login-ver-clave"
+                                @onclick="() => mostrarClave = !mostrarClave"
+                                aria-label="@(mostrarClave ? "Ocultar contraseña" : "Mostrar contraseña")"
+                                aria-pressed="@mostrarClave"
+                                title="@(mostrarClave ? "Ocultar contraseña" : "Mostrar contraseña")">
+                            @if (mostrarClave)
+                            {
+                                <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8"/>
+                                    <path d="M9.9 5.2A10.6 10.6 0 0 1 12 5c5 0 8.5 4 10 7a12 12 0 0 1-3.1 3.6M6.1 6.1A14 14 0 0 0 2 12c1.5 3 5 7 10 7 1.6 0 3-.4 4.2-1.1"/>
+                                </svg>
+                            }
+                            else
+                            {
+                                <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            }
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary login-ingresar">
+                    Ingresar a SIGMETA
+                    <span aria-hidden="true">→</span>
+                </button>
+            </form>
+            <div class="login-ayuda">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>
+                </svg>
+                <p>¿Olvidaste tu contraseña? Solicita al administrador que la restablezca.</p>
+            </div>
+        </div>
+        <div class="login-formulario-pie">SIGMETA · Sistema de gestión empresarial</div>
+    </section>
 </div>
 
 @code {
-    // mensaje del BO cuando el login falla: /login?error=Usuario%20o%20clave%20incorrectos
     [SupplyParameterFromQuery(Name = "error")]
     public string? Error { get; set; }
+
+    private bool mostrarClave;
 }
