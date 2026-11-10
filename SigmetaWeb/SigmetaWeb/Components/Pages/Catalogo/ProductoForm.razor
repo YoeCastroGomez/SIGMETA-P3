@@ -1,166 +1,486 @@
 @page "/productos/nuevo"
 @page "/productos/editar/{Id:int}"
+@inject ApiJava Api
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>@Titulo · SIGMETA</PageTitle>
 
-@* RF005 · Formulario de producto. Solo visual (Lab 9): Guardar no registra, solo vuelve a la lista. *@
+@* RF005 · Formulario de producto (solo Administrador; si otro rol guarda, el BO lo rechaza).
+   Nuevo: POST /api/productos. Editar: GET /api/productos/{Id} para cargarlo y PUT /api/productos/{Id} para guardar.
+   La pantalla evita los errores de números: no deja escribir negativos y el factor queda fijo en 1 cuando las
+   dos unidades son iguales. Lo demás lo sigue validando el BO y su mensaje sale en el aviso rojo
+   (código interno repetido, categoría desactivada, cambio de la unidad de venta de un producto ya registrado). *@
 <Encabezado Rf="RF005" Titulo="@Titulo">
     <a class="btn btn-outline-secondary" href="/productos">Volver a la lista</a>
 </Encabezado>
 
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Identificación</h2>
-    <div class="row">
-        <div class="col-md-4">
-            <Campo Etiqueta="Código interno" Id="codInterno" Obligatorio="true" Ayuda="Único.">
-                <input id="codInterno" class="form-control" maxlength="50" value="@ejemplo?.CodigoInterno" />
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            <Campo Etiqueta="Código de fabricante" Id="codFabricante">
-                <input id="codFabricante" class="form-control" maxlength="50" value="@ejemplo?.CodigoFabricante" />
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            <Campo Etiqueta="Código de proveedor" Id="codProveedor">
-                <input id="codProveedor" class="form-control" maxlength="50" value="@ejemplo?.CodigoProveedor" />
-            </Campo>
-        </div>
-        <div class="col-md-8">
-            <Campo Etiqueta="Nombre" Id="nombre" Obligatorio="true">
-                <input id="nombre" class="form-control" maxlength="150" value="@ejemplo?.Nombre" />
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            <Campo Etiqueta="Categoría" Id="categoria" Obligatorio="true">
-                <select id="categoria" class="form-select">
-                    <option value="">Seleccione…</option>
-                    @foreach (var c in MuestrasCatalogo.Categorias.Where(c => c.Activo))
-                    {
-                        <option selected="@(ejemplo?.Categoria == c.Nombre)">@c.Nombre</option>
-                    }
-                </select>
-            </Campo>
-        </div>
-        <div class="col-12">
-            <Campo Etiqueta="Descripción" Id="descripcion">
-                <input id="descripcion" class="form-control" maxlength="255" value="@ejemplo?.Descripcion" />
-            </Campo>
-        </div>
-    </div>
-</div>
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Unidades</h2>
-    <div class="row">
-        <div class="col-md-4">
-            <Campo Etiqueta="Unidad de compra" Id="unidadCompra" Obligatorio="true">
-                <select id="unidadCompra" class="form-select">
-                    @foreach (var u in MuestrasCatalogo.Unidades)
-                    {
-                        <option value="@u" selected="@(ejemplo?.UnidadCompra == u)">@MuestrasCatalogo.Texto(u)</option>
-                    }
-                </select>
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            @* RF005/RF012: la unidad de venta es la unidad del stock y no puede cambiar después de registrar. *@
-            <Campo Etiqueta="Unidad de venta" Id="unidadVenta" Obligatorio="true"
-                   Ayuda="@(EsNuevo ? "En esta unidad se lleva el stock; luego no podrá cambiarse." : "No puede cambiarse: es la unidad del stock.")">
-                <select id="unidadVenta" class="form-select" disabled="@(!EsNuevo)">
-                    @foreach (var u in MuestrasCatalogo.Unidades)
-                    {
-                        <option value="@u" selected="@(ejemplo?.UnidadVenta == u)">@MuestrasCatalogo.Texto(u)</option>
-                    }
-                </select>
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            <Campo Etiqueta="Factor de conversión" Id="factor" Obligatorio="true"
-                   Ayuda="Unidades de venta en una unidad de compra. Si las unidades son iguales, es 1.">
-                <input id="factor" type="number" min="0" step="0.001" class="form-control" value="@(ejemplo?.FactorConversion ?? 1m)" />
-            </Campo>
-        </div>
-    </div>
-</div>
-
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Precios y stock</h2>
-    <div class="row">
-        <div class="col-md-4">
-            <Campo Etiqueta="Precio de venta (S/)" Id="precio" Obligatorio="true">
-                <input id="precio" type="number" min="0" step="0.01" class="form-control" value="@ejemplo?.PrecioVenta" />
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            <Campo Etiqueta="Costo unitario (S/)" Id="costo" Obligatorio="true">
-                <input id="costo" type="number" min="0" step="0.01" class="form-control" value="@ejemplo?.CostoUnitario" />
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            <Campo Etiqueta="Precio referencial (S/)" Id="precioRef">
-                <input id="precioRef" type="number" min="0" step="0.01" class="form-control" value="@ejemplo?.PrecioReferencial" />
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            <Campo Etiqueta="Stock mínimo" Id="stockMinimo" Obligatorio="true">
-                <input id="stockMinimo" type="number" min="0" step="0.001" class="form-control" value="@ejemplo?.StockMinimo" />
-            </Campo>
-        </div>
-        <div class="col-md-8">
-            <Campo Etiqueta="Imagen" Id="imagen">
-                <input id="imagen" type="file" accept="image/*" class="form-control" />
-            </Campo>
-        </div>
-    </div>
-
-    @if (EsNuevo)
+@if (producto is null)
+{
+    if (string.IsNullOrEmpty(error))
     {
-        @* RF012: el producto nuevo entra con stock 0; el stock solo lo mueven las recepciones y los ajustes. *@
-        <div class="alert alert-secondary">
-            El producto se registra con <strong>stock 0</strong>. El stock aumenta con las recepciones de compra
-            y los ajustes de almacén.
+        <p class="text-muted">Cargando producto...</p>
+    }
+}
+else
+{
+    @* novalidate: el navegador no muestra sus globos (en inglés). Los errores de cada campo salen debajo del
+       cuadro con el estándar de Campo (Error=...); los del BO, en el aviso rojo de arriba. *@
+    @if (SoloLectura)
+    {
+        @* RF005: un producto desactivado no se modifica (el BO lo rechaza). Se avisa al abrir, no al guardar. *@
+        <div class="alert alert-warning">
+            Este producto está <strong>desactivado</strong>: solo se puede consultar, no modificar.
         </div>
     }
-    else
-    {
-        @* Solo lectura: el stock lo cambian los movimientos de almacén; la auditoría la registra el sistema (RNF001).
-           El estado no se cambia aquí: se usa el botón Desactivar de la lista. *@
-        <div class="row border-top pt-3">
-            <div class="col-sm-4 mb-3">
-                <div class="small text-muted text-uppercase">Stock actual</div>
-                <div class="fw-semibold">@ejemplo!.StockActual.ToString("0.###") @MuestrasCatalogo.Texto(ejemplo.UnidadVenta).ToLowerInvariant()</div>
-            </div>
-            <div class="col-sm-4 mb-3">
-                <div class="small text-muted text-uppercase">Última modificación</div>
-                <div class="fw-semibold">aquispe · 12/09/2026 10:15</div>
-            </div>
-            <div class="col-sm-4 mb-3">
-                <div class="small text-muted text-uppercase">Estado</div>
-                <div class="fw-semibold"><Estado Texto="@(ejemplo.Activo ? "Activo" : "Inactivo")" /></div>
-            </div>
-        </div>
-    }
+    <EditForm Model="@producto" OnSubmit="Guardar" novalidate>
+        @* fieldset disabled bloquea todos los cuadros cuando el producto está desactivado *@
+        <fieldset disabled="@SoloLectura">
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
-        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-        <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary" href="/productos">Cancelar</a>
-            <button class="btn btn-primary" @onclick="Volver">Guardar</button>
+        <div class="card card-body mb-3">
+            <h2 class="h6 fw-semibold mb-3">Identificación</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    <Campo Etiqueta="Código interno" Id="codInterno" Obligatorio="true" Error="@(Error("codInterno"))"
+                           Ayuda="Único. Se guarda en mayúsculas y sin espacios.">
+                        <InputText id="codInterno" class="@(ClaseCuadro("codInterno"))" maxlength="50" style="text-transform: uppercase"
+                                   @bind-Value="producto.CodigoInterno" @oninput="@(e => Escribiendo("codInterno", e))" />
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    <Campo Etiqueta="Código de fabricante" Id="codFabricante">
+                        <InputText id="codFabricante" class="form-control" maxlength="50" style="text-transform: uppercase" @bind-Value="producto.CodigoFabricante" />
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    <Campo Etiqueta="Código de proveedor" Id="codProveedor">
+                        <InputText id="codProveedor" class="form-control" maxlength="50" style="text-transform: uppercase" @bind-Value="producto.CodigoProveedor" />
+                    </Campo>
+                </div>
+                <div class="col-md-8">
+                    @* El BO guarda el nombre en MAYUSCULAS y sin tildes ("Martíllo" -> "MARTILLO") y no deja repetirlo *@
+                    <Campo Etiqueta="Nombre" Id="nombre" Obligatorio="true" Error="@(Error("nombre"))"
+                           Ayuda="Se guarda en mayúsculas y sin tildes. No puede repetirse.">
+                        <InputText id="nombre" class="@(ClaseCuadro("nombre"))" maxlength="150" style="text-transform: uppercase"
+                                   @bind-Value="producto.Nombre" @oninput="@(e => Escribiendo("nombre", e))" />
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    @* Solo las categorías activas: un producto no puede ir a una categoría desactivada
+                       (si igual llegara una, por ejemplo desde Postman, el BO la rechaza).
+                       Al editar no se pierde la actual: una categoría con productos activos no puede desactivarse. *@
+                    <Campo Etiqueta="Categoría" Id="categoria" Obligatorio="true" Error="@(Error("categoria"))">
+                        <InputSelect id="categoria" class="@(ClaseCuadro("categoria", "form-select"))" @bind-Value="producto.Categoria.Id">
+                            <option value="0">Seleccione…</option>
+                            @foreach (var c in categorias.Where(c => c.Activo))
+                            {
+                                <option value="@c.Id">@c.Nombre</option>
+                            }
+                        </InputSelect>
+                    </Campo>
+                </div>
+                <div class="col-12">
+                    <Campo Etiqueta="Descripción" Id="descripcion" Ayuda="Se guarda en mayúsculas y sin tildes.">
+                        <InputText id="descripcion" class="form-control" maxlength="255" style="text-transform: uppercase"
+                                   @bind-Value="producto.Descripcion" />
+                    </Campo>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
+
+        <div class="card card-body mb-3">
+            <h2 class="h6 fw-semibold mb-3">Unidades</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    <Campo Etiqueta="Unidad de compra" Id="unidadCompra" Obligatorio="true">
+                        <InputSelect id="unidadCompra" class="form-select" @bind-Value="producto.UnidadCompra"
+                                     @bind-Value:after="AjustarFactor">
+                            @foreach (var u in Producto.Unidades)
+                            {
+                                <option value="@u">@Producto.TextoUnidad(u)</option>
+                            }
+                        </InputSelect>
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    @* RF005/RF012: la unidad de venta es la unidad del stock. Se puede tocar al editar (por si hubo un error),
+                       pero si ya existe el producto el BO rechaza el cambio y su mensaje sale en el aviso rojo. *@
+                    <Campo Etiqueta="Unidad de venta" Id="unidadVenta" Obligatorio="true"
+                           Ayuda="@(EsNuevo ? "En esta unidad se lleva el stock; luego no podrá cambiarse." : "Es la unidad del stock: en un producto ya registrado no puede cambiarse.")">
+                        <InputSelect id="unidadVenta" class="form-select"
+                                     @bind-Value="producto.UnidadVenta" @bind-Value:after="AjustarFactor">
+                            @foreach (var u in Producto.Unidades)
+                            {
+                                <option value="@u">@Producto.TextoUnidad(u)</option>
+                            }
+                        </InputSelect>
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    <Campo Etiqueta="Factor de conversión" Id="factor" Obligatorio="true" Ayuda="@(AdvertenciaFactor is null ? AyudaFactor : null)" Error="@(Error("factor"))">
+                        @* Si compra y venta son la misma unidad, el factor es 1 y no se puede cambiar. *@
+                        <InputNumber id="factor" class="@(ClaseCuadro("factor"))" min="0.001" disabled="@MismaUnidad"
+                                     onkeydown="@SoloPositivos" @bind-Value="producto.FactorConversion"
+                                     @oninput="@(e => Escribiendo("factor", e))"
+                                     ParsingErrorMessage="El factor de conversión debe ser un número" />
+                        @if (AdvertenciaFactor is not null && Error("factor") is null)
+                        {
+                            @* Solo advierte (no bloquea): puede ser correcto, pero casi siempre es un olvido *@
+                            <div class="small text-warning-emphasis mt-1">⚠ @AdvertenciaFactor</div>
+                        }
+                    </Campo>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-body mb-3">
+            <h2 class="h6 fw-semibold mb-3">Precios y stock</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    @* RF005: el precio solo lo cambia el Administrador (el BO lo valida). *@
+                    <Campo Etiqueta="Precio de venta (S/)" Id="precio" Obligatorio="true" Error="@(Error("precio"))"
+                           Ayuda="No puede ser menor que el costo.">
+                        <InputNumber id="precio" class="@(ClaseCuadro("precio"))" min="0.01" onkeydown="@SoloPositivos"
+                                     @bind-Value="producto.PrecioVenta"
+                                     @oninput="@(e => Escribiendo("precio", e))"
+                                     ParsingErrorMessage="El precio de venta debe ser un número" />
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    <Campo Etiqueta="Costo unitario (S/)" Id="costo" Obligatorio="true" Error="@(Error("costo"))">
+                        <InputNumber id="costo" class="@(ClaseCuadro("costo"))" min="0" onkeydown="@SoloPositivos"
+                                     @bind-Value="producto.CostoUnitario"
+                                     @oninput="@(e => Escribiendo("costo", e))"
+                                     ParsingErrorMessage="El costo unitario debe ser un número" />
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    <Campo Etiqueta="Precio referencial (S/)" Id="precioRef" Obligatorio="true" Error="@(Error("precioRef"))"
+                           Ayuda="Precio de lista de referencia.">
+                        <InputNumber id="precioRef" class="@(ClaseCuadro("precioRef"))" min="0.01" onkeydown="@SoloPositivos"
+                                     @bind-Value="producto.PrecioReferencial"
+                                     @oninput="@(e => Escribiendo("precioRef", e))"
+                                     ParsingErrorMessage="El precio referencial debe ser un número" />
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    <Campo Etiqueta="Stock mínimo" Id="stockMinimo" Obligatorio="true" Error="@(Error("stockMinimo"))"
+                           Ayuda="En unidades de venta. Entero si se vende por unidad, caja o juego.">
+                        <InputNumber id="stockMinimo" class="@(ClaseCuadro("stockMinimo"))" min="0" onkeydown="@SoloPositivos"
+                                     @bind-Value="producto.StockMinimo"
+                                     @oninput="@(e => Escribiendo("stockMinimo", e))"
+                                     ParsingErrorMessage="El stock mínimo debe ser un número" />
+                    </Campo>
+                </div>
+                <div class="col-md-8">
+                    @* Por ahora la imagen se guarda como texto: el nombre o la ruta del archivo. *@
+                    <Campo Etiqueta="Imagen" Id="imagen" Ayuda="Nombre o ruta del archivo, por ejemplo martillo-acero.jpg">
+                        <InputText id="imagen" class="form-control" maxlength="255" placeholder="martillo-acero.jpg"
+                                   @bind-Value="producto.Imagen" />
+                    </Campo>
+                </div>
+            </div>
+
+            @if (EsNuevo)
+            {
+                @* RF012: el producto nuevo entra con stock 0; el stock solo lo mueven las recepciones y los ajustes. *@
+                <div class="alert alert-secondary">
+                    El producto se registra con <strong>stock 0</strong>. El stock aumenta con las recepciones de compra
+                    y los ajustes de almacén.
+                </div>
+            }
+            else
+            {
+                @* Solo lectura: el stock lo cambian los movimientos de almacén; la auditoría la registra el BO (RNF001).
+                   El estado no se cambia aquí: se usa el botón Desactivar de la lista. *@
+                <div class="row border-top pt-3">
+                    <div class="col-sm-4 mb-3">
+                        <div class="small text-muted text-uppercase">Stock actual</div>
+                        <div class="fw-semibold">@producto.StockTexto</div>
+                    </div>
+                    <div class="col-sm-4 mb-3">
+                        <div class="small text-muted text-uppercase">Última modificación</div>
+                        <div class="fw-semibold">@(producto.UltimaModificacion ?? "Sin modificaciones")</div>
+                    </div>
+                    <div class="col-sm-4 mb-3">
+                        <div class="small text-muted text-uppercase">Estado</div>
+                        <div class="fw-semibold"><Estado Texto="@(producto.Activo ? "Activo" : "Inactivo")" /></div>
+                    </div>
+                </div>
+            }
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+                <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-outline-secondary" href="/productos">@(SoloLectura ? "Volver" : "Cancelar")</a>
+                    @if (!SoloLectura)
+                    {
+                        <button type="submit" class="btn btn-primary" disabled="@guardando">
+                            @(guardando ? "Guardando..." : "Guardar")
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+        </fieldset>
+    </EditForm>
+}
 
 @code {
     [Parameter] public int? Id { get; set; }
 
+    private Producto? producto;
+    private List<Categoria> categorias = new();
+    private string? error;
+    private bool guardando;
+
     private bool EsNuevo => Id is null;
     private string Titulo => EsNuevo ? "Nuevo producto" : "Editar producto";
 
-    // Al editar se muestra un producto de ejemplo fijo (Lab 9: sin consultas).
-    private ProductoFila? ejemplo => EsNuevo ? null : MuestrasCatalogo.Productos[0];
+    private string AyudaFactor => MismaUnidad
+        ? "Las dos unidades son iguales: el factor es 1 y no se puede cambiar."
+        : "Unidades de venta en una unidad de compra (caja de 12 → 12). Entero si se vende por unidad, caja o juego.";
 
-    // Lab 9: no se registra nada, solo se navega.
-    private void Volver() => Nav.NavigateTo("/productos");
+    // Si se compra y se vende en la misma unidad no hay conversión: el factor queda fijo en 1
+    private bool MismaUnidad => producto is not null && producto.UnidadCompra == producto.UnidadVenta;
+
+    // Producto desactivado abierto por su dirección (/productos/editar/5): solo se consulta
+    private bool SoloLectura => !EsNuevo && producto is not null && !producto.Activo;
+
+    // Unidades distintas con factor 1 ("1 caja trae 1 unidad"): casi siempre se olvidó poner el factor.
+    // Es solo una advertencia: se puede guardar igual.
+    private string? AdvertenciaFactor
+    {
+        get
+        {
+            if (producto is null || MismaUnidad || Numero("factor", producto.FactorConversion) != 1)
+            {
+                return null;
+            }
+            var compra = Producto.TextoUnidad(producto.UnidadCompra).ToLowerInvariant();
+            var venta = Producto.TextoUnidad(producto.UnidadVenta).ToLowerInvariant();
+            return $"Con factor 1, cada {compra} trae solo 1 {venta}. ¿Es correcto? Por ejemplo, una caja de 12 lleva factor 12.";
+        }
+    }
+
+    private void AjustarFactor()
+    {
+        if (MismaUnidad)
+        {
+            producto!.FactorConversion = 1;
+            escrito.Remove("factor");   // lo escrito antes en el cuadro ya no vale: el factor es 1
+        }
+    }
+
+    // ---------------- Validación en pantalla ----------------
+    // Mismas reglas que el BO (ProductoBOImpl.validarDatos), para avisar antes de enviar. Cada error sale en rojo
+    // debajo de su cuadro (Campo Error=...) mientras se escribe. Un cuadro que todavía no se tocó recién se marca
+    // al pulsar Guardar. El BO vuelve a validar todo (y lo que solo él sabe, como un código repetido).
+
+    // Lo que se está escribiendo en cada cuadro: InputText e InputNumber recién pasan el valor al salir del cuadro,
+    // así que se guarda aquí para validar al momento.
+    private readonly Dictionary<string, string?> escrito = new();
+    private bool intentoGuardar;
+
+    private void Escribiendo(string campo, ChangeEventArgs e) => escrito[campo] = e.Value?.ToString();
+
+    private string Texto(string campo, string? valorModelo) =>
+        escrito.TryGetValue(campo, out var t) ? t ?? "" : valorModelo ?? "";
+
+    private decimal Numero(string campo, decimal valorModelo) =>
+        !escrito.TryGetValue(campo, out var t) ? valorModelo
+        : decimal.TryParse(t, System.Globalization.NumberStyles.Number,
+                           System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0;
+
+    // UNIDAD, CAJA y JUEGO no se parten: factor y stock mínimo enteros (igual que el BO)
+    private bool VentaEntera => producto is not null && producto.UnidadVenta is "UNIDAD" or "CAJA" or "JUEGO";
+
+    private static bool MasDecimales(decimal valor, int maximo) => valor != Math.Round(valor, maximo);
+
+    private Dictionary<string, string> Errores()
+    {
+        var e = new Dictionary<string, string>();
+        if (producto is null)
+        {
+            return e;
+        }
+        if (string.IsNullOrWhiteSpace(Texto("codInterno", producto.CodigoInterno)))
+        {
+            e["codInterno"] = "El código interno es obligatorio.";
+        }
+        if (string.IsNullOrWhiteSpace(Texto("nombre", producto.Nombre)))
+        {
+            e["nombre"] = "El nombre es obligatorio.";
+        }
+        if (producto.Categoria.Id == 0)
+        {
+            e["categoria"] = "Elija la categoría del producto.";
+        }
+
+        var unidad = Producto.TextoUnidad(producto.UnidadVenta).ToLowerInvariant();
+        var factor = Numero("factor", producto.FactorConversion);
+        if (factor <= 0)
+        {
+            e["factor"] = "El factor de conversión debe ser mayor a 0.";
+        }
+        else if (MasDecimales(factor, 3))
+        {
+            e["factor"] = "El factor de conversión admite como máximo 3 decimales.";
+        }
+        else if (VentaEntera && MasDecimales(factor, 0))
+        {
+            e["factor"] = $"Debe ser un número entero: la unidad de venta ({unidad}) no se parte.";
+        }
+
+        var precio = Numero("precio", producto.PrecioVenta);
+        var costo = Numero("costo", producto.CostoUnitario);
+        if (precio <= 0)
+        {
+            e["precio"] = "El precio de venta debe ser mayor a 0.";
+        }
+        else if (MasDecimales(precio, 2))
+        {
+            e["precio"] = "El precio de venta admite como máximo 2 decimales.";
+        }
+        else if (precio < costo)
+        {
+            e["precio"] = $"No se puede: el precio de venta (S/ {precio:N2}) es menor que el costo (S/ {costo:N2}).";
+        }
+        if (costo < 0)
+        {
+            e["costo"] = "El costo unitario no puede ser negativo.";
+        }
+        else if (MasDecimales(costo, 2))
+        {
+            e["costo"] = "El costo unitario admite como máximo 2 decimales.";
+        }
+
+        var referencial = Numero("precioRef", producto.PrecioReferencial);
+        if (referencial <= 0)
+        {
+            e["precioRef"] = "El precio referencial es obligatorio y debe ser mayor a 0.";
+        }
+        else if (MasDecimales(referencial, 2))
+        {
+            e["precioRef"] = "El precio referencial admite como máximo 2 decimales.";
+        }
+
+        var stockMinimo = Numero("stockMinimo", producto.StockMinimo);
+        if (stockMinimo < 0)
+        {
+            e["stockMinimo"] = "El stock mínimo no puede ser negativo.";
+        }
+        else if (MasDecimales(stockMinimo, 3))
+        {
+            e["stockMinimo"] = "El stock mínimo admite como máximo 3 decimales.";
+        }
+        else if (VentaEntera && MasDecimales(stockMinimo, 0))
+        {
+            e["stockMinimo"] = $"Debe ser un número entero: la unidad de venta ({unidad}) no se parte.";
+        }
+        return e;
+    }
+
+    // El error de un campo se muestra si ya se escribió en él o si se pulsó Guardar.
+    // El de precio también al cambiar el costo (es la comparación "precio menor que el costo").
+    private string? Error(string campo)
+    {
+        var mostrar = intentoGuardar || escrito.ContainsKey(campo) || (campo == "precio" && escrito.ContainsKey("costo"));
+        return mostrar && Errores().TryGetValue(campo, out var mensaje) ? mensaje : null;
+    }
+
+    private string ClaseCuadro(string campo, string clase = "form-control") =>
+        Error(campo) is null ? clase : clase + " is-invalid";
+
+    // Evita escribir "-", "+" y "e" en los campos de números: no se pueden poner negativos desde el teclado
+    // (el mínimo de cada campo también lo controla el navegador y el modelo con [Range]).
+    private const string SoloPositivos = "if (['-', '+', 'e', 'E'].includes(event.key)) { event.preventDefault(); }";
+
+    // Sube la página hasta el aviso (el formulario es largo y el botón Guardar queda abajo)
+    private async Task SubirAlAviso()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("window.scrollTo", 0, 0);
+        }
+        catch (Exception)
+        {
+            // si no se puede subir no pasa nada: el aviso igual está en pantalla
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            categorias = await Api.Get<List<Categoria>>("categorias") ?? new List<Categoria>();   // GET /api/categorias
+            producto = EsNuevo
+                ? new Producto()
+                : await Api.Get<Producto>($"productos/{Id}");
+            AjustarFactor();   // si las unidades son iguales, el factor se muestra fijo en 1                                       // GET /api/productos/{Id}
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "No existe el producto con id 99"
+        }
+    }
+
+    private async Task Guardar()
+    {
+        error = null;
+        if (SoloLectura)
+        {
+            return;   // desactivado: no se modifica (el formulario ya está bloqueado)
+        }
+        intentoGuardar = true;   // desde ahora se marcan en rojo también los cuadros que no se tocaron
+        if (Errores().Count > 0)
+        {
+            error = "Revise los campos marcados en rojo.";
+            await SubirAlAviso();
+            return;
+        }
+
+        AjustarFactor();
+        guardando = true;
+        // quién y cuándo modificó lo pone el BO con el usuario de la sesión: no se manda
+        var usuarioAnterior = producto!.UsuarioModificacion;
+        var fechaAnterior = producto.FechaModificacion;
+        producto.UsuarioModificacion = null;
+        producto.FechaModificacion = null;
+        try
+        {
+            if (EsNuevo)
+            {
+                await Api.Post<Producto>("productos", producto);          // POST /api/productos
+            }
+            else
+            {
+                await Api.Put<Producto>($"productos/{Id}", producto);     // PUT /api/productos/{Id}
+            }
+            // vuelve a la lista y allí sale el aviso verde (Productos.razor lee "guardado")
+            Nav.NavigateTo(EsNuevo ? "/productos?guardado=nuevo" : "/productos?guardado=editado");
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // mensaje del BO, por ejemplo "Ya existe un producto con el codigo INT-001"
+            // si no se guardó, se vuelve a mostrar la última modificación que tenía
+            producto.UsuarioModificacion = usuarioAnterior;
+            producto.FechaModificacion = fechaAnterior;
+            await SubirAlAviso();   // el aviso rojo está arriba y el botón Guardar abajo: se sube para verlo
+        }
+        catch (Exception e)
+        {
+            // cualquier otro error (por ejemplo al leer la respuesta del Java) también sale en el aviso rojo
+            error = "Error inesperado: " + e.Message;
+            producto.UsuarioModificacion = usuarioAnterior;
+            producto.FechaModificacion = fechaAnterior;
+            await SubirAlAviso();
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
 }
