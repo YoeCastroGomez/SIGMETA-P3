@@ -7,7 +7,7 @@
             Subtitulo="Cada despacho descuenta el stock y se registra como movimiento de almacén. Se admiten despachos parciales." />
 
 <div class="card card-body mb-3">
-    <div class="row g-3 align-items-end">
+    <div class="row g-3 align-items-end sigmeta-filtros">
         <Campo Etiqueta="Venta o cliente" Id="fBuscar" Clase="col-sm-6 col-md">
             <input id="fBuscar" class="form-control" maxlength="150" placeholder="Número de venta, razón social o nombre" />
         </Campo>
@@ -38,7 +38,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var v in PorDespachar)
+                @foreach (var v in Paginar(PorDespachar, paginaActual1, tamanoPagina1))
                 {
                     var vendido = v.Detalles.Sum(l => l.Cantidad);
                     var despachado = v.Detalles.Sum(l => MuestrasVentas.CantidadDespachada(v.Id, l.NumeroLinea));
@@ -63,6 +63,7 @@
             </tbody>
         </table>
     </div>
+        <Paginacion TotalRegistros="@(PorDespachar.Count())" @bind-PaginaActual="paginaActual1" @bind-TamanoPagina="tamanoPagina1" />
 </div>
 
 <h2 class="h6 fw-semibold mb-2">Guías de remisión registradas</h2>
@@ -81,7 +82,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var d in MuestrasVentas.Despachos)
+                @foreach (var d in Paginar(MuestrasVentas.Despachos, paginaActual2, tamanoPagina2))
                 {
                     <tr>
                         <td><strong>@($"{d.SerieGuia}-{d.NumeroGuia}")</strong></td>
@@ -102,9 +103,22 @@
             </tbody>
         </table>
     </div>
+        <Paginacion TotalRegistros="@(MuestrasVentas.Despachos.Count())" @bind-PaginaActual="paginaActual2" @bind-TamanoPagina="tamanoPagina2" />
 </div>
 
 @code {
+    private int paginaActual1 = 1;
+    private int tamanoPagina1 = 10;
+    private int paginaActual2 = 1;
+    private int tamanoPagina2 = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+    {
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((segura - 1) * tamano).Take(tamano);
+    }
+
     // Ventas con líneas pendientes de despacho (Lab 9: datos de ejemplo)
     private static readonly VentaFila[] PorDespachar =
         MuestrasVentas.Ventas.Where(v => v.Estado is "REGISTRADA" or "DESPACHADA_PARCIAL").ToArray();
