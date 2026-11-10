@@ -51,7 +51,7 @@
 }
 
 <div class="card card-body mb-3">
-    <form class="row g-3 align-items-end" @onsubmit="Buscar" @onsubmit:preventDefault>
+    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault>
         <Campo Etiqueta="Comprobante" Id="fComprobante" Clase="col-sm-6 col-md-2">
             <input id="fComprobante" class="form-control" maxlength="20" placeholder="F001-00000123" @bind="fComprobante" />
         </Campo>
@@ -121,7 +121,7 @@ else
                     {
                         <tr><td colspan="9" class="text-center text-muted py-4">No hay cuentas que coincidan con la búsqueda.</td></tr>
                     }
-                    @foreach (var c in cuentas)
+                    @foreach (var c in Paginar(cuentas, paginaActual, tamanoPagina))
                     {
                         <tr>
                             <td><strong>@c.Cliente</strong><div class="small text-muted">@c.DocumentoCliente</div></td>
@@ -156,10 +156,22 @@ else
                 </tbody>
             </table>
         </div>
+        <Paginacion TotalRegistros="@((cuentas)?.Count ?? 0)" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
 }
 
 @code {
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T>? registros, int pagina, int tamano)
+    {
+        if (registros is null) return Enumerable.Empty<T>();
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int paginaSegura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((paginaSegura - 1) * tamano).Take(tamano);
+    }
+
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
 
     private record ClienteOpcion(int Id, string Nombre);
