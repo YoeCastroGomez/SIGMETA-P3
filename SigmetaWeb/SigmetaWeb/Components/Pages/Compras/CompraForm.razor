@@ -147,7 +147,7 @@ else
         try
         {
             proveedores = await Api.Get<List<Proveedor>>("proveedores") ?? new();
-            productos = await Api.Get<List<ProductoCompraRest>>("productos?incluirInactivos=true") ?? new();
+            productos = await Api.Get<List<ProductoCompraRest>>("productos") ?? new();
             if (EsNuevo)
             {
                 numero = "";
