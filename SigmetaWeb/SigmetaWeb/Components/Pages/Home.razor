@@ -121,7 +121,7 @@
                                 @foreach (var barra in ComprasPorMes)
                                 {
                                     <div class="inicio-columna-grupo" @key="barra.Etiqueta"
-                                         title="@barra.Etiqueta: S/ @barra.Valor.ToString("N2")">
+                                         title="@($"{barra.Etiqueta}: S/ {barra.Valor:N2}")">
                                         <strong class="inicio-columna-importe">S/ @barra.Valor.ToString("N0")</strong>
                                         <div class="inicio-columna-area">
                                             <div class="inicio-columna" style="height:@(Porcentaje(barra.Valor, MaxMes))%"></div>
