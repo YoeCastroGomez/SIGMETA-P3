@@ -106,7 +106,7 @@ public class Producto
         }
         return DateTime.TryParseExact(texto[..16], "yyyy-MM-dd'T'HH:mm", CultureInfo.InvariantCulture,
                                       DateTimeStyles.None, out var fecha)
-            ? fecha.ToString("dd/MM/yyyy HH:mm")
+            ? fecha.ToString("yyyy-MM-dd HH:mm")
             : texto;
     }
 }

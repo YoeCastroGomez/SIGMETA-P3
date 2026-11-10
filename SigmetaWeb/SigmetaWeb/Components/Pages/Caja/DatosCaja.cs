@@ -155,6 +155,6 @@ public static class TextosCaja
         _ => valor ?? ""
     };
 
-    public static string Fecha(DateOnly? f) => f?.ToString("dd/MM/yyyy") ?? "—";
-    public static string FechaHora(DateTime? f) => f?.ToString("dd/MM/yyyy HH:mm") ?? "—";
+    public static string Fecha(DateOnly? f) => f?.ToString("yyyy-MM-dd") ?? "—";
+    public static string FechaHora(DateTime? f) => f?.ToString("yyyy-MM-dd HH:mm") ?? "—";
 }

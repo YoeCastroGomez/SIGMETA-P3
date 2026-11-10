@@ -67,7 +67,7 @@
                     {
                         <tr>
                             <td class="text-nowrap">@v.Numero</td>
-                            <td class="text-nowrap">@v.FechaEmision.ToString("dd/MM/yyyy")</td>
+                            <td class="text-nowrap">@v.FechaEmision.ToString("yyyy-MM-dd")</td>
                             <td>@v.Cliente</td>
                             <td>@MuestrasReportes.Texto(v.CondicionPago)</td>
                             <td class="text-end text-nowrap">S/ @v.Total.ToString("N2")</td>
@@ -118,7 +118,7 @@ else if (pestana == "abastecimiento")
                     {
                         <tr>
                             <td class="text-nowrap">@c.Numero</td>
-                            <td class="text-nowrap">@c.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td class="text-nowrap">@c.Fecha.ToString("yyyy-MM-dd")</td>
                             <td>@c.Proveedor</td>
                             <td class="text-end text-nowrap">S/ @c.Total.ToString("N2")</td>
                             <td><Estado Texto="@c.Estado" /></td>
@@ -168,7 +168,7 @@ else if (pestana == "abastecimiento")
                                     <td class="text-nowrap">@p.Codigo</td>
                                     <td>@p.Producto</td>
                                     <td class="text-end">@p.Stock.ToString("N0")</td>
-                                    <td class="text-nowrap">@(p.UltimoMovimiento?.ToString("dd/MM/yyyy") ?? "Nunca")</td>
+                                    <td class="text-nowrap">@(p.UltimoMovimiento?.ToString("yyyy-MM-dd") ?? "Nunca")</td>
                                 </tr>
                             }
                         </tbody>
@@ -213,7 +213,7 @@ else
                     @foreach (var c in MuestrasCaja.Cierres)
                     {
                         <tr>
-                            <td class="text-nowrap">@c.FechaCierre.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="text-nowrap">@c.FechaCierre.ToString("yyyy-MM-dd HH:mm")</td>
                             <td>N.º @c.IdCaja</td>
                             <td>@c.UsuarioCierre</td>
                             <td class="text-end text-nowrap">S/ @c.MontoCalculado.ToString("N2")</td>

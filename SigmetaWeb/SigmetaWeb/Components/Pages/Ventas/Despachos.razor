@@ -46,7 +46,7 @@
                     <tr>
                         <td><strong>@v.Numero</strong></td>
                         <td>@v.Cliente</td>
-                        <td>@v.FechaEmision.ToString("dd/MM/yyyy")</td>
+                        <td>@v.FechaEmision.ToString("yyyy-MM-dd")</td>
                         <td style="min-width: 10rem;">
                             <div class="progress" role="progressbar" aria-label="Avance del despacho"
                                  aria-valuenow="@porcentaje" aria-valuemin="0" aria-valuemax="100" style="height: .5rem;">
@@ -86,7 +86,7 @@
                     <tr>
                         <td><strong>@($"{d.SerieGuia}-{d.NumeroGuia}")</strong></td>
                         <td>@MuestrasVentas.Venta(d.IdVenta)?.Numero</td>
-                        <td>@d.FechaDespacho.ToString("dd/MM/yyyy")</td>
+                        <td>@d.FechaDespacho.ToString("yyyy-MM-dd")</td>
                         <td>@(d.DireccionEntrega ?? "—")</td>
                         <td>@(d.Transportista ?? "—")</td>
                         <td><Estado Texto="@(d.Anulado ? "Anulada" : "Vigente")" /></td>

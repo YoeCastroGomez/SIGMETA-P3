@@ -38,7 +38,7 @@
                 @foreach (var m in historial)
                 {
                     <tr>
-                        <td>@m.Fecha.ToString("dd/MM/yyyy")</td>
+                        <td>@m.Fecha.ToString("yyyy-MM-dd")</td>
                         <td>@MuestrasCompras.NombreProducto(m.CodigoInterno)</td>
                         <td><Estado Texto="@m.Tipo" /></td>
                         <td>@m.Cantidad.ToString("0.###")</td>

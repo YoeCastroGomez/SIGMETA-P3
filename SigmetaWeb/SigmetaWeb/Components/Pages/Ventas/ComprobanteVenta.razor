@@ -18,7 +18,7 @@
         </div>
         <div class="col-sm-6 col-md-3 mb-3">
             <div class="small text-muted text-uppercase">Fecha</div>
-            <div class="fw-semibold">@venta.FechaEmision.ToString("dd/MM/yyyy")</div>
+            <div class="fw-semibold">@venta.FechaEmision.ToString("yyyy-MM-dd")</div>
         </div>
         <div class="col-sm-6 col-md-3 mb-3">
             <div class="small text-muted text-uppercase">Condición de pago</div>
@@ -90,7 +90,7 @@ else
             </div>
             <div class="col-sm-6 col-md-3 mb-3">
                 <div class="small text-muted text-uppercase">Fecha de emisión</div>
-                <div class="fw-semibold">@comprobante.FechaEmision.ToString("dd/MM/yyyy")</div>
+                <div class="fw-semibold">@comprobante.FechaEmision.ToString("yyyy-MM-dd")</div>
             </div>
             <div class="col-sm-6 col-md-3 mb-3">
                 <div class="small text-muted text-uppercase">Último envío</div>
@@ -102,7 +102,7 @@ else
                     else
                     {
                         @MuestrasVentas.Texto(comprobante.MedioEnvio)
-                        <div class="small text-muted">@comprobante.FechaEnvio?.ToString("dd/MM/yyyy HH:mm")</div>
+                        <div class="small text-muted">@comprobante.FechaEnvio?.ToString("yyyy-MM-dd HH:mm")</div>
                     }
                 </div>
             </div>

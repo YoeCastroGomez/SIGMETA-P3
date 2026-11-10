@@ -51,7 +51,7 @@
                         <td>@o.NumeroOrdenCliente</td>
                         <td>@o.Cliente</td>
                         <td>@o.Cotizacion</td>
-                        <td>@o.FechaEmision.ToString("dd/MM/yyyy")</td>
+                        <td>@o.FechaEmision.ToString("yyyy-MM-dd")</td>
                         <td class="text-end">@MuestrasVentas.Total(o.Detalles).ToString("N2")</td>
                         <td><Estado Texto="@MuestrasVentas.Texto(o.Estado)" /></td>
                         <td class="text-end">

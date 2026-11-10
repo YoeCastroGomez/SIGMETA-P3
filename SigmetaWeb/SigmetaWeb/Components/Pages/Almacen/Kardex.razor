@@ -124,7 +124,7 @@ else
                     @foreach (var m in movimientos)
                     {
                         <tr>
-                            <td>@m.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td>@m.Fecha.ToString("yyyy-MM-dd")</td>
                             <td><Estado Texto="@m.Tipo" /></td>
                             <td>@(m.Tipo == "ENTRADA" ? m.Cantidad.ToString("0.###") : "—")</td>
                             <td>@(m.Tipo == "SALIDA" ? m.Cantidad.ToString("0.###") : "—")</td>
