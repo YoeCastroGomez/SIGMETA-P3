@@ -707,3 +707,103 @@ body, button, input, select, textarea {
 .sigmeta-brand-nombre { letter-spacing: .015em; font-weight: 700; }
 .sigmeta-brand-leyenda { letter-spacing: .055em; font-weight: 600; }
 .sigmeta-sidebar .menu-grupo { letter-spacing: .025em; }
+
+/* Filtros de listados: botones y campos consistentes con la marca. */
+.sigmeta-filtros {
+    --sigmeta-filtro-fondo: #fffdfb;
+    --sigmeta-filtro-borde: #d6b8a0;
+    --sigmeta-filtro-texto: #39322e;
+    --sigmeta-filtro-acento: #aa5017;
+    --sigmeta-filtro-resaltado: rgba(182,91,25,.20);
+}
+.sigmeta-filtros .form-control,
+.sigmeta-filtros .form-select {
+    background-color: var(--sigmeta-filtro-fondo);
+    color: var(--sigmeta-filtro-texto);
+    border: 1px solid var(--sigmeta-filtro-borde);
+    border-radius: 8px;
+    min-height: 39px;
+}
+.sigmeta-filtros .form-control::placeholder { color: #78685c; opacity: 1; }
+.sigmeta-filtros .form-control:hover,
+.sigmeta-filtros .form-select:hover { border-color: #b77b4c; }
+.sigmeta-filtros .form-control:focus,
+.sigmeta-filtros .form-select:focus {
+    border-color: var(--sigmeta-filtro-acento);
+    box-shadow: 0 0 0 .2rem var(--sigmeta-filtro-resaltado);
+}
+.sigmeta-filtros button[type="submit"] {
+    background: #ac541a;
+    border: 1px solid #ac541a;
+    color: #fff;
+    font-weight: 650;
+    border-radius: 8px;
+    min-height: 39px;
+}
+.sigmeta-filtros button[type="submit"]:hover,
+.sigmeta-filtros button[type="submit"]:focus-visible {
+    background: #86400f;
+    border-color: #86400f;
+    color: #fff;
+}
+.sigmeta-filtros button[type="button"].btn-outline-secondary {
+    background: #fffaf5;
+    border: 1px solid #b87950;
+    color: #8a4217;
+    font-weight: 650;
+    border-radius: 8px;
+    min-height: 39px;
+}
+.sigmeta-filtros button[type="button"].btn-outline-secondary:hover,
+.sigmeta-filtros button[type="button"].btn-outline-secondary:focus-visible {
+    background: #f4e3d2;
+    border-color: #a45727;
+    color: #71350f;
+}
+.sigmeta-filtros button:disabled { opacity: .58; cursor: not-allowed; }
+
+html[data-bs-theme="dark"] .sigmeta-filtros {
+    --sigmeta-filtro-fondo: #292629;
+    --sigmeta-filtro-borde: #80614c;
+    --sigmeta-filtro-texto: #f7ede5;
+    --sigmeta-filtro-acento: #f1b27b;
+    --sigmeta-filtro-resaltado: rgba(241,178,123,.22);
+}
+html[data-bs-theme="dark"] .sigmeta-filtros .form-control,
+html[data-bs-theme="dark"] .sigmeta-filtros .form-select {
+    background-color: var(--sigmeta-filtro-fondo);
+    border-color: var(--sigmeta-filtro-borde);
+    color: var(--sigmeta-filtro-texto);
+}
+html[data-bs-theme="dark"] .sigmeta-filtros .form-control::placeholder { color: #c4b2a5; }
+html[data-bs-theme="dark"] .sigmeta-filtros .form-control:hover,
+html[data-bs-theme="dark"] .sigmeta-filtros .form-select:hover {
+    border-color: #d79b6c;
+}
+html[data-bs-theme="dark"] .sigmeta-filtros button[type="submit"] {
+    background: #eda76b;
+    border-color: #eda76b;
+    color: #26160e;
+}
+html[data-bs-theme="dark"] .sigmeta-filtros button[type="submit"]:hover,
+html[data-bs-theme="dark"] .sigmeta-filtros button[type="submit"]:focus-visible {
+    background: #ffd1a9;
+    border-color: #ffd1a9;
+    color: #21120b;
+}
+html[data-bs-theme="dark"] .sigmeta-filtros button[type="button"].btn-outline-secondary {
+    background: #40322c;
+    border-color: #c38c65;
+    color: #ffcfaa;
+}
+html[data-bs-theme="dark"] .sigmeta-filtros button[type="button"].btn-outline-secondary:hover,
+html[data-bs-theme="dark"] .sigmeta-filtros button[type="button"].btn-outline-secondary:focus-visible {
+    background: #5b4031;
+    color: #ffe8d6;
+    border-color: #edb48b;
+}
+@media(prefers-reduced-motion:reduce) {
+    .sigmeta-filtros .form-control,
+    .sigmeta-filtros .form-select,
+    .sigmeta-filtros .btn { transition: none; }
+}
