@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <CascadingValue Value="rol" Name="Rol">
     <div class="d-flex min-vh-100">
@@ -49,7 +50,19 @@
                     <span class="sigmeta-topbar-indicador" aria-hidden="true"></span>
                     <span>Espacio de trabajo</span>
                 </div>
-                <div class="ms-auto d-flex align-items-center gap-3">
+                <div class="ms-auto d-flex align-items-center gap-2 gap-md-3">
+                    <button type="button" class="sigmeta-tema-btn" @onclick="AlternarTema"
+                            aria-label="@(temaOscuro ? "Activar modo claro" : "Activar modo oscuro")"
+                            title="@(temaOscuro ? "Activar modo claro" : "Activar modo oscuro")">
+                        @if (temaOscuro)
+                        {
+                            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+                        }
+                        else
+                        {
+                            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20.1 15.7A8.5 8.5 0 0 1 8.3 3.9 8.5 8.5 0 1 0 20.1 15.7Z"/></svg>
+                        }
+                    </button>
                     <a class="sigmeta-topbar-usuario text-decoration-none" href="/mi-clave" title="Cambiar mi clave">
                         <span class="sigmeta-topbar-avatar" aria-hidden="true">@InicialesUsuario</span>
                         <span class="d-none d-md-flex flex-column">
@@ -81,6 +94,7 @@
     [CascadingParameter] private Task<AuthenticationState> EstadoAuth { get; set; } = default!;
 
     private bool menuAbierto;
+    private bool temaOscuro;
     private string usuario = "";
     private string nombreCompleto = "";
     private string rol = "";
@@ -93,6 +107,28 @@
         usuario = user.Identity?.Name ?? "";
         nombreCompleto = $"{user.FindFirst(ClaimTypes.GivenName)?.Value} {user.FindFirst(ClaimTypes.Surname)?.Value}";
         rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                temaOscuro = (await JS.InvokeAsync<string>("sigmetaTheme.get")) == "dark";
+                StateHasChanged();
+            }
+            catch (JSException) { }
+        }
+    }
+
+    private async Task AlternarTema()
+    {
+        try
+        {
+            temaOscuro = (await JS.InvokeAsync<string>("sigmetaTheme.set", temaOscuro ? "light" : "dark")) == "dark";
+        }
+        catch (JSException) { }
     }
 
     // /auth/logout cierra la sesión del Java y borra la cookie (AuthEndpoints)
