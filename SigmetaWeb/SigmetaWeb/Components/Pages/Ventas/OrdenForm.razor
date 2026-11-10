@@ -1,79 +1,287 @@
 @page "/ordenes/nueva"
+@page "/ordenes/editar/{Id:int}"
+@inject ApiJava Api
 @inject NavigationManager Nav
 
-<PageTitle>Nueva orden de compra de cliente · SIGMETA</PageTitle>
+<PageTitle>@Titulo · SIGMETA</PageTitle>
 
-@* RF007 · Registrar la orden de compra del cliente a partir de una cotización aceptada.
-   Solo visual (Lab 9): Guardar no registra, solo vuelve a la lista. *@
-<Encabezado Rf="RF007" Titulo="Nueva orden de compra de cliente">
+@* RF007 · Orden de compra del cliente.
+   Nueva: se elige una cotización ACEPTADA sin orden (GET /api/cotizaciones?estado=ACEPTADA y GET /api/ordenes)
+          y se genera con POST /api/ordenes {"idCotizacion", "numeroOrdenCliente"}: el BO copia el detalle.
+   Editar: GET /api/ordenes/{Id} y PUT /api/ordenes/{Id} (número del cliente y observaciones, solo PENDIENTE).
+   Desde la lista de cotizaciones se llega con ?cotizacion=ID (botón "Generar orden"). *@
+<Encabezado Rf="RF007" Titulo="@Titulo">
     <a class="btn btn-outline-secondary" href="/ordenes">Volver a la lista</a>
 </Encabezado>
 
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Datos de la orden</h2>
-    <div class="row">
-        <div class="col-md-6">
-            <Campo Etiqueta="Cotización aceptada" Id="cotizacion" Obligatorio="true"
-                   Ayuda="Solo se listan cotizaciones en estado Aceptada que aún no tienen orden.">
-                <select id="cotizacion" class="form-select" @bind="idCotizacion">
-                    @foreach (var c in MuestrasVentas.CotizacionesAceptadas)
-                    {
-                        <option value="@c.Id">@c.Numero · @c.Cliente</option>
-                    }
-                </select>
-            </Campo>
-        </div>
-        <div class="col-md-6">
-            <Campo Etiqueta="Nº de orden de compra del cliente" Id="numOrdenCliente" Obligatorio="true"
-                   Ayuda="El número que figura en el documento que envió el cliente.">
-                <input id="numOrdenCliente" class="form-control" maxlength="30" />
-            </Campo>
-        </div>
-        <div class="col-md-6 mb-3">
-            <div class="small text-muted text-uppercase">Cliente</div>
-            <div class="fw-semibold">@Cotizacion.Cliente</div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="small text-muted text-uppercase">Fecha de emisión</div>
-            <div class="fw-semibold">@DateTime.Today.ToString("dd/MM/yyyy")</div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="small text-muted text-uppercase">Estado inicial</div>
-            <div><Estado Texto="Pendiente" /></div>
-        </div>
-        <div class="col-12">
-            <Campo Etiqueta="Observaciones" Id="observaciones">
-                <textarea id="observaciones" class="form-control" rows="2" maxlength="300"></textarea>
-            </Campo>
-        </div>
-    </div>
-</div>
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 
-<div class="card mb-3">
-    <div class="card-body pb-0">
-        <h2 class="h6 fw-semibold mb-1">Detalle</h2>
-        <p class="small text-muted">Copiado de la cotización @Cotizacion.Numero. No se edita aquí.</p>
+@if (cargando)
+{
+    <p class="text-muted">Cargando...</p>
+}
+else if (EsNuevo)
+{
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Datos de la orden</h2>
+        @if (cotizacionesLibres.Count == 0)
+        {
+            <div class="alert alert-secondary mb-0">
+                No hay cotizaciones aceptadas sin orden. Acepte una cotización en la pantalla Cotizaciones.
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                <div class="col-md-6">
+                    <Campo Etiqueta="Cotización aceptada" Id="cotizacion" Obligatorio="true"
+                           Ayuda="Solo se listan cotizaciones en estado Aceptada que aún no tienen orden.">
+                        <select id="cotizacion" class="form-select" value="@idCotizacion" @onchange="CambiarCotizacion">
+                            <option value="0">Seleccione…</option>
+                            @foreach (var c in cotizacionesLibres)
+                            {
+                                <option value="@c.Id">@c.Numero · @c.Cliente · S/ @c.Total.ToString("N2")</option>
+                            }
+                        </select>
+                    </Campo>
+                </div>
+                <div class="col-md-6">
+                    <Campo Etiqueta="Nº de orden de compra del cliente" Id="numOrdenCliente"
+                           Ayuda="El número que figura en el documento que envió el cliente.">
+                        <input id="numOrdenCliente" class="form-control" maxlength="30" @bind="numeroOrdenCliente" />
+                    </Campo>
+                </div>
+                @if (cotizacion is not null)
+                {
+                    <div class="col-md-6 mb-3">
+                        <div class="small text-muted text-uppercase">Cliente</div>
+                        <div class="fw-semibold">@cotizacion.Cliente <span class="small text-muted">@cotizacion.DocumentoCliente</span></div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="small text-muted text-uppercase">Fecha de emisión</div>
+                        <div class="fw-semibold">@DateTime.Today.ToString("dd/MM/yyyy")</div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="small text-muted text-uppercase">Estado inicial</div>
+                        <div><Estado Texto="Pendiente" /></div>
+                    </div>
+                }
+            </div>
+        }
     </div>
-    <TablaLineas Lineas="@Cotizacion.Detalles" />
-</div>
 
-<div class="card card-body mb-3">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-        <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary" href="/ordenes">Cancelar</a>
-            <button class="btn btn-primary" @onclick="Volver">Guardar</button>
+    @if (cotizacion is not null)
+    {
+        <div class="card mb-3">
+            <div class="card-body pb-0">
+                <h2 class="h6 fw-semibold mb-1">Detalle</h2>
+                <p class="small text-muted">Se copia de la cotización @cotizacion.Numero. No se edita aquí.</p>
+            </div>
+            <TablaDetalle Lineas="@cotizacion.Lineas" SubTotal="@cotizacion.SubTotal" Igv="@cotizacion.Igv" Total="@cotizacion.Total" />
+        </div>
+    }
+
+    <div class="card card-body mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" href="/ordenes">Cancelar</a>
+                <button class="btn btn-primary" disabled="@guardando" @onclick="Generar">
+                    @(guardando ? "Generando..." : "Generar orden")
+                </button>
+            </div>
         </div>
     </div>
-</div>
+}
+else if (orden is not null)
+{
+    @if (!EditablePendiente)
+    {
+        <div class="alert alert-secondary">
+            Esta orden está <strong>@TextosVentas.Texto(orden.Estado)</strong>: solo se modifica una orden pendiente.
+        </div>
+    }
+
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Orden @orden.Numero</h2>
+        <div class="row">
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Cotización</div>
+                <div class="fw-semibold">@orden.NumeroCotizacion</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Fecha de emisión</div>
+                <div class="fw-semibold">@TextosVentas.Fecha(orden.FechaEmision)</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Estado de atención</div>
+                <div><Estado Texto="@TextosVentas.Texto(orden.Estado)" /></div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Registrada por</div>
+                <div class="fw-semibold">@orden.UsuarioRegistro</div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="small text-muted text-uppercase">Cliente</div>
+                <div class="fw-semibold">@orden.Cliente <span class="small text-muted">@orden.DocumentoCliente</span></div>
+            </div>
+            <div class="col-md-6">
+                <Campo Etiqueta="Nº de orden de compra del cliente" Id="numOrdenClienteEditar">
+                    <input id="numOrdenClienteEditar" class="form-control" maxlength="30"
+                           @bind="orden.NumeroOrdenCliente" disabled="@(!EditablePendiente)" />
+                </Campo>
+            </div>
+            <div class="col-12">
+                <Campo Etiqueta="Observaciones" Id="observaciones">
+                    <textarea id="observaciones" class="form-control" rows="2" maxlength="300"
+                              @bind="orden.Observaciones" disabled="@(!EditablePendiente)"></textarea>
+                </Campo>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body pb-0">
+            <h2 class="h6 fw-semibold mb-1">Detalle</h2>
+            <p class="small text-muted">Copiado de la cotización. "Atendida" es lo ya entregado al cliente con los despachos.</p>
+        </div>
+        <TablaDetalle Lineas="@orden.Lineas" SubTotal="@orden.SubTotal" Igv="@orden.Igv" Total="@orden.Total" MostrarAtendida="true" />
+    </div>
+
+    <div class="card card-body mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span></span>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" href="/ordenes">Volver</a>
+                @if (orden.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL")
+                {
+                    <a class="btn btn-outline-primary" href="@($"/ventas/nueva?orden={orden.Id}")">Registrar venta</a>
+                }
+                @if (EditablePendiente)
+                {
+                    <button class="btn btn-primary" disabled="@guardando" @onclick="GuardarCambios">
+                        @(guardando ? "Guardando..." : "Guardar")
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
 
 @code {
-    // Solo cambia qué cotización se muestra (Lab 9: sin consultas).
-    private int idCotizacion = MuestrasVentas.CotizacionesAceptadas[0].Id;
+    [Parameter] public int? Id { get; set; }
 
-    private CotizacionFila Cotizacion =>
-        MuestrasVentas.CotizacionesAceptadas.FirstOrDefault(c => c.Id == idCotizacion) ?? MuestrasVentas.CotizacionesAceptadas[0];
+    // viene de la lista de cotizaciones: /ordenes/nueva?cotizacion=ID
+    [SupplyParameterFromQuery(Name = "cotizacion")] public int? IdCotizacionInicial { get; set; }
 
-    // Lab 9: no se registra nada, solo se navega.
-    private void Volver() => Nav.NavigateTo("/ordenes");
+    private bool EsNuevo => Id is null;
+    private string Titulo => EsNuevo ? "Nueva orden de compra de cliente" : "Orden de compra de cliente";
+    private bool EditablePendiente => orden?.Estado == "PENDIENTE";
+
+    private List<CotizacionDatos> cotizacionesLibres = new();
+    private int idCotizacion;
+    private CotizacionDatos? cotizacion;
+    private string? numeroOrdenCliente;
+
+    private OrdenDatos? orden;
+
+    private bool cargando = true;
+    private bool guardando;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (EsNuevo)
+            {
+                // cotizaciones aceptadas que aún no tienen una orden vigente (una cotización tiene una sola orden activa)
+                var aceptadas = await Api.Get<List<CotizacionDatos>>("cotizaciones?estado=ACEPTADA") ?? new();
+                var ordenes = await Api.Get<List<OrdenDatos>>("ordenes") ?? new();
+                var conOrden = ordenes.Where(o => o.Estado != "ANULADA").Select(o => o.IdCotizacion).ToHashSet();
+                cotizacionesLibres = aceptadas.Where(c => !conOrden.Contains(c.Id)).ToList();
+
+                if (IdCotizacionInicial is int inicial && cotizacionesLibres.Any(c => c.Id == inicial))
+                {
+                    await ElegirCotizacion(inicial);
+                }
+            }
+            else
+            {
+                orden = await Api.Get<OrdenDatos>($"ordenes/{Id}");   // GET /api/ordenes/{Id}
+            }
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        cargando = false;
+    }
+
+    private async Task CambiarCotizacion(ChangeEventArgs e)
+    {
+        var id = int.TryParse(e.Value?.ToString(), out var valor) ? valor : 0;
+        await ElegirCotizacion(id);
+    }
+
+    // GET /api/cotizaciones/{id}: para mostrar el detalle que se va a copiar
+    private async Task ElegirCotizacion(int id)
+    {
+        idCotizacion = id;
+        cotizacion = null;
+        if (id <= 0) return;
+        try
+        {
+            cotizacion = await Api.Get<CotizacionDatos>($"cotizaciones/{id}");
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+    }
+
+    // POST /api/ordenes {"idCotizacion", "numeroOrdenCliente"}
+    private async Task Generar()
+    {
+        error = null;
+        if (idCotizacion <= 0)
+        {
+            error = "Elija la cotización aceptada de la que sale la orden.";
+            return;
+        }
+        guardando = true;
+        try
+        {
+            await Api.Post<OrdenDatos>("ordenes", new OrdenDatos { IdCotizacion = idCotizacion, NumeroOrdenCliente = numeroOrdenCliente });
+            Nav.NavigateTo("/ordenes");
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "Ya existe una orden de compra activa para la cotizacion ..."
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    // PUT /api/ordenes/{Id}: número del cliente y observaciones
+    private async Task GuardarCambios()
+    {
+        error = null;
+        guardando = true;
+        try
+        {
+            await Api.Put<OrdenDatos>($"ordenes/{Id}", orden);
+            Nav.NavigateTo("/ordenes");
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "Solo se puede modificar una orden de compra en estado PENDIENTE"
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
 }

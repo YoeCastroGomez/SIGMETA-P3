@@ -1,8 +1,14 @@
 @page "/ventas"
+@using SigmetaWeb.Components.Pages.Caja
+@using SigmetaWeb.Components.Pages.Clientes
+@inject ApiJava Api
 
 <PageTitle>Ventas y comprobantes · SIGMETA</PageTitle>
 
-@* RF008 · Lista de ventas (Vendedor y Cajero). Solo visual (Lab 9): filtros y botones no consultan nada. *@
+@* RF008 · Lista de ventas (Vendedor y Cajero). Datos reales del Java:
+   - GET  /api/ventas (?cliente=ID)            listarTodos / listarPorCliente, con el comprobante vigente de cada venta
+   - POST /api/ventas/{id}/anular {"motivo"}   anular (no se puede con comprobante o despacho vigente)
+   - GET  /api/cajas/ventas-por-cobrar         (solo Cajero) ventas al contado aún sin cobro, para el botón Cobrar (RF010, Adriano) *@
 <Encabezado Rf="RF008" Titulo="Ventas y comprobantes"
             Subtitulo="Ventas registradas desde una orden de compra de cliente o de forma directa. Importes en soles.">
     @if (Rol == "Vendedor")
@@ -12,105 +18,241 @@
     }
 </Encabezado>
 
-<div class="card card-body mb-3">
-    <div class="row g-3 align-items-end">
-        <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
-            <input id="fCliente" class="form-control" maxlength="150" placeholder="Razón social, nombre o documento" />
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
+{
+    <div class="alert alert-success">@exito</div>
+}
+
+@if (anulando is not null)
+{
+    @* RF008: anular pide un motivo (anulación lógica). *@
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Anular venta @anulando.Numero</h2>
+        <Campo Etiqueta="Motivo de anulación" Id="motivo" Obligatorio="true">
+            <input id="motivo" class="form-control" maxlength="200" @bind="motivo" />
         </Campo>
-        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-2">
-            <select id="fEstado" class="form-select">
-                <option>Todos</option>
-                <option>Registrada</option>
-                <option>Despachada parcial</option>
-                <option>Despachada</option>
-                <option>Anulada</option>
-            </select>
-        </Campo>
-        <Campo Etiqueta="Desde" Id="fDesde" Clase="col-sm-6 col-md-2">
-            <input id="fDesde" type="date" class="form-control" />
-        </Campo>
-        <Campo Etiqueta="Hasta" Id="fHasta" Clase="col-sm-6 col-md-2">
-            <input id="fHasta" type="date" class="form-control" />
-        </Campo>
-        <div class="col-auto">
-            <button class="btn btn-dark">Buscar</button>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary" @onclick="CerrarAnulacion">Cancelar</button>
+                <button class="btn btn-outline-danger" disabled="@trabajando" @onclick="ConfirmarAnulacion">Anular</button>
+            </div>
         </div>
     </div>
+}
+
+<div class="card card-body mb-3">
+    <form class="row g-3 align-items-end" @onsubmit="Buscar" @onsubmit:preventDefault>
+        <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-8 col-md">
+            <select id="fCliente" class="form-select" @bind="filtroCliente">
+                <option value="0">Todos</option>
+                @foreach (var c in clientes)
+                {
+                    <option value="@c.Id">@c.NombreMostrado · @c.NumeroDocumento</option>
+                }
+            </select>
+        </Campo>
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-dark">Buscar</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
+        </div>
+    </form>
 </div>
 
-<div class="card mb-3">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Número</th>
-                    <th>Cliente</th>
-                    <th>Fecha</th>
-                    <th>Condición de pago</th>
-                    <th class="text-end">Total (S/)</th>
-                    <th>Comprobante</th>
-                    <th>Estado</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var v in MuestrasVentas.Ventas)
-                {
+@if (ventas is null)
+{
+    <p class="text-muted">Cargando ventas...</p>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
                     <tr>
-                        <td>
-                            <strong>@v.Numero</strong>
-                            <div class="small text-muted">@(v.OrdenCompraCliente is null ? "Venta directa" : $"Orden {v.OrdenCompraCliente}")</div>
-                        </td>
-                        <td>@v.Cliente</td>
-                        <td>@v.FechaEmision.ToString("dd/MM/yyyy")</td>
-                        <td>
-                            @MuestrasVentas.Texto(v.CondicionPago)
-                            @if (v.CondicionPago == "CREDITO")
-                            {
-                                <div class="small text-muted">@v.PlazoCreditoDias días</div>
-                            }
-                            else if (v.Estado != "ANULADA")
-                            {
-                                <div class="small text-muted">@(MuestrasVentas.CobradaAlContado(v.Id) ? "Cobrada en caja" : "Por cobrar")</div>
-                            }
-                        </td>
-                        <td class="text-end">@MuestrasVentas.Total(v.Detalles).ToString("N2")</td>
-                        <td>
-                            @if (v.Comprobante is not null)
-                            {
-                                @v.Comprobante
-                            }
-                            else
-                            {
-                                <span class="text-muted">Sin emitir</span>
-                            }
-                        </td>
-                        <td><Estado Texto="@MuestrasVentas.Texto(v.Estado)" /></td>
-                        <td class="text-end">
-                            <div class="d-inline-flex gap-1 text-nowrap">
-                                @if (v.Estado != "ANULADA")
-                                {
-                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/ventas/{v.Id}/comprobante")">Comprobante</a>
-                                }
-                                @if (Rol == "Cajero" && v.CondicionPago == "CONTADO" && v.Estado != "ANULADA" && !MuestrasVentas.CobradaAlContado(v.Id))
-                                {
-                                    @* RF010: el Cajero cobra la venta al contado; queda como movimiento COBRO_CONTADO de su caja *@
-                                    <a class="btn btn-sm btn-primary" href="@($"/ventas/{v.Id}/cobro?volver=/ventas")">Cobrar</a>
-                                }
-                                @if (v.Estado == "REGISTRADA" && v.Comprobante is null)
-                                {
-                                    @* RF008: solo se anula una venta sin comprobante vigente ni despachos *@
-                                    <button class="btn btn-sm btn-outline-danger">Anular</button>
-                                }
-                            </div>
-                        </td>
+                        <th>Número</th>
+                        <th>Cliente</th>
+                        <th>Fecha</th>
+                        <th>Condición de pago</th>
+                        <th class="text-end">Total (S/)</th>
+                        <th>Comprobante</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @if (ventas.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">No se encontraron ventas.</td></tr>
+                    }
+                    @foreach (var v in VentasPagina)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@v.Numero</strong>
+                                <div class="small text-muted">@(v.NumeroOrden is null ? "Venta directa" : $"Orden {v.NumeroOrden}")</div>
+                            </td>
+                            <td>@v.Cliente<div class="small text-muted">@v.DocumentoCliente</div></td>
+                            <td>@TextosVentas.Fecha(v.FechaEmision)</td>
+                            <td>
+                                @TextosVentas.Texto(v.CondicionPago)
+                                @if (v.CondicionPago == "CREDITO")
+                                {
+                                    <div class="small text-muted">@v.PlazoCreditoDias días</div>
+                                }
+                                else if (Rol == "Cajero" && v.Estado != "ANULADA")
+                                {
+                                    <div class="small text-muted">@(PorCobrar(v) ? "Por cobrar" : "Cobrada en caja")</div>
+                                }
+                            </td>
+                            <td class="text-end">@v.Total.ToString("N2")</td>
+                            <td>
+                                @if (v.Comprobante is not null)
+                                {
+                                    @v.Comprobante
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Sin emitir</span>
+                                }
+                            </td>
+                            <td><Estado Texto="@TextosVentas.Texto(v.Estado)" /></td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1 text-nowrap">
+                                    @if (v.Estado != "ANULADA")
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary" href="@($"/ventas/{v.Id}/comprobante")">Comprobante</a>
+                                    }
+                                    @if (Rol == "Cajero" && PorCobrar(v))
+                                    {
+                                        @* RF010 (Adriano): el Cajero cobra la venta al contado; queda como movimiento COBRO_CONTADO de su caja *@
+                                        <a class="btn btn-sm btn-primary" href="@($"/ventas/{v.Id}/cobro?volver=/ventas")">Cobrar</a>
+                                    }
+                                    @if (Rol == "Vendedor" && v.Estado == "REGISTRADA" && v.Comprobante is null)
+                                    {
+                                        @* RF008: solo se modifica una venta REGISTRADA sin comprobante ni despacho *@
+                                        <a class="btn btn-sm btn-outline-secondary" href="@($"/ventas/editar/{v.Id}")">Editar</a>
+                                    }
+                                    @if (v.Estado == "REGISTRADA" && v.Comprobante is null)
+                                    {
+                                        @* RF008: solo se anula una venta sin comprobante vigente ni despachos *@
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => AbrirAnulacion(v)">Anular</button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <Paginacion TotalRegistros="@ventas.Count"
+                    @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
-</div>
+}
 
 @code {
-    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
+
+    private List<VentaDatos>? ventas;
+    private List<Cliente> clientes = new();
+    private HashSet<int> idsPorCobrar = new();
+    private int filtroCliente;
+    private string? error;
+    private string? exito;
+    private bool trabajando;
+
+    private VentaDatos? anulando;
+    private string motivo = "";
+
+    // paginacion (componente compartido Shared/Paginacion), igual que en Compras
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private int TotalPaginas => tamanoPagina == 0 ? 1 : Math.Max(1, (int)Math.Ceiling((double)(ventas?.Count ?? 0) / tamanoPagina));
+    private IEnumerable<VentaDatos> VentasPagina => ventas is null ? Enumerable.Empty<VentaDatos>()
+        : tamanoPagina == 0 ? ventas
+        : ventas.Skip((Math.Clamp(paginaActual, 1, TotalPaginas) - 1) * tamanoPagina).Take(tamanoPagina);
+
+    private bool PorCobrar(VentaDatos v) => idsPorCobrar.Contains(v.Id);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            clientes = await Api.Get<List<Cliente>>("clientes") ?? new();   // para el filtro por cliente
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        await Cargar();
+    }
+
+    private async Task Buscar()
+    {
+        exito = null;
+        paginaActual = 1;
+        await Cargar();
+    }
+
+    private async Task Limpiar()
+    {
+        filtroCliente = 0;
+        exito = null;
+        paginaActual = 1;
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        try
+        {
+            var ruta = filtroCliente > 0 ? $"ventas?cliente={filtroCliente}" : "ventas";   // listarPorCliente / listarTodos
+            ventas = await Api.Get<List<VentaDatos>>(ruta) ?? new();
+
+            if (Rol == "Cajero")
+            {
+                // RF010: ventas al contado vigentes que aún no tienen su cobro en caja (ventanilla de Adriano)
+                var porCobrar = await Api.Get<List<VentaPorCobrar>>("cajas/ventas-por-cobrar") ?? new();
+                idsPorCobrar = porCobrar.Select(p => p.Id).ToHashSet();
+            }
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+            ventas ??= new();
+        }
+    }
+
+    private void AbrirAnulacion(VentaDatos v)
+    {
+        anulando = v;
+        motivo = "";
+        exito = null;
+    }
+
+    private void CerrarAnulacion() => anulando = null;
+
+    // POST /api/ventas/{id}/anular {"motivo": ...}
+    private async Task ConfirmarAnulacion()
+    {
+        if (anulando is null) return;
+        error = null;
+        trabajando = true;
+        try
+        {
+            await Api.Post<object>($"ventas/{anulando.Id}/anular", new AnulacionDatos { Motivo = motivo });
+            exito = $"Se anuló la venta {anulando.Numero}.";
+            anulando = null;
+            await Cargar();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "No se puede anular una venta con comprobantes vigentes"
+        }
+        finally
+        {
+            trabajando = false;
+        }
+    }
 }

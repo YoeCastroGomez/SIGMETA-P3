@@ -111,6 +111,13 @@ public class VentaRS extends VentanillaBase {
         return ejecutar(ticket, id -> {
             Venta venta = aVenta(datos);
             venta.setId(idVenta); // el id es el de la direccion, no el del cuerpo
+            // el numero correlativo no se cambia al modificar: se toma de la venta guardada, no de lo que manda Blazor
+            // (VentaBOImpl.modificar no lo copia y el SP de modificar lo exige)
+            Venta actual = ventaBO.obtener(idVenta);
+            if (actual == null) {
+                throw new IllegalArgumentException("No existe la venta con id " + idVenta);
+            }
+            venta.setNumero(actual.getNumero());
             ventaBO.modificar(venta, id);
             return conDetalle(ventaBO.obtener(idVenta));
         });

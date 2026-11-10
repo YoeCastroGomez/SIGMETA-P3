@@ -1,75 +1,164 @@
 @page "/ordenes"
+@inject ApiJava Api
 
 <PageTitle>Órdenes de compra de clientes · SIGMETA</PageTitle>
 
-@* RF007 · Órdenes de compra de clientes (Vendedor). Solo visual (Lab 9): filtros y botones no consultan nada. *@
+@* RF007 · Órdenes de compra de clientes (Vendedor). Datos reales del Java:
+   - GET  /api/ordenes                       lista con el estado de atención (PENDIENTE, ATENDIDA_PARCIAL, ATENDIDA)
+   - POST /api/ordenes/{id}/anular {"motivo"} anular (solo PENDIENTE y sin ventas vigentes)
+   El estado de atención lo actualiza el BO solo, con los despachos de las ventas de la orden (cantidad entregada). *@
 <Encabezado Rf="RF007" Titulo="Órdenes de compra de clientes"
             Subtitulo="Cada orden se genera desde una cotización aceptada y toma su detalle sin volver a digitarlo.">
     <a class="btn btn-primary" href="/ordenes/nueva">Nueva orden</a>
 </Encabezado>
 
-<div class="card card-body mb-3">
-    <div class="row g-3 align-items-end">
-        <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
-            <input id="fCliente" class="form-control" maxlength="150" placeholder="Razón social o documento" />
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
+{
+    <div class="alert alert-success">@exito</div>
+}
+
+@if (anulando is not null)
+{
+    @* RF007: anular pide un motivo (anulación lógica). *@
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Anular orden @anulando.Numero</h2>
+        <Campo Etiqueta="Motivo de anulación" Id="motivo" Obligatorio="true">
+            <input id="motivo" class="form-control" maxlength="200" @bind="motivo" />
         </Campo>
-        <Campo Etiqueta="Estado de atención" Id="fEstado" Clase="col-sm-6 col-md-3">
-            <select id="fEstado" class="form-select">
-                <option>Todos</option>
-                <option>Pendiente</option>
-                <option>Atendida parcial</option>
-                <option>Atendida</option>
-                <option>Anulada</option>
-            </select>
-        </Campo>
-        <div class="col-auto">
-            <button class="btn btn-dark">Buscar</button>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary" @onclick="CerrarAnulacion">Cancelar</button>
+                <button class="btn btn-outline-danger" disabled="@trabajando" @onclick="ConfirmarAnulacion">Anular</button>
+            </div>
         </div>
     </div>
-</div>
+}
 
-<div class="card mb-3">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Número</th>
-                    <th>Nº orden del cliente</th>
-                    <th>Cliente</th>
-                    <th>Cotización</th>
-                    <th>Fecha</th>
-                    <th class="text-end">Total (S/)</th>
-                    <th>Estado</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var o in MuestrasVentas.Ordenes)
-                {
+@if (ordenes is null)
+{
+    <p class="text-muted">Cargando órdenes...</p>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
                     <tr>
-                        <td><strong>@o.Numero</strong></td>
-                        <td>@o.NumeroOrdenCliente</td>
-                        <td>@o.Cliente</td>
-                        <td>@o.Cotizacion</td>
-                        <td>@o.FechaEmision.ToString("dd/MM/yyyy")</td>
-                        <td class="text-end">@MuestrasVentas.Total(o.Detalles).ToString("N2")</td>
-                        <td><Estado Texto="@MuestrasVentas.Texto(o.Estado)" /></td>
-                        <td class="text-end">
-                            <div class="d-inline-flex gap-1 text-nowrap">
-                                @if (o.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL")
-                                {
-                                    @* RF008: la venta se registra a partir de una orden pendiente o atendida parcialmente *@
-                                    <a class="btn btn-sm btn-outline-secondary" href="/ventas/nueva">Registrar venta</a>
-                                }
-                                @if (o.Estado == "PENDIENTE")
-                                {
-                                    <button class="btn btn-sm btn-outline-danger">Anular</button>
-                                }
-                            </div>
-                        </td>
+                        <th>Número</th>
+                        <th>Nº orden del cliente</th>
+                        <th>Cliente</th>
+                        <th>Cotización</th>
+                        <th>Fecha</th>
+                        <th class="text-end">Total (S/)</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @if (ordenes.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">No hay órdenes de compra de clientes.</td></tr>
+                    }
+                    @foreach (var o in OrdenesPagina)
+                    {
+                        <tr>
+                            <td><strong>@o.Numero</strong></td>
+                            <td>@o.NumeroOrdenCliente</td>
+                            <td>@o.Cliente<div class="small text-muted">@o.DocumentoCliente</div></td>
+                            <td>@o.NumeroCotizacion</td>
+                            <td>@TextosVentas.Fecha(o.FechaEmision)</td>
+                            <td class="text-end">@o.Total.ToString("N2")</td>
+                            <td><Estado Texto="@TextosVentas.Texto(o.Estado)" /></td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1 text-nowrap">
+                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/ordenes/editar/{o.Id}")">
+                                        @(o.Estado == "PENDIENTE" ? "Editar" : "Ver")
+                                    </a>
+                                    @if (o.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL")
+                                    {
+                                        @* RF008: la venta se registra a partir de una orden pendiente o atendida parcialmente *@
+                                        <a class="btn btn-sm btn-outline-primary" href="@($"/ventas/nueva?orden={o.Id}")">Registrar venta</a>
+                                    }
+                                        @if (o.Estado == "PENDIENTE")
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => AbrirAnulacion(o)">Anular</button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <Paginacion TotalRegistros="@ordenes.Count"
+                    @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
-</div>
+}
+
+@code {
+    private List<OrdenDatos>? ordenes;
+    private string? error;
+    private string? exito;
+    private bool trabajando;
+
+    private OrdenDatos? anulando;
+    private string motivo = "";
+
+    // paginacion (componente compartido Shared/Paginacion), igual que en Compras
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private int TotalPaginas => tamanoPagina == 0 ? 1 : Math.Max(1, (int)Math.Ceiling((double)(ordenes?.Count ?? 0) / tamanoPagina));
+    private IEnumerable<OrdenDatos> OrdenesPagina => ordenes is null ? Enumerable.Empty<OrdenDatos>()
+        : tamanoPagina == 0 ? ordenes
+        : ordenes.Skip((Math.Clamp(paginaActual, 1, TotalPaginas) - 1) * tamanoPagina).Take(tamanoPagina);
+
+    protected override async Task OnInitializedAsync() => await Cargar();
+
+    private async Task Cargar()
+    {
+        try
+        {
+            ordenes = await Api.Get<List<OrdenDatos>>("ordenes") ?? new();   // GET /api/ordenes
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+            ordenes ??= new();
+        }
+    }
+
+    private void AbrirAnulacion(OrdenDatos o)
+    {
+        anulando = o;
+        motivo = "";
+        exito = null;
+    }
+
+    private void CerrarAnulacion() => anulando = null;
+
+    // POST /api/ordenes/{id}/anular {"motivo": ...}
+    private async Task ConfirmarAnulacion()
+    {
+        if (anulando is null) return;
+        error = null;
+        trabajando = true;
+        try
+        {
+            await Api.Post<object>($"ordenes/{anulando.Id}/anular", new AnulacionDatos { Motivo = motivo });
+            exito = $"Se anuló la orden {anulando.Numero}.";
+            anulando = null;
+            await Cargar();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "Anule primero las ventas vigentes de la orden"
+        }
+        finally
+        {
+            trabajando = false;
+        }
+    }
+}
