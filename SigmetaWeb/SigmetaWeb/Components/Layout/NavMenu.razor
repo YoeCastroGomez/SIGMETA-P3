@@ -18,6 +18,16 @@
         </span><span>Panel de inicio</span>
     </NavLink>
 
+    @if (MenuActual.Length == 0)
+    {
+        @* RF001: un rol que no es ninguno de los cuatro no ve ninguna opción (mínimo acceso por defecto) *@
+        <div class="mx-3 mt-3 p-3 rounded-3 small"
+             style="border:1px dashed rgba(145,157,169,.45);color:#c3cbd3;background:rgba(255,255,255,.03);line-height:1.45">
+            <div class="fw-semibold mb-1" style="color:#e8ecef">Sin módulos asignados</div>
+            Tu cuenta todavía no tiene opciones habilitadas. Consulta con el Administrador del sistema.
+        </div>
+    }
+
     @foreach (var grupo in MenuActual)
     {
         var abierto = abiertos.Contains(grupo.Titulo);
@@ -42,7 +52,8 @@
     }
 </nav>
 @code {
-    [Parameter] public string Rol { get; set; } = "Administrador";
+    // sin rol no hay menú: nunca se asume Administrador (RF001: solo las opciones del rol)
+    [Parameter] public string Rol { get; set; } = "";
     [Parameter] public EventCallback AlNavegar { get; set; }
 
     private static string SiglaGrupo(string titulo) => titulo switch
@@ -157,13 +168,15 @@
         }),
     };
 
-    // Elige cuál de los cuatro menús fijos se dibuja.
+    // Elige cuál de los cuatro menús fijos se dibuja. RF001: cada rol se nombra explícitamente;
+    // un rol desconocido (o vacío) no recibe ninguna opción, nunca el menú del Administrador.
     private Grupo[] MenuActual => Rol switch
     {
         "Vendedor" => MenuVendedor,
         "Cajero" => MenuCajero,
         "Almacenero" => MenuAlmacenero,
-        _ => MenuAdministrador,
+        "Administrador" => MenuAdministrador,
+        _ => Array.Empty<Grupo>(),
     };
 
     // ---------------- Desplegar / plegar grupos (solo visual) ----------------

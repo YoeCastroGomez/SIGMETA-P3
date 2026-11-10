@@ -1,5 +1,8 @@
 package pe.edu.pucp.sigmeta.ws.base;
 
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.Request;
 import jakarta.ws.rs.core.Response;
 import pe.edu.pucp.sigmeta.seguridad.SesionServicio;
 
@@ -14,6 +17,10 @@ import pe.edu.pucp.sigmeta.seguridad.SesionServicio;
 //     return ejecutar(ticket, id -> { clienteBO.desactivar(idCliente, id); return null; });
 public abstract class VentanillaBase {
 
+    // el pedido HTTP actual: los GET solo consultan y se ejecutan sin el bloqueo global (mas rapido)
+    @Context
+    private Request pedido;
+
     protected Response ejecutar(String ticket, SesionServicio.Accion<?> accion) {
         return ejecutar(ticket, Response.Status.OK, accion);
     }
@@ -25,7 +32,8 @@ public abstract class VentanillaBase {
             return error(Response.Status.UNAUTHORIZED, "Su sesion no existe o ya vencio. Vuelva a iniciar sesion");
         }
         try {
-            Object resultado = sesion.ejecutar(accion);
+            boolean soloConsulta = pedido != null && HttpMethod.GET.equals(pedido.getMethod());
+            Object resultado = soloConsulta ? sesion.consultar(accion) : sesion.ejecutar(accion);
             if (resultado == null) {
                 return Response.noContent().build(); // 204 sin cuerpo
             }
