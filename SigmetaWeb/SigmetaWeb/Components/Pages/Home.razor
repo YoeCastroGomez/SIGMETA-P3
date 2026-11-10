@@ -471,26 +471,34 @@
     {
         cargando = true;
         errorResumen = null;
-        try
-        {
-            compras = await Api.Get<List<CompraRest>>("compras") ?? new();
-        }
-        catch (Exception)
-        {
-            compras = null;
-            errorResumen = "no se pudo consultar Compras";
-        }
 
-        try
+        // Las consultas no dependen entre sí; se cargan simultáneamente.
+        var tareaCompras = ConsultarCompras();
+        var tareaProveedores = ConsultarProveedores();
+        await Task.WhenAll(tareaCompras, tareaProveedores);
+
+        compras = await tareaCompras;
+        proveedores = await tareaProveedores;
+        if (compras is null || proveedores is null)
         {
-            proveedores = await Api.Get<List<Proveedor>>("proveedores") ?? new();
-        }
-        catch (Exception)
-        {
-            proveedores = null;
-            errorResumen = errorResumen is null ? "no se pudo consultar Proveedores" : errorResumen + " ni Proveedores";
+            errorResumen = compras is null && proveedores is null
+                ? "no se pudieron consultar Compras ni Proveedores"
+                : compras is null ? "no se pudo consultar Compras"
+                                  : "no se pudo consultar Proveedores";
         }
         cargando = false;
+    }
+
+    private async Task<List<CompraRest>?> ConsultarCompras()
+    {
+        try { return await Api.Get<List<CompraRest>>("compras") ?? new(); }
+        catch (Exception) { return null; }
+    }
+
+    private async Task<List<Proveedor>?> ConsultarProveedores()
+    {
+        try { return await Api.Get<List<Proveedor>>("proveedores") ?? new(); }
+        catch (Exception) { return null; }
     }
 
     private string NombreProveedor(int id) =>
