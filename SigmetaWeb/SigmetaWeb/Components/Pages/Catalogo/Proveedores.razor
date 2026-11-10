@@ -138,6 +138,7 @@ else
         filtroRuc = filtroRazonSocial = filtroEstado = "";
         exito = null;
         confirmarId = null;
+        paginaActual = 1;
         await Cargar();
     }
 
@@ -184,6 +185,7 @@ else
             confirmarId = null;
             // Recargar la consulta para reflejar la baja lógica desde MySQL.
             proveedores = await Api.Get<List<Proveedor>>(RutaBusqueda()) ?? new();
+            AjustarPagina();
             exito = $"Se desactivó el proveedor {proveedor.RazonSocial}.";
         }
         catch (ErrorApi e)
