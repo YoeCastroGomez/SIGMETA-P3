@@ -63,7 +63,7 @@
                     <tr><th>Número</th><th>Fecha</th><th>Cliente</th><th>Condición</th><th class="text-end">Total</th><th>Estado</th></tr>
                 </thead>
                 <tbody>
-                    @foreach (var v in MuestrasReportes.Ventas)
+                    @foreach (var v in Paginar(MuestrasReportes.Ventas, paginaReporte1, tamanoReporte1))
                     {
                         <tr>
                             <td class="text-nowrap">@v.Numero</td>
@@ -77,6 +77,7 @@
                 </tbody>
             </table>
         </div>
+            <Paginacion TotalRegistros="@(MuestrasReportes.Ventas.Count())" @bind-PaginaActual="paginaReporte1" @bind-TamanoPagina="tamanoReporte1" />
         <div class="card-body small text-muted">Las ventas anuladas se muestran, pero no suman en los totales.</div>
     </div>
 
@@ -88,7 +89,7 @@
                     <tr><th>Cliente</th><th class="text-end">Límite</th><th class="text-end">Saldo pendiente</th><th class="text-end">Disponible</th><th class="text-end">Vencido</th></tr>
                 </thead>
                 <tbody>
-                    @foreach (var c in MuestrasReportes.Creditos)
+                    @foreach (var c in Paginar(MuestrasReportes.Creditos, paginaReporte2, tamanoReporte2))
                     {
                         <tr>
                             <td><strong>@c.Cliente</strong></td>
@@ -101,6 +102,7 @@
                 </tbody>
             </table>
         </div>
+            <Paginacion TotalRegistros="@(MuestrasReportes.Creditos.Count())" @bind-PaginaActual="paginaReporte2" @bind-TamanoPagina="tamanoReporte2" />
     </div>
 }
 else if (pestana == "abastecimiento")
@@ -114,7 +116,7 @@ else if (pestana == "abastecimiento")
                     <tr><th>Número</th><th>Fecha</th><th>Proveedor</th><th class="text-end">Total</th><th>Estado</th></tr>
                 </thead>
                 <tbody>
-                    @foreach (var c in MuestrasReportes.Compras)
+                    @foreach (var c in Paginar(MuestrasReportes.Compras, paginaReporte3, tamanoReporte3))
                     {
                         <tr>
                             <td class="text-nowrap">@c.Numero</td>
@@ -127,6 +129,7 @@ else if (pestana == "abastecimiento")
                 </tbody>
             </table>
         </div>
+            <Paginacion TotalRegistros="@(MuestrasReportes.Compras.Count())" @bind-PaginaActual="paginaReporte3" @bind-TamanoPagina="tamanoReporte3" />
     </div>
 
     <div class="row">
@@ -139,7 +142,7 @@ else if (pestana == "abastecimiento")
                             <tr><th>Código</th><th>Producto</th><th class="text-end">Salidas</th><th class="text-end">Stock</th></tr>
                         </thead>
                         <tbody>
-                            @foreach (var p in MuestrasReportes.MayorRotacion)
+                            @foreach (var p in Paginar(MuestrasReportes.MayorRotacion, paginaReporte4, tamanoReporte4))
                             {
                                 <tr>
                                     <td class="text-nowrap">@p.Codigo</td>
@@ -151,6 +154,7 @@ else if (pestana == "abastecimiento")
                         </tbody>
                     </table>
                 </div>
+            <Paginacion TotalRegistros="@(MuestrasReportes.MayorRotacion.Count())" @bind-PaginaActual="paginaReporte4" @bind-TamanoPagina="tamanoReporte4" />
             </div>
         </div>
         <div class="col-lg-6">
@@ -162,7 +166,7 @@ else if (pestana == "abastecimiento")
                             <tr><th>Código</th><th>Producto</th><th class="text-end">Stock</th><th>Último movimiento</th></tr>
                         </thead>
                         <tbody>
-                            @foreach (var p in MuestrasReportes.SinMovimiento)
+                            @foreach (var p in Paginar(MuestrasReportes.SinMovimiento, paginaReporte5, tamanoReporte5))
                             {
                                 <tr>
                                     <td class="text-nowrap">@p.Codigo</td>
@@ -174,6 +178,7 @@ else if (pestana == "abastecimiento")
                         </tbody>
                     </table>
                 </div>
+            <Paginacion TotalRegistros="@(MuestrasReportes.SinMovimiento.Count())" @bind-PaginaActual="paginaReporte5" @bind-TamanoPagina="tamanoReporte5" />
             </div>
         </div>
     </div>
@@ -210,7 +215,7 @@ else
                     <tr><th>Fecha de cierre</th><th>Caja</th><th>Responsable</th><th class="text-end">Calculado</th><th class="text-end">Declarado</th><th class="text-end">Diferencia</th><th>Estado</th></tr>
                 </thead>
                 <tbody>
-                    @foreach (var c in MuestrasCaja.Cierres)
+                    @foreach (var c in Paginar(MuestrasCaja.Cierres, paginaReporte6, tamanoReporte6))
                     {
                         <tr>
                             <td class="text-nowrap">@c.FechaCierre.ToString("yyyy-MM-dd HH:mm")</td>
@@ -225,10 +230,31 @@ else
                 </tbody>
             </table>
         </div>
+            <Paginacion TotalRegistros="@(MuestrasCaja.Cierres.Count())" @bind-PaginaActual="paginaReporte6" @bind-TamanoPagina="tamanoReporte6" />
     </div>
 }
 
 @code {
+    private int paginaReporte1 = 1;
+    private int tamanoReporte1 = 10;
+    private int paginaReporte2 = 1;
+    private int tamanoReporte2 = 10;
+    private int paginaReporte3 = 1;
+    private int tamanoReporte3 = 10;
+    private int paginaReporte4 = 1;
+    private int tamanoReporte4 = 10;
+    private int paginaReporte5 = 1;
+    private int tamanoReporte5 = 10;
+    private int paginaReporte6 = 1;
+    private int tamanoReporte6 = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+    {
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((segura - 1) * tamano).Take(tamano);
+    }
+
     // Pestaña visible: solo cambia lo que se muestra.
     private string pestana = "comercial";
 
