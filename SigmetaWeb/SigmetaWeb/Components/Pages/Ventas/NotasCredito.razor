@@ -14,7 +14,7 @@
 
 @* Filtros del RF013: comprobante de origen, cliente y fecha (ComprobanteBO.buscarNotasCredito) *@
 <div class="card card-body mb-3">
-    <div class="row g-3 align-items-end">
+    <div class="row g-3 align-items-end sigmeta-filtros">
         <Campo Etiqueta="Comprobante de origen" Id="fOrigen" Clase="col-sm-6 col-md-3">
             <input id="fOrigen" class="form-control" maxlength="30" placeholder="F001-00000123" />
         </Campo>
@@ -50,7 +50,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var nc in MuestrasVentas.NotasCredito)
+                @foreach (var nc in Paginar(MuestrasVentas.NotasCredito, paginaActual, tamanoPagina))
                 {
                     <tr>
                         <td><strong>@nc.SerieNumero</strong></td>
@@ -73,8 +73,19 @@
             </tbody>
         </table>
     </div>
+        <Paginacion TotalRegistros="@(MuestrasVentas.NotasCredito.Count())" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
 </div>
 
 @code {
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+    {
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((segura - 1) * tamano).Take(tamano);
+    }
+
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
 }
