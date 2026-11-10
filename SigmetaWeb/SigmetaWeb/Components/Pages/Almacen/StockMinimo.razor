@@ -30,7 +30,7 @@
             </thead>
 
             <tbody>
-                @foreach (var p in MuestrasCatalogo.Productos.Where(p => p.Activo && p.StockActual <= p.StockMinimo))
+                @foreach (var p in Paginar(MuestrasCatalogo.Productos.Where(p => p.Activo && p.StockActual <= p.StockMinimo), paginaActual, tamanoPagina))
                 {
                     <tr>
                         <td>@p.CodigoInterno</td>
@@ -58,6 +58,7 @@
             </tbody>
         </table>
     </div>
+        <Paginacion TotalRegistros="@(MuestrasCatalogo.Productos.Where(p => p.Activo && p.StockActual <= p.StockMinimo).Count())" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
 </div>
 
 <div class="alert alert-secondary">
@@ -65,3 +66,15 @@
     La consulta real del inventario se integrará posteriormente
     con los servicios Java.
 </div>
+
+@code {
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+    {
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((segura - 1) * tamano).Take(tamano);
+    }
+}
