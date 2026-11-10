@@ -1,0 +1,296 @@
+@page "/caja/cierres"
+@inject ApiJava Api
+
+<PageTitle>Cierres de caja · SIGMETA</PageTitle>
+
+@* RF010 · Historial de cierres. Datos reales del Java:
+   - GET  /api/cierres                          todos los cierres (CierreCajaBO.listarTodosConDetalle)
+   - GET  /api/cierres?desde=...&hasta=...      búsqueda por rango de fechas (CierreCajaBO.buscarPorRangoFechas)
+   - PUT  /api/cierres/{id}                     corregir el monto declarado (CierreCajaBO.modificar, solo Administrador)
+   - POST /api/cierres/{id}/reabrir             reabrir con motivo (CierreCajaBO.reabrir, solo Administrador)
+   Reabrir no borra el cierre: queda REVERTIDO con fecha, usuario y motivo; al cerrar de nuevo se crea otro cierre.
+   Los botones solo se ven para el Administrador, pero quien decide es el BO: con otro rol responde
+   "El rol X no tiene permiso para realizar esta operacion". *@
+<Encabezado Rf="RF010" Titulo="Cierres de caja"
+            Subtitulo="Un cierre reabierto queda como revertido; al cerrar de nuevo se registra un cierre nuevo. Corregir solo cambia el monto declarado." />
+
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
+{
+    <div class="alert alert-success">@exito</div>
+}
+
+@if (cierreAReabrir is not null)
+{
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Reabrir caja N.º @cierreAReabrir.IdCaja</h2>
+        <div class="row">
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Fecha de cierre</div>
+                <div class="fw-semibold">@TextosCaja.FechaHora(cierreAReabrir.FechaCierre)</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Responsable</div>
+                <div class="fw-semibold">@cierreAReabrir.UsuarioCierre</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Declarado</div>
+                <div class="fw-semibold">S/ @cierreAReabrir.MontoDeclarado.ToString("N2")</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Diferencia</div>
+                <div class="fw-semibold">S/ @cierreAReabrir.Diferencia.ToString("N2")</div>
+            </div>
+            <div class="col-12">
+                <Campo Etiqueta="Motivo de la reapertura" Id="motivo" Obligatorio="true"
+                       Ayuda="Queda registrado junto con la fecha y el usuario que reabre.">
+                    <textarea id="motivo" class="form-control" rows="2" maxlength="200" @bind="motivo"></textarea>
+                </Campo>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary" @onclick="() => cierreAReabrir = null">Cancelar</button>
+                <button class="btn btn-primary" disabled="@guardando" @onclick="ConfirmarReapertura">Confirmar reapertura</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (cierreACorregir is not null)
+{
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Corregir cierre de la caja N.º @cierreACorregir.IdCaja</h2>
+        <div class="row">
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Fecha de cierre</div>
+                <div class="fw-semibold">@TextosCaja.FechaHora(cierreACorregir.FechaCierre)</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Responsable</div>
+                <div class="fw-semibold">@cierreACorregir.UsuarioCierre</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Calculado por el sistema</div>
+                <div class="fw-semibold">S/ @cierreACorregir.MontoCalculado.ToString("N2")</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Declarado actual</div>
+                <div class="fw-semibold">S/ @cierreACorregir.MontoDeclarado.ToString("N2")</div>
+            </div>
+            <div class="col-md-6">
+                <Campo Etiqueta="Monto declarado corregido (S/)" Id="declaradoCorregido" Obligatorio="true"
+                       Ayuda="No puede ser negativo. El monto calculado no se modifica.">
+                    <input id="declaradoCorregido" type="number" step="0.01" class="form-control"
+                           @bind="declaradoCorregido" @bind:event="oninput" />
+                </Campo>
+            </div>
+            <div class="col-md-6">
+                @* Solo para mostrar: la diferencia la recalcula y guarda el BO (declarado − calculado). *@
+                <Campo Etiqueta="Nueva diferencia (S/)" Id="nuevaDiferencia" Ayuda="Negativa = faltante · positiva = sobrante.">
+                    <input id="nuevaDiferencia" class="form-control" readonly
+                           value="@(declaradoCorregido is null ? "—" : (declaradoCorregido.Value - cierreACorregir.MontoCalculado).ToString("N2"))" />
+                </Campo>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary" @onclick="() => cierreACorregir = null">Cancelar</button>
+                <button class="btn btn-primary" disabled="@guardando" @onclick="GuardarCorreccion">Guardar corrección</button>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="card card-body mb-3">
+    <form class="row g-3 align-items-end" @onsubmit="Buscar" @onsubmit:preventDefault>
+        <Campo Etiqueta="Cerrado desde" Id="fDesde" Clase="col-sm-6 col-md-3">
+            <input id="fDesde" type="date" class="form-control" @bind="fDesde" />
+        </Campo>
+        <Campo Etiqueta="Cerrado hasta" Id="fHasta" Clase="col-sm-6 col-md-3">
+            <input id="fHasta" type="date" class="form-control" @bind="fHasta" />
+        </Campo>
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-dark">Buscar</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
+        </div>
+    </form>
+    <div class="form-text">Sin fechas se listan todos los cierres. Con fechas se usa la búsqueda por rango (las dos son obligatorias).</div>
+</div>
+
+@if (cierres is null)
+{
+    <p class="text-muted">Cargando cierres...</p>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Fecha de cierre</th>
+                        <th>Caja</th>
+                        <th class="text-end">Calculado</th>
+                        <th class="text-end">Declarado</th>
+                        <th class="text-end">Diferencia</th>
+                        <th>Responsable</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (cierres.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">No se encontraron cierres.</td></tr>
+                    }
+                    @foreach (var c in cierres)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@TextosCaja.FechaHora(c.FechaCierre)</td>
+                            <td>N.º @c.IdCaja</td>
+                            <td class="text-end text-nowrap">S/ @c.MontoCalculado.ToString("N2")</td>
+                            <td class="text-end text-nowrap">S/ @c.MontoDeclarado.ToString("N2")</td>
+                            <td class="text-end text-nowrap @(c.Diferencia < 0 ? "text-danger" : "")">S/ @c.Diferencia.ToString("N2")</td>
+                            <td>@c.UsuarioCierre</td>
+                            <td>
+                                <Estado Texto="@TextosCaja.Texto(c.Estado)" />
+                                @if (c.Estado == "REVERTIDO")
+                                {
+                                    <div class="small text-muted">
+                                        Reabierta el @TextosCaja.FechaHora(c.FechaReapertura) por @c.UsuarioReapertura
+                                    </div>
+                                    <div class="small text-muted">@c.MotivoReapertura</div>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1 text-nowrap">
+                                    @if (Rol == "Administrador" && c.Estado == "VIGENTE")
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Corregir(c)">Corregir</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Reabrir(c)">Reabrir</button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
+
+    private List<CierreDatos>? cierres;
+    private DateOnly? fDesde, fHasta;
+    private CierreDatos? cierreAReabrir;
+    private string? motivo;
+    private CierreDatos? cierreACorregir;
+    private decimal? declaradoCorregido;
+    private bool guardando;
+    private string? error;
+    private string? exito;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+    }
+
+    private async Task Buscar()
+    {
+        exito = null;
+        await Cargar();
+    }
+
+    private async Task Limpiar()
+    {
+        fDesde = fHasta = null;
+        exito = null;
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        error = null;
+        try
+        {
+            var ruta = "cierres";
+            if (fDesde is not null || fHasta is not null)
+            {
+                // el Java valida que estén las dos y que desde no sea posterior a hasta
+                ruta += $"?desde={fDesde:yyyy-MM-dd}&hasta={fHasta:yyyy-MM-dd}";
+            }
+            cierres = await Api.Get<List<CierreDatos>>(ruta) ?? new();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+            cierres ??= new();
+        }
+    }
+
+    private void Reabrir(CierreDatos c)
+    {
+        exito = null;
+        cierreACorregir = null;
+        cierreAReabrir = c;
+        motivo = null;
+    }
+
+    private void Corregir(CierreDatos c)
+    {
+        exito = null;
+        cierreAReabrir = null;
+        cierreACorregir = c;
+        declaradoCorregido = c.MontoDeclarado;
+    }
+
+    private async Task ConfirmarReapertura()
+    {
+        if (cierreAReabrir is null) return;
+        error = null;
+        guardando = true;
+        try
+        {
+            await Api.Post<CierreDatos>($"cierres/{cierreAReabrir.Id}/reabrir", new { motivo });
+            exito = $"Se reabrió la caja N.º {cierreAReabrir.IdCaja}. Su cierre quedó como revertido.";
+            cierreAReabrir = null;
+            await Cargar();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        guardando = false;
+    }
+
+    private async Task GuardarCorreccion()
+    {
+        if (cierreACorregir is null) return;
+        error = null;
+        if (declaradoCorregido is null)
+        {
+            error = "Ingrese el monto declarado corregido.";
+            return;
+        }
+        guardando = true;
+        try
+        {
+            var corregido = await Api.Put<CierreDatos>($"cierres/{cierreACorregir.Id}", new { montoDeclarado = declaradoCorregido });
+            exito = $"Se corrigió el cierre de la caja N.º {cierreACorregir.IdCaja}. Nueva diferencia: S/ {corregido?.Diferencia:N2}.";
+            cierreACorregir = null;
+            await Cargar();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        guardando = false;
+    }
+}

@@ -1,0 +1,302 @@
+@page "/caja"
+@inject ApiJava Api
+
+<PageTitle>Caja · SIGMETA</PageTitle>
+
+@* RF010 · Flujo de la caja del Cajero: 1. Apertura  2. Movimientos  3. Cobro de ventas al contado  4. Cierre.
+   Datos reales del Java:
+   - GET  /api/cajas/abierta            caja abierta del usuario de la sesión con el resumen (204 = no tiene)
+   - POST /api/cajas                    abrir con {"montoInicial": ...} (CajaBO.abrirCaja)
+   - GET  /api/cajas/ventas-por-cobrar  ventas al contado vigentes sin cobro (CajaBO.listarVentasPorCobrarAlContado)
+   El cajero lo saca el Java de la sesión (ticket): la pantalla nunca manda su id. *@
+<Encabezado Rf="RF010" Titulo="Caja"
+            Subtitulo="@(caja is not null ? "Resumen de la jornada de la caja abierta." : "No tienes una caja abierta. Ábrela para registrar cobros y movimientos.")" />
+
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
+{
+    <div class="alert alert-success">@exito</div>
+}
+
+@if (cargando)
+{
+    <p class="text-muted">Cargando la caja...</p>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-body pb-2">
+            <h2 class="h6 fw-semibold mb-3">Flujo de la jornada</h2>
+        </div>
+        <ol class="list-group list-group-flush list-group-numbered">
+            <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="ms-2 me-auto">
+                    <div class="fw-semibold">Abrir caja</div>
+                    <div class="small text-muted">Monto inicial de efectivo. Un cajero solo tiene una caja abierta a la vez.</div>
+                </div>
+                @if (caja is not null)
+                {
+                    <Estado Texto="Abierta" />
+                }
+                else
+                {
+                    <a class="btn btn-sm btn-primary" href="#apertura">Abrir caja</a>
+                }
+            </li>
+            <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="ms-2 me-auto">
+                    <div class="fw-semibold">Movimientos de la jornada</div>
+                    <div class="small text-muted">Cobros al contado, cobros de crédito (RF009) e ingresos y egresos manuales.</div>
+                </div>
+                @if (caja is not null)
+                {
+                    <a class="btn btn-sm btn-outline-secondary" href="/caja/movimientos">Ver movimientos</a>
+                }
+                else
+                {
+                    <span class="small text-muted">Requiere caja abierta</span>
+                }
+            </li>
+            <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="ms-2 me-auto">
+                    <div class="fw-semibold">Cobrar ventas al contado</div>
+                    <div class="small text-muted">Cada cobro queda como movimiento <em>Cobro al contado</em> de la venta.</div>
+                </div>
+                @if (caja is not null)
+                {
+                    <span class="badge text-bg-light border">@porCobrar.Count por cobrar</span>
+                }
+                else
+                {
+                    <span class="small text-muted">Requiere caja abierta</span>
+                }
+            </li>
+            <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="ms-2 me-auto">
+                    <div class="fw-semibold">Cerrar caja</div>
+                    <div class="small text-muted">Compara el monto calculado con el declarado y registra la diferencia y el responsable.</div>
+                </div>
+                @if (caja is not null)
+                {
+                    <a class="btn btn-sm btn-primary" href="/caja/cierre">Cerrar caja</a>
+                }
+                else
+                {
+                    <span class="small text-muted">Requiere caja abierta</span>
+                }
+            </li>
+        </ol>
+    </div>
+
+    @if (caja is null)
+    {
+        <div id="apertura" class="card card-body mb-3" style="max-width: 560px;">
+            <h2 class="h6 fw-semibold mb-3">1. Apertura de caja</h2>
+            <div class="row">
+                <div class="col-sm-6 mb-3">
+                    <div class="small text-muted text-uppercase">Cajero</div>
+                    <div class="fw-semibold">El usuario de tu sesión</div>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <div class="small text-muted text-uppercase">Fecha y hora</div>
+                    <div class="fw-semibold">Se toma al abrir</div>
+                </div>
+                <div class="col-12">
+                    <Campo Etiqueta="Monto inicial (S/)" Id="montoInicial" Obligatorio="true"
+                           Ayuda="Efectivo con el que empieza la jornada. No puede ser negativo.">
+                        <input id="montoInicial" type="number" step="0.01" class="form-control" @bind="montoInicial" />
+                    </Campo>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+                <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+                <button class="btn btn-primary" disabled="@guardando" @onclick="Abrir">Abrir caja</button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card card-body mb-3">
+            <h2 class="h6 fw-semibold mb-3">Datos de la caja</h2>
+            <div class="row">
+                <div class="col-sm-6 col-md-3 mb-3">
+                    <div class="small text-muted text-uppercase">Caja</div>
+                    <div class="fw-semibold">N.º @caja.Id</div>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-3">
+                    <div class="small text-muted text-uppercase">Apertura</div>
+                    <div class="fw-semibold">@TextosCaja.FechaHora(caja.FechaApertura)</div>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-3">
+                    <div class="small text-muted text-uppercase">Cajero</div>
+                    <div class="fw-semibold">@caja.UsuarioApertura</div>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-3">
+                    <div class="small text-muted text-uppercase">Estado</div>
+                    <div><Estado Texto="Abierta" /></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body pb-0">
+                <h2 class="h6 fw-semibold mb-1">3. Ventas al contado por cobrar</h2>
+                <p class="small text-muted">Ventas al contado vigentes que todavía no tienen su cobro en la caja.</p>
+            </div>
+            @if (porCobrar.Count == 0)
+            {
+                <div class="card-body pt-0 small text-muted">No hay ventas al contado pendientes de cobro.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Venta</th>
+                                <th>Cliente</th>
+                                <th>Comprobante</th>
+                                <th class="text-end">Total (S/)</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var v in porCobrar)
+                            {
+                                <tr>
+                                    <td><strong>@v.Numero</strong><div class="small text-muted">@TextosCaja.Fecha(v.FechaEmision)</div></td>
+                                    <td>@v.Cliente</td>
+                                    <td>@(v.Comprobante ?? "Sin emitir")</td>
+                                    <td class="text-end">@v.Total.ToString("N2")</td>
+                                    <td class="text-end">
+                                        <a class="btn btn-sm btn-primary" href="@($"/ventas/{v.Id}/cobro?volver=/caja")">Cobrar</a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card mb-3">
+                    <div class="card-body pb-0">
+                        <h2 class="h6 fw-semibold mb-3">Resumen de la jornada</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <tbody>
+                                <tr><td>Monto inicial</td><td class="text-end">S/ @caja.MontoInicial.ToString("N2")</td></tr>
+                                <tr><td>(+) Cobros al contado</td><td class="text-end">S/ @caja.TotalCobrosContado.ToString("N2")</td></tr>
+                                <tr><td>(+) Cobros de crédito</td><td class="text-end">S/ @caja.TotalCobrosCredito.ToString("N2")</td></tr>
+                                <tr><td>(+) Ingresos manuales</td><td class="text-end">S/ @caja.TotalIngresosManuales.ToString("N2")</td></tr>
+                                <tr><td>(−) Egresos manuales</td><td class="text-end">S/ @caja.TotalEgresosManuales.ToString("N2")</td></tr>
+                                <tr>
+                                    <td>(−) Devoluciones y anulaciones <span class="small text-muted">· no cuentan como cobro</span></td>
+                                    <td class="text-end">S/ @caja.TotalDevoluciones.ToString("N2")</td>
+                                </tr>
+                                <tr class="table-light fw-semibold">
+                                    <td>Monto calculado por el sistema</td>
+                                    <td class="text-end">S/ @caja.MontoEsperado.ToString("N2")</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card mb-3">
+                    <div class="card-body pb-0">
+                        <h2 class="h6 fw-semibold mb-3">Por medio de pago</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Medio</th>
+                                    <th class="text-end">Ingresos</th>
+                                    <th class="text-end">Egresos</th>
+                                    <th class="text-end">Neto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (caja.PorMedioPago.Count == 0)
+                                {
+                                    <tr><td colspan="4" class="text-center text-muted py-3">Todavía no hay movimientos.</td></tr>
+                                }
+                                @foreach (var t in caja.PorMedioPago)
+                                {
+                                    <tr>
+                                        <td>@TextosCaja.Texto(t.MedioPago)</td>
+                                        <td class="text-end">S/ @t.Ingresos.ToString("N2")</td>
+                                        <td class="text-end">S/ @t.Egresos.ToString("N2")</td>
+                                        <td class="text-end fw-semibold">S/ @t.Neto.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-body pt-2 small text-muted">El efectivo en caja es el monto inicial más el neto en efectivo.</div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private CajaDatos? caja;
+    private List<VentaPorCobrar> porCobrar = new();
+    private decimal? montoInicial;
+    private bool cargando = true;
+    private bool guardando;
+    private string? error;
+    private string? exito;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+        cargando = false;
+    }
+
+    private async Task Cargar()
+    {
+        try
+        {
+            caja = await Api.Get<CajaDatos>("cajas/abierta");    // null si el cajero no tiene caja abierta
+            porCobrar = caja is null
+                ? new List<VentaPorCobrar>()
+                : await Api.Get<List<VentaPorCobrar>>("cajas/ventas-por-cobrar") ?? new List<VentaPorCobrar>();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+    }
+
+    // POST /api/cajas: el BO valida el monto (no negativo) y que el cajero no tenga otra caja abierta
+    private async Task Abrir()
+    {
+        error = null;
+        exito = null;
+        if (montoInicial is null)
+        {
+            error = "Ingrese el monto inicial (puede ser 0).";
+            return;
+        }
+        guardando = true;
+        try
+        {
+            var nueva = await Api.Post<CajaDatos>("cajas", new { montoInicial });
+            exito = $"Se abrió la caja N.º {nueva?.Id} con S/ {montoInicial:N2}.";
+            await Cargar();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        guardando = false;
+    }
+}

@@ -1,0 +1,232 @@
+@page "/caja/movimientos"
+@inject ApiJava Api
+
+<PageTitle>Movimientos de caja · SIGMETA</PageTitle>
+
+@* RF010 · Movimientos de la caja abierta del Cajero. Datos reales del Java:
+   - GET    /api/cajas/abierta                       la caja abierta del usuario de la sesión
+   - GET    /api/cajas/{id}/movimientos              movimientos de la caja
+   - POST   /api/cajas/{id}/movimientos              ingreso o egreso manual (MovimientoCajaBO.registrarMovimiento)
+   - PUT    /api/cajas/{id}/movimientos/{idMov}      modificar un ingreso o egreso manual (MovimientoCajaBO.modificar)
+   - DELETE /api/cajas/{id}/movimientos/{idMov}      eliminar un ingreso o egreso manual (MovimientoCajaBO.eliminar)
+   Los cobros no se modifican ni eliminan: el de crédito se anula desde el cobro (RF009) y el de contado anulando la venta.
+   Las devoluciones (venta anulada, nota de crédito, cobro anulado) las registra el sistema. *@
+<Encabezado Rf="RF010" Titulo="Movimientos de caja"
+            Subtitulo="@(caja is null ? "" : $"Caja N.º {caja.Id} · abierta el {TextosCaja.FechaHora(caja.FechaApertura)} por {caja.UsuarioApertura}")">
+    <a class="btn btn-outline-secondary" href="/caja">Volver a la caja</a>
+    @if (caja is not null && formulario is null)
+    {
+        <button class="btn btn-primary" @onclick="Nuevo">Ingreso o egreso manual</button>
+    }
+</Encabezado>
+
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
+{
+    <div class="alert alert-success">@exito</div>
+}
+
+@if (cargando)
+{
+    <p class="text-muted">Cargando movimientos...</p>
+}
+else if (caja is null)
+{
+    <div class="alert alert-secondary">
+        No tienes una caja abierta. <a href="/caja">Abre tu caja</a> para registrar movimientos.
+    </div>
+}
+else
+{
+    @if (formulario is not null)
+    {
+        <div class="card card-body mb-3">
+            <h2 class="h6 fw-semibold mb-3">@(formulario.Id == 0 ? "Nuevo movimiento manual" : "Modificar movimiento manual")</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    <Campo Etiqueta="Tipo" Id="tipo" Obligatorio="true">
+                        <select id="tipo" class="form-select" @bind="formulario.Tipo">
+                            <option value="INGRESO_MANUAL">Ingreso manual</option>
+                            <option value="EGRESO_MANUAL">Egreso manual</option>
+                        </select>
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    <Campo Etiqueta="Medio de pago" Id="medio" Obligatorio="true">
+                        <select id="medio" class="form-select" @bind="formulario.MedioPago">
+                            @foreach (var m in TextosCaja.MediosPago)
+                            {
+                                <option value="@m">@TextosCaja.Texto(m)</option>
+                            }
+                        </select>
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    <Campo Etiqueta="Monto (S/)" Id="monto" Obligatorio="true" Ayuda="Mayor a 0.">
+                        <input id="monto" type="number" step="0.01" class="form-control" @bind="formulario.Monto" />
+                    </Campo>
+                </div>
+                <div class="col-12">
+                    <Campo Etiqueta="Concepto" Id="concepto" Obligatorio="true" Ayuda="Motivo del ingreso o egreso.">
+                        <input id="concepto" class="form-control" maxlength="150" @bind="formulario.Concepto" />
+                    </Campo>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+                <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary" @onclick="() => formulario = null">Cancelar</button>
+                    <button class="btn btn-primary" disabled="@guardando" @onclick="Guardar">Guardar</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Medio de pago</th>
+                        <th>Concepto</th>
+                        <th>Registrado por</th>
+                        <th class="text-end">Monto</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (movimientos.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">Todavía no hay movimientos en esta caja.</td></tr>
+                    }
+                    @foreach (var m in movimientos)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@TextosCaja.FechaHora(m.FechaMovimiento)</td>
+                            <td>@TextosCaja.Texto(m.Tipo)</td>
+                            <td>@TextosCaja.Texto(m.MedioPago)</td>
+                            <td>
+                                @m.Concepto
+                                @if (m.DocumentoOrigen is not null)
+                                {
+                                    <div class="small text-muted">Origen: @TextosCaja.Texto(m.DocumentoOrigen)</div>
+                                }
+                                @if (m.EsDevolucion)
+                                {
+                                    <div><span class="badge text-bg-secondary">no cuenta como cobro</span></div>
+                                }
+                            </td>
+                            <td>@m.UsuarioRegistro</td>
+                            <td class="text-end text-nowrap @(m.EsEgreso ? "text-danger" : "")">
+                                @(m.EsEgreso ? "− " : "")S/ @m.Monto.ToString("N2")
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1 text-nowrap">
+                                    @if (m.Manual)
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(m)">Modificar</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Eliminar(m)">Eliminar</button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    private CajaDatos? caja;
+    private List<MovimientoDatos> movimientos = new();
+    private MovimientoDatos? formulario;   // null = formulario cerrado; Id 0 = nuevo
+    private bool cargando = true;
+    private bool guardando;
+    private string? error;
+    private string? exito;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+        cargando = false;
+    }
+
+    private async Task Cargar()
+    {
+        try
+        {
+            caja = await Api.Get<CajaDatos>("cajas/abierta");
+            if (caja is not null)
+            {
+                movimientos = await Api.Get<List<MovimientoDatos>>($"cajas/{caja.Id}/movimientos") ?? new();
+            }
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+    }
+
+    private void Nuevo()
+    {
+        exito = null;
+        formulario = new MovimientoDatos();
+    }
+
+    private void Editar(MovimientoDatos m)
+    {
+        exito = null;
+        formulario = new MovimientoDatos { Id = m.Id, Tipo = m.Tipo, MedioPago = m.MedioPago, Monto = m.Monto, Concepto = m.Concepto };
+    }
+
+    // las validaciones (monto mayor a 0, concepto, efectivo suficiente para el egreso, caja abierta) son del BO
+    private async Task Guardar()
+    {
+        if (caja is null || formulario is null) return;
+        error = null;
+        exito = null;
+        guardando = true;
+        try
+        {
+            var datos = new { formulario.Tipo, formulario.MedioPago, formulario.Monto, formulario.Concepto };
+            if (formulario.Id == 0)
+            {
+                await Api.Post<MovimientoDatos>($"cajas/{caja.Id}/movimientos", datos);
+                exito = $"Se registró el {TextosCaja.Texto(formulario.Tipo).ToLower()} de S/ {formulario.Monto:N2}.";
+            }
+            else
+            {
+                await Api.Put<MovimientoDatos>($"cajas/{caja.Id}/movimientos/{formulario.Id}", datos);
+                exito = "Se modificó el movimiento.";
+            }
+            formulario = null;
+            await Cargar();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        guardando = false;
+    }
+
+    private async Task Eliminar(MovimientoDatos m)
+    {
+        if (caja is null) return;
+        error = null;
+        exito = null;
+        try
+        {
+            await Api.Delete($"cajas/{caja.Id}/movimientos/{m.Id}");
+            exito = $"Se eliminó el movimiento \"{m.Concepto}\".";
+            await Cargar();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+    }
+}
