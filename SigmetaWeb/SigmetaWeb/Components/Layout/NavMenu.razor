@@ -9,8 +9,13 @@
 *@
 <nav class="nav flex-column py-3" aria-label="Menú principal">
     <div class="px-3 pb-2 small text-uppercase fw-semibold" style="letter-spacing:.09em;color:#919da9;font-size:.67rem">Espacio de trabajo</div>
-    <NavLink class="nav-link" href="/" Match="NavLinkMatch.All" @onclick="AlNavegar">
-        <span class="me-2" aria-hidden="true">⌂</span> Panel de inicio
+    <NavLink class="nav-link sigmeta-nav-inicio" href="/" Match="NavLinkMatch.All" @onclick="AlNavegar">
+        <span class="sigmeta-nav-icono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+            </svg>
+        </span><span>Panel de inicio</span>
     </NavLink>
 
     @foreach (var grupo in MenuActual)
@@ -19,7 +24,7 @@
         <button type="button" class="menu-grupo btn btn-link text-decoration-none text-uppercase fw-semibold d-flex justify-content-between align-items-center w-100"
                 aria-expanded="@(abierto ? "true" : "false")"
                 @onclick="() => Alternar(grupo.Titulo)">
-            <span>@grupo.Titulo</span>
+            <span class="d-flex align-items-center gap-2 sigmeta-grupo-nombre"><span class="sigmeta-grupo-sigla" aria-hidden="true">@SiglaGrupo(grupo.Titulo)</span>@grupo.Titulo</span>
             <span class="menu-chevron @(abierto ? "abierto" : "")" aria-hidden="true">›</span>
         </button>
 
@@ -29,7 +34,7 @@
                 @foreach (var l in grupo.Enlaces)
                 {
                     <NavLink class="nav-link" href="@l.Ruta" @onclick="AlNavegar">
-                        <span class="me-2" style="opacity:.65" aria-hidden="true">·</span>@l.Texto
+                        <span class="sigmeta-submenu-punto" aria-hidden="true"></span><span>@l.Texto</span>
                     </NavLink>
                 }
             </div>
@@ -39,6 +44,19 @@
 @code {
     [Parameter] public string Rol { get; set; } = "Administrador";
     [Parameter] public EventCallback AlNavegar { get; set; }
+
+    private static string SiglaGrupo(string titulo) => titulo switch
+    {
+        "Ventas" => "VE",
+        "Caja y cobranza" => "CA",
+        "Compras e inventario" => "CO",
+        "Inventario" => "IN",
+        "Almacén" => "AL",
+        "Catálogo" => "CT",
+        "Administración" => "AD",
+        "Autorizaciones" => "AU",
+        _ => "•"
+    };
 
     private record Enlace(string Texto, string Ruta);
     private record Grupo(string Titulo, Enlace[] Enlaces);
