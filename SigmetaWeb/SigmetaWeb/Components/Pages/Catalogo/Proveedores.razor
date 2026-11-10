@@ -1,6 +1,7 @@
 @page "/proveedores"
 @inject ApiJava Api
 @using SigmetaWeb.Components.Pages.Catalogo
+@using SigmetaWeb.Components.Shared
 
 <PageTitle>Proveedores · SIGMETA</PageTitle>
 
@@ -63,7 +64,7 @@ else
                     }
                     else
                     {
-                        @foreach (var p in proveedores)
+                        @foreach (var p in ProveedoresPagina)
                         {
                             <tr>
                                 <td>@p.Ruc</td>
@@ -96,11 +97,21 @@ else
                 </tbody>
             </table>
         </div>
+        <Paginacion TotalRegistros="@(proveedores?.Count ?? 0)"
+                    @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
 }
 
 @code {
     private List<Proveedor>? proveedores;
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<Proveedor> ProveedoresPagina =>
+        (proveedores ?? new List<Proveedor>())
+            .Skip((Math.Clamp(paginaActual, 1, TotalPaginas) - 1) * tamanoPagina)
+            .Take(tamanoPagina);
+    private int TotalPaginas => Math.Max(1, (int)Math.Ceiling((double)(proveedores?.Count ?? 0) / tamanoPagina));
+    private void AjustarPagina() => paginaActual = Math.Clamp(paginaActual, 1, TotalPaginas);
     private string filtroRuc = "";
     private string filtroRazonSocial = "";
     private string filtroEstado = "";
@@ -118,6 +129,7 @@ else
     {
         exito = null;
         confirmarId = null;
+        paginaActual = 1;
         await Cargar();
     }
 
@@ -148,6 +160,7 @@ else
         try
         {
             proveedores = await Api.Get<List<Proveedor>>(RutaBusqueda()) ?? new();
+            AjustarPagina();
         }
         catch (ErrorApi e)
         {
