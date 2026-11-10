@@ -2,6 +2,7 @@
 @inject ApiJava Api
 @using SigmetaWeb.Components.Pages.Compras
 @using SigmetaWeb.Components.Pages.Catalogo
+@using SigmetaWeb.Components.Shared
 
 <PageTitle>Compras · SIGMETA</PageTitle>
 
@@ -56,7 +57,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var c in resultado)
+                @foreach (var c in ComprasPagina)
                 {
                     <tr>
                         <td>@c.Numero</td>
@@ -95,11 +96,19 @@
             </tbody>
         </table>
     </div>
+    <Paginacion TotalRegistros="@resultado.Count"
+                @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
 </div>
 
 @code {
     private List<CompraRest> compras = new();
     private List<CompraRest> resultado = new();
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<CompraRest> ComprasPagina =>
+        resultado.Skip((Math.Clamp(paginaActual, 1, TotalPaginas) - 1) * tamanoPagina).Take(tamanoPagina);
+    private int TotalPaginas => Math.Max(1, (int)Math.Ceiling((double)resultado.Count / tamanoPagina));
+    private void AjustarPagina() => paginaActual = Math.Clamp(paginaActual, 1, TotalPaginas);
     private List<Proveedor> proveedores = new();
     private string filtroProveedorTexto = "";
     private string filtroNumero = "";
@@ -149,6 +158,7 @@
                  (DateTime.TryParse(c.FechaEmision, out var fecha) && fecha.Date <= filtroHasta.Value.Date))
             .OrderByDescending(c => c.Id)
             .ToList();
+        AjustarPagina();
     }
 
     private Task Buscar()
@@ -160,6 +170,9 @@
         }
         error = null;
         exito = null;
+        paginaActual = 1;
+        confirmarId = null;
+        paginaActual = 1;
         AplicarFiltros();
         return Task.CompletedTask;
     }
