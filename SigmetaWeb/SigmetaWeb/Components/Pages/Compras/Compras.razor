@@ -18,7 +18,7 @@
 }
 
 <div class="card card-body mb-3">
-    <form class="row g-3 align-items-end" @onsubmit="Buscar" @onsubmit:preventDefault>
+    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault>
         <Campo Etiqueta="Número de compra" Id="numeroCompraFiltro" Clase="col-sm-6 col-md-3">
             <input id="numeroCompraFiltro" type="text" class="form-control"
                    placeholder="Ej. OC-LAB11" @bind="filtroNumero" />
