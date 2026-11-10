@@ -97,7 +97,7 @@ else
                     {
                         <tr><td colspan="7" class="text-center text-muted py-4">La cuenta todavía no tiene cobros.</td></tr>
                     }
-                    @foreach (var c in cuenta.Cobros ?? new())
+                    @foreach (var c in Paginar(cuenta.Cobros ?? new(), paginaActual, tamanoPagina))
                     {
                         <tr>
                             <td class="text-nowrap">@TextosCaja.Fecha(c.FechaCobro)</td>
@@ -129,6 +129,7 @@ else
                 </tbody>
             </table>
         </div>
+        <Paginacion TotalRegistros="@(cuenta.Cobros?.Count() ?? 0)" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
 
     <div class="alert alert-secondary">
@@ -137,6 +138,16 @@ else
 }
 
 @code {
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+    {
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((segura - 1) * tamano).Take(tamano);
+    }
+
     [Parameter] public int Id { get; set; }
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
 
