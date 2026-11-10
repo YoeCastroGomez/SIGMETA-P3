@@ -1,0 +1,252 @@
+@page "/cobranzas"
+@inject ApiJava Api
+
+<PageTitle>Cuentas por cobrar · SIGMETA</PageTitle>
+
+@* RF009 · Cuentas por cobrar (Cajero y Administrador). La cuenta la crea el BO al registrar una venta al crédito
+   y su saldo baja con cada cobro. Datos reales del Java (las búsquedas las hace el BO, no la pantalla):
+   - GET /api/cuentas-por-cobrar                          todas (listarTodasConDetalle)
+   - GET /api/cuentas-por-cobrar?comprobante=F001-...     por comprobante (buscarPorComprobante)
+   - GET /api/cuentas-por-cobrar?cliente={id}             por cliente (listarPorCliente)
+   - GET /api/cuentas-por-cobrar?desde=&hasta=&porVencimiento=   por rango de fechas (buscarPorRangoFechas)
+   - GET /api/cuentas-por-cobrar?estado=PENDIENTE         por estado (listarPorEstado)
+   - GET /api/cuentas-por-cobrar?vencidas=true            vencidas (listarVencidas)
+   - GET /api/cuentas-por-cobrar/resumen                  totales del Administrador (obtenerResumen) *@
+<Encabezado Rf="RF009" Titulo="Cuentas por cobrar"
+            Subtitulo="Se generan al registrar una venta al crédito. Importes en soles.">
+    <a class="btn btn-outline-secondary" href="/cobros">Consultar cobros</a>
+</Encabezado>
+
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+
+@* RF009: el Administrador ve el total de saldos pendientes y de cuentas vencidas *@
+@if (resumen is not null)
+{
+    <div class="row">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card card-body mb-3">
+                <div class="small text-muted text-uppercase">Saldo pendiente</div>
+                <div class="h5 fw-bold mb-0">S/ @resumen.TotalSaldoPendiente.ToString("N2")</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card card-body mb-3">
+                <div class="small text-muted text-uppercase">Saldo vencido</div>
+                <div class="h5 fw-bold text-danger mb-0">S/ @resumen.TotalSaldoVencido.ToString("N2")</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card card-body mb-3">
+                <div class="small text-muted text-uppercase">Cuentas con saldo</div>
+                <div class="h5 fw-bold mb-0">@resumen.CuentasConSaldo</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card card-body mb-3">
+                <div class="small text-muted text-uppercase">Cuentas vencidas</div>
+                <div class="h5 fw-bold mb-0">@resumen.CuentasVencidas</div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="card card-body mb-3">
+    <form class="row g-3 align-items-end" @onsubmit="Buscar" @onsubmit:preventDefault>
+        <Campo Etiqueta="Comprobante" Id="fComprobante" Clase="col-sm-6 col-md-2">
+            <input id="fComprobante" class="form-control" maxlength="20" placeholder="F001-00000123" @bind="fComprobante" />
+        </Campo>
+        <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
+            <select id="fCliente" class="form-select" @bind="fCliente">
+                <option value="0">Todos</option>
+                @foreach (var c in clientes)
+                {
+                    <option value="@c.Id">@c.Nombre</option>
+                }
+            </select>
+        </Campo>
+        <Campo Etiqueta="Fecha de" Id="fTipoFecha" Clase="col-sm-6 col-md-2">
+            <select id="fTipoFecha" class="form-select" @bind="fPorVencimiento">
+                <option value="false">Emisión</option>
+                <option value="true">Vencimiento</option>
+            </select>
+        </Campo>
+        <Campo Etiqueta="Desde" Id="fDesde" Clase="col-sm-6 col-md-2">
+            <input id="fDesde" type="date" class="form-control" @bind="fDesde" />
+        </Campo>
+        <Campo Etiqueta="Hasta" Id="fHasta" Clase="col-sm-6 col-md-2">
+            <input id="fHasta" type="date" class="form-control" @bind="fHasta" />
+        </Campo>
+        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-2">
+            <select id="fEstado" class="form-select" @bind="fEstado">
+                <option value="">Todos</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="PAGADA_PARCIAL">Pagada parcial</option>
+                <option value="PAGADA">Pagada</option>
+                <option value="VENCIDA">Vencida</option>
+                <option value="VENCIDAS">Solo vencidas a la fecha</option>
+            </select>
+        </Campo>
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-dark">Buscar</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
+        </div>
+    </form>
+    <div class="form-text">Se busca por un filtro a la vez, en este orden: comprobante, cliente, rango de fechas (las dos) y estado.</div>
+</div>
+
+@if (cuentas is null)
+{
+    <p class="text-muted">Cargando cuentas por cobrar...</p>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Venta</th>
+                        <th>Emisión</th>
+                        <th>Vencimiento</th>
+                        <th class="text-end">Monto</th>
+                        <th class="text-end">Pagado</th>
+                        <th class="text-end">Saldo</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (cuentas.Count == 0)
+                    {
+                        <tr><td colspan="9" class="text-center text-muted py-4">No hay cuentas que coincidan con la búsqueda.</td></tr>
+                    }
+                    @foreach (var c in cuentas)
+                    {
+                        <tr>
+                            <td><strong>@c.Cliente</strong><div class="small text-muted">@c.DocumentoCliente</div></td>
+                            <td class="text-nowrap">
+                                @c.Venta
+                                <div class="small text-muted">@(c.Comprobante ?? "Sin comprobante")</div>
+                            </td>
+                            <td class="text-nowrap">@TextosCaja.Fecha(c.FechaEmision)</td>
+                            <td class="text-nowrap @(c.Vencida ? "text-danger" : "")">@TextosCaja.Fecha(c.FechaVencimiento)</td>
+                            <td class="text-end text-nowrap">S/ @c.MontoOriginal.ToString("N2")</td>
+                            <td class="text-end text-nowrap">S/ @c.MontoPagado.ToString("N2")</td>
+                            <td class="text-end text-nowrap fw-semibold">S/ @c.SaldoPendiente.ToString("N2")</td>
+                            <td>
+                                <Estado Texto="@TextosCaja.Texto(c.Estado)" />
+                                @if (c.Vencida && c.Estado != "VENCIDA")
+                                {
+                                    <div class="small text-danger">vencida</div>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1 text-nowrap">
+                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/cobranzas/{c.Id}")">Ver</a>
+                                    @if (Rol == "Cajero" && c.SaldoPendiente > 0)
+                                    {
+                                        @* RF009: el cobro lo registra el Cajero (CobroBOImpl exige el rol CAJERO) *@
+                                        <a class="btn btn-sm btn-primary" href="@($"/cobranzas/{c.Id}/cobro")">Cobrar</a>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
+
+    private record ClienteOpcion(int Id, string Nombre);
+
+    private List<CuentaDatos>? cuentas;
+    private ResumenCuentas? resumen;
+    private List<ClienteOpcion> clientes = new();
+
+    private string? fComprobante;
+    private int fCliente;
+    private bool fPorVencimiento;
+    private DateOnly? fDesde, fHasta;
+    private string fEstado = "";
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar("cuentas-por-cobrar");
+        // los clientes del filtro salen de las mismas cuentas (solo clientes que tienen deuda registrada)
+        clientes = (cuentas ?? new())
+            .GroupBy(c => c.IdCliente)
+            .Select(g => new ClienteOpcion(g.Key, g.First().Cliente ?? $"Cliente {g.Key}"))
+            .OrderBy(c => c.Nombre)
+            .ToList();
+        if (Rol == "Administrador")
+        {
+            try
+            {
+                resumen = await Api.Get<ResumenCuentas>("cuentas-por-cobrar/resumen");
+            }
+            catch (ErrorApi e)
+            {
+                error = e.Message;
+            }
+        }
+    }
+
+    private async Task Buscar()
+    {
+        if (!string.IsNullOrWhiteSpace(fComprobante))
+        {
+            await Cargar($"cuentas-por-cobrar?comprobante={Uri.EscapeDataString(fComprobante.Trim())}");
+        }
+        else if (fCliente > 0)
+        {
+            await Cargar($"cuentas-por-cobrar?cliente={fCliente}");
+        }
+        else if (fDesde is not null || fHasta is not null)
+        {
+            // el BO valida que estén las dos fechas y que desde no sea posterior a hasta
+            await Cargar($"cuentas-por-cobrar?desde={fDesde:yyyy-MM-dd}&hasta={fHasta:yyyy-MM-dd}&porVencimiento={(fPorVencimiento ? "true" : "false")}");
+        }
+        else if (fEstado == "VENCIDAS")
+        {
+            await Cargar("cuentas-por-cobrar?vencidas=true");
+        }
+        else if (fEstado != "")
+        {
+            await Cargar($"cuentas-por-cobrar?estado={fEstado}");
+        }
+        else
+        {
+            await Cargar("cuentas-por-cobrar");
+        }
+    }
+
+    private async Task Limpiar()
+    {
+        fComprobante = null;
+        fCliente = 0;
+        fPorVencimiento = false;
+        fDesde = fHasta = null;
+        fEstado = "";
+        await Cargar("cuentas-por-cobrar");
+    }
+
+    private async Task Cargar(string ruta)
+    {
+        error = null;
+        try
+        {
+            cuentas = await Api.Get<List<CuentaDatos>>(ruta) ?? new();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+            cuentas ??= new();
+        }
+    }
+}

@@ -1,0 +1,171 @@
+@page "/caja/cierre"
+@inject ApiJava Api
+
+<PageTitle>Cierre de caja · SIGMETA</PageTitle>
+
+@* RF010 · Cierre diario del Cajero. Datos reales del Java:
+   - GET  /api/cajas/abierta        caja abierta con el resumen y el monto calculado por el BO
+   - POST /api/cajas/{id}/cerrar    {"montoDeclarado": ...} (CierreCajaBO.registrarCierre: calcula el monto esperado,
+                                    la diferencia y guarda quién cerró; solo el cajero que abrió la caja)
+   Las ventas anuladas y las devoluciones por nota de crédito no cuentan como cobro: el sistema registró un egreso
+   que compensa el cobro (CompensacionCaja), por eso se restan aparte. *@
+<Encabezado Rf="RF010" Titulo="Cierre de caja"
+            Subtitulo="Solo el cajero que abrió la caja puede cerrarla.">
+    <a class="btn btn-outline-secondary" href="/caja">Volver a la caja</a>
+    <a class="btn btn-outline-secondary" href="/caja/movimientos">Movimientos</a>
+    <a class="btn btn-outline-secondary" href="/caja/cierres">Historial de cierres</a>
+</Encabezado>
+
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+
+@if (cierre is not null)
+{
+    <div class="alert alert-success">
+        Se cerró la caja N.º @cierre.IdCaja. Calculado S/ @cierre.MontoCalculado.ToString("N2") ·
+        declarado S/ @cierre.MontoDeclarado.ToString("N2") ·
+        diferencia <strong class="@(cierre.Diferencia < 0 ? "text-danger" : "")">S/ @cierre.Diferencia.ToString("N2")</strong>.
+        <a href="/caja/cierres">Ver historial de cierres</a>
+    </div>
+}
+
+@if (cargando)
+{
+    <p class="text-muted">Cargando la caja...</p>
+}
+else if (caja is null)
+{
+    @if (cierre is null)
+    {
+        <div class="alert alert-secondary">No tienes una caja abierta para cerrar. <a href="/caja">Ir a la caja</a></div>
+    }
+}
+else
+{
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Caja a cerrar</h2>
+        <div class="row">
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Caja</div>
+                <div class="fw-semibold">N.º @caja.Id</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Apertura</div>
+                <div class="fw-semibold">@TextosCaja.FechaHora(caja.FechaApertura)</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Cajero</div>
+                <div class="fw-semibold">@caja.UsuarioApertura</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Monto inicial</div>
+                <div class="fw-semibold">S/ @caja.MontoInicial.ToString("N2")</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card mb-3">
+                <div class="card-body pb-0">
+                    <h2 class="h6 fw-semibold mb-3">Cálculo del sistema</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <tbody>
+                            <tr><td>Monto inicial</td><td class="text-end">S/ @caja.MontoInicial.ToString("N2")</td></tr>
+                            <tr><td>(+) Cobros al contado</td><td class="text-end">S/ @caja.TotalCobrosContado.ToString("N2")</td></tr>
+                            <tr><td>(+) Cobros de crédito</td><td class="text-end">S/ @caja.TotalCobrosCredito.ToString("N2")</td></tr>
+                            <tr><td>(+) Ingresos manuales</td><td class="text-end">S/ @caja.TotalIngresosManuales.ToString("N2")</td></tr>
+                            <tr><td>(−) Egresos manuales</td><td class="text-end">S/ @caja.TotalEgresosManuales.ToString("N2")</td></tr>
+                            <tr>
+                                <td>
+                                    (−) Ventas anuladas, notas de crédito y cobros anulados
+                                    <div><span class="badge text-bg-secondary">no cuenta como cobro</span></div>
+                                </td>
+                                <td class="text-end">S/ @caja.TotalDevoluciones.ToString("N2")</td>
+                            </tr>
+                            <tr class="table-light fw-semibold">
+                                <td>Monto calculado</td>
+                                <td class="text-end">S/ @caja.MontoEsperado.ToString("N2")</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card card-body mb-3">
+                <h2 class="h6 fw-semibold mb-3">Cierre</h2>
+
+                <Campo Etiqueta="Monto calculado por el sistema (S/)" Id="calculado">
+                    <input id="calculado" class="form-control" readonly value="@caja.MontoEsperado.ToString("N2")" />
+                </Campo>
+
+                <Campo Etiqueta="Monto declarado (S/)" Id="declarado" Obligatorio="true"
+                       Ayuda="Dinero contado al final de la jornada. No puede ser negativo.">
+                    <input id="declarado" type="number" step="0.01" class="form-control"
+                           @bind="declarado" @bind:event="oninput" />
+                </Campo>
+
+                @* Solo para mostrar: la diferencia real la calcula y guarda el BO (declarado − calculado). *@
+                <Campo Etiqueta="Diferencia (S/)" Id="diferencia" Ayuda="Negativa = faltante · positiva = sobrante.">
+                    <input id="diferencia" class="form-control" readonly
+                           value="@(declarado is null ? "—" : (declarado.Value - caja.MontoEsperado).ToString("N2"))" />
+                </Campo>
+
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+                    <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+                    <div class="d-flex gap-2">
+                        <a class="btn btn-outline-secondary" href="/caja">Cancelar</a>
+                        <button class="btn btn-primary" disabled="@guardando" @onclick="Cerrar">Cerrar caja</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private CajaDatos? caja;
+    private CierreDatos? cierre;   // el cierre que se acaba de registrar
+    private decimal? declarado;
+    private bool cargando = true;
+    private bool guardando;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            caja = await Api.Get<CajaDatos>("cajas/abierta");
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        cargando = false;
+    }
+
+    private async Task Cerrar()
+    {
+        if (caja is null) return;
+        error = null;
+        if (declarado is null)
+        {
+            error = "Ingrese el monto declarado (el dinero que contó).";
+            return;
+        }
+        guardando = true;
+        try
+        {
+            cierre = await Api.Post<CierreDatos>($"cajas/{caja.Id}/cerrar", new { montoDeclarado = declarado });
+            caja = null;   // la caja ya quedó cerrada
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        guardando = false;
+    }
+}
