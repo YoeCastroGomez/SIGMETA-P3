@@ -1,9 +1,13 @@
 @page "/productos"
+@inject ApiJava Api
+@inject IJSRuntime JS
 
 <PageTitle>Productos · SIGMETA</PageTitle>
 
-@* RF005 · Lista y búsqueda de productos. Solo visual (Lab 9): los filtros y botones no hacen nada.
-   La buscan todos los roles; Nuevo, Editar y Desactivar solo se muestran al Administrador. *@
+@* RF005 · Lista y búsqueda de productos. Datos reales del Java: GET /api/productos (con filtros por código,
+   nombre, categoría o estado) y DELETE /api/productos/{id} para desactivar.
+   La buscan los 4 roles y ven el precio y el stock; Nuevo, Editar y Desactivar solo se muestran al Administrador
+   (y el BO lo vuelve a validar). *@
 <Encabezado Rf="RF005" Titulo="Productos"
             Subtitulo="Un producto desactivado conserva su historial, pero no puede elegirse en documentos nuevos.">
     @if (EsAdministrador)
@@ -12,96 +16,295 @@
     }
 </Encabezado>
 
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
+{
+    <div class="alert alert-success">@exito</div>
+}
+
+@* Confirmación antes de desactivar: solo si se pulsa Desactivar en el cuadro se llama al Java *@
+<Confirmacion Visible="@(porDesactivar is not null)"
+              Titulo="Desactivar producto"
+              TextoConfirmar="Desactivar"
+              AlConfirmar="ConfirmarDesactivar"
+              AlCancelar="() => porDesactivar = null">
+    <p class="mb-2">
+        ¿Seguro que desea desactivar el producto <strong>@porDesactivar?.CodigoInterno · @porDesactivar?.Nombre</strong>?
+    </p>
+    <p class="small text-muted mb-2">
+        No se borra: queda inactivo y conserva su historial, pero ya no se puede elegir en documentos nuevos
+        ni modificar.
+    </p>
+    @* RF005 no incluye reactivar: la desactivación es definitiva y el nombre y el código interno no pueden volver a usarse *@
+    <p class="small text-danger fw-semibold mb-0">
+        Esta acción no se puede deshacer: no podrá reactivarlo ni registrar otro producto con el mismo nombre
+        o código interno.
+    </p>
+</Confirmacion>
+
 <div class="card card-body mb-3">
-    <div class="row g-3 align-items-end">
-        @* RF005: un solo campo para el código interno, de fabricante o de proveedor (ProductoBO.buscarPorCodigo).
-           Es también el espacio del lector de código de barras: el lector escribe aquí el código leído. *@
-        <Campo Etiqueta="Código" Id="fCodigo" Clase="col-sm-6 col-md-3"
-               Ayuda="Interno, de fabricante o de proveedor. Puede usar el lector.">
-            <input id="fCodigo" class="form-control" maxlength="50" placeholder="Escanear o escribir" />
-        </Campo>
+    @* RF005: el cuadro del lector de código de barras. El lector escribe el código y presiona Enter;
+       a mano se escribe el código (o parte del nombre) y se presiona Enter. Es el componente BuscadorProducto,
+       el mismo que se usa en las cotizaciones y las ventas. *@
+    <div class="row">
+        <BuscadorProducto Etiqueta="Código" Id="fCodigo" Clase="col-md-6 mb-3" AutoEnfocar="true"
+                          AlEncontrar="MostrarResultadoBuscador" />
+    </div>
+
+    <form class="row g-3 align-items-end border-top pt-3" @onsubmit="Buscar" @onsubmit:preventDefault>
         <Campo Etiqueta="Nombre" Id="fNombre" Clase="col-sm-6 col-md">
-            <input id="fNombre" class="form-control" maxlength="150" />
+            <input id="fNombre" class="form-control" maxlength="150" @bind="filtroNombre" />
         </Campo>
         <Campo Etiqueta="Categoría" Id="fCategoria" Clase="col-sm-6 col-md-3">
-            <select id="fCategoria" class="form-select">
-                <option>Todas</option>
-                @foreach (var c in MuestrasCatalogo.Categorias)
+            <select id="fCategoria" class="form-select" @bind="filtroCategoria">
+                <option value="0">Todas</option>
+                @foreach (var c in categorias)
                 {
-                    <option>@c.Nombre</option>
+                    <option value="@c.Id">@(c.Activo ? c.Nombre : c.Nombre + " (inactiva)")</option>
                 }
             </select>
         </Campo>
         <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-2">
-            <select id="fEstado" class="form-select">
-                <option>Todos</option>
-                <option>Activos</option>
-                <option>Inactivos</option>
+            <select id="fEstado" class="form-select" @bind="filtroEstado">
+                <option value="">Todos</option>
+                <option value="true">Activos</option>
+                <option value="false">Inactivos</option>
             </select>
         </Campo>
-        <div class="col-auto">
-            <button class="btn btn-dark">Buscar</button>
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-dark">Buscar</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
         </div>
-    </div>
+    </form>
+    <div class="form-text">Los filtros se combinan: por ejemplo, parte del nombre + una categoría + inactivos. Los vacíos no filtran.</div>
 </div>
 
-<div class="card mb-3">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Código</th>
-                    <th>Nombre</th>
-                    <th>Categoría</th>
-                    <th class="text-end">Precio de venta</th>
-                    <th class="text-end">Stock</th>
-                    <th class="text-end">Stock mínimo</th>
-                    <th>Estado</th>
-                    @if (EsAdministrador)
-                    {
-                        <th class="text-end">Acciones</th>
-                    }
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var p in MuestrasCatalogo.Productos)
-                {
+@if (productos is null)
+{
+    <p class="text-muted">Cargando productos...</p>
+}
+else
+{
+    if (!string.IsNullOrEmpty(descripcion))
+    {
+        <p class="small text-muted mb-2">@descripcion · @productos.Count producto(s)</p>
+    }
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
                     <tr>
-                        <td>@p.CodigoInterno</td>
-                        <td><strong>@p.Nombre</strong></td>
-                        <td>@p.Categoria</td>
-                        <td class="text-end">S/ @p.PrecioVenta.ToString("N2")</td>
-                        <td class="text-end @ClaseStock(p)">
-                            @p.StockActual.ToString("0.###") @MuestrasCatalogo.Texto(p.UnidadVenta).ToLowerInvariant()
-                        </td>
-                        <td class="text-end">@p.StockMinimo.ToString("0.###")</td>
-                        <td><Estado Texto="@(p.Activo ? "Activo" : "Inactivo")" /></td>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Categoría</th>
+                        <th class="text-end">Precio de venta</th>
+                        <th class="text-end">Stock</th>
+                        <th class="text-end">Stock mínimo</th>
+                        <th>Estado</th>
                         @if (EsAdministrador)
                         {
-                            <td class="text-end">
-                                @* RF005: un producto desactivado ya no se modifica ni se desactiva otra vez. *@
-                                @if (p.Activo)
+                            <th class="text-end">Acciones</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (productos.Count == 0)
+                    {
+                        <tr><td colspan="@(EsAdministrador ? 8 : 7)" class="text-center text-muted py-4">No se encontraron productos.</td></tr>
+                    }
+                    @foreach (var p in productos)
+                    {
+                        <tr>
+                            <td>
+                                @p.CodigoInterno
+                                @if (!string.IsNullOrEmpty(p.CodigoFabricante) || !string.IsNullOrEmpty(p.CodigoProveedor))
                                 {
-                                    <div class="d-inline-flex gap-1 text-nowrap">
-                                        <a class="btn btn-sm btn-outline-secondary" href="@($"/productos/editar/{p.Id}")">Editar</a>
-                                        <button class="btn btn-sm btn-outline-danger">Desactivar</button>
+                                    <div class="small text-muted">
+                                        @(p.CodigoFabricante ?? "—") · @(p.CodigoProveedor ?? "—")
                                     </div>
                                 }
                             </td>
-                        }
-                    </tr>
-                }
-            </tbody>
-        </table>
+                            <td><strong>@p.Nombre</strong></td>
+                            <td>@p.Categoria.Nombre</td>
+                            <td class="text-end">S/ @p.PrecioVenta.ToString("N2")</td>
+                            @* El stock se resalta en rojo cuando llegó al mínimo o está por debajo (RF012). *@
+                            <td class="text-end @(p.StockBajo ? "text-danger fw-semibold" : "")">@p.StockTexto</td>
+                            <td class="text-end">@p.StockMinimo.ToString("0.###")</td>
+                            <td><Estado Texto="@(p.Activo ? "Activo" : "Inactivo")" /></td>
+                            @if (EsAdministrador)
+                            {
+                                <td class="text-end">
+                                    @* RF005: un producto desactivado ya no se modifica ni se desactiva otra vez. *@
+                                    @if (p.Activo)
+                                    {
+                                        <div class="d-inline-flex gap-1 text-nowrap">
+                                            <a class="btn btn-sm btn-outline-secondary" href="@($"/productos/editar/{p.Id}")">Editar</a>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirDesactivar(p)">Desactivar</button>
+                                        </div>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
+}
 
 @code {
-    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
-
-    // Solo cambia qué botones se ven; en la pantalla no se valida nada.
+    // RF001: el rol sale de la sesión (MainLayout). Solo decide qué botones se ven; el permiso lo valida el BO.
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
     private bool EsAdministrador => Rol == "Administrador";
 
-    // El stock se resalta en rojo cuando llegó al mínimo o está por debajo (RF012: stock mínimo).
-    private static string ClaseStock(ProductoFila p) => p.StockActual <= p.StockMinimo ? "text-danger fw-semibold" : "";
+    // ProductoForm vuelve aquí con ?guardado=nuevo o ?guardado=editado para mostrar el aviso verde
+    [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
+
+    private List<Producto>? productos;
+    private List<Categoria> categorias = new();
+    private string filtroNombre = "";
+    private int filtroCategoria;
+    private string filtroEstado = "";
+    private string ultimaRuta = "productos";
+    private string? descripcion;
+    private string? error;
+    private string? exito;
+
+    // Desactivar pide confirmación: primero se guarda cuál es y se muestra el cuadro
+    private Producto? porDesactivar;
+
+    private void PedirDesactivar(Producto p)
+    {
+        error = exito = null;
+        porDesactivar = p;
+    }
+
+    private async Task ConfirmarDesactivar()
+    {
+        var p = porDesactivar;
+        porDesactivar = null;   // cierra el cuadro
+        if (p is not null)
+        {
+            await Desactivar(p);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            categorias = await Api.Get<List<Categoria>>("categorias") ?? new List<Categoria>();   // para el filtro
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        if (Guardado == "nuevo")
+        {
+            exito = "Producto registrado correctamente.";
+        }
+        else if (Guardado == "editado")
+        {
+            exito = "Producto modificado correctamente.";
+        }
+        await Cargar("productos", null);
+    }
+
+    // Lo que devuelve el BuscadorProducto (Enter en el cuadro Código): buscarPorCodigo o buscarPorNombre
+    private void MostrarResultadoBuscador(List<Producto> encontrados)
+    {
+        error = exito = null;
+        productos = encontrados;
+        descripcion = "Resultado del buscador por código o nombre";
+    }
+
+    // GET /api/productos?nombre=..&categoria=..&estado=.. : los filtros llenos se combinan (ProductoBO.buscar)
+    private async Task Buscar()
+    {
+        exito = null;
+        var parametros = new List<string>();
+        var texto = new List<string>();
+        var nombre = filtroNombre.Trim();
+        if (nombre != "")
+        {
+            parametros.Add($"nombre={Uri.EscapeDataString(nombre)}");
+            texto.Add($"nombre contiene \"{nombre}\"");
+        }
+        if (filtroCategoria != 0)
+        {
+            parametros.Add($"categoria={filtroCategoria}");
+            texto.Add($"categoría {categorias.FirstOrDefault(c => c.Id == filtroCategoria)?.Nombre}");
+        }
+        if (filtroEstado != "")
+        {
+            parametros.Add($"estado={filtroEstado}");
+            texto.Add(filtroEstado == "true" ? "solo activos" : "solo inactivos");
+        }
+
+        if (parametros.Count == 0)
+        {
+            await Cargar("productos", null);   // todos
+        }
+        else
+        {
+            await Cargar("productos?" + string.Join("&", parametros), "Filtro: " + string.Join(" · ", texto));
+        }
+    }
+
+    private async Task Limpiar()
+    {
+        filtroNombre = filtroEstado = "";
+        filtroCategoria = 0;
+        exito = null;
+        await Cargar("productos", null);
+    }
+
+    private async Task Cargar(string ruta, string? texto)
+    {
+        error = null;
+        try
+        {
+            productos = await Api.Get<List<Producto>>(ruta) ?? new List<Producto>();
+            ultimaRuta = ruta;
+            descripcion = texto;
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+            productos ??= new List<Producto>();
+        }
+    }
+
+    // DELETE /api/productos/{id}: baja lógica, el producto queda inactivo
+    private async Task Desactivar(Producto p)
+    {
+        error = exito = null;
+        try
+        {
+            await Api.Delete($"productos/{p.Id}");
+            await Cargar(ultimaRuta, descripcion);
+            exito = $"Se desactivó el producto {p.CodigoInterno} · {p.Nombre}.";
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        catch (Exception e)
+        {
+            error = "Error inesperado: " + e.Message;
+        }
+        await SubirAlAviso();   // el botón Desactivar está en la tabla y el aviso arriba
+    }
+
+    private async Task SubirAlAviso()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("window.scrollTo", 0, 0);
+        }
+        catch (Exception)
+        {
+            // si no se puede subir no pasa nada: el aviso igual está en pantalla
+        }
+    }
 }

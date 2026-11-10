@@ -81,7 +81,16 @@ public class ServicioSesionAuth : IServicioSesionAuth
             }
         }
         await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        context.Response.Redirect("/login");
+        // si la sesión se cerró sola (el Java respondió 401), se muestra el motivo en el login
+        var motivo = context.Request.Query["motivo"].ToString();
+        if (string.IsNullOrWhiteSpace(motivo))
+        {
+            context.Response.Redirect("/login");
+        }
+        else
+        {
+            VolverAlLogin(context, motivo);
+        }
     }
 
     private static void VolverAlLogin(HttpContext context, string mensaje)

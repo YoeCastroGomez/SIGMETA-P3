@@ -1,9 +1,16 @@
 @* Etiqueta + control + ayuda. El * marca los obligatorios (RNF004).
-   Clase: clases de Bootstrap para el contenedor (por defecto "mb-3"; en filas de filtros, una columna "col-…"). *@
+   Clase: clases de Bootstrap para el contenedor (por defecto "mb-3"; en filas de filtros, una columna "col-…").
+   Error: mensaje de validación de la pantalla. Estándar de SIGMETA para los errores de un campo: texto rojo en
+   español debajo del cuadro (el cuadro se marca con "is-invalid"); mientras hay error, no se muestra la ayuda.
+   Los errores del BO (Java) siguen saliendo en el aviso rojo de arriba (AvisoError). *@
 <div class="@(Clase ?? "mb-3")">
     <label class="form-label fw-semibold small" for="@Id">@Etiqueta @if (Obligatorio) {<span class="text-danger" title="Obligatorio">*</span>}</label>
     @ChildContent
-    @if (!string.IsNullOrEmpty(Ayuda))
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <div class="small text-danger mt-1">@Error</div>
+    }
+    else if (!string.IsNullOrEmpty(Ayuda))
     {
         <div class="form-text">@Ayuda</div>
     }
@@ -14,6 +21,7 @@
     [Parameter] public string? Id { get; set; }
     [Parameter] public bool Obligatorio { get; set; }
     [Parameter] public string? Ayuda { get; set; }
+    [Parameter] public string? Error { get; set; }
     [Parameter] public string? Clase { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
 }

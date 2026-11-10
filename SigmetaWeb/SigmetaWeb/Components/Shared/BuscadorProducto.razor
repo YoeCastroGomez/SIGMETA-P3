@@ -1,0 +1,191 @@
+@using SigmetaWeb.Components.Pages.Catalogo
+@inject ApiJava Api
+
+@* RF005 · Buscador de productos (también sirve para el lector de código de barras).
+   El lector funciona como un teclado: escribe el código en el cuadro donde está el cursor y presiona Enter solo.
+   Al presionar Enter se llama a GET /api/productos?buscar=texto:
+     - si el texto es un código exacto (interno, de fabricante o de proveedor) -> buscarPorCodigo
+     - si no, los productos activos cuyo nombre contiene el texto             -> buscarPorNombre
+
+   Uso en un formulario (cotización, venta...): con AlElegir recibes el producto elegido.
+       @using SigmetaWeb.Components.Pages.Catalogo
+       <BuscadorProducto AlElegir="AgregarProducto" />
+       private void AgregarProducto(Producto p) { ... p.Id, p.Nombre, p.PrecioVenta, p.StockActual ... }
+     Si el código es exacto, el producto se elige solo (como el lector). Si hay varios por nombre, se muestra
+     la lista para que el usuario elija uno. Después vuelve el cursor al cuadro para el siguiente producto.
+
+   Uso en una lista (pantalla Productos): con AlEncontrar recibes todos los resultados y los muestras tú.
+       <BuscadorProducto AlEncontrar="MostrarResultados" />
+
+   Se puede poner dentro de un EditForm: el Enter no envía el formulario de afuera. *@
+
+<Campo Etiqueta="@Etiqueta" Id="@Id" Clase="@Clase" Ayuda="@Ayuda">
+    <div class="position-relative">
+        <div class="input-group">
+            @* onkeydown (JavaScript) solo evita que el Enter envíe un formulario de afuera;
+               la búsqueda la hace @onkeyup en C#. *@
+            <input id="@Id" @ref="entrada" class="form-control" maxlength="150" autocomplete="off"
+                   placeholder="@Placeholder"
+                   @bind="texto" @bind:event="oninput"
+                   onkeydown="if (event.key === 'Enter') { event.preventDefault(); }"
+                   @onkeyup="Tecla" />
+            <button type="button" class="btn btn-outline-secondary" disabled="@buscando" @onclick="Buscar">
+                @(buscando ? "Buscando..." : "Buscar")
+            </button>
+        </div>
+
+        @if (sugerencias is not null)
+        {
+            <div class="list-group position-absolute w-100 shadow mt-1" style="z-index: 1050; max-height: 300px; overflow-y: auto;">
+                <div class="list-group-item small text-muted bg-light d-flex justify-content-between">
+                    <span>@sugerencias.Count productos coinciden. Elija uno:</span>
+                    <button type="button" class="btn-close btn-sm" aria-label="Cerrar" @onclick="CerrarSugerencias"></button>
+                </div>
+                @foreach (var p in sugerencias)
+                {
+                    <button type="button" class="list-group-item list-group-item-action" @onclick="() => Elegir(p)">
+                        <div class="d-flex justify-content-between gap-3">
+                            <div>
+                                <span class="small text-muted">@p.CodigoInterno</span>
+                                <strong class="ms-1">@p.Nombre</strong>
+                                <div class="small text-muted">@p.Categoria.Nombre</div>
+                            </div>
+                            <div class="text-end text-nowrap">
+                                <div class="fw-semibold">S/ @p.PrecioVenta.ToString("N2")</div>
+                                <div class="small @(p.StockBajo ? "text-danger fw-semibold" : "text-muted")">Stock: @p.StockTexto</div>
+                            </div>
+                        </div>
+                    </button>
+                }
+            </div>
+        }
+    </div>
+    @if (!string.IsNullOrEmpty(mensaje))
+    {
+        <div class="small text-danger mt-1">@mensaje</div>
+    }
+</Campo>
+
+@code {
+    // Se llama con el producto elegido (código exacto o clic en la lista)
+    [Parameter] public EventCallback<Producto> AlElegir { get; set; }
+
+    // Si se usa, el buscador no muestra la lista: entrega todos los resultados a la pantalla
+    [Parameter] public EventCallback<List<Producto>> AlEncontrar { get; set; }
+
+    [Parameter] public string Etiqueta { get; set; } = "Código";
+    [Parameter] public string Placeholder { get; set; } = "Escanear o escribir";
+    [Parameter] public string? Ayuda { get; set; } = "Código interno, de fabricante o de proveedor, o parte del nombre. Presione Enter.";
+    [Parameter] public string Id { get; set; } = "buscadorProducto";
+    [Parameter] public string? Clase { get; set; }
+
+    // Después de elegir, borra el cuadro para escanear el siguiente producto
+    [Parameter] public bool LimpiarAlElegir { get; set; } = true;
+
+    // Pone el cursor en el cuadro al abrir la pantalla (útil con el lector)
+    [Parameter] public bool AutoEnfocar { get; set; }
+
+    private ElementReference entrada;
+    private string texto = "";
+    private List<Producto>? sugerencias;
+    private string? mensaje;
+    private bool buscando;
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (primeraVez && AutoEnfocar)
+        {
+            await Enfocar();
+        }
+    }
+
+    private async Task Tecla(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Code == "NumpadEnter")
+        {
+            await Buscar();
+        }
+        else if (e.Key == "Escape")
+        {
+            CerrarSugerencias();
+        }
+    }
+
+    private async Task Buscar()
+    {
+        var buscado = texto.Trim();
+        sugerencias = null;
+        mensaje = null;
+        if (buscado.Length == 0)
+        {
+            mensaje = "Escriba o escanee un código, o escriba parte del nombre.";
+            return;
+        }
+
+        buscando = true;
+        try
+        {
+            var lista = await Api.Get<List<Producto>>($"productos?buscar={Uri.EscapeDataString(buscado)}")
+                        ?? new List<Producto>();
+
+            if (AlEncontrar.HasDelegate)
+            {
+                await AlEncontrar.InvokeAsync(lista);
+                return;
+            }
+
+            if (lista.Count == 0)
+            {
+                mensaje = $"No hay productos activos con el código o el nombre \"{buscado}\".";
+            }
+            else if (lista.Count == 1 && EsCodigoExacto(lista[0], buscado))
+            {
+                await Elegir(lista[0]);   // como el lector: el código exacto se agrega solo
+            }
+            else
+            {
+                sugerencias = lista;
+            }
+        }
+        catch (ErrorApi e)
+        {
+            mensaje = e.Message;
+        }
+        finally
+        {
+            buscando = false;
+        }
+    }
+
+    private async Task Elegir(Producto p)
+    {
+        sugerencias = null;
+        mensaje = null;
+        if (LimpiarAlElegir)
+        {
+            texto = "";
+        }
+        await AlElegir.InvokeAsync(p);
+        await Enfocar();
+    }
+
+    private void CerrarSugerencias() => sugerencias = null;
+
+    private static bool EsCodigoExacto(Producto p, string codigo) =>
+        string.Equals(p.CodigoInterno, codigo, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(p.CodigoFabricante, codigo, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(p.CodigoProveedor, codigo, StringComparison.OrdinalIgnoreCase);
+
+    // La pantalla de afuera también puede pedir el cursor: @ref="buscador" y luego await buscador.Enfocar();
+    public async Task Enfocar()
+    {
+        try
+        {
+            await entrada.FocusAsync();
+        }
+        catch (Exception)
+        {
+            // si el cuadro todavía no está en pantalla no pasa nada
+        }
+    }
+}
