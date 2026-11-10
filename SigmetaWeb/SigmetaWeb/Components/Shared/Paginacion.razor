@@ -6,7 +6,7 @@
                 value="@TamanoPagina" @onchange="CambiarTamano">
             <option value="10">10</option>
             <option value="25">25</option>
-            <option value="50">50</option>
+            <option value="0">Todos</option>
         </select>
         <span class="small text-muted">registros</span>
         <span class="small text-muted ms-2">
@@ -20,6 +20,8 @@
             }
         </span>
     </div>
+    @if (TamanoPagina != 0)
+    {
     <nav aria-label="Paginación de registros">
         <ul class="pagination pagination-sm mb-0 flex-wrap">
             <li class="page-item @(PaginaEfectiva == 1 ? "disabled" : "")">
@@ -40,6 +42,7 @@
             </li>
         </ul>
     </nav>
+    }
 </div>
 
 @code {
@@ -50,10 +53,10 @@
     [Parameter] public EventCallback<int> TamanoPaginaChanged { get; set; }
 
     private readonly string idSelector = "tamano-" + Guid.NewGuid().ToString("N");
-    private int TamanoSeguro => Math.Max(1, TamanoPagina);
-    private int TotalPaginas => Math.Max(1, (int)Math.Ceiling((double)TotalRegistros / TamanoSeguro));
+    private int TamanoSeguro => TamanoPagina == 0 ? Math.Max(1, TotalRegistros) : Math.Max(1, TamanoPagina);
+    private int TotalPaginas => TamanoPagina == 0 ? 1 : Math.Max(1, (int)Math.Ceiling((double)TotalRegistros / TamanoSeguro));
     private int PaginaEfectiva => Math.Clamp(PaginaActual, 1, TotalPaginas);
-    private int Inicio => (PaginaEfectiva - 1) * TamanoSeguro + 1;
+    private int Inicio => TotalRegistros == 0 ? 0 : (PaginaEfectiva - 1) * TamanoSeguro + 1;
     private int Fin => Math.Min(PaginaEfectiva * TamanoSeguro, TotalRegistros);
 
     private IEnumerable<int> PaginasVisibles
@@ -77,7 +80,7 @@
     private async Task CambiarTamano(ChangeEventArgs e)
     {
         if (int.TryParse(e.Value?.ToString(), out int tamano) &&
-            (tamano == 10 || tamano == 25 || tamano == 50))
+            (tamano == 10 || tamano == 25 || tamano == 0))
         {
             await TamanoPaginaChanged.InvokeAsync(tamano);
             await PaginaActualChanged.InvokeAsync(1);
