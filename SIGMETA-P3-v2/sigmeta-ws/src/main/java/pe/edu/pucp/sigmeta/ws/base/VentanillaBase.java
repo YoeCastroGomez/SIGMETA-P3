@@ -40,7 +40,13 @@ public abstract class VentanillaBase {
             }
             return error(Response.Status.CONFLICT, e.getMessage());
         } catch (SecurityException e) {
-            return error(Response.Status.UNAUTHORIZED, e.getMessage());
+            // 401 solo si la sesion de verdad vencio: Blazor manda al login con 401.
+            // Cualquier otro problema de seguridad (usuario inactivo, responsable distinto...) es 403
+            // y se muestra como error, sin expulsar al usuario.
+            if (!sesion.estaVigente()) {
+                return error(Response.Status.UNAUTHORIZED, e.getMessage());
+            }
+            return error(Response.Status.FORBIDDEN, e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
             return error(Response.Status.INTERNAL_SERVER_ERROR, "Error en el servidor: " + e.getMessage());

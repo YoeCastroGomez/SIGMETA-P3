@@ -94,8 +94,8 @@ public class ApiJava
         var mensaje = await LeerMensaje(respuesta);
         if (respuesta.StatusCode == HttpStatusCode.Unauthorized)
         {
-            // el ticket ya no sirve (pasaron los 20 minutos): se cierra la sesión y se vuelve al login
-            nav.NavigateTo("/auth/logout", forceLoad: true);
+            // el ticket ya no sirve: se cierra la sesión y se vuelve al login mostrando el motivo
+            nav.NavigateTo("/auth/logout?motivo=" + Uri.EscapeDataString(mensaje), forceLoad: true);
         }
         throw new ErrorApi(mensaje, (int)respuesta.StatusCode);
     }
