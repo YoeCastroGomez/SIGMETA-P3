@@ -902,3 +902,79 @@ html[data-bs-theme="dark"] .btn-danger {
     --bs-btn-focus-shadow-rgb:255,155,140;
 }
 .btn { font-weight:600; }
+
+/* Botones de tabla y filtros: estilo institucional compartido.
+   Los estados destructivos mantienen su color rojo. */
+html[data-bs-theme="light"] .btn-dark,
+html:not([data-bs-theme="dark"]) .btn-dark {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #a95118;
+    --bs-btn-border-color: #a95118;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #873d0f;
+    --bs-btn-hover-border-color: #873d0f;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #73330d;
+    --bs-btn-active-border-color: #73330d;
+    --bs-btn-focus-shadow-rgb: 169,81,24;
+}
+html[data-bs-theme="light"] .btn-outline-primary,
+html:not([data-bs-theme="dark"]) .btn-outline-primary {
+    --bs-btn-color: #9b4715;
+    --bs-btn-border-color: #bc794c;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #a95118;
+    --bs-btn-hover-border-color: #a95118;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #873d0f;
+    --bs-btn-active-border-color: #873d0f;
+}
+html[data-bs-theme="light"] .btn-outline-secondary,
+html:not([data-bs-theme="dark"]) .btn-outline-secondary {
+    --bs-btn-color: #53545c;
+    --bs-btn-border-color: #8e8c90;
+    --bs-btn-hover-color: #242125;
+    --bs-btn-hover-bg: #e9e2dc;
+    --bs-btn-hover-border-color: #8e7870;
+}
+html[data-bs-theme="dark"] .btn-dark {
+    --bs-btn-color: #21130b;
+    --bs-btn-bg: #f0aa70;
+    --bs-btn-border-color: #f0aa70;
+    --bs-btn-hover-color: #21130b;
+    --bs-btn-hover-bg: #ffd0a5;
+    --bs-btn-hover-border-color: #ffd0a5;
+    --bs-btn-active-color: #21130b;
+    --bs-btn-active-bg: #e9944e;
+    --bs-btn-active-border-color: #e9944e;
+    --bs-btn-focus-shadow-rgb: 240,170,112;
+}
+html[data-bs-theme="dark"] .btn-outline-primary {
+    --bs-btn-color: #f4bc88;
+    --bs-btn-border-color: #bd8558;
+    --bs-btn-hover-color: #21130b;
+    --bs-btn-hover-bg: #f0aa70;
+    --bs-btn-hover-border-color: #f0aa70;
+    --bs-btn-active-color: #21130b;
+    --bs-btn-active-bg: #ffd0a5;
+    --bs-btn-active-border-color: #ffd0a5;
+}
+html[data-bs-theme="dark"] .btn-outline-secondary {
+    --bs-btn-color: #e0cfbf;
+    --bs-btn-border-color: #8c7970;
+    --bs-btn-hover-color: #fff5eb;
+    --bs-btn-hover-bg: #57463d;
+    --bs-btn-hover-border-color: #ae927e;
+}
+html[data-bs-theme="dark"] .form-select option {
+    background: #302b2b;
+    color: #f3ebe5;
+}
+html[data-bs-theme="light"] .form-select option {
+    background: #fffaf6;
+    color: #302c2a;
+}
+.btn:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}
