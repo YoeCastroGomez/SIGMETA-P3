@@ -36,9 +36,10 @@ import java.util.Map;
 //                                            primero busca el codigo exacto (buscarPorCodigo); si no hay,
 //                                            busca por parte del nombre (buscarPorNombre). Solo activos.
 //   GET    /api/productos?codigo=INT-001     buscar por codigo interno, de fabricante o de proveedor
-//   GET    /api/productos?nombre=martillo    buscar por nombre (coincidencia parcial, activos)
-//   GET    /api/productos?categoria=3        listar por categoria (activos)
-//   GET    /api/productos?estado=true        listar por estado (true activos, false inactivos)
+//   GET    /api/productos?nombre=martillo&categoria=3&estado=false
+//                                            filtros de la pantalla Productos; se combinan y cada uno es
+//                                            opcional (nombre: parte del nombre; estado: true activos,
+//                                            false inactivos, sin estado = todos)
 //   GET    /api/productos/7                  obtener uno por id
 //   POST   /api/productos                    registrar (solo Administrador)
 //   PUT    /api/productos/7                  modificar, incluido el precio (solo Administrador)
@@ -73,12 +74,9 @@ public class ProductoRS extends VentanillaBase {
                 if (producto != null) {
                     lista.add(producto);
                 }
-            } else if (nombre != null && !nombre.isBlank()) {
-                lista = productoBO.buscarPorNombre(nombre.trim());
-            } else if (idCategoria != null) {
-                lista = productoBO.listarPorCategoria(idCategoria);
-            } else if (estado != null) {
-                lista = productoBO.listarPorEstado(estado);
+            } else if ((nombre != null && !nombre.isBlank()) || idCategoria != null || estado != null) {
+                // filtros de la pantalla Productos: nombre + categoria + estado juntos
+                lista = productoBO.buscar(nombre, idCategoria, estado);
             } else {
                 // listarTodos del BO solo trae los activos; la pantalla muestra todos con su estado
                 lista = new ArrayList<>(productoBO.listarPorEstado(true));

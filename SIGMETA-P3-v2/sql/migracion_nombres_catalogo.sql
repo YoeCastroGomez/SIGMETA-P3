@@ -159,3 +159,71 @@ SET SQL_SAFE_UPDATES = 1;
 
 -- Resultado
 SELECT id, codigo_interno, nombre, estado FROM producto ORDER BY id;
+
+
+-- =========================================================================
+-- PARTE C - DEMAS CAMPOS DE TEXTO Y PRECIO REFERENCIAL
+-- Desde ahora los BO guardan TODOS los textos en MAYUSCULAS:
+--   codigos (interno, fabricante, proveedor): mayusculas y sin espacios
+--   descripciones de categorias y productos: mayusculas y sin tildes
+--   la imagen no se toca (es el nombre de un archivo)
+-- Ademas el precio referencial ahora es obligatorio: a los productos que no
+-- lo tenian se les pone su precio de venta (el Administrador lo ajusta luego).
+-- Se puede ejecutar mas de una vez.
+-- =========================================================================
+SET SQL_SAFE_UPDATES = 0;
+
+START TRANSACTION;
+
+UPDATE categoria
+SET descripcion = NULLIF(UPPER(TRIM(
+           REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+           REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+           REPLACE(REPLACE(REPLACE(descripcion COLLATE utf8mb4_bin, '   ', ' '), '  ', ' '), '  ', ' '),
+               'á', 'a'), 'é', 'e'), 'í', 'i'), 'ó', 'o'), 'ú', 'u'), 'ü', 'u'),
+               'à', 'a'), 'è', 'e'), 'ì', 'i'), 'ò', 'o'), 'ù', 'u'),
+               'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U'), 'Ü', 'U'),
+               'À', 'A'), 'È', 'E'), 'Ì', 'I'), 'Ò', 'O'), 'Ù', 'U')
+       )), '');
+
+UPDATE producto
+SET codigo_interno    = UPPER(REPLACE(REPLACE(REPLACE(TRIM(codigo_interno), ' ', ''), '\t', ''), '\n', '')),
+    codigo_fabricante = NULLIF(UPPER(REPLACE(REPLACE(REPLACE(TRIM(codigo_fabricante), ' ', ''), '\t', ''), '\n', '')), ''),
+    codigo_proveedor  = NULLIF(UPPER(REPLACE(REPLACE(REPLACE(TRIM(codigo_proveedor), ' ', ''), '\t', ''), '\n', '')), ''),
+    descripcion       = NULLIF(UPPER(TRIM(
+           REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+           REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+           REPLACE(REPLACE(REPLACE(descripcion COLLATE utf8mb4_bin, '   ', ' '), '  ', ' '), '  ', ' '),
+               'á', 'a'), 'é', 'e'), 'í', 'i'), 'ó', 'o'), 'ú', 'u'), 'ü', 'u'),
+               'à', 'a'), 'è', 'e'), 'ì', 'i'), 'ò', 'o'), 'ù', 'u'),
+               'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U'), 'Ü', 'U'),
+               'À', 'A'), 'È', 'E'), 'Ì', 'I'), 'Ò', 'O'), 'Ù', 'U')
+       )), '');
+
+UPDATE producto
+SET precio_referencial = precio_venta
+WHERE precio_referencial IS NULL OR precio_referencial <= 0;
+
+COMMIT;
+
+SET SQL_SAFE_UPDATES = 1;
+
+-- Para revisar: productos con precio de venta menor que el costo.
+-- Desde ahora el BO no deja guardarlos asi; el Administrador debe corregirlos desde la pantalla.
+SELECT id, codigo_interno, nombre, precio_venta, costo_unitario
+FROM producto
+WHERE precio_venta < costo_unitario;
+
+-- Para revisar: codigos que se repiten entre dos productos activos (el lector de barras no sabria cual
+-- elegir). Desde ahora el BO no lo permite; el Administrador debe cambiar uno de los dos codigos.
+SELECT a.id, a.codigo_interno, a.nombre,
+       b.id AS otro_id, b.codigo_interno AS otro_codigo_interno, b.nombre AS otro_nombre
+FROM producto a
+JOIN producto b ON a.id < b.id AND a.estado = TRUE AND b.estado = TRUE
+WHERE a.codigo_interno    IN (b.codigo_interno, b.codigo_fabricante, b.codigo_proveedor)
+   OR a.codigo_fabricante IN (b.codigo_interno, b.codigo_fabricante, b.codigo_proveedor)
+   OR a.codigo_proveedor  IN (b.codigo_interno, b.codigo_fabricante, b.codigo_proveedor);
+
+-- Resultado
+SELECT id, codigo_interno, codigo_fabricante, codigo_proveedor, nombre, descripcion, precio_referencial
+FROM producto ORDER BY id;

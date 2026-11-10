@@ -23,8 +23,9 @@ import java.util.List;
 // RF006: servicio REST de categorias de productos.
 //
 //   GET    /api/categorias                   listar todas (activas e inactivas)
-//   GET    /api/categorias?nombre=herra      buscar por nombre (coincidencia parcial, activas e inactivas)
-//   GET    /api/categorias?estado=true       listar por estado (true activas, false inactivas)
+//   GET    /api/categorias?nombre=herra&estado=false
+//                                            filtros de la pantalla; se combinan y cada uno es opcional
+//                                            (nombre: parte del nombre; estado: true activas, false inactivas)
 //   GET    /api/categorias/3                 obtener una por id
 //   POST   /api/categorias                   registrar (solo Administrador)
 //   PUT    /api/categorias/3                 modificar (solo Administrador)
@@ -46,11 +47,8 @@ public class CategoriaRS extends VentanillaBase {
                            @QueryParam("nombre") String nombre,
                            @QueryParam("estado") Boolean estado) {
         return ejecutar(ticket, id -> {
-            if (nombre != null && !nombre.isBlank()) {
-                return categoriaBO.buscarPorNombre(nombre.trim());
-            }
-            if (estado != null) {
-                return categoriaBO.listarPorEstado(estado);
+            if ((nombre != null && !nombre.isBlank()) || estado != null) {
+                return categoriaBO.buscar(nombre, estado);   // nombre + estado juntos
             }
             // listarTodos del BO solo trae las activas; la pantalla muestra todas con su estado
             List<Categoria> todas = new ArrayList<>(categoriaBO.listarPorEstado(true));
