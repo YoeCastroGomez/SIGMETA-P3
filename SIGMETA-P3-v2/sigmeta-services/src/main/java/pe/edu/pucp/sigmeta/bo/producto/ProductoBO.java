@@ -20,6 +20,8 @@ public interface ProductoBO {
     List<Producto> buscarPorNombre(String nombre) throws SQLException;
     List<Producto> listarPorCategoria(int idCategoria) throws SQLException;
     List<Producto> listarPorEstado(boolean estado) throws SQLException;
+    // busqueda de la pantalla Productos: los filtros se combinan; null = ese filtro no se aplica
+    List<Producto> buscar(String nombre, Integer idCategoria, Boolean estado) throws SQLException;
 
     // RF012: productos en su stock minimo o por debajo
     List<Producto> listarConStockBajo() throws SQLException;

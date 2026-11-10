@@ -64,6 +64,9 @@ public class CategoriaBOImpl implements CategoriaBO {
         verificarPermiso(idResponsable);
         Transaccion.ejecutar(() -> {
             Categoria categoria = obtenerExistente(idCategoria);
+            if (!categoria.isEstado()) {
+                throw new IllegalStateException("La categoria " + categoria.getNombre() + " ya esta desactivada");
+            }
             // RF006: no puede desactivarse una categoria con productos activos asociados
             boolean tieneProductosActivos = productoDAO.listarTodos().stream()
                     .anyMatch(p -> p.getCategoria().getId() == idCategoria);
@@ -114,6 +117,26 @@ public class CategoriaBOImpl implements CategoriaBO {
         });
     }
 
+    // RF006: busqueda de la pantalla Categorias con los filtros combinados (nombre + estado).
+    // Cada filtro es opcional: null no filtra. Ej.: "herra" + inactivas.
+    @Override
+    public List<Categoria> buscar(String nombre, Boolean estado) throws SQLException {
+        String texto = nombre == null || nombre.isBlank() ? null
+                : normalizarNombre(Validador.textoOpcional(nombre, "nombre", 100));
+        return Transaccion.ejecutar(() -> {
+            List<Categoria> categorias = new ArrayList<>();
+            if (estado == null || estado) {
+                categorias.addAll(categoriaDAO.listarPorEstado(true));
+            }
+            if (estado == null || !estado) {
+                categorias.addAll(categoriaDAO.listarPorEstado(false));
+            }
+            return categorias.stream()
+                    .filter(c -> texto == null || normalizarNombre(c.getNombre()).contains(texto))
+                    .toList();
+        });
+    }
+
     // RF006: las categorias las mantiene el Administrador
     private void verificarPermiso(int idResponsable) throws SQLException {
         usuarioBO.verificarRol(idResponsable, TipoRol.ADMINISTRADOR);
@@ -135,7 +158,9 @@ public class CategoriaBOImpl implements CategoriaBO {
     private void validarDatos(Categoria categoria) {
         Validador.obligatorio(categoria, "categoria");
         categoria.setNombre(normalizarNombre(Validador.textoObligatorio(categoria.getNombre(), "nombre", 100)));
-        categoria.setDescripcion(Validador.textoOpcional(categoria.getDescripcion(), "descripcion", 255));
+        // la descripcion tambien se guarda en MAYUSCULAS y sin tildes
+        categoria.setDescripcion(TextoNormalizado.opcional(
+                Validador.textoOpcional(categoria.getDescripcion(), "descripcion", 255)));
     }
 
     // la tabla no tiene UNIQUE en nombre; se controla entre las categorias activas y las desactivadas.

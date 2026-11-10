@@ -31,9 +31,14 @@
     <p class="mb-2">
         ¿Seguro que desea desactivar el producto <strong>@porDesactivar?.CodigoInterno · @porDesactivar?.Nombre</strong>?
     </p>
-    <p class="small text-muted mb-0">
+    <p class="small text-muted mb-2">
         No se borra: queda inactivo y conserva su historial, pero ya no se puede elegir en documentos nuevos
         ni modificar.
+    </p>
+    @* RF005 no incluye reactivar: la desactivación es definitiva y el nombre y el código interno no pueden volver a usarse *@
+    <p class="small text-danger fw-semibold mb-0">
+        Esta acción no se puede deshacer: no podrá reactivarlo ni registrar otro producto con el mismo nombre
+        o código interno.
     </p>
 </Confirmacion>
 
@@ -71,7 +76,7 @@
             <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
         </div>
     </form>
-    <div class="form-text">Se busca por nombre; si está vacío, por categoría; si tampoco hay categoría, por estado.</div>
+    <div class="form-text">Los filtros se combinan: por ejemplo, parte del nombre + una categoría + inactivos. Los vacíos no filtran.</div>
 </div>
 
 @if (productos is null)
@@ -213,27 +218,36 @@ else
         descripcion = "Resultado del buscador por código o nombre";
     }
 
+    // GET /api/productos?nombre=..&categoria=..&estado=.. : los filtros llenos se combinan (ProductoBO.buscar)
     private async Task Buscar()
     {
         exito = null;
-        if (!string.IsNullOrWhiteSpace(filtroNombre))
+        var parametros = new List<string>();
+        var texto = new List<string>();
+        var nombre = filtroNombre.Trim();
+        if (nombre != "")
         {
-            await Cargar($"productos?nombre={Uri.EscapeDataString(filtroNombre.Trim())}",          // buscarPorNombre
-                         $"Productos activos cuyo nombre contiene \"{filtroNombre.Trim()}\"");
+            parametros.Add($"nombre={Uri.EscapeDataString(nombre)}");
+            texto.Add($"nombre contiene \"{nombre}\"");
         }
-        else if (filtroCategoria != 0)
+        if (filtroCategoria != 0)
         {
-            var nombre = categorias.FirstOrDefault(c => c.Id == filtroCategoria)?.Nombre;
-            await Cargar($"productos?categoria={filtroCategoria}", $"Productos activos de la categoría {nombre}");   // listarPorCategoria
+            parametros.Add($"categoria={filtroCategoria}");
+            texto.Add($"categoría {categorias.FirstOrDefault(c => c.Id == filtroCategoria)?.Nombre}");
         }
-        else if (filtroEstado != "")
+        if (filtroEstado != "")
         {
-            await Cargar($"productos?estado={filtroEstado}",                                           // listarPorEstado
-                         filtroEstado == "true" ? "Productos activos" : "Productos inactivos");
+            parametros.Add($"estado={filtroEstado}");
+            texto.Add(filtroEstado == "true" ? "solo activos" : "solo inactivos");
+        }
+
+        if (parametros.Count == 0)
+        {
+            await Cargar("productos", null);   // todos
         }
         else
         {
-            await Cargar("productos", null);                                                           // todos
+            await Cargar("productos?" + string.Join("&", parametros), "Filtro: " + string.Join(" · ", texto));
         }
     }
 

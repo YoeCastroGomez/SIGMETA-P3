@@ -26,31 +26,37 @@
               AlConfirmar="ConfirmarDesactivar"
               AlCancelar="() => porDesactivar = null">
     <p class="mb-2">¿Seguro que desea desactivar la categoría <strong>@porDesactivar?.Nombre</strong>?</p>
-    <p class="small text-muted mb-0">
+    <p class="small text-muted mb-2">
         No se borra: queda inactiva. Solo se puede desactivar si ya no tiene productos activos.
         Una categoría inactiva ya no se puede modificar ni elegir en productos nuevos.
+    </p>
+    @* RF006 no incluye reactivar: la desactivación es definitiva y el nombre no puede volver a usarse *@
+    <p class="small text-danger fw-semibold mb-0">
+        Esta acción no se puede deshacer: no podrá reactivarla ni registrar otra categoría con el mismo nombre.
     </p>
 </Confirmacion>
 
 @if (formulario is not null)
 {
-    <EditForm Model="@formulario" OnValidSubmit="Guardar">
-        <DataAnnotationsValidator />
+    @* novalidate: sin globos del navegador. El error del nombre sale debajo del cuadro (Campo Error=...);
+       los del BO (nombre repetido, sin permiso...) en el aviso rojo de arriba. *@
+    <EditForm Model="@formulario" OnSubmit="Guardar" novalidate>
         <div class="card card-body mb-3">
             <h2 class="h6 fw-semibold mb-3">@(formulario.Id == 0 ? "Nueva categoría" : "Editar categoría")</h2>
-            <ValidationSummary class="alert alert-warning" />
             <div class="row">
                 <div class="col-md-6">
                     @* El BO guarda el nombre en MAYUSCULAS y sin tildes ("Látex" -> "LATEX"); aquí solo se muestra así al escribir *@
-                    <Campo Etiqueta="Nombre" Id="nombre" Obligatorio="true"
+                    <Campo Etiqueta="Nombre" Id="nombre" Obligatorio="true" Error="@ErrorNombre"
                            Ayuda="Se guarda en mayúsculas y sin tildes. No puede repetirse.">
-                        <InputText id="nombre" class="form-control" maxlength="100" style="text-transform: uppercase"
-                                   @bind-Value="formulario.Nombre" />
+                        <InputText id="nombre" class="@(ErrorNombre is null ? "form-control" : "form-control is-invalid")"
+                                   maxlength="100" style="text-transform: uppercase"
+                                   @bind-Value="formulario.Nombre" @oninput="e => nombreEscrito = e.Value?.ToString()" />
                     </Campo>
                 </div>
                 <div class="col-md-6">
                     <Campo Etiqueta="Descripción" Id="descripcion">
-                        <InputText id="descripcion" class="form-control" maxlength="255" @bind-Value="formulario.Descripcion" />
+                        <InputText id="descripcion" class="form-control" maxlength="255" style="text-transform: uppercase"
+                                   @bind-Value="formulario.Descripcion" />
                     </Campo>
                 </div>
             </div>
@@ -85,7 +91,7 @@
             <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
         </div>
     </form>
-    <div class="form-text">Se busca por nombre (parte del nombre); si está vacío, por estado.</div>
+    <div class="form-text">Los filtros se combinan: por ejemplo, parte del nombre + inactivas. Los vacíos no filtran.</div>
 </div>
 
 @if (categorias is null)
@@ -154,18 +160,17 @@ else
     private async Task Buscar()
     {
         exito = null;
+        // GET /api/categorias?nombre=..&estado=.. : los filtros llenos se combinan (CategoriaBO.buscar)
+        var parametros = new List<string>();
         if (!string.IsNullOrWhiteSpace(filtroNombre))
         {
-            await Cargar($"categorias?nombre={Uri.EscapeDataString(filtroNombre.Trim())}");   // buscarPorNombre
+            parametros.Add($"nombre={Uri.EscapeDataString(filtroNombre.Trim())}");
         }
-        else if (filtroEstado != "")
+        if (filtroEstado != "")
         {
-            await Cargar($"categorias?estado={filtroEstado}");                                // listarPorEstado
+            parametros.Add($"estado={filtroEstado}");
         }
-        else
-        {
-            await Cargar("categorias");                                                       // todas
-        }
+        await Cargar(parametros.Count == 0 ? "categorias" : "categorias?" + string.Join("&", parametros));
     }
 
     private async Task Limpiar()
@@ -212,33 +217,49 @@ else
     {
         error = exito = null;
         formulario = new Categoria();
+        nombreEscrito = null;
+        intentoGuardar = false;
     }
 
     private void Editar(Categoria c)
     {
         error = exito = null;
         formulario = c.Copia();
+        nombreEscrito = null;
+        intentoGuardar = false;
     }
 
     private void Cerrar() => formulario = null;
 
     // POST /api/categorias o PUT /api/categorias/{id}. Solo se ejecuta si pasan las validaciones de la pantalla.
+    // Validación en pantalla, con el mismo estándar que el formulario de productos: el error sale en rojo
+    // debajo del cuadro mientras se escribe (o al pulsar Guardar si no se tocó). El BO vuelve a validar.
+    private string? nombreEscrito;    // lo que se está escribiendo (InputText pasa el valor recién al salir)
+    private bool intentoGuardar;
+
+    private string? ErrorNombre =>
+        formulario is not null && (intentoGuardar || nombreEscrito is not null)
+        && string.IsNullOrWhiteSpace(nombreEscrito ?? formulario.Nombre)
+            ? "El nombre es obligatorio."
+            : null;
+
     private async Task Guardar()
     {
         error = exito = null;
+        intentoGuardar = true;
+        if (ErrorNombre is not null)
+        {
+            return;   // el mensaje ya está debajo del cuadro
+        }
         guardando = true;
         try
         {
+            // el BO preprocesa los textos (MAYUSCULAS y sin tildes) y devuelve la categoria ya guardada
             var nueva = formulario!.Id == 0;
-            if (nueva)
-            {
-                await Api.Post<Categoria>("categorias", formulario);
-            }
-            else
-            {
-                await Api.Put<Categoria>($"categorias/{formulario.Id}", formulario);
-            }
-            var nombre = formulario.Nombre.Trim().ToUpperInvariant();
+            var guardada = nueva
+                ? await Api.Post<Categoria>("categorias", formulario)
+                : await Api.Put<Categoria>($"categorias/{formulario.Id}", formulario);
+            var nombre = guardada?.Nombre ?? formulario.Nombre;
             formulario = null;
             await Buscar();   // vuelve a pedir la lista al Java para ver el cambio guardado
             exito = nueva ? $"Se registró la categoría {nombre}." : $"Se modificó la categoría {nombre}.";

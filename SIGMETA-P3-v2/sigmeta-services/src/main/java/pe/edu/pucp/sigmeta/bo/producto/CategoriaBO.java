@@ -15,4 +15,6 @@ public interface CategoriaBO {
     List<Categoria> listarTodos() throws SQLException;
     List<Categoria> buscarPorNombre(String nombre) throws SQLException;
     List<Categoria> listarPorEstado(boolean estado) throws SQLException;
+    // busqueda de la pantalla Categorias: nombre y estado se combinan; null = ese filtro no se aplica
+    List<Categoria> buscar(String nombre, Boolean estado) throws SQLException;
 }
