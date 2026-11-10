@@ -35,6 +35,13 @@ public final class SesionServicio {
     @FunctionalInterface
     public interface Accion<T> { T ejecutar(int idAutenticado) throws SQLException; }
     public <T> T ejecutar(Accion<T> accion) throws SQLException {
+        return ejecutar(accion, false);
+    }
+    // para consultas (GET): igual, pero la transaccion no toma el bloqueo global (ver Transaccion.consultar)
+    public <T> T consultar(Accion<T> accion) throws SQLException {
+        return ejecutar(accion, true);
+    }
+    private <T> T ejecutar(Accion<T> accion, boolean soloLectura) throws SQLException {
         if (cerrada) {
             throw new SecurityException("Su sesion fue cerrada. Vuelva a iniciar sesion");
         }
@@ -45,7 +52,7 @@ public final class SesionServicio {
         if (ACTUAL.get() != null) throw new SecurityException("No se permite sustituir una sesion activa");
         ACTUAL.set(idUsuario);
         try {
-            return Transaccion.ejecutar(() -> {
+            Transaccion.Operacion<T> operacion = () -> {
                 Usuario usuario = new UsuarioBOImpl().obtener(idUsuario);
                 if (usuario == null || !usuario.isEstado() || !usuario.getRol().isEstado()) {
                     // RF001/RF002: si el Administrador desactivo al usuario (o a su rol) mientras estaba
@@ -54,7 +61,8 @@ public final class SesionServicio {
                     throw new SecurityException("Su usuario o su rol fue desactivado. Consulte con el Administrador");
                 }
                 return accion.ejecutar(idUsuario);
-            });
+            };
+            return soloLectura ? Transaccion.consultar(operacion) : Transaccion.ejecutar(operacion);
         } finally { ACTUAL.remove(); }
     }
     private void renovar() { expira = System.currentTimeMillis() + INACTIVIDAD_MAXIMA_MS; }
