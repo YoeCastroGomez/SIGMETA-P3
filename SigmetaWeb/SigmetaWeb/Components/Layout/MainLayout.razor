@@ -1,32 +1,80 @@
 @inherits LayoutComponentBase
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <CascadingValue Value="rol" Name="Rol">
     <div class="d-flex min-vh-100">
-        <aside class="sigmeta-sidebar d-flex flex-column @(menuAbierto ? "abierto" : "")">
-            <div class="d-flex align-items-center gap-2 px-3 py-3 border-bottom border-secondary">
-                <span class="sigmeta-logo rounded d-flex align-items-center justify-content-center text-white fw-bold">SM</span>
-                <div>
-                    <div class="text-white fw-bold">SIGMETA</div>
-                    <div class="small text-white-50">Grupo Meta</div>
-                </div>
+        @if (menuAbierto)
+        {
+            <button type="button" class="sigmeta-sidebar-backdrop d-xl-none" aria-label="Cerrar menú lateral"
+                    @onclick="() => menuAbierto = false"></button>
+        }
+        <aside class="sigmeta-sidebar d-flex flex-column @(menuAbierto ? "abierto" : "")" aria-label="Navegación lateral">
+            <a class="sigmeta-brand text-decoration-none" href="/" aria-label="SIGMETA, ir al inicio">
+                <span class="sigmeta-brand-emblema" aria-hidden="true">
+                    <svg viewBox="0 0 48 48" width="32" height="32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="5" width="38" height="38" rx="11" stroke="white" stroke-opacity=".24"/>
+                        <path d="M14 31V19L24 13L34 19V31L24 37L14 31Z" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
+                        <path d="M14 19L24 25L34 19M24 25V37" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>
+                </span>
+                <span class="sigmeta-brand-texto">
+                    <span class="sigmeta-brand-nombre">SIGMETA<span class="sigmeta-brand-punto">.</span></span>
+                    <span class="sigmeta-brand-leyenda">GESTIÓN EMPRESARIAL</span>
+                </span>
+            </a>
+            <div class="sigmeta-sidebar-contenido">
+                <NavMenu Rol="@rol" AlNavegar="() => menuAbierto = false" />
             </div>
-            <NavMenu Rol="@rol" AlNavegar="() => menuAbierto = false" />
+            <div class="sigmeta-sidebar-perfil">
+                <div class="sigmeta-avatar" aria-hidden="true">@InicialesUsuario</div>
+                <div class="sigmeta-perfil-info">
+                    <div class="sigmeta-perfil-nombre" title="@nombreCompleto">@nombreCompleto</div>
+                    <div class="sigmeta-perfil-rol">@rol</div>
+                </div>
+                <a href="/mi-clave" class="sigmeta-perfil-config" title="Mi cuenta" aria-label="Mi cuenta">
+                    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+                        <circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/>
+                    </svg>
+                </a>
+            </div>
         </aside>
 
-        <div class="flex-grow-1 d-flex flex-column" style="min-width: 0;">
-            <header class="d-flex align-items-center gap-3 bg-white border-bottom px-4 py-2">
-                <button class="btn btn-sm btn-outline-secondary d-xl-none" @onclick="() => menuAbierto = !menuAbierto">Menú</button>
-                <div class="ms-auto d-flex align-items-center gap-3">
-                    <a class="small text-decoration-none" href="/mi-clave" title="Cambiar mi clave">
-                        <strong>@usuario</strong>
-                        <span class="text-muted d-none d-sm-inline">· @nombreCompleto · @rol</span>
+        <div class="sigmeta-contenido flex-grow-1 d-flex flex-column" style="min-width: 0;">
+            <header class="sigmeta-topbar d-flex align-items-center gap-3">
+                <button type="button" class="sigmeta-menu-movil btn btn-sm d-xl-none" aria-label="Abrir menú"
+                        aria-expanded="@menuAbierto" @onclick="() => menuAbierto = !menuAbierto">
+                    <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <div class="sigmeta-topbar-identidad d-none d-sm-flex align-items-center gap-2">
+                    <span class="sigmeta-topbar-indicador" aria-hidden="true"></span>
+                    <span>Espacio de trabajo</span>
+                </div>
+                <div class="ms-auto d-flex align-items-center gap-2 gap-md-3">
+                    <button type="button" class="sigmeta-tema-btn" @onclick="AlternarTema"
+                            aria-label="@(temaOscuro ? "Activar modo claro" : "Activar modo oscuro")"
+                            title="@(temaOscuro ? "Activar modo claro" : "Activar modo oscuro")">
+                        @if (temaOscuro)
+                        {
+                            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+                        }
+                        else
+                        {
+                            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20.1 15.7A8.5 8.5 0 0 1 8.3 3.9 8.5 8.5 0 1 0 20.1 15.7Z"/></svg>
+                        }
+                    </button>
+                    <a class="sigmeta-topbar-usuario text-decoration-none" href="/mi-clave" title="Cambiar mi clave">
+                        <span class="sigmeta-topbar-avatar" aria-hidden="true">@InicialesUsuario</span>
+                        <span class="d-none d-md-flex flex-column">
+                            <strong>@usuario</strong>
+                            <small>@rol</small>
+                        </span>
                     </a>
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="CerrarSesion">Cerrar sesión</button>
+                    <button class="sigmeta-salir btn btn-sm" @onclick="CerrarSesion">Cerrar sesión</button>
                 </div>
             </header>
 
-            <main class="container-fluid p-3 p-md-4" style="max-width: 1200px;">
+            <main class="sigmeta-main container-fluid p-3 p-md-4" style="max-width: 1240px;">
                 @Body
             </main>
         </div>
@@ -46,9 +94,11 @@
     [CascadingParameter] private Task<AuthenticationState> EstadoAuth { get; set; } = default!;
 
     private bool menuAbierto;
+    private bool temaOscuro;
     private string usuario = "";
     private string nombreCompleto = "";
     private string rol = "";
+    private string InicialesUsuario => string.Join("", nombreCompleto.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => char.ToUpperInvariant(x[0])));
 
     protected override async Task OnParametersSetAsync()
     {
@@ -57,6 +107,28 @@
         usuario = user.Identity?.Name ?? "";
         nombreCompleto = $"{user.FindFirst(ClaimTypes.GivenName)?.Value} {user.FindFirst(ClaimTypes.Surname)?.Value}";
         rol = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                temaOscuro = (await JS.InvokeAsync<string>("sigmetaTheme.get")) == "dark";
+                StateHasChanged();
+            }
+            catch (JSException) { }
+        }
+    }
+
+    private async Task AlternarTema()
+    {
+        try
+        {
+            temaOscuro = (await JS.InvokeAsync<string>("sigmetaTheme.set", temaOscuro ? "light" : "dark")) == "dark";
+        }
+        catch (JSException) { }
     }
 
     // /auth/logout cierra la sesión del Java y borra la cookie (AuthEndpoints)

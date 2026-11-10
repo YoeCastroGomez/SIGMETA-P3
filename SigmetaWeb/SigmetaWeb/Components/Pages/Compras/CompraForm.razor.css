@@ -1,0 +1,12 @@
+/* RF011: campos numericos sin controles de incremento/decremento.
+   CSS aislado para no afectar otras pantallas de SIGMETA. */
+input.sin-flechas::-webkit-inner-spin-button,
+input.sin-flechas::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input.sin-flechas {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}

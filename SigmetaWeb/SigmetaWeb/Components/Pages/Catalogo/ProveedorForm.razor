@@ -1,108 +1,167 @@
 @page "/proveedores/nuevo"
 @page "/proveedores/editar/{Id:int}"
+@inject ApiJava Api
 @inject NavigationManager Nav
+@using SigmetaWeb.Components.Pages.Catalogo
 
 <PageTitle>@Titulo · SIGMETA</PageTitle>
 
-@* RF004 · Formulario de proveedor. Solo visual (Lab 9): Guardar no registra, solo vuelve a la lista. *@
 <Encabezado Rf="RF004" Titulo="@Titulo">
     <a class="btn btn-outline-secondary" href="/proveedores">Volver a la lista</a>
 </Encabezado>
 
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Identificación</h2>
-    <div class="row">
-        <div class="col-md-4">
-            <Campo Etiqueta="RUC" Id="ruc" Obligatorio="true" Ayuda="Único. 11 dígitos.">
-                <input id="ruc" class="form-control" maxlength="11" value="@ejemplo?.Ruc" />
-            </Campo>
-        </div>
-        <div class="col-md-8">
-            <Campo Etiqueta="Razón social" Id="razonSocial" Obligatorio="true" Ayuda="No puede repetirse.">
-                <input id="razonSocial" class="form-control" maxlength="150" value="@ejemplo?.RazonSocial" />
-            </Campo>
-        </div>
-        <div class="col-12">
-            <Campo Etiqueta="Rubro" Id="rubro">
-                <input id="rubro" class="form-control" maxlength="100" value="@ejemplo?.Rubro" />
-            </Campo>
-        </div>
-    </div>
-</div>
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Datos de contacto</h2>
-    <div class="row">
-        <div class="col-12">
-            <Campo Etiqueta="Dirección" Id="direccion">
-                <input id="direccion" class="form-control" maxlength="200" value="@ejemplo?.Direccion" />
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            <Campo Etiqueta="Teléfono" Id="telefono" Ayuda="Dígitos, espacios, + y -.">
-                <input id="telefono" type="tel" class="form-control" maxlength="20" value="@ejemplo?.Telefono" />
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            <Campo Etiqueta="Correo" Id="correo">
-                <input id="correo" type="email" class="form-control" maxlength="120" value="@ejemplo?.Correo" />
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            <Campo Etiqueta="Persona de contacto" Id="contacto">
-                <input id="contacto" class="form-control" maxlength="100" value="@ejemplo?.NombreContacto" />
-            </Campo>
-        </div>
-    </div>
-</div>
+@if (proveedor is null)
+{
+    <p class="text-muted">Cargando proveedor...</p>
+}
+else
+{
+    <EditForm Model="@proveedor" OnValidSubmit="Guardar">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="alert alert-warning" />
 
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Condición comercial</h2>
-    <div class="row">
-        <div class="col-md-4">
-            <Campo Etiqueta="Plazo de entrega (días)" Id="plazo">
-                <input id="plazo" type="number" min="0" class="form-control" value="@(ejemplo?.PlazoEntregaDias ?? 0)" />
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            <Campo Etiqueta="Condición de pago" Id="condicion" Obligatorio="true">
-                <select id="condicion" class="form-select">
-                    <option value="CONTADO" selected="@(ejemplo?.CondicionPago == "CONTADO")">Contado</option>
-                    <option value="CREDITO" selected="@(ejemplo?.CondicionPago == "CREDITO")">Crédito</option>
-                </select>
-            </Campo>
-        </div>
-        @if (!EsNuevo)
-        {
-            <div class="col-md-4">
-                <Campo Etiqueta="Estado" Id="estado">
-                    <div class="form-check form-switch mt-1">
-                        <input id="estado" class="form-check-input" type="checkbox" checked="@ejemplo!.Activo" />
-                        <label class="form-check-label" for="estado">Activo</label>
-                    </div>
-                </Campo>
+        <div class="card card-body mb-3">
+            <h2 class="h6 fw-semibold mb-3">Identificación</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    <Campo Etiqueta="RUC" Id="ruc" Obligatorio="true" Ayuda="Único, 11 dígitos.">
+                        <InputText id="ruc" class="form-control" maxlength="11" @bind-Value="proveedor.Ruc" />
+                        <ValidationMessage For="@(() => proveedor.Ruc)" />
+                    </Campo>
+                </div>
+                <div class="col-md-8">
+                    <Campo Etiqueta="Razón social" Id="razonSocial" Obligatorio="true">
+                        <InputText id="razonSocial" class="form-control" maxlength="150" @bind-Value="proveedor.RazonSocial" />
+                        <ValidationMessage For="@(() => proveedor.RazonSocial)" />
+                    </Campo>
+                </div>
+                <div class="col-12">
+                    <Campo Etiqueta="Rubro" Id="rubro">
+                        <InputText id="rubro" class="form-control" maxlength="100" @bind-Value="proveedor.Rubro" />
+                    </Campo>
+                </div>
             </div>
-        }
-    </div>
-
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
-        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-        <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary" href="/proveedores">Cancelar</a>
-            <button class="btn btn-primary" @onclick="Volver">Guardar</button>
         </div>
-    </div>
-</div>
+
+        <div class="card card-body mb-3">
+            <h2 class="h6 fw-semibold mb-3">Datos de contacto</h2>
+            <div class="row">
+                <div class="col-12">
+                    <Campo Etiqueta="Dirección" Id="direccion">
+                        <InputText id="direccion" class="form-control" maxlength="200" @bind-Value="proveedor.Contacto.Direccion" />
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    <Campo Etiqueta="Teléfono" Id="telefono">
+                        <InputText id="telefono" class="form-control" maxlength="20" @bind-Value="proveedor.Contacto.Telefono" />
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    <Campo Etiqueta="Correo" Id="correo">
+                        <InputText id="correo" type="email" class="form-control" maxlength="120" @bind-Value="proveedor.Contacto.Correo" />
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    <Campo Etiqueta="Persona de contacto" Id="contacto">
+                        <InputText id="contacto" class="form-control" maxlength="100" @bind-Value="proveedor.Contacto.NombreContacto" />
+                    </Campo>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-body mb-3">
+            <h2 class="h6 fw-semibold mb-3">Condición comercial</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    <Campo Etiqueta="Plazo de entrega (días)" Id="plazo">
+                        <InputNumber id="plazo" class="form-control" min="0" @bind-Value="proveedor.PlazoEntregaDias" />
+                        <ValidationMessage For="@(() => proveedor.PlazoEntregaDias)" />
+                    </Campo>
+                </div>
+                <div class="col-md-4">
+                    <Campo Etiqueta="Condición de pago" Id="condicion" Obligatorio="true">
+                        <InputSelect id="condicion" class="form-select" @bind-Value="proveedor.CondicionPago">
+                            <option value="CONTADO">Contado</option>
+                            <option value="CREDITO">Crédito</option>
+                        </InputSelect>
+                    </Campo>
+                </div>
+                @if (!EsNuevo)
+                {
+                    <div class="col-md-4">
+                        <div class="small text-muted">Estado</div>
+                        <Estado Texto="@(proveedor.Estado ? "Activo" : "Inactivo")" />
+                        <div class="small text-muted">La desactivación se realiza desde la lista.</div>
+                    </div>
+                }
+            </div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+                <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-outline-secondary" href="/proveedores">Cancelar</a>
+                    <button type="submit" class="btn btn-primary" disabled="@guardando">
+                        @(guardando ? "Guardando..." : "Guardar")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+}
 
 @code {
     [Parameter] public int? Id { get; set; }
 
+    private Proveedor? proveedor;
+    private string? error;
+    private bool guardando;
     private bool EsNuevo => Id is null;
     private string Titulo => EsNuevo ? "Nuevo proveedor" : "Editar proveedor";
 
-    // Al editar se muestra un proveedor de ejemplo fijo (Lab 9: sin consultas).
-    private ProveedorFila? ejemplo => EsNuevo ? null : MuestrasCatalogo.Proveedores[0];
+    protected override async Task OnParametersSetAsync()
+    {
+        error = null;
+        if (EsNuevo)
+        {
+            proveedor = new Proveedor();
+            return;
+        }
+        proveedor = null;
+        try
+        {
+            proveedor = await Api.Get<Proveedor>($"proveedores/{Id}");
+            if (proveedor is null)
+                error = $"No existe el proveedor con ID {Id}.";
+            else
+                proveedor.Contacto ??= new DatosContactoProveedor();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+    }
 
-    // Lab 9: no se registra nada, solo se navega.
-    private void Volver() => Nav.NavigateTo("/proveedores");
+    private async Task Guardar()
+    {
+        if (proveedor is null) return;
+        error = null;
+        guardando = true;
+        try
+        {
+            if (EsNuevo)
+                await Api.Post<Proveedor>("proveedores", proveedor);
+            else
+                await Api.Put<Proveedor>($"proveedores/{Id}", proveedor);
+            Nav.NavigateTo("/proveedores");
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
 }

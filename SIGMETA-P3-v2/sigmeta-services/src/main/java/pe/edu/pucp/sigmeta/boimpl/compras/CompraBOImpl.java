@@ -81,18 +81,39 @@ public class CompraBOImpl implements CompraBO {
             if (existente.getProveedor().getId() != compra.getProveedor().getId()) {
                 verificarProveedorActivo(compra.getProveedor().getId());
             }
-            // Una modificacion de cabecera no puede desajustar el importe de las lineas guardadas.
-            List<DetalleCompra> lineas = new java.util.ArrayList<>();
-            for (DetalleCompra linea : detalleCompraDAO.listAll()) {
-                if (linea.getCompra().getId() == compra.getId()) {
-                    lineas.add(linea);
-                }
-            }
-            if (lineas.isEmpty()) {
+            // Si se envian detalles, reemplazamos las lineas de una compra aun no recibida.
+            // Si no se envian, conservamos las lineas existentes (edicion solo de cabecera).
+            List<DetalleCompra> anteriores = detalleCompraDAO.listarPorCompra(compra.getId());
+            if (anteriores.isEmpty()) {
                 throw new IllegalArgumentException("La compra no tiene detalles registrados");
             }
+            List<DetalleCompra> nuevas = compra.getDetalles();
+            boolean modificarLineas = nuevas != null && !nuevas.isEmpty();
+            if (modificarLineas) {
+                validarDetalles(nuevas);
+                for (DetalleCompra anterior : anteriores) {
+                    if (anterior.getCantidadRecibida() > 0) {
+                        throw new IllegalStateException("No se pueden modificar detalles con cantidades recibidas");
+                    }
+                }
+            }
+            List<DetalleCompra> lineas = modificarLineas ? nuevas : anteriores;
             CalculoCompra.totales(compra, lineas);
+
+            if (modificarLineas) {
+                // La transaccion garantiza rollback si falla cualquier detalle o la cabecera.
+                // Reemplazamos solo compras REGISTRADAS y sin recepciones (restriccion del SP).
+                for (DetalleCompra anterior : anteriores) {
+                    detalleCompraDAO.remove(anterior);
+                }
+                for (DetalleCompra nueva : nuevas) {
+                    nueva.setId(0);
+                    nueva.setCompra(compra);
+                    detalleCompraDAO.save(nueva);
+                }
+            }
             compraDAO.update(compra);
+            compra.setDetalles(lineas);
             return compra;
         });
     }
@@ -122,7 +143,11 @@ public class CompraBOImpl implements CompraBO {
     public Compra obtener(int idCompra) throws SQLException {
         validarId(idCompra);
         return Transaccion.ejecutar(() -> {
-            return compraDAO.load(idCompra);
+            Compra compra = compraDAO.load(idCompra);
+            if (compra != null) {
+                compra.setDetalles(detalleCompraDAO.listarPorCompra(idCompra));
+            }
+            return compra;
         });
     }
 

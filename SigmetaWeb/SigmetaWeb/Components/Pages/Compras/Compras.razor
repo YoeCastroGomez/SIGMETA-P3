@@ -1,106 +1,233 @@
-﻿@page "/compras"
-
-@* RF011 - Listado de compras a proveedores.
-   Solo interfaz visual para el Laboratorio 9. *@
+@page "/compras"
+@inject ApiJava Api
+@using SigmetaWeb.Components.Pages.Compras
+@using SigmetaWeb.Components.Pages.Catalogo
+@using SigmetaWeb.Components.Shared
 
 <PageTitle>Compras · SIGMETA</PageTitle>
 
-<Encabezado Rf="RF011" Titulo="Compras a proveedores">
-    <a class="btn btn-primary" href="/compras/nueva">
-        Nueva compra
-    </a>
+<Encabezado Rf="RF011" Titulo="Compras a proveedores"
+            Subtitulo="Órdenes reales de compra, con historial de anulaciones.">
+    <a class="btn btn-primary" href="/compras/nueva">Nueva compra</a>
 </Encabezado>
 
-@* Filtros de búsqueda *@
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
+{
+    <div class="alert alert-success">@exito</div>
+}
+
 <div class="card card-body mb-3">
-    <div class="row g-3 align-items-end">
-
-        <Campo Etiqueta="Proveedor" Id="proveedor"
-               Clase="col-sm-6 col-md-4">
-            <input id="proveedor" class="form-control"
-                   placeholder="Buscar proveedor"
-                   @bind="filtroProveedor" @bind:event="oninput" />
+    <form class="row g-3 align-items-end" @onsubmit="Buscar" @onsubmit:preventDefault>
+        <Campo Etiqueta="Número de compra" Id="numeroCompraFiltro" Clase="col-sm-6 col-md-3">
+            <input id="numeroCompraFiltro" type="text" class="form-control"
+                   placeholder="Ej. OC-LAB11" @bind="filtroNumero" />
         </Campo>
-
-        <Campo Etiqueta="Desde" Id="fechaDesde"
-               Clase="col-sm-6 col-md-3">
-            <input id="fechaDesde" type="date"
-                   class="form-control" @bind="filtroDesde" />
+        <Campo Etiqueta="Proveedor" Id="proveedorCompra" Clase="col-sm-6 col-md-3">
+            <input id="proveedorCompra" type="text" class="form-control"
+                   list="sugerenciasProveedoresCompras" autocomplete="off"
+                   placeholder="Escribe o selecciona" @bind="filtroProveedorTexto" />
+            <datalist id="sugerenciasProveedoresCompras">
+                @foreach (var p in proveedores.OrderBy(p => p.RazonSocial))
+                {
+                    <option value="@p.RazonSocial"></option>
+                }
+            </datalist>
         </Campo>
-
-        <Campo Etiqueta="Hasta" Id="fechaHasta"
-               Clase="col-sm-6 col-md-3">
-            <input id="fechaHasta" type="date"
-                   class="form-control" @bind="filtroHasta" />
+        <Campo Etiqueta="Desde" Id="fechaDesdeCompra" Clase="col-sm-6 col-md-2">
+            <input id="fechaDesdeCompra" type="date" class="form-control" @bind="filtroDesde" />
         </Campo>
-
-        <div class="col-auto">
-            <button class="btn btn-dark" @onclick="Buscar">Buscar</button>
+        <Campo Etiqueta="Hasta" Id="fechaHastaCompra" Clase="col-sm-6 col-md-2">
+            <input id="fechaHastaCompra" type="date" class="form-control" @bind="filtroHasta" />
+        </Campo>
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-dark" disabled="@cargando">Buscar</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar" disabled="@cargando">Limpiar</button>
         </div>
-
-    </div>
+    </form>
 </div>
 
-@* Listado de ejemplo (mismos datos que Recepciones y Kardex) *@
 <div class="card mb-3">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
-
             <thead class="table-light">
                 <tr>
-                    <th>Número</th>
-                    <th>Proveedor</th>
-                    <th>Fecha</th>
-                    <th>Total</th>
-                    <th>Estado</th>
+                    <th>Número</th><th>Proveedor</th><th>Fecha</th><th>Total</th><th>Estado</th>
                     <th class="text-end">Acciones</th>
                 </tr>
             </thead>
-
             <tbody>
-                @foreach (var c in resultado)
+                @foreach (var c in ComprasPagina)
                 {
                     <tr>
                         <td>@c.Numero</td>
-                        <td>@c.Proveedor</td>
-                        <td>@c.Fecha.ToString("dd/MM/yyyy")</td>
+                        <td>@NombreProveedor(c.IdProveedor)</td>
+                        <td>@c.FechaEmision</td>
                         <td>S/ @c.Total.ToString("N2")</td>
                         <td><Estado Texto="@c.Estado" /></td>
                         <td class="text-end">
-                            <a class="btn btn-sm btn-outline-secondary"
-                               href="/compras/editar/@c.Id">
-                                Editar
-                            </a>
+                            <div class="d-inline-flex gap-1 text-nowrap">
+                                <a class="btn btn-sm btn-outline-primary" href="@($"/compras/detalle/{c.Id}")">Ver detalle</a>
+                                @if (c.Estado == "REGISTRADA" && !c.Anulado)
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/compras/editar/{c.Id}")">Editar</a>
+                                    @if (confirmarId == c.Id)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-danger" disabled="@cargando" @onclick="() => Anular(c)">Confirmar anulación</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => confirmarId = null">Cancelar</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => confirmarId = c.Id">Anular</button>
+                                    }
+                                }
+                            </div>
                         </td>
                     </tr>
                 }
-                @if (resultado.Count == 0)
+                @if (!cargando && error is null && resultado.Count == 0)
                 {
-                    <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
-                            No hay compras que coincidan con la búsqueda.
-                        </td>
-                    </tr>
+                    <tr><td colspan="6" class="text-center text-muted py-4">No hay compras que coincidan con la búsqueda.</td></tr>
+                }
+                @if (cargando && cargaInicial)
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Consultando compras y proveedores...</td></tr>
                 }
             </tbody>
-
         </table>
     </div>
+    @if (!cargando && error is null)
+    {
+        <Paginacion TotalRegistros="@resultado.Count"
+                    @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
+    }
 </div>
 
 @code {
-    private string filtroProveedor = "";
+    private List<CompraRest> compras = new();
+    private List<CompraRest> resultado = new();
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<CompraRest> ComprasPagina => tamanoPagina == 0
+        ? resultado
+        : resultado.Skip((Math.Clamp(paginaActual, 1, TotalPaginas) - 1) * tamanoPagina).Take(tamanoPagina);
+    private int TotalPaginas => tamanoPagina == 0 ? 1 : Math.Max(1, (int)Math.Ceiling((double)resultado.Count / tamanoPagina));
+    private void AjustarPagina() => paginaActual = Math.Clamp(paginaActual, 1, TotalPaginas);
+    private List<Proveedor> proveedores = new();
+    private string filtroProveedorTexto = "";
+    private string filtroNumero = "";
     private DateTime? filtroDesde;
     private DateTime? filtroHasta;
-    private List<CompraFila> resultado = MuestrasCompras.Compras.ToList();
+    private string? error;
+    private string? exito;
+    private int? confirmarId;
+    private bool cargando;
+    private bool cargaInicial = true;
+    private Dictionary<int, string> nombresProveedores = new();
 
-    private void Buscar()
+    protected override async Task OnInitializedAsync()
     {
-        resultado = MuestrasCompras.Compras
-            .Where(c => string.IsNullOrWhiteSpace(filtroProveedor)
-                        || c.Proveedor.Contains(filtroProveedor.Trim(), StringComparison.OrdinalIgnoreCase))
-            .Where(c => filtroDesde is null || c.Fecha >= DateOnly.FromDateTime(filtroDesde.Value))
-            .Where(c => filtroHasta is null || c.Fecha <= DateOnly.FromDateTime(filtroHasta.Value))
+        cargando = true;
+        try
+        {
+            // Ambas peticiones son independientes y pueden ejecutarse a la vez.
+            var tareaProveedores = Api.Get<List<Proveedor>>("proveedores");
+            var tareaCompras = Api.Get<List<CompraRest>>("compras");
+            await Task.WhenAll(tareaProveedores, tareaCompras);
+            proveedores = await tareaProveedores ?? new();
+            nombresProveedores = proveedores.ToDictionary(p => p.Id, p => p.RazonSocial);
+            compras = await tareaCompras ?? new();
+            AplicarFiltros();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        catch (Exception)
+        {
+            error = "No se pudo cargar la lista. Comprueba la conexión con Java REST e inténtalo de nuevo.";
+        }
+        finally
+        {
+            cargando = false;
+            cargaInicial = false;
+        }
+    }
+
+    private string NombreProveedor(int id) =>
+        nombresProveedores.TryGetValue(id, out var nombre) ? nombre : $"Proveedor #{id}";
+
+    private async Task Cargar()
+    {
+        cargando = true;
+        error = null;
+        try
+        {
+            compras = await Api.Get<List<CompraRest>>("compras") ?? new();
+            AplicarFiltros();
+        }
+        catch (ErrorApi e) { error = e.Message; }
+        catch (Exception) { error = "Ocurrió un problema al consultar las compras. Inténtalo otra vez."; }
+        finally { cargando = false; }
+    }
+
+    private void AplicarFiltros()
+    {
+        resultado = compras
+            .Where(c => string.IsNullOrWhiteSpace(filtroNumero) ||
+                c.Numero.Contains(filtroNumero.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Where(c => string.IsNullOrWhiteSpace(filtroProveedorTexto) ||
+                NombreProveedor(c.IdProveedor).Contains(filtroProveedorTexto.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Where(c => filtroDesde is null ||
+                 (DateTime.TryParse(c.FechaEmision, out var fecha) && fecha.Date >= filtroDesde.Value.Date))
+            .Where(c => filtroHasta is null ||
+                 (DateTime.TryParse(c.FechaEmision, out var fecha) && fecha.Date <= filtroHasta.Value.Date))
+            .OrderByDescending(c => c.Id)
             .ToList();
+        AjustarPagina();
+    }
+
+    private Task Buscar()
+    {
+        if (filtroDesde.HasValue && filtroHasta.HasValue && filtroDesde > filtroHasta)
+        {
+            error = "La fecha de inicio no puede ser posterior a la fecha de fin.";
+            return Task.CompletedTask;
+        }
+        error = null;
+        exito = null;
+        paginaActual = 1;
+        confirmarId = null;
+        AplicarFiltros();
+        return Task.CompletedTask;
+    }
+
+    private Task Limpiar()
+    {
+        filtroProveedorTexto = "";
+        filtroNumero = "";
+        filtroDesde = filtroHasta = null;
+        exito = null;
+        error = null;
+        confirmarId = null;
+        paginaActual = 1;
+        AplicarFiltros();
+        return Task.CompletedTask;
+    }
+
+    private async Task Anular(CompraRest compra)
+    {
+        cargando = true;
+        error = exito = null;
+        try
+        {
+            await Api.Delete($"compras/{compra.Id}");
+            confirmarId = null;
+            compras = await Api.Get<List<CompraRest>>("compras") ?? new();
+            AplicarFiltros();
+            exito = $"Se anuló la compra {compra.Numero}.";
+        }
+        catch (ErrorApi e) { error = e.Message; }
+        finally { cargando = false; }
     }
 }

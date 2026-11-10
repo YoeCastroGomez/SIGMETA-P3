@@ -1,0 +1,89 @@
+@* Componente reutilizable para paginar tablas que ya cargaron sus datos en Blazor. *@
+<div class="sigmeta-paginacion d-flex flex-wrap justify-content-between align-items-center gap-3 px-3 py-3 border-top">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <label class="small text-muted" for="@idSelector">Mostrar</label>
+        <select id="@idSelector" class="form-select form-select-sm" style="width: auto"
+                value="@TamanoPagina" @onchange="CambiarTamano">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="0">Todos</option>
+        </select>
+        <span class="small text-muted">registros</span>
+        <span class="small text-muted ms-2">
+            @if (TotalRegistros == 0)
+            {
+                <span>0 de 0</span>
+            }
+            else
+            {
+                <span>@Inicio - @Fin de @TotalRegistros</span>
+            }
+        </span>
+    </div>
+    @if (TamanoPagina != 0)
+    {
+    <nav aria-label="Paginación de registros">
+        <ul class="pagination pagination-sm mb-0 flex-wrap">
+            <li class="page-item @(PaginaEfectiva == 1 ? "disabled" : "")">
+                <button type="button" class="page-link" disabled="@(PaginaEfectiva == 1)"
+                        @onclick="() => IrPagina(PaginaEfectiva - 1)">Anterior</button>
+            </li>
+            @foreach (var numero in PaginasVisibles)
+            {
+                <li class="page-item @(numero == PaginaEfectiva ? "active" : "")" @key="numero">
+                    <button type="button" class="page-link" aria-label="@($"Página {numero}")"
+                            aria-current="@(numero == PaginaEfectiva ? "page" : null)"
+                            @onclick="() => IrPagina(numero)">@numero</button>
+                </li>
+            }
+            <li class="page-item @(PaginaEfectiva >= TotalPaginas ? "disabled" : "")">
+                <button type="button" class="page-link" disabled="@(PaginaEfectiva >= TotalPaginas)"
+                        @onclick="() => IrPagina(PaginaEfectiva + 1)">Siguiente</button>
+            </li>
+        </ul>
+    </nav>
+    }
+</div>
+
+@code {
+    [Parameter] public int TotalRegistros { get; set; }
+    [Parameter] public int PaginaActual { get; set; } = 1;
+    [Parameter] public int TamanoPagina { get; set; } = 10;
+    [Parameter] public EventCallback<int> PaginaActualChanged { get; set; }
+    [Parameter] public EventCallback<int> TamanoPaginaChanged { get; set; }
+
+    private readonly string idSelector = "tamano-" + Guid.NewGuid().ToString("N");
+    private int TamanoSeguro => TamanoPagina == 0 ? Math.Max(1, TotalRegistros) : Math.Max(1, TamanoPagina);
+    private int TotalPaginas => TamanoPagina == 0 ? 1 : Math.Max(1, (int)Math.Ceiling((double)TotalRegistros / TamanoSeguro));
+    private int PaginaEfectiva => Math.Clamp(PaginaActual, 1, TotalPaginas);
+    private int Inicio => TotalRegistros == 0 ? 0 : (PaginaEfectiva - 1) * TamanoSeguro + 1;
+    private int Fin => Math.Min(PaginaEfectiva * TamanoSeguro, TotalRegistros);
+
+    private IEnumerable<int> PaginasVisibles
+    {
+        get
+        {
+            int desde = Math.Max(1, PaginaEfectiva - 2);
+            int hasta = Math.Min(TotalPaginas, desde + 4);
+            desde = Math.Max(1, hasta - 4);
+            return Enumerable.Range(desde, hasta - desde + 1);
+        }
+    }
+
+    private async Task IrPagina(int pagina)
+    {
+        int destino = Math.Clamp(pagina, 1, TotalPaginas);
+        if (destino != PaginaActual)
+            await PaginaActualChanged.InvokeAsync(destino);
+    }
+
+    private async Task CambiarTamano(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int tamano) &&
+            (tamano == 10 || tamano == 25 || tamano == 0))
+        {
+            await TamanoPaginaChanged.InvokeAsync(tamano);
+            await PaginaActualChanged.InvokeAsync(1);
+        }
+    }
+}
