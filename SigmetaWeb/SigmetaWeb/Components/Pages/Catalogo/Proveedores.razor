@@ -106,11 +106,12 @@ else
     private List<Proveedor>? proveedores;
     private int paginaActual = 1;
     private int tamanoPagina = 10;
-    private IEnumerable<Proveedor> ProveedoresPagina =>
-        (proveedores ?? new List<Proveedor>())
+    private IEnumerable<Proveedor> ProveedoresPagina => tamanoPagina == 0
+        ? (proveedores ?? new List<Proveedor>())
+        : (proveedores ?? new List<Proveedor>())
             .Skip((Math.Clamp(paginaActual, 1, TotalPaginas) - 1) * tamanoPagina)
             .Take(tamanoPagina);
-    private int TotalPaginas => Math.Max(1, (int)Math.Ceiling((double)(proveedores?.Count ?? 0) / tamanoPagina));
+    private int TotalPaginas => tamanoPagina == 0 ? 1 : Math.Max(1, (int)Math.Ceiling((double)(proveedores?.Count ?? 0) / tamanoPagina));
     private void AjustarPagina() => paginaActual = Math.Clamp(paginaActual, 1, TotalPaginas);
     private string filtroRuc = "";
     private string filtroRazonSocial = "";
