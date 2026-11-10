@@ -604,3 +604,25 @@ html[data-bs-theme="dark"] .inicio-barra-pista,
 html[data-bs-theme="dark"] .inicio-estado-fila .progress {background:#51423d;}
 html[data-bs-theme="dark"] .inicio-grafico-etiqueta {background:#5a4030;color:#ffceaa;}
 html[data-bs-theme="dark"] .inicio-icono-naranja {background:#594030;color:#ffd0a4;}
+
+/* Pantalla de acceso consistente con los temas claro y oscuro */
+.sigmeta-login {
+    min-height:100vh;
+    background:
+        radial-gradient(circle at 10% 12%,rgba(218,137,62,.095),transparent 39%),
+        radial-gradient(circle at 95% 95%,rgba(184,111,54,.055),transparent 38%),
+        #f7f5f1;
+    overflow-x:hidden;
+}
+html[data-bs-theme="dark"] .sigmeta-login {
+    background:
+        radial-gradient(circle at 8% 14%,rgba(187,108,48,.11),transparent 42%),
+        #211f22;
+}
+html[data-bs-theme="dark"] .login-shell {border-color:#574740;box-shadow:0 25px 70px rgba(0,0,0,.25);}
+html[data-bs-theme="dark"] .login-formulario-zona {background:#302b2b;color:#f6eae0;}
+html[data-bs-theme="dark"] .login-formulario-insignia {background:#59402d;color:#ffd0a6;}
+html[data-bs-theme="dark"] .login-formulario-bienvenida {color:#f0b079;}
+html[data-bs-theme="dark"] .login-requerido {color:#f0b079;}
+html[data-bs-theme="dark"] .login-input {background:#282629;border-color:#65534c;color:#fff4ea;}
+html[data-bs-theme="dark"] .login-ayuda {background:#3c3230;color:#d8c8bc;}
