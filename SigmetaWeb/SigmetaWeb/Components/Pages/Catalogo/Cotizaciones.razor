@@ -1,15 +1,27 @@
 @page "/cotizaciones"
+@using SigmetaWeb.Components.Pages.Ventas
+@using SigmetaWeb.Components.Pages.Clientes
+@inject ApiJava Api
+@inject NavigationManager Nav
 
 <PageTitle>Cotizaciones · SIGMETA</PageTitle>
 
-@* RF007 · Lista de cotizaciones. Solo visual (Lab 9): los filtros y botones no hacen nada. Importes solo en soles.
-   Los botones de cada fila siguen el ciclo de CotizacionBOImpl:
-   REGISTRADA -> Editar, Enviar, Anular · ENVIADA -> Aceptar, Rechazar, Anular · RECHAZADA o VENCIDA -> Anular ·
-   ACEPTADA -> ninguno (no se puede anular). *@
+@* RF007 · Lista de cotizaciones. Datos reales del Java:
+   - GET  /api/cotizaciones (?cliente=ID o ?estado=ESTADO)    listarTodos / listarPorCliente / listarPorEstado
+   - POST /api/cotizaciones/{id}/enviar | aceptar | rechazar  ciclo REGISTRADA -> ENVIADA -> ACEPTADA o RECHAZADA
+   - POST /api/cotizaciones/{id}/anular {"motivo": ...}       anulacion logica con motivo
+   Los botones de cada fila siguen el ciclo de CotizacionBOImpl; si algo no corresponde, el BO responde con su mensaje
+   (por ejemplo "La cotizacion vencio el ..." o "No se puede anular una cotizacion aceptada"). *@
 <Encabezado Rf="RF007" Titulo="Cotizaciones"
             Subtitulo="Solo una cotización registrada se modifica. Una cotización aceptada puede pasar a orden de compra del cliente.">
     <a class="btn btn-primary" href="/cotizaciones/nueva">Nueva cotización</a>
 </Encabezado>
+
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
+{
+    <div class="alert alert-success">@exito</div>
+}
 
 @if (anulando is not null)
 {
@@ -17,97 +29,227 @@
     <div class="card card-body mb-3">
         <h2 class="h6 fw-semibold mb-3">Anular cotización @anulando.Numero</h2>
         <Campo Etiqueta="Motivo de anulación" Id="motivo" Obligatorio="true">
-            <input id="motivo" class="form-control" maxlength="255" />
+            <input id="motivo" class="form-control" maxlength="255" @bind="motivo" />
         </Campo>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
             <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary" @onclick="Cerrar">Cancelar</button>
-                <button class="btn btn-outline-danger" @onclick="Cerrar">Anular</button>
+                <button class="btn btn-outline-secondary" @onclick="CerrarAnulacion">Cancelar</button>
+                <button class="btn btn-outline-danger" disabled="@trabajando" @onclick="ConfirmarAnulacion">Anular</button>
             </div>
         </div>
     </div>
 }
 
 <div class="card card-body mb-3">
-    <div class="row g-3 align-items-end">
+    <form class="row g-3 align-items-end" @onsubmit="Buscar" @onsubmit:preventDefault>
         <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
-            <select id="fCliente" class="form-select">
-                <option>Todos</option>
-                @foreach (var c in MuestrasCatalogo.Clientes)
+            <select id="fCliente" class="form-select" @bind="filtroCliente">
+                <option value="0">Todos</option>
+                @foreach (var c in clientes)
                 {
-                    <option>@c</option>
+                    <option value="@c.Id">@c.NombreMostrado · @c.NumeroDocumento</option>
                 }
             </select>
         </Campo>
         <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-3">
-            <select id="fEstado" class="form-select">
-                <option>Todos</option>
-                @foreach (var e in MuestrasCatalogo.EstadosCotizacion)
+            <select id="fEstado" class="form-select" @bind="filtroEstado">
+                <option value="">Todos</option>
+                @foreach (var e in TextosVentas.EstadosCotizacion)
                 {
-                    <option>@MuestrasCatalogo.Texto(e)</option>
+                    <option value="@e">@TextosVentas.Texto(e)</option>
                 }
             </select>
         </Campo>
-        <div class="col-auto">
-            <button class="btn btn-dark">Buscar</button>
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-dark">Buscar</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
+        </div>
+    </form>
+    <div class="form-text">Se busca por cliente; si es "Todos", por estado. Las cotizaciones anuladas no se listan.</div>
+</div>
+
+@if (cotizaciones is null)
+{
+    <p class="text-muted">Cargando cotizaciones...</p>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Número</th>
+                        <th>Cliente</th>
+                        <th>Fecha</th>
+                        <th>Vigencia</th>
+                        <th class="text-end">Total</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (cotizaciones.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">No se encontraron cotizaciones.</td></tr>
+                    }
+                    @foreach (var c in cotizaciones)
+                    {
+                        <tr>
+                            <td><strong>@c.Numero</strong></td>
+                            <td>@c.Cliente<div class="small text-muted">@c.DocumentoCliente</div></td>
+                            <td>@TextosVentas.Fecha(c.FechaEmision)</td>
+                            <td>@TextosVentas.Fecha(c.FechaVigencia)</td>
+                            <td class="text-end">S/ @c.Total.ToString("N2")</td>
+                            <td><Estado Texto="@TextosVentas.Texto(c.Estado)" /></td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1 text-nowrap">
+                                    @if (c.Estado == "REGISTRADA")
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary" href="@($"/cotizaciones/editar/{c.Id}")">Editar</a>
+                                        <button class="btn btn-sm btn-primary" disabled="@trabajando" @onclick="() => Enviar(c)">Enviar</button>
+                                    }
+                                    @if (c.Estado == "ENVIADA")
+                                    {
+                                        <button class="btn btn-sm btn-primary" disabled="@trabajando" @onclick="() => Aceptar(c)">Aceptar</button>
+                                        <button class="btn btn-sm btn-outline-danger" disabled="@trabajando" @onclick="() => Rechazar(c)">Rechazar</button>
+                                    }
+                                    @if (c.Estado == "ACEPTADA")
+                                    {
+                                        @* RF007: la orden de compra del cliente sale de una cotización aceptada *@
+                                        <a class="btn btn-sm btn-outline-primary" href="@($"/ordenes/nueva?cotizacion={c.Id}")">Generar orden</a>
+                                    }
+                                    @if (c.Estado is "REGISTRADA" or "ENVIADA" or "RECHAZADA" or "VENCIDA")
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => AbrirAnulacion(c)">Anular</button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
-</div>
-
-<div class="card mb-3">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Número</th>
-                    <th>Cliente</th>
-                    <th>Fecha</th>
-                    <th>Vigencia</th>
-                    <th class="text-end">Total</th>
-                    <th>Estado</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var c in MuestrasCatalogo.Cotizaciones)
-                {
-                    <tr>
-                        <td><strong>@c.Numero</strong></td>
-                        <td>@c.Cliente</td>
-                        <td>@c.FechaEmision</td>
-                        <td>@c.FechaVigencia</td>
-                        <td class="text-end">S/ @c.Total.ToString("N2")</td>
-                        <td><Estado Texto="@MuestrasCatalogo.Texto(c.Estado)" /></td>
-                        <td class="text-end">
-                            <div class="d-inline-flex gap-1 text-nowrap">
-                                @if (c.Estado == "REGISTRADA")
-                                {
-                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/cotizaciones/editar/{c.Id}")">Editar</a>
-                                    <button class="btn btn-sm btn-primary">Enviar</button>
-                                }
-                                @if (c.Estado == "ENVIADA")
-                                {
-                                    <button class="btn btn-sm btn-primary">Aceptar</button>
-                                    <button class="btn btn-sm btn-outline-danger">Rechazar</button>
-                                }
-                                @if (c.Estado is "REGISTRADA" or "ENVIADA" or "RECHAZADA" or "VENCIDA")
-                                {
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => Anular(c)">Anular</button>
-                                }
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
+}
 
 @code {
-    // Solo controla qué cotización se muestra en el bloque de anulación (Lab 9: no se anula nada).
-    private CotizacionFila? anulando;
+    private List<CotizacionDatos>? cotizaciones;
+    private List<Cliente> clientes = new();
+    private int filtroCliente;
+    private string filtroEstado = "";
+    private string? error;
+    private string? exito;
+    private bool trabajando;
 
-    private void Anular(CotizacionFila cotizacion) => anulando = cotizacion;
-    private void Cerrar() => anulando = null;
+    private CotizacionDatos? anulando;
+    private string motivo = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            clientes = await Api.Get<List<Cliente>>("clientes") ?? new();   // para el filtro por cliente
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        await Cargar();
+    }
+
+    private async Task Buscar()
+    {
+        exito = null;
+        await Cargar();
+    }
+
+    private async Task Limpiar()
+    {
+        filtroCliente = 0;
+        filtroEstado = "";
+        exito = null;
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        var ruta = "cotizaciones";
+        if (filtroCliente > 0)
+        {
+            ruta = $"cotizaciones?cliente={filtroCliente}";             // listarPorCliente
+        }
+        else if (filtroEstado != "")
+        {
+            ruta = $"cotizaciones?estado={filtroEstado}";               // listarPorEstado
+        }
+        try
+        {
+            cotizaciones = await Api.Get<List<CotizacionDatos>>(ruta) ?? new();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+            cotizaciones ??= new();
+        }
+    }
+
+    private Task Enviar(CotizacionDatos c) => Accion(c, "enviar", "enviada");
+    private Task Aceptar(CotizacionDatos c) => Accion(c, "aceptar", "aceptada");
+    private Task Rechazar(CotizacionDatos c) => Accion(c, "rechazar", "rechazada");
+
+    // POST /api/cotizaciones/{id}/enviar | aceptar | rechazar
+    private async Task Accion(CotizacionDatos c, string accion, string participio)
+    {
+        error = null;
+        exito = null;
+        trabajando = true;
+        try
+        {
+            await Api.Post<CotizacionDatos>($"cotizaciones/{c.Id}/{accion}", null);
+            exito = $"La cotización {c.Numero} quedó {participio}.";
+            await Cargar();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        finally
+        {
+            trabajando = false;
+        }
+    }
+
+    private void AbrirAnulacion(CotizacionDatos c)
+    {
+        anulando = c;
+        motivo = "";
+        exito = null;
+    }
+
+    private void CerrarAnulacion() => anulando = null;
+
+    // POST /api/cotizaciones/{id}/anular {"motivo": ...}
+    private async Task ConfirmarAnulacion()
+    {
+        if (anulando is null) return;
+        error = null;
+        trabajando = true;
+        try
+        {
+            await Api.Post<object>($"cotizaciones/{anulando.Id}/anular", new AnulacionDatos { Motivo = motivo });
+            exito = $"Se anuló la cotización {anulando.Numero}.";
+            anulando = null;
+            await Cargar();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "El campo motivo de anulacion es obligatorio"
+        }
+        finally
+        {
+            trabajando = false;
+        }
+    }
 }
