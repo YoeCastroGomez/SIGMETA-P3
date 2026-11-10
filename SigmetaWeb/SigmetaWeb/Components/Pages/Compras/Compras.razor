@@ -85,19 +85,22 @@
                         </td>
                     </tr>
                 }
-                @if (!cargando && resultado.Count == 0)
+                @if (!cargando && error is null && resultado.Count == 0)
                 {
                     <tr><td colspan="6" class="text-center text-muted py-4">No hay compras que coincidan con la búsqueda.</td></tr>
                 }
-                @if (cargando)
+                @if (cargando && cargaInicial)
                 {
-                    <tr><td colspan="6" class="text-center text-muted py-3">Consultando compras...</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Consultando compras y proveedores...</td></tr>
                 }
             </tbody>
         </table>
     </div>
-    <Paginacion TotalRegistros="@resultado.Count"
-                @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
+    @if (!cargando && error is null)
+    {
+        <Paginacion TotalRegistros="@resultado.Count"
+                    @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
+    }
 </div>
 
 @code {
@@ -119,19 +122,40 @@
     private string? exito;
     private int? confirmarId;
     private bool cargando;
+    private bool cargaInicial = true;
+    private Dictionary<int, string> nombresProveedores = new();
 
     protected override async Task OnInitializedAsync()
     {
+        cargando = true;
         try
         {
-            proveedores = await Api.Get<List<Proveedor>>("proveedores") ?? new();
+            // Ambas peticiones son independientes y pueden ejecutarse a la vez.
+            var tareaProveedores = Api.Get<List<Proveedor>>("proveedores");
+            var tareaCompras = Api.Get<List<CompraRest>>("compras");
+            await Task.WhenAll(tareaProveedores, tareaCompras);
+            proveedores = await tareaProveedores ?? new();
+            nombresProveedores = proveedores.ToDictionary(p => p.Id, p => p.RazonSocial);
+            compras = await tareaCompras ?? new();
+            AplicarFiltros();
         }
-        catch (ErrorApi e) { error = e.Message; }
-        await Cargar();
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        catch (Exception)
+        {
+            error = "No se pudo cargar la lista. Comprueba la conexión con Java REST e inténtalo de nuevo.";
+        }
+        finally
+        {
+            cargando = false;
+            cargaInicial = false;
+        }
     }
 
     private string NombreProveedor(int id) =>
-        proveedores.FirstOrDefault(p => p.Id == id)?.RazonSocial ?? $"Proveedor #{id}";
+        nombresProveedores.TryGetValue(id, out var nombre) ? nombre : $"Proveedor #{id}";
 
     private async Task Cargar()
     {
@@ -143,6 +167,7 @@
             AplicarFiltros();
         }
         catch (ErrorApi e) { error = e.Message; }
+        catch (Exception) { error = "Ocurrió un problema al consultar las compras. Inténtalo otra vez."; }
         finally { cargando = false; }
     }
 
