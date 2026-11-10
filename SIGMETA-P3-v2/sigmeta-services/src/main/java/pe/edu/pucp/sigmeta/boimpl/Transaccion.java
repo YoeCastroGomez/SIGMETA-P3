@@ -22,6 +22,18 @@ public final class Transaccion {
     }
 
     public static <T> T ejecutar(Operacion<T> operacion) throws SQLException {
+        return ejecutar(operacion, true);
+    }
+
+    // Solo lectura (consultas, por ejemplo los GET del servicio REST): misma transaccion, pero sin el
+    // bloqueo global. El bloqueo existe para que dos escrituras no se pisen; una consulta no escribe, asi que
+    // no necesita hacer cola detras de las demas (antes las consultas en paralelo de una pantalla esperaban
+    // una por una). Las llamadas anidadas de adentro tampoco bloquean: la de afuera decide.
+    public static <T> T consultar(Operacion<T> operacion) throws SQLException {
+        return ejecutar(operacion, false);
+    }
+
+    private static <T> T ejecutar(Operacion<T> operacion, boolean bloquear) throws SQLException {
         int nivel = profundidad.get();
         boolean propia = nivel == 0;
         if (propia) {
@@ -31,7 +43,7 @@ public final class Transaccion {
         }
         profundidad.set(nivel + 1);
         try {
-            if (propia) {
+            if (propia && bloquear) {
                 // Protocolo comun a TODOS los BO: una fila InnoDB, no un mutex de una JVM.
                 // Evita actualizaciones perdidas entre cobros, notas, ventas, anulaciones y cajas.
                 // Compromiso deliberado: menor concurrencia, sin introducir ordenes de bloqueo incompatibles.
