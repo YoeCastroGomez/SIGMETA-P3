@@ -1,0 +1,44 @@
+.inicio-hero {
+    position: relative;
+    overflow: hidden;
+    min-height: 190px;
+    display: flex;
+    align-items: center;
+    border-radius: 16px;
+    padding: 30px 34px;
+    color: #fff;
+    background: linear-gradient(115deg, #20252d 0%, #303b47 64%, #3c4653 100%);
+    box-shadow: 0 8px 24px rgba(23, 31, 41, 0.09);
+}
+.inicio-hero-contenido { position: relative; z-index: 2; max-width: 690px; }
+.inicio-etiqueta { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.13em; color: #eab589; }
+.inicio-titulo { font-size: clamp(1.5rem, 3vw, 2.15rem); font-weight: 750; letter-spacing: -0.035em; margin: 9px 0; }
+.inicio-subtitulo { font-size: 0.93rem; color: #d2d7dc; line-height: 1.6; }
+.inicio-rol, .inicio-fecha { display: inline-flex; align-items: center; gap: 7px; font-size: 0.75rem; border-radius: 999px; padding: 6px 12px; background: rgba(255,255,255,.10); color: #eef0f4; }
+.inicio-punto { width: 7px; height: 7px; border-radius: 50%; background: #62d8a4; }
+.inicio-hero-decoracion { position: absolute; inset: 0 0 0 auto; width: 35%; pointer-events: none; }
+.inicio-decoracion-circulo { position: absolute; width: 280px; height: 280px; border-radius: 50%; border: 45px solid rgba(225,119,38,.13); right: -42px; top: -62px; }
+.inicio-decoracion-icono { position: absolute; right: 65px; top: 55px; transform: rotate(-10deg); font-size: 3.8rem; letter-spacing: -0.1em; font-weight: 800; color: rgba(255,255,255,.07); }
+.inicio-seccion-titulo { font-size: 1.1rem; font-weight: 750; letter-spacing: -0.025em; color: #252a31; }
+.inicio-indicador, .inicio-acceso { background: #fff; border: 1px solid #e2e5e9; border-radius: 12px; color: inherit; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.inicio-indicador:hover, .inicio-acceso:hover { border-color: #d28b54; box-shadow: 0 7px 20px rgba(28,36,45,.09); transform: translateY(-2px); }
+.inicio-indicador .card-body { padding: 19px; }
+.inicio-indicador-etiqueta { color: #58616b; font-size: 0.82rem; font-weight: 600; }
+.inicio-indicador-valor { margin: 9px 0 4px; color: #23272e; font-size: 2.05rem; font-weight: 750; line-height: 1.15; letter-spacing: -0.04em; }
+.inicio-indicador-pie { color: #777f88; font-size: 0.74rem; }
+.inicio-icono { width: 39px; height: 39px; display: inline-flex; justify-content: center; align-items: center; flex-shrink: 0; border-radius: 10px; font-size: 0.75rem; font-weight: 800; }
+.inicio-icono-naranja { background: #fff0e2; color: #b35d18; }
+.inicio-icono-azul { background: #e7f0ff; color: #3467a3; }
+.inicio-icono-ambar { background: #fff5d8; color: #9b6c08; }
+.inicio-icono-rojo { background: #ffeceb; color: #b74544; }
+.inicio-acceso .card-body { padding: 19px; }
+.inicio-flecha { color: #969da5; font-size: 1.1rem; }
+.inicio-tabla-card { border-radius: 12px; overflow: hidden; border: 1px solid #e2e5e9; }
+.inicio-tabla-card .card-header { border-bottom: 1px solid #eaedf0; }
+.inicio-tabla-card th { font-size: 0.76rem; color: #68717a; font-weight: 700; }
+.inicio-tabla-card td { font-size: 0.82rem; }
+@media (max-width: 767px) {
+    .inicio-hero { padding: 24px 20px; min-height: 170px; }
+    .inicio-hero-decoracion { opacity: .3; }
+    .inicio-indicador .card-body, .inicio-acceso .card-body { padding: 16px; }
+}
