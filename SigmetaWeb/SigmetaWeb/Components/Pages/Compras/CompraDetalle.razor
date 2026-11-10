@@ -154,7 +154,7 @@ else if (compra is not null)
             }
             // La consulta de proveedores incluye inactivos para preservar el historial.
             proveedores = await Api.Get<List<Proveedor>>("proveedores") ?? new();
-            productos = await Api.Get<List<ProductoCompraRest>>("productos?incluirInactivos=true") ?? new();
+            productos = await Api.Get<List<ProductoCompraRest>>("productos") ?? new();
         }
         catch (ErrorApi e)
         {
