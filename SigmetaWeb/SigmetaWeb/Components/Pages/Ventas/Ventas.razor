@@ -62,7 +62,7 @@
                             <div class="small text-muted">@(v.OrdenCompraCliente is null ? "Venta directa" : $"Orden {v.OrdenCompraCliente}")</div>
                         </td>
                         <td>@v.Cliente</td>
-                        <td>@v.FechaEmision.ToString("dd/MM/yyyy")</td>
+                        <td>@v.FechaEmision.ToString("yyyy-MM-dd")</td>
                         <td>
                             @MuestrasVentas.Texto(v.CondicionPago)
                             @if (v.CondicionPago == "CREDITO")

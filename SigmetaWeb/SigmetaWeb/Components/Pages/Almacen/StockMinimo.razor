@@ -40,11 +40,11 @@
                         <td>
                             @if (p.StockActual < p.StockMinimo)
                             {
-                                <span class="badge bg-danger">Bajo el mínimo</span>
+                                <Estado Texto="Bajo el mínimo" />
                             }
                             else
                             {
-                                <span class="badge bg-warning text-dark">En el mínimo</span>
+                                <Estado Texto="En el mínimo" />
                             }
                         </td>
                         <td class="text-end">

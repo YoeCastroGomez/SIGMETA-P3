@@ -131,7 +131,7 @@ else if (compra is not null)
         ?? $"Proveedor #{compra?.IdProveedor}";
 
     private static string MostrarFecha(string? valor) =>
-        DateTime.TryParse(valor, out var fecha) ? fecha.ToString("dd/MM/yyyy") : "—";
+        DateTime.TryParse(valor, out var fecha) ? fecha.ToString("yyyy-MM-dd") : "—";
 
     private string NombreProducto(int id)
     {

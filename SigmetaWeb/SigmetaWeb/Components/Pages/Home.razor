@@ -356,7 +356,7 @@ else
                                 <td class="ps-3 ps-md-4 fw-semibold">@compra.Numero</td>
                                 <td>@NombreProveedor(compra.IdProveedor)</td>
                                 <td>@MostrarFecha(compra.FechaEmision)</td>
-                                <td><span class="@ClaseEstado(compra.Estado)">@compra.Estado.Replace("_", " ")</span></td>
+                                <td><Estado Texto="@(compra.Estado.Replace("_", " "))" /></td>
                                 <td class="text-end">S/ @compra.Total.ToString("N2")</td>
                                 <td class="text-end pe-3 pe-md-4"><a class="btn btn-sm btn-outline-primary" href="@($"/compras/detalle/{compra.Id}")">Ver detalle</a></td>
                             </tr>
@@ -527,14 +527,6 @@ else
         proveedores?.FirstOrDefault(p => p.Id == id)?.RazonSocial ?? $"Proveedor #{id}";
 
     private static string MostrarFecha(string? valor) =>
-        DateTime.TryParse(valor, out var fecha) ? fecha.ToString("dd/MM/yyyy") : "—";
+        DateTime.TryParse(valor, out var fecha) ? fecha.ToString("yyyy-MM-dd") : "—";
 
-    private static string ClaseEstado(string estado) => estado switch
-    {
-        "REGISTRADA" => "badge rounded-pill bg-secondary-subtle text-secondary-emphasis border",
-        "RECIBIDA" => "badge rounded-pill bg-success-subtle text-success-emphasis border",
-        "RECIBIDA_PARCIAL" => "badge rounded-pill bg-warning-subtle text-warning-emphasis border",
-        "ANULADA" => "badge rounded-pill bg-danger-subtle text-danger-emphasis border",
-        _ => "badge rounded-pill bg-light text-dark border"
-    };
 }
