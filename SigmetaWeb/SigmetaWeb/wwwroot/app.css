@@ -130,3 +130,191 @@ h1:focus { outline: none; }
 @media (max-width: 1199.98px) {
     .sigmeta-sidebar { height: 100vh; overflow-y: auto; }
 }
+
+/* SIGMETA: identidad y navegacion renovadas */
+.sigmeta-sidebar {
+    width: 262px;
+    min-width: 262px;
+    overflow-x: hidden;
+    background: linear-gradient(180deg, #1c242d 0%, #212b34 100%);
+    color: #d3dae2;
+}
+.sigmeta-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 100px;
+    padding: 20px 19px;
+    border-bottom: 1px solid rgba(255,255,255,.09);
+}
+.sigmeta-brand-emblema {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+    border-radius: 15px;
+    background: linear-gradient(140deg, #f2a653 0%, #af5817 100%);
+    box-shadow: 0 8px 20px rgba(0,0,0,.21), inset 0 1px 0 rgba(255,255,255,.26);
+}
+.sigmeta-brand-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sigmeta-brand-nombre { color: #fff; font-size: 1.24rem; font-weight: 800; letter-spacing: .055em; line-height: 1.15; }
+.sigmeta-brand-punto { color: #f4a95f; }
+.sigmeta-brand-leyenda { color: #a7b6c5; font-size: .59rem; font-weight: 650; letter-spacing: .105em; white-space: nowrap; }
+.sigmeta-sidebar-contenido {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #52616d transparent;
+    padding: 5px 0 18px;
+}
+.sigmeta-sidebar .nav-link {
+    width: auto;
+    min-width: 0;
+    margin: 3px 12px;
+    gap: 11px;
+    padding: 11px 13px !important;
+    border-radius: 10px;
+    font-size: .82rem;
+    font-weight: 500;
+}
+.sigmeta-sidebar .nav-link.active {
+    background: linear-gradient(90deg, rgba(217,137,64,.22), rgba(217,137,64,.07));
+    color: #ffd4ab;
+    box-shadow: inset 3px 0 0 #ef9a48;
+}
+.sigmeta-nav-icono { display: inline-flex; flex: 0 0 20px; color: #e5a168; }
+.sigmeta-sidebar .menu-grupo {
+    width: calc(100% - 24px) !important;
+    max-width: calc(100% - 24px);
+    min-width: 0;
+    margin: 12px 12px 2px;
+    padding: 10px 12px !important;
+    font-size: .69rem;
+    line-height: 1.35;
+    color: #b5c0ce;
+    text-align: left;
+    white-space: normal;
+}
+.sigmeta-grupo-nombre { min-width: 0; }
+.sigmeta-grupo-sigla {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: .62rem;
+    font-weight: 800;
+    background: #35414e;
+    color: #e7b582;
+    letter-spacing: 0;
+}
+.sigmeta-sidebar .nav-submenu {
+    padding: 1px 0 4px 28px;
+    animation: sigmeta-submenu-entrada .2s ease-out both;
+}
+.sigmeta-sidebar .nav-submenu .nav-link { font-size: .78rem; padding: 9px 12px !important; gap: 9px; }
+.sigmeta-submenu-punto {
+    width: 6px;
+    height: 6px;
+    flex: 0 0 6px;
+    border: 1.5px solid #8794a2;
+    border-radius: 50%;
+}
+.sigmeta-sidebar .nav-submenu .nav-link.active .sigmeta-submenu-punto { background: #ef9a48; border-color: #ef9a48; }
+.sigmeta-sidebar-perfil {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 14px;
+    border-top: 1px solid rgba(255,255,255,.09);
+    background: rgba(255,255,255,.025);
+}
+.sigmeta-avatar, .sigmeta-topbar-avatar {
+    display: inline-grid;
+    place-items: center;
+    border-radius: 11px;
+    font-weight: 800;
+    font-size: .78rem;
+    background: #41434a;
+    color: #f9ddbe;
+}
+.sigmeta-avatar { width: 38px; height: 38px; flex: 0 0 38px; }
+.sigmeta-perfil-info { min-width: 0; flex: 1; }
+.sigmeta-perfil-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .78rem; color: #f1f3f5; font-weight: 650; }
+.sigmeta-perfil-rol { color: #a6b2bf; font-size: .7rem; }
+.sigmeta-perfil-config { color: #b6c0ca; padding: 5px; }
+.sigmeta-perfil-config:hover { color: #fff; }
+.sigmeta-contenido { min-width: 0; }
+.sigmeta-topbar {
+    position: sticky;
+    z-index: 1010;
+    top: 0;
+    min-height: 63px;
+    padding: 9px 24px;
+    background: rgba(255,255,255,.95);
+    border-bottom: 1px solid #e7e5e1;
+    backdrop-filter: blur(12px);
+}
+.sigmeta-topbar-identidad { font-size: .78rem; font-weight: 600; color: #627080; }
+.sigmeta-topbar-indicador { width: 7px; height: 7px; border-radius: 50%; background: #d58743; }
+.sigmeta-topbar-usuario { display: flex; align-items: center; gap: 9px; color: #303741; }
+.sigmeta-topbar-avatar { width: 31px; height: 31px; background: #f6ede5; color: #ad641e; }
+.sigmeta-topbar-usuario strong { font-size: .76rem; line-height: 1.1; }
+.sigmeta-topbar-usuario small { color: #87919b; font-size: .67rem; }
+.sigmeta-salir { color: #5a6571; border: 1px solid #d5dbe0; background: #fff; }
+.sigmeta-salir:hover { background: #f5f5f5; border-color: #aab3bb; }
+.sigmeta-menu-movil { display: inline-flex; align-items: center; border: 1px solid #d6dbe0; }
+.sigmeta-sidebar-backdrop { display: none; }
+.sigmeta-main { animation: sigmeta-contenido-entrada .35s ease-out both; }
+@keyframes sigmeta-contenido-entrada {
+    from { opacity: 0; transform: translateY(9px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes sigmeta-submenu-entrada {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@media (min-width: 1200px) {
+    .sigmeta-sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        max-height: 100vh;
+        align-self: flex-start;
+        overflow: hidden;
+        scrollbar-width: auto;
+    }
+}
+@media (max-width: 1199.98px) {
+    .sigmeta-sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        height: 100dvh;
+        max-height: 100dvh;
+        z-index: 1051;
+        overflow: hidden;
+    }
+    .sigmeta-sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        border: 0;
+        background: rgba(12,21,30,.57);
+        z-index: 1050;
+    }
+}
+@media (max-width: 575px) {
+    .sigmeta-topbar { padding: 8px 14px; }
+    .sigmeta-brand { min-height: 84px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .sigmeta-main, .sigmeta-sidebar .nav-submenu { animation: none !important; }
+    .sigmeta-sidebar, .sigmeta-sidebar .nav-link, .sigmeta-sidebar .menu-chevron { transition: none !important; }
+}
