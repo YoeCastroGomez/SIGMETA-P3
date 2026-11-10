@@ -42,3 +42,24 @@
     .inicio-hero-decoracion { opacity: .3; }
     .inicio-indicador .card-body, .inicio-acceso .card-body { padding: 16px; }
 }
+
+/* Graficos livianos, sin librerias JavaScript ni cifras precargadas */
+.inicio-grafico { background:#fff; border:1px solid #e2e5e9; border-radius:12px; }
+.inicio-grafico-etiqueta { padding:5px 10px; border-radius:7px; background:#f8eee6; color:#a65a20; font-size:.75rem; font-weight:700; }
+.inicio-barras { display:flex; flex-direction:column; gap:15px; margin-top:19px; }
+.inicio-barra-fila { display:grid; grid-template-columns:85px minmax(50px,1fr) 95px; align-items:center; gap:12px; }
+.inicio-barra-nombre { font-size:.76rem; font-weight:600; color:#505b65; text-transform:capitalize; }
+.inicio-barra-pista { overflow:hidden; background:#f0f1f2; height:11px; border-radius:999px; }
+.inicio-barra-valor { height:100%; min-width:0; border-radius:999px; background:linear-gradient(90deg,#c27837,#e3a163); }
+.inicio-barra-cifra { font-size:.76rem; font-weight:650; color:#303942; text-align:right; font-variant-numeric:tabular-nums; }
+.inicio-estados { display:flex; flex-direction:column; gap:17px; padding-top:9px; }
+.inicio-estado-fila { margin:6px 0 15px; }
+.inicio-estado-fila .progress { height:9px; background:#f0f1f2; border-radius:100px; }
+.inicio-estado-fila .progress-bar { border-radius:100px; }
+.inicio-proveedor { background:#faf9f7; border:1px solid #efeeeb; border-radius:10px; padding:15px; }
+.inicio-aviso-datos { border:1px dashed #cbd1d7; border-radius:11px; background:#fafbfc; padding:18px 20px; color:#58626b; }
+.inicio-aviso-datos strong { color:#39434e; font-size:.88rem; }
+@media (max-width:575px) {
+    .inicio-barra-fila { grid-template-columns:72px minmax(32px,1fr) 78px; gap:8px; }
+    .inicio-barra-nombre,.inicio-barra-cifra { font-size:.68rem; }
+}
