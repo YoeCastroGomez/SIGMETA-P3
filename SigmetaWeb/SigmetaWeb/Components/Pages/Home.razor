@@ -116,17 +116,20 @@
                     }
                     else
                     {
-                        <div class="inicio-barras" role="img" aria-label="Importe de compras agrupado por mes">
-                            @foreach (var barra in ComprasPorMes)
-                            {
-                                <div class="inicio-barra-fila" @key="barra.Etiqueta">
-                                    <span class="inicio-barra-nombre">@barra.Etiqueta</span>
-                                    <div class="inicio-barra-pista">
-                                        <div class="inicio-barra-valor" style="width:@(Porcentaje(barra.Valor, MaxMes))%"></div>
+                        <div class="inicio-columnas" role="group" aria-label="Importe de compras por mes">
+                            <div class="inicio-columnas-grafico">
+                                @foreach (var barra in ComprasPorMes)
+                                {
+                                    <div class="inicio-columna-grupo" @key="barra.Etiqueta"
+                                         title="@barra.Etiqueta: S/ @barra.Valor.ToString("N2")">
+                                        <strong class="inicio-columna-importe">S/ @barra.Valor.ToString("N0")</strong>
+                                        <div class="inicio-columna-area">
+                                            <div class="inicio-columna" style="height:@(Porcentaje(barra.Valor, MaxMes))%"></div>
+                                        </div>
+                                        <span class="inicio-columna-etiqueta">@barra.Etiqueta</span>
                                     </div>
-                                    <strong class="inicio-barra-cifra">S/ @barra.Valor.ToString("N0")</strong>
-                                </div>
-                            }
+                                }
+                            </div>
                         </div>
                     }
                 </div>
@@ -143,7 +146,7 @@
                     }
                     else
                     {
-                        <div class="inicio-estados">
+                        <div class="inicio-estados inicio-estados-grafico">
                             @foreach (var estado in EstadosCompra)
                             {
                                 <div class="inicio-estado-fila" @key="estado.Etiqueta">
