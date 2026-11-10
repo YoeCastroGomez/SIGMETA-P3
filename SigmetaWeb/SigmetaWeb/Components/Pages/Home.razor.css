@@ -85,3 +85,60 @@
         animation: none !important;
     }
 }
+
+/* Graficos de columnas: azul petroleo, turquesa y cobre como acento */
+.inicio-columnas {
+    border: 1px solid #e7edf1;
+    border-radius: 13px;
+    padding: 18px 12px 12px;
+    background: linear-gradient(to top, rgba(233,241,245,.55) 1px, transparent 1px) 0 0 / 100% 25%;
+}
+.inicio-columnas-grafico {
+    display:flex;
+    gap:clamp(10px,2vw,28px);
+    align-items:stretch;
+    justify-content:space-evenly;
+    min-height:245px;
+}
+.inicio-columna-grupo {
+    display:flex;
+    flex:1 1 0;
+    min-width:0;
+    max-width:135px;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-end;
+    gap:9px;
+}
+.inicio-columna-importe { color:#416170; font-size:.71rem; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.inicio-columna-area { width:100%; height:185px; display:flex; align-items:flex-end; justify-content:center; }
+.inicio-columna {
+    width:min(66%,76px);
+    min-height:3px;
+    background:linear-gradient(180deg,#479eaa 0%,#287080 100%);
+    border-radius:8px 8px 3px 3px;
+    box-shadow:0 4px 12px rgba(31,104,122,.12);
+    transition:filter .2s ease;
+    animation:inicio-crecer .7s cubic-bezier(.2,.75,.2,1) both;
+    transform-origin:bottom;
+}
+.inicio-columna-grupo:nth-child(3n+2) .inicio-columna {background:linear-gradient(180deg,#6287bc,#3f6597);}
+.inicio-columna-grupo:nth-child(3n+3) .inicio-columna {background:linear-gradient(180deg,#d4a16a,#b47d48);}
+.inicio-columna-grupo:hover .inicio-columna {filter:brightness(1.09);}
+.inicio-columna-etiqueta {font-size:.74rem;color:#586674;text-align:center;white-space:nowrap;text-transform:capitalize;}
+.inicio-estados-grafico .progress {height:15px;}
+.inicio-estados-grafico .bg-secondary {background-color:#537b91!important;}
+.inicio-estados-grafico .bg-warning {background-color:#d7a15d!important;}
+.inicio-estados-grafico .bg-success {background-color:#3d9c8a!important;}
+.inicio-estados-grafico .bg-danger {background-color:#cb7180!important;}
+.inicio-barra-valor {background:linear-gradient(90deg,#437c96,#67aab3);}
+@keyframes inicio-crecer {from {transform:scaleY(.08);opacity:.5;}to {transform:scaleY(1);opacity:1;}}
+@media(max-width:575px) {
+    .inicio-columnas {overflow-x:auto;}
+    .inicio-columnas-grafico {min-width:320px;gap:7px;}
+    .inicio-columna-importe {font-size:.65rem;}
+    .inicio-columna-etiqueta {font-size:.67rem;}
+}
+@media(prefers-reduced-motion:reduce) {
+    .inicio-columna {animation:none!important;transition:none!important;}
+}
