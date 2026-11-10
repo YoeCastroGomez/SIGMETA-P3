@@ -142,3 +142,32 @@
 @media(prefers-reduced-motion:reduce) {
     .inicio-columna {animation:none!important;transition:none!important;}
 }
+
+/* Acento predominante naranja SIGMETA en el panel y los gráficos */
+.inicio-hero {
+    background:linear-gradient(112deg,#4a3024 0%,#3b3330 58%,#584131 100%);
+}
+.inicio-etiqueta {color:#ffd09b;}
+.inicio-hero .inicio-punto {background:#f0ab6b;}
+.inicio-decoracion-circulo {border-color:rgba(240,148,68,.20);}
+.inicio-icono-naranja {background:#fff0e2;color:#ad5418;}
+.inicio-icono-azul {background:#fff1e2;color:#a65b23;}
+.inicio-icono-ambar {background:#fff4d8;color:#916411;}
+.inicio-acceso:hover,.inicio-indicador:hover {border-color:#d79158;}
+.inicio-grafico-etiqueta {background:#faeadb;color:#aa5118;}
+.inicio-columna {
+    background:linear-gradient(180deg,#f0b374 0%,#c66d28 100%);
+    box-shadow:0 4px 12px rgba(175,89,32,.14);
+}
+.inicio-columna-grupo:nth-child(3n+2) .inicio-columna {
+    background:linear-gradient(180deg,#db914f,#ae541a);
+}
+.inicio-columna-grupo:nth-child(3n+3) .inicio-columna {
+    background:linear-gradient(180deg,#f5c58f,#d18b45);
+}
+.inicio-columna-importe {color:#895021;}
+.inicio-barra-valor {background:linear-gradient(90deg,#b9692a,#eca66b);}
+.inicio-estados-grafico .bg-secondary {background-color:#c8783e!important;}
+.inicio-estados-grafico .bg-warning {background-color:#e6b25e!important;}
+.inicio-estados-grafico .bg-success {background-color:#5e9d82!important;}
+.inicio-estados-grafico .bg-danger {background-color:#bc6372!important;}
