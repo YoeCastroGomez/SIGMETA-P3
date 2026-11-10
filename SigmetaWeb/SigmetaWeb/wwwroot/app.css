@@ -696,3 +696,14 @@ html[data-bs-theme="dark"] .sigmeta-paginacion .form-select:focus {
 @media (prefers-reduced-motion: reduce) {
     .sigmeta-paginacion .page-link { transition: none; }
 }
+
+/* Tipografía empresarial SIGMETA: legible en formularios, tablas y pantallas. */
+:root, html[data-bs-theme="light"], html[data-bs-theme="dark"] {
+    --bs-body-font-family: "Source Sans 3", "Segoe UI", Arial, sans-serif;
+}
+body, button, input, select, textarea {
+    font-family: var(--bs-body-font-family);
+}
+.sigmeta-brand-nombre { letter-spacing: .015em; font-weight: 700; }
+.sigmeta-brand-leyenda { letter-spacing: .055em; font-weight: 600; }
+.sigmeta-sidebar .menu-grupo { letter-spacing: .025em; }
