@@ -9,7 +9,7 @@
 </Encabezado>
 
 <div class="card card-body mb-3">
-    <div class="row g-3 align-items-end">
+    <div class="row g-3 align-items-end sigmeta-filtros">
         <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
             <input id="fCliente" class="form-control" maxlength="150" placeholder="Razón social o documento" />
         </Campo>
@@ -44,7 +44,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var o in MuestrasVentas.Ordenes)
+                @foreach (var o in Paginar(MuestrasVentas.Ordenes, paginaActual, tamanoPagina))
                 {
                     <tr>
                         <td><strong>@o.Numero</strong></td>
@@ -72,4 +72,17 @@
             </tbody>
         </table>
     </div>
+        <Paginacion TotalRegistros="@(MuestrasVentas.Ordenes.Count())" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
 </div>
+
+@code {
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+    {
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((segura - 1) * tamano).Take(tamano);
+    }
+}
