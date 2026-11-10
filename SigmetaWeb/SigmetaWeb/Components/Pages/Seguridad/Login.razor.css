@@ -1,0 +1,188 @@
+.login-shell {
+    width: min(1120px, calc(100% - 48px));
+    min-height: min(680px, calc(100vh - 80px));
+    margin: 40px auto;
+    display: grid;
+    grid-template-columns: 1.06fr 1fr;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(39,31,24,.10);
+    animation: login-aparecer .5s cubic-bezier(.2,.75,.2,1) both;
+}
+.login-marca {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 42px 46px 36px;
+    min-width: 0;
+    background: linear-gradient(143deg,#b55b20 0%,#934313 55%,#5e3426 100%);
+    color: #fff;
+}
+.login-marca::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: .4;
+    background: radial-gradient(circle at 95% 12%,rgba(255,211,147,.35) 0,transparent 43%);
+}
+.login-marca-top { display: flex; align-items: center; gap: 14px; }
+.login-emblema {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    flex: 0 0 56px;
+    border-radius: 15px;
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.26);
+}
+.login-marca-nombre { display: flex; flex-direction: column; gap: 2px; }
+.login-marca-nombre strong { font-size: 1.6rem; letter-spacing: .045em; line-height: 1.1; }
+.login-marca-nombre strong span { color: #ffdbad; }
+.login-marca-nombre small { font-size: .62rem; letter-spacing: .16em; color: #ffe5cf; font-weight: 650; }
+.login-marca-centro { position: relative; z-index: 1; margin: 66px 0 60px; }
+.login-marca-etiqueta {
+    display: inline-block;
+    margin-bottom: 19px;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .13em;
+    color: #ffe2bf;
+}
+.login-marca-centro h1 {
+    font-size: clamp(2rem,3.5vw,3rem);
+    line-height: 1.18;
+    font-weight: 800;
+    letter-spacing: -.04em;
+    margin: 0 0 20px;
+}
+.login-marca-centro h1 em { color: #ffe1bc; font-style: normal; }
+.login-marca-centro p { font-size: .96rem; line-height: 1.8; color: #ffebde; max-width: 375px; margin-bottom: 27px; }
+.login-marca-modulos { display: flex; flex-wrap: wrap; gap: 8px; }
+.login-marca-modulos span {
+    font-size: .72rem;
+    padding: 7px 11px;
+    border-radius: 999px;
+    color: #fff7ef;
+    border: 1px solid rgba(255,255,255,.31);
+    background: rgba(255,255,255,.095);
+}
+.login-marca-pie { position: relative; display: flex; align-items: center; gap: 9px; color: #ffe0c9; font-size: .72rem; }
+.login-marca-punto { width: 7px; height: 7px; background: #ffd398; border-radius: 50%; }
+.login-marca-decoracion {
+    position: absolute;
+    right: -180px;
+    bottom: 13%;
+    width: 360px;
+    height: 360px;
+    border: 75px solid rgba(255,255,255,.07);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.login-formulario-zona {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px clamp(26px,5vw,70px) 24px;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+}
+.login-formulario { width: 100%; max-width: 400px; }
+.login-formulario-encabezado { margin-bottom: 30px; }
+.login-formulario-insignia {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 43px;
+    height: 43px;
+    border-radius: 12px;
+    background: #fce9d9;
+    color: #a84e14;
+    margin-bottom: 22px;
+}
+.login-formulario-bienvenida { font-size: .68rem; font-weight: 800; color: #ac551c; letter-spacing: .12em; margin-bottom: 9px; }
+.login-formulario-encabezado h2 { font-size: 1.85rem; line-height: 1.2; letter-spacing: -.04em; font-weight: 750; margin: 0 0 10px; }
+.login-formulario-encabezado p { line-height: 1.6; color: var(--bs-secondary-color); font-size: .85rem; margin: 0; }
+.login-campos { display: grid; gap: 20px; }
+.login-campos .form-label { font-size: .82rem; margin-bottom: 8px; }
+.login-requerido { color: #b45b19; }
+.login-input {
+    min-height: 49px;
+    border-radius: 10px;
+    padding: 12px 15px;
+    font-size: .88rem;
+    background: var(--bs-body-bg);
+}
+.login-clave-contenedor { position: relative; }
+.login-clave-input { padding-right: 53px; }
+.login-ver-clave {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 8px;
+    color: var(--bs-secondary-color);
+    background: transparent;
+}
+.login-ver-clave:hover { color: var(--bs-body-color); background: var(--bs-tertiary-bg); }
+.login-ver-clave:focus-visible { outline: 2px solid #b65b19; outline-offset: 1px; }
+.login-ingresar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    min-height: 51px;
+    margin-top: 5px;
+    padding: 11px 18px;
+    border-radius: 10px;
+    font-size: .9rem;
+    font-weight: 700;
+}
+.login-ingresar span { font-size: 1.3rem; }
+.login-ayuda {
+    display: flex;
+    gap: 11px;
+    align-items: flex-start;
+    padding: 16px;
+    margin-top: 28px;
+    border-radius: 11px;
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-secondary-color);
+}
+.login-ayuda svg { flex: 0 0 18px; margin-top: 1px; }
+.login-ayuda p { margin: 0; font-size: .75rem; line-height: 1.6; }
+.login-formulario-pie { margin-top: auto; padding-top: 32px; font-size: .7rem; color: var(--bs-tertiary-color); text-align: center; }
+@keyframes login-aparecer {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 900px) {
+    .login-shell { grid-template-columns: 1fr; width: min(540px,calc(100% - 28px)); margin: 22px auto; min-height: auto; }
+    .login-marca { padding: 26px 30px; min-height: 145px; }
+    .login-marca-centro,.login-marca-pie,.login-marca-decoracion { display: none; }
+    .login-formulario-zona { padding: 37px 30px 28px; }
+}
+@media (max-width: 480px) {
+    .login-shell { width: calc(100% - 20px); margin: 10px auto; border-radius: 16px; }
+    .login-marca { min-height: 100px; padding: 20px 22px; justify-content: center; }
+    .login-emblema { width: 45px; height: 45px; flex-basis: 45px; }
+    .login-marca-nombre strong { font-size: 1.35rem; }
+    .login-formulario-zona { padding: 30px 21px 25px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .login-shell { animation: none !important; }
+}

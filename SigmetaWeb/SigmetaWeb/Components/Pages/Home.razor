@@ -1,56 +1,435 @@
 @page "/"
+@using SigmetaWeb.Components.Pages.Compras
+@using SigmetaWeb.Components.Pages.Catalogo
+@using SigmetaWeb.Components.Pages.Clientes
+@inject ApiJava Api
 
-<PageTitle>Inicio · SIGMETA</PageTitle>
+<PageTitle>Panel de control · SIGMETA</PageTitle>
 
-<Encabezado Titulo="Inicio" Subtitulo="@($"Accesos rápidos · {Rol}")" />
+<section class="inicio-hero mb-4">
+    <div class="inicio-hero-contenido">
+        <span class="inicio-etiqueta">SIGMETA / PANEL DE CONTROL</span>
+        <h1 class="inicio-titulo">Bienvenido a SIGMETA</h1>
+        <p class="mb-0 inicio-subtitulo">Tu espacio de trabajo para consultar operaciones y acceder a los módulos del sistema.</p>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <span class="inicio-rol"><span class="inicio-punto"></span>@Rol</span>
+            <span class="inicio-fecha">@DateTime.Today.ToString("dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-PE"))</span>
+        </div>
+    </div>
+    <div class="inicio-hero-decoracion" aria-hidden="true">
+        <div class="inicio-decoracion-circulo"></div>
+        <div class="inicio-decoracion-icono">SM</div>
+    </div>
+</section>
 
-<div class="row g-3">
-    @foreach (var a in AccesosActuales)
-    {
-        <div class="col-sm-6 col-lg-3">
-            <a class="card h-100 text-decoration-none" href="@a.Ruta">
+@if (EsAdministrador)
+{
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+        <div>
+            <h2 class="inicio-seccion-titulo mb-1">Resumen operativo</h2>
+            <p class="text-muted small mb-0">Indicadores actuales consultados desde los servicios de SIGMETA.</p>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@cargando" @onclick="CargarResumen">
+            @(cargando ? "Actualizando..." : "Actualizar datos")
+        </button>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <a class="inicio-indicador card h-100 text-decoration-none" href="/compras">
                 <div class="card-body">
-                    <div class="fw-semibold text-body">@a.Titulo</div>
-                    <div class="small text-muted">@a.Desc</div>
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <span class="inicio-indicador-etiqueta">Compras registradas</span>
+                        <span class="inicio-icono inicio-icono-naranja" aria-hidden="true">OC</span>
+                    </div>
+                    <div class="inicio-indicador-valor">@(cargando && compras is null ? "…" : compras?.Count.ToString() ?? "—")</div>
+                    <div class="inicio-indicador-pie">Consultar órdenes de compra <span aria-hidden="true">↗</span></div>
+                </div>
+            </a>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <a class="inicio-indicador card h-100 text-decoration-none" href="/proveedores">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <span class="inicio-indicador-etiqueta">Proveedores activos</span>
+                        <span class="inicio-icono inicio-icono-azul" aria-hidden="true">PR</span>
+                    </div>
+                    <div class="inicio-indicador-valor">@(cargando && proveedores is null ? "…" : proveedores?.Count(p => p.Estado).ToString() ?? "—")</div>
+                    <div class="inicio-indicador-pie">Administrar proveedores <span aria-hidden="true">↗</span></div>
+                </div>
+            </a>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <a class="inicio-indicador card h-100 text-decoration-none" href="/compras">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <span class="inicio-indicador-etiqueta">Compras por recibir</span>
+                        <span class="inicio-icono inicio-icono-ambar" aria-hidden="true">PE</span>
+                    </div>
+                    <div class="inicio-indicador-valor">@(cargando && compras is null ? "…" : compras?.Count(c => c.Estado == "REGISTRADA" || c.Estado == "RECIBIDA_PARCIAL").ToString() ?? "—")</div>
+                    <div class="inicio-indicador-pie">Registradas o recibidas parcialmente</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <a class="inicio-indicador card h-100 text-decoration-none" href="/compras">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <span class="inicio-indicador-etiqueta">Compras anuladas</span>
+                        <span class="inicio-icono inicio-icono-rojo" aria-hidden="true">AN</span>
+                    </div>
+                    <div class="inicio-indicador-valor">@(cargando && compras is null ? "…" : compras?.Count(c => c.Anulado || c.Estado == "ANULADA").ToString() ?? "—")</div>
+                    <div class="inicio-indicador-pie">Historial disponible para consulta</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(errorResumen))
+    {
+        <div class="alert alert-warning small mb-4" role="alert">
+            No se pudo cargar todo el resumen: @errorResumen. Puedes seguir usando los accesos rápidos.
+        </div>
+    }
+}
+
+@if (EsAdministrador)
+{
+    <div class="row g-3 mb-4">
+        <div class="col-lg-7">
+            <section class="card inicio-grafico h-100">
+                <div class="card-body p-3 p-md-4">
+                    <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+                        <div>
+                            <h2 class="inicio-seccion-titulo mb-1">Compras por mes</h2>
+                            <p class="small text-muted mb-0">Importe de compras no anuladas · últimos 6 meses con registros.</p>
+                        </div>
+                        <span class="inicio-grafico-etiqueta">S/</span>
+                    </div>
+                    @if (compras is null)
+                    {
+                        <p class="text-muted small">No hay datos disponibles para este gráfico.</p>
+                    }
+                    else if (ComprasPorMes.Count == 0)
+                    {
+                        <p class="text-muted small">Aún no existen compras con fechas válidas para mostrar.</p>
+                    }
+                    else
+                    {
+                        <div class="inicio-columnas" role="group" aria-label="Importe de compras por mes">
+                            <div class="inicio-columnas-grafico">
+                                @foreach (var barra in ComprasPorMes)
+                                {
+                                    <div class="inicio-columna-grupo" @key="barra.Etiqueta"
+                                         title="@($"{barra.Etiqueta}: S/ {barra.Valor:N2}")">
+                                        <strong class="inicio-columna-importe">S/ @barra.Valor.ToString("N0")</strong>
+                                        <div class="inicio-columna-area">
+                                            <div class="inicio-columna" style="height:@(Porcentaje(barra.Valor, MaxMes))%"></div>
+                                        </div>
+                                        <span class="inicio-columna-etiqueta">@barra.Etiqueta</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+        </div>
+        <div class="col-lg-5">
+            <section class="card inicio-grafico h-100">
+                <div class="card-body p-3 p-md-4">
+                    <h2 class="inicio-seccion-titulo mb-1">Distribución de compras</h2>
+                    <p class="small text-muted mb-3">Cantidad de órdenes por estado.</p>
+                    @if (compras is null)
+                    {
+                        <p class="small text-muted">No hay datos disponibles para este gráfico.</p>
+                    }
+                    else
+                    {
+                        <div class="inicio-estados inicio-estados-grafico">
+                            @foreach (var estado in EstadosCompra)
+                            {
+                                <div class="inicio-estado-fila" @key="estado.Etiqueta">
+                                    <div class="d-flex justify-content-between gap-2 mb-1">
+                                        <span class="small">@estado.Etiqueta</span>
+                                        <strong class="small">@estado.Valor</strong>
+                                    </div>
+                                    <div class="progress" role="progressbar" aria-label="@estado.Etiqueta"
+                                         aria-valuenow="@estado.Valor" aria-valuemin="0" aria-valuemax="@Math.Max(1, compras.Count)">
+                                        <div class="progress-bar @estado.Clase" style="width:@(Porcentaje(estado.Valor, Math.Max(1, compras.Count)))%"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </section>
+        </div>
+    </div>
+    <section class="card inicio-grafico mb-4">
+        <div class="card-body p-3 p-md-4">
+            <h2 class="inicio-seccion-titulo mb-1">Proveedores con mayor volumen de compras</h2>
+            <p class="small text-muted mb-3">Importes acumulados de órdenes no anuladas; no equivale a gastos pagados.</p>
+            @if (compras is null || ComprasPorProveedor.Count == 0)
+            {
+                <p class="small text-muted mb-0">No hay compras disponibles para este análisis.</p>
+            }
+            else
+            {
+                <div class="row g-3">
+                    @foreach (var proveedor in ComprasPorProveedor)
+                    {
+                        <div class="col-md-4" @key="proveedor.Etiqueta">
+                            <div class="inicio-proveedor h-100">
+                                <div class="small text-muted text-truncate" title="@proveedor.Etiqueta">@proveedor.Etiqueta</div>
+                                <div class="fw-bold fs-5 mt-1">S/ @proveedor.Valor.ToString("N2")</div>
+                                <div class="inicio-barra-pista mt-2">
+                                    <div class="inicio-barra-valor" style="width:@(Porcentaje(proveedor.Valor, MaxProveedor))%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+}
+
+@if (EsVendedor)
+{
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+        <div>
+            <h2 class="inicio-seccion-titulo mb-1">Panorama comercial</h2>
+            <p class="small text-muted mb-0">Información real de clientes registrada en SIGMETA.</p>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary" disabled="@cargando" @onclick="CargarClientes">Actualizar</button>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(errorClientes))
+    {
+        <div class="alert alert-warning small mb-3">@errorClientes</div>
+    }
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-4">
+            <div class="card inicio-indicador h-100"><div class="card-body">
+                <span class="inicio-indicador-etiqueta">Clientes en cartera</span>
+                <div class="inicio-indicador-valor">@(clientes?.Count.ToString() ?? "—")</div>
+                <div class="inicio-indicador-pie">Registrados en el sistema</div>
+            </div></div>
+        </div>
+        <div class="col-sm-6 col-lg-4">
+            <div class="card inicio-indicador h-100"><div class="card-body">
+                <span class="inicio-indicador-etiqueta">Clientes activos</span>
+                <div class="inicio-indicador-valor">@(clientes?.Count(c => c.Activo).ToString() ?? "—")</div>
+                <div class="inicio-indicador-pie">Disponibles para operaciones</div>
+            </div></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card inicio-indicador h-100"><div class="card-body">
+                <span class="inicio-indicador-etiqueta">Clientes con crédito</span>
+                <div class="inicio-indicador-valor">@(clientes?.Count(c => c.LimiteCredito > 0).ToString() ?? "—")</div>
+                <div class="inicio-indicador-pie">Con línea de crédito asignada</div>
+            </div></div>
+        </div>
+        <div class="col-12">
+            <div class="card inicio-grafico"><div class="card-body p-3 p-md-4">
+                <h2 class="inicio-seccion-titulo mb-1">Composición de clientes</h2>
+                <p class="text-muted small mb-3">Distribución entre empresas y personas naturales.</p>
+                @if (clientes is null)
+                {
+                    <p class="text-muted small mb-0">No hay datos disponibles.</p>
+                }
+                else
+                {
+                    @foreach (var grupo in TiposCliente)
+                    {
+                        <div class="inicio-estado-fila" @key="grupo.Etiqueta">
+                            <div class="d-flex justify-content-between mb-1"><span class="small">@grupo.Etiqueta</span><strong class="small">@grupo.Valor</strong></div>
+                            <div class="progress" role="progressbar" aria-label="@grupo.Etiqueta"
+                                 aria-valuenow="@grupo.Valor" aria-valuemin="0" aria-valuemax="@Math.Max(1, clientes.Count)">
+                                <div class="progress-bar @grupo.Clase" style="width:@(Porcentaje(grupo.Valor, Math.Max(1, clientes.Count)))%"></div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div></div>
+        </div>
+    </div>
+}
+
+@if (Rol is "Cajero" or "Almacenero")
+{
+    <section class="card inicio-grafico mb-4">
+        <div class="card-body p-3 p-md-4">
+            <h2 class="inicio-seccion-titulo mb-1">Panel de seguimiento · @Rol</h2>
+            <p class="small text-muted mb-3">
+                @(Rol == "Cajero" ? "Controla el ciclo de caja y cobranza desde los accesos del módulo."
+                    : "Da seguimiento a recepciones, despachos y necesidades de reposición.")
+            </p>
+            <div class="inicio-aviso-datos">
+                <strong>Indicadores pendientes de integración REST</strong>
+                <p class="small mb-0 mt-1">Los gráficos de @(Rol == "Cajero" ? "ingresos, egresos y saldos de caja" : "rotación de productos, movimientos y stock mínimo") estarán disponibles cuando los servicios correspondientes del equipo expongan datos reales. No se muestran cifras simuladas.</p>
+            </div>
+        </div>
+    </section>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="inicio-seccion-titulo mb-1">Accesos rápidos</h2>
+        <p class="text-muted small mb-0">Las herramientas más útiles para tu rol.</p>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    @foreach (var acceso in AccesosActuales)
+    {
+        <div class="col-sm-6 col-xl-3" @key="acceso.Ruta">
+            <a class="inicio-acceso card h-100 text-decoration-none" href="@acceso.Ruta">
+                <div class="card-body d-flex flex-column gap-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="inicio-icono inicio-icono-naranja" aria-hidden="true">@acceso.Iniciales</span>
+                        <span class="inicio-flecha" aria-hidden="true">↗</span>
+                    </div>
+                    <div class="fw-semibold text-body">@acceso.Titulo</div>
+                    <p class="small text-muted mb-0">@acceso.Desc</p>
                 </div>
             </a>
         </div>
     }
 </div>
 
+@if (EsAdministrador)
+{
+    <div class="card inicio-tabla-card mb-3">
+        <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2 py-3 px-3 px-md-4">
+            <div>
+                <h2 class="inicio-seccion-titulo mb-1">Compras recientes</h2>
+                <p class="text-muted small mb-0">Consulta directa de las últimas órdenes.</p>
+            </div>
+            <a class="btn btn-sm btn-outline-secondary" href="/compras">Ver todas las compras</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3 ps-md-4">N.º de orden</th>
+                        <th>Proveedor</th>
+                        <th>Fecha</th>
+                        <th>Estado</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end pe-3 pe-md-4">Detalle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (compras is null && cargando)
+                    {
+                        <tr><td colspan="6" class="text-center text-muted py-4">Cargando compras...</td></tr>
+                    }
+                    else if (compras is null || compras.Count == 0)
+                    {
+                        <tr><td colspan="6" class="text-center text-muted py-4">No hay compras disponibles.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var compra in compras.OrderByDescending(c => c.Id).Take(5))
+                        {
+                            <tr @key="compra.Id">
+                                <td class="ps-3 ps-md-4 fw-semibold">@compra.Numero</td>
+                                <td>@NombreProveedor(compra.IdProveedor)</td>
+                                <td>@MostrarFecha(compra.FechaEmision)</td>
+                                <td><span class="@ClaseEstado(compra.Estado)">@compra.Estado.Replace("_", " ")</span></td>
+                                <td class="text-end">S/ @compra.Total.ToString("N2")</td>
+                                <td class="text-end pe-3 pe-md-4"><a class="btn btn-sm btn-outline-primary" href="@($"/compras/detalle/{compra.Id}")">Ver detalle</a></td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
 @code {
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
 
-    private record Acceso(string Titulo, string Desc, string Ruta);
+    private record Acceso(string Iniciales, string Titulo, string Desc, string Ruta);
+    private bool EsAdministrador => string.Equals(Rol, "Administrador", StringComparison.OrdinalIgnoreCase);
+    private bool EsVendedor => string.Equals(Rol, "Vendedor", StringComparison.OrdinalIgnoreCase);
+    private record DatoGrafico(string Etiqueta, decimal Valor, string Clase = "");
 
-    // Accesos fijos por rol (solo visual): la tarea principal de cada uno.
+    private static decimal Porcentaje(decimal valor, decimal max) =>
+        max <= 0 ? 0 : Math.Clamp(Math.Round(valor * 100m / max, 1), 0, 100);
+    private List<DatoGrafico> ComprasPorMes => compras is null ? new() :
+        compras.Where(c => !c.Anulado && c.Estado != "ANULADA" &&
+                 DateTime.TryParse(c.FechaEmision, out _))
+            .GroupBy(c => DateTime.Parse(c.FechaEmision!).ToString("yyyy-MM"))
+            .OrderByDescending(g => g.Key).Take(6).OrderBy(g => g.Key)
+            .Select(g => new DatoGrafico(
+                DateTime.Parse(g.Key + "-01").ToString("MMM yyyy", new System.Globalization.CultureInfo("es-PE")),
+                g.Sum(c => c.Total))).ToList();
+    private decimal MaxMes => ComprasPorMes.Select(x => x.Valor).DefaultIfEmpty(0).Max();
+
+    private List<DatoGrafico> EstadosCompra => compras is null ? new() : new()
+    {
+        new("Registradas", compras.Count(c => c.Estado == "REGISTRADA"), "bg-secondary"),
+        new("Recibidas parcialmente", compras.Count(c => c.Estado == "RECIBIDA_PARCIAL"), "bg-warning"),
+        new("Recibidas", compras.Count(c => c.Estado == "RECIBIDA"), "bg-success"),
+        new("Anuladas", compras.Count(c => c.Estado == "ANULADA" || c.Anulado), "bg-danger")
+    };
+    private List<DatoGrafico> ComprasPorProveedor => compras is null ? new() :
+        compras.Where(c => !c.Anulado && c.Estado != "ANULADA")
+            .GroupBy(c => c.IdProveedor)
+            .OrderByDescending(g => g.Sum(c => c.Total)).Take(3)
+            .Select(g => new DatoGrafico(NombreProveedor(g.Key), g.Sum(c => c.Total))).ToList();
+    private decimal MaxProveedor => ComprasPorProveedor.Select(x => x.Valor).DefaultIfEmpty(0).Max();
+    private List<Cliente>? clientes;
+    private string? errorClientes;
+    private List<DatoGrafico> TiposCliente => clientes is null ? new() : new()
+    {
+        new("Empresas", clientes.Count(c => c.TipoPersona == "JURIDICA"), "bg-primary"),
+        new("Personas naturales", clientes.Count(c => c.TipoPersona == "NATURAL"), "bg-info")
+    };
+
+
+    private List<CompraRest>? compras;
+    private List<Proveedor>? proveedores;
+    private bool cargando;
+    private string? errorResumen;
+
     private static readonly Acceso[] Administrador =
     {
-        new("Solicitudes de autorización", "Aprobar o rechazar operaciones restringidas.", "/autorizaciones"),
-        new("Usuarios", "Registrar, editar y desactivar usuarios.", "/usuarios"),
-        new("Clientes", "Clientes y líneas de crédito.", "/clientes"),
-        new("Reportes", "Comercial, abastecimiento y caja.", "/reportes"),
+        new("NC", "Nueva compra", "Registrar una orden de compra a un proveedor.", "/compras/nueva"),
+        new("PR", "Proveedores", "Consultar, registrar y administrar proveedores.", "/proveedores"),
+        new("PD", "Productos", "Buscar artículos del catálogo.", "/productos"),
+        new("KA", "Kardex", "Revisar los movimientos de inventario.", "/almacen/kardex"),
+        new("AU", "Autorizaciones", "Gestionar solicitudes de autorización.", "/autorizaciones"),
+        new("US", "Usuarios", "Administrar usuarios del sistema.", "/usuarios"),
+        new("CL", "Clientes", "Consultar la cartera de clientes.", "/clientes"),
+        new("RP", "Reportes", "Consultar información operativa.", "/reportes")
     };
+
     private static readonly Acceso[] Vendedor =
     {
-        new("Clientes", "Registrar y buscar clientes.", "/clientes"),
-        new("Cotizaciones", "Preparar y enviar cotizaciones.", "/cotizaciones"),
-        new("Ventas y comprobantes", "Registrar ventas y emitir comprobantes.", "/ventas"),
-        new("Productos", "Buscar precio y existencias.", "/productos"),
+        new("CL", "Clientes", "Registrar y buscar clientes.", "/clientes"),
+        new("CT", "Cotizaciones", "Preparar cotizaciones.", "/cotizaciones"),
+        new("VE", "Ventas", "Gestionar comprobantes y ventas.", "/ventas"),
+        new("PD", "Productos", "Consultar precios y existencias.", "/productos")
     };
+
     private static readonly Acceso[] Cajero =
     {
-        new("Caja", "Apertura de la jornada.", "/caja"),
-        new("Cuentas por cobrar", "Registrar cobros y ver saldos.", "/cobranzas"),
-        new("Notas de crédito", "Devoluciones sobre un comprobante.", "/notas-credito"),
-        new("Cierre de caja", "Cuadrar la caja al final del día.", "/caja/cierre"),
+        new("CJ", "Caja", "Apertura de la jornada.", "/caja"),
+        new("CB", "Cobranzas", "Consultar cuentas por cobrar.", "/cobranzas"),
+        new("NC", "Notas de crédito", "Gestionar devoluciones.", "/notas-credito"),
+        new("CC", "Cierre de caja", "Cuadrar caja al finalizar la jornada.", "/caja/cierre")
     };
+
     private static readonly Acceso[] Almacenero =
     {
-        new("Compras por recibir", "Registrar la mercadería que llega.", "/recepciones"),
-        new("Ventas por despachar", "Entregar la mercadería vendida.", "/despachos"),
-        new("Movimientos de almacén", "Historial de entradas y salidas.", "/almacen/movimientos"),
-        new("Stock mínimo", "Productos por reponer.", "/almacen/stock-minimo"),
+        new("RC", "Recepciones", "Registrar las compras recibidas.", "/recepciones"),
+        new("DP", "Despachos", "Revisar mercadería por entregar.", "/despachos"),
+        new("KA", "Kardex", "Consultar entradas y salidas.", "/almacen/kardex"),
+        new("SM", "Stock mínimo", "Identificar productos por reponer.", "/almacen/stock-minimo")
     };
 
     private Acceso[] AccesosActuales => Rol switch
@@ -58,6 +437,82 @@
         "Vendedor" => Vendedor,
         "Cajero" => Cajero,
         "Almacenero" => Almacenero,
-        _ => Administrador,
+        _ => Administrador
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (EsAdministrador && compras is null && proveedores is null && !cargando)
+            await CargarResumen();
+        else if (EsVendedor && clientes is null && !cargando)
+            await CargarClientes();
+    }
+
+    private async Task CargarClientes()
+    {
+        cargando = true;
+        errorClientes = null;
+        try
+        {
+            clientes = await Api.Get<List<Cliente>>("clientes") ?? new();
+        }
+        catch (Exception)
+        {
+            clientes = null;
+            errorClientes = "No se pudieron consultar los clientes desde Java REST.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarResumen()
+    {
+        cargando = true;
+        errorResumen = null;
+
+        // Las consultas no dependen entre sí; se cargan simultáneamente.
+        var tareaCompras = ConsultarCompras();
+        var tareaProveedores = ConsultarProveedores();
+        await Task.WhenAll(tareaCompras, tareaProveedores);
+
+        compras = await tareaCompras;
+        proveedores = await tareaProveedores;
+        if (compras is null || proveedores is null)
+        {
+            errorResumen = compras is null && proveedores is null
+                ? "no se pudieron consultar Compras ni Proveedores"
+                : compras is null ? "no se pudo consultar Compras"
+                                  : "no se pudo consultar Proveedores";
+        }
+        cargando = false;
+    }
+
+    private async Task<List<CompraRest>?> ConsultarCompras()
+    {
+        try { return await Api.Get<List<CompraRest>>("compras") ?? new(); }
+        catch (Exception) { return null; }
+    }
+
+    private async Task<List<Proveedor>?> ConsultarProveedores()
+    {
+        try { return await Api.Get<List<Proveedor>>("proveedores") ?? new(); }
+        catch (Exception) { return null; }
+    }
+
+    private string NombreProveedor(int id) =>
+        proveedores?.FirstOrDefault(p => p.Id == id)?.RazonSocial ?? $"Proveedor #{id}";
+
+    private static string MostrarFecha(string? valor) =>
+        DateTime.TryParse(valor, out var fecha) ? fecha.ToString("dd/MM/yyyy") : "—";
+
+    private static string ClaseEstado(string estado) => estado switch
+    {
+        "REGISTRADA" => "badge rounded-pill bg-secondary-subtle text-secondary-emphasis border",
+        "RECIBIDA" => "badge rounded-pill bg-success-subtle text-success-emphasis border",
+        "RECIBIDA_PARCIAL" => "badge rounded-pill bg-warning-subtle text-warning-emphasis border",
+        "ANULADA" => "badge rounded-pill bg-danger-subtle text-danger-emphasis border",
+        _ => "badge rounded-pill bg-light text-dark border"
     };
 }

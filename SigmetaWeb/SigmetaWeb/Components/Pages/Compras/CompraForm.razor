@@ -1,228 +1,304 @@
-﻿@page "/compras/nueva"
+@page "/compras/nueva"
 @page "/compras/editar/{Id:int}"
 @using SigmetaWeb.Components.Pages.Catalogo
+@using SigmetaWeb.Components.Pages.Compras
+@inject ApiJava Api
 @inject NavigationManager Nav
 
-@* RF011 - Registro y edición de compras.
-   Solo presentación visual para el Laboratorio 9. *@
-
 <PageTitle>@Titulo · SIGMETA</PageTitle>
-
 <Encabezado Rf="RF011" Titulo="@Titulo">
-    <a class="btn btn-outline-secondary" href="/compras">
-        Volver a la lista
-    </a>
+    <a class="btn btn-outline-secondary" href="/compras">Volver a la lista</a>
 </Encabezado>
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 
-@* Cabecera de la compra *@
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Datos de la compra</h2>
-
-    <div class="row">
-        <div class="col-md-6">
-            <Campo Etiqueta="Proveedor" Id="proveedor"
-                   Obligatorio="true"
-                   Ayuda="Proveedores activos del catálogo.">
-                <select id="proveedor" class="form-select" @bind="proveedorId">
+@if (cargando)
+{
+    <p class="text-muted">Cargando información de compra...</p>
+}
+else
+{
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Datos de la compra</h2>
+        <div class="row g-3">
+            <Campo Etiqueta="Número de orden" Id="numeroCompra" Clase="col-md-4" Obligatorio="true">
+                <input id="numeroCompra" class="form-control" maxlength="50" @bind="numero" />
+            </Campo>
+            <Campo Etiqueta="Proveedor" Id="proveedorCompra" Clase="col-md-8" Obligatorio="true">
+                <select id="proveedorCompra" class="form-select" @bind="proveedorId">
                     <option value="0">Seleccione un proveedor</option>
-                    @foreach (var p in MuestrasCompras.ProveedoresActivos)
+                    @foreach (var p in proveedores.Where(p => p.Estado || p.Id == proveedorId))
                     {
-                        <option value="@p.Id">@p.RazonSocial</option>
+                        <option value="@p.Id">@p.RazonSocial @(p.Estado ? "" : "(Inactivo)")</option>
                     }
                 </select>
             </Campo>
-        </div>
-
-        <div class="col-md-3">
-            <Campo Etiqueta="Fecha" Id="fecha"
-                   Obligatorio="true">
-                <input id="fecha" type="date"
-                       class="form-control"
-                       @bind="fecha" />
+            <Campo Etiqueta="Fecha de emisión" Id="fechaCompra" Clase="col-md-6" Obligatorio="true">
+                <input id="fechaCompra" type="date" class="form-control" @bind="fecha" />
             </Campo>
-        </div>
-
-        <div class="col-md-3">
-            <Campo Etiqueta="Fecha estimada de recepción"
-                   Id="fechaEstimada">
-                <input id="fechaEstimada" type="date"
-                       class="form-control"
-                       @bind="fechaEstimada" />
+            <Campo Etiqueta="Fecha estimada de recepción" Id="fechaEstimadaCompra" Clase="col-md-6">
+                <input id="fechaEstimadaCompra" type="date" class="form-control" @bind="fechaEstimada" />
+            </Campo>
+            <Campo Etiqueta="Observaciones" Id="observacionesCompra" Clase="col-12">
+                <textarea id="observacionesCompra" class="form-control" maxlength="255" rows="2" @bind="observaciones"></textarea>
             </Campo>
         </div>
     </div>
-</div>
 
-@* Detalle de productos *@
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Detalle de compra</h2>
-
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Producto</th>
-                    <th>Unidad de compra</th>
-                    <th>Cantidad</th>
-                    <th>Costo unitario (S/)</th>
-                    <th class="text-end">Importe (S/)</th>
-                    <th></th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @foreach (var l in lineas)
-                {
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Detalle de compra</h2>
+        <p class="small text-muted">
+            Los productos se eligen del catálogo disponible. Los importes definitivos los calcula Java.
+        </p>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
                     <tr>
-                        <td>
-                            <select class="form-select" value="@l.Codigo"
-                                    @onchange="e => CambiarProducto(l, e.Value?.ToString())">
-                                @foreach (var p in MuestrasCompras.ProductosActivos)
-                                {
-                                    <option value="@p.CodigoInterno">@p.CodigoInterno · @p.Nombre</option>
-                                }
-                            </select>
-                        </td>
-                        <td>@MuestrasCatalogo.Texto(MuestrasCompras.Producto(l.Codigo)?.UnidadCompra ?? "")</td>
-                        <td>
-                            <input type="number"
-                                   class="form-control"
-                                   min="0.001" step="0.001"
-                                   @bind="l.Cantidad" @bind:event="oninput" />
-                        </td>
-                        <td>
-                            <input type="number"
-                                   class="form-control"
-                                   min="0" step="0.01"
-                                   @bind="l.Costo" @bind:event="oninput" />
-                        </td>
-                        <td class="text-end">S/ @((l.Cantidad * l.Costo).ToString("N2"))</td>
-                        <td class="text-end">
-                            <button class="btn btn-sm btn-outline-danger"
-                                    disabled="@(lineas.Count == 1)"
-                                    @onclick="() => Quitar(l)">
-                                Quitar
-                            </button>
-                        </td>
+                        <th>Producto</th><th>Unidad</th><th>Cantidad</th><th>Precio unitario (S/)</th>
+                        <th>Descuento (S/)</th><th>Importe (S/)</th><th></th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var linea in lineas)
+                    {
+                        <tr @key="linea">
+                            <td>
+                                <input type="text" class="form-control" list="productosCompraDisponibles"
+                                       autocomplete="off" placeholder="Código o nombre del producto"
+                                       value="@TextoProducto(linea)"
+                                       @oninput="e => CambiarProducto(linea, e.Value?.ToString())" />
+                            </td>
+                            <td>
+                                <select class="form-select" @bind="linea.UnidadCompra">
+                                    @foreach (var unidad in MuestrasCatalogo.Unidades)
+                                    {
+                                        <option value="@unidad">@MuestrasCatalogo.Texto(unidad)</option>
+                                    }
+                                </select>
+                            </td>
+                            <td><input type="number" min="0.001" step="0.001" class="form-control sin-flechas" @bind="linea.Cantidad" @bind:event="oninput" /></td>
+                            <td><input type="number" min="0" step="0.01" class="form-control sin-flechas" @bind="linea.PrecioUnitario" @bind:event="oninput" /></td>
+                            <td><input type="number" min="0" step="0.01" class="form-control sin-flechas" @bind="linea.Descuento" @bind:event="oninput" /></td>
+                            <td>S/ @Importe(linea).ToString("N2")</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        disabled="@(lineas.Count <= 1)" @onclick="() => Quitar(linea)">Quitar</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <datalist id="productosCompraDisponibles">
+            @foreach (var p in productos.Where(p => p.Estado))
+            {
+                <option value="@EtiquetaProducto(p)"></option>
+            }
+        </datalist>
+        <button type="button" class="btn btn-outline-secondary align-self-start" @onclick="Agregar">Agregar producto</button>
     </div>
 
-    <div>
-        <button class="btn btn-outline-secondary" @onclick="Agregar">
-            Agregar producto
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Resumen de compra</h2>
+        <div class="row justify-content-end">
+            <div class="col-md-4">
+                <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><strong>S/ @SubTotal.ToString("N2")</strong></div>
+                <div class="d-flex justify-content-between mb-2"><span>IGV (18 %)</span><strong>S/ @Igv.ToString("N2")</strong></div>
+                <hr />
+                <div class="d-flex justify-content-between"><strong>Total</strong><strong>S/ @Total.ToString("N2")</strong></div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex justify-content-end gap-2">
+        <a class="btn btn-outline-secondary" href="/compras">Cancelar</a>
+        <button type="button" class="btn btn-primary" disabled="@guardando" @onclick="Guardar">
+            @(guardando ? "Guardando..." : "Guardar compra")
         </button>
     </div>
-</div>
-
-@* Totales: se recalculan al cambiar cantidades o costos *@
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Resumen de compra</h2>
-
-    <div class="row justify-content-end">
-        <div class="col-md-4">
-            <div class="d-flex justify-content-between mb-2">
-                <span>Subtotal:</span>
-                <strong>S/ @SubTotal.ToString("N2")</strong>
-            </div>
-            <div class="d-flex justify-content-between mb-2">
-                <span>IGV (18 %):</span>
-                <strong>S/ @Igv.ToString("N2")</strong>
-            </div>
-            <hr />
-            <div class="d-flex justify-content-between">
-                <strong>Total:</strong>
-                <strong>S/ @Total.ToString("N2")</strong>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="alert alert-secondary">
-    Vista de demostración: Guardar no registra la compra; la persistencia
-    se integrará con los servicios Java.
-</div>
-
-@* Acciones: solo navegación, sin registrar datos *@
-<div class="d-flex justify-content-end gap-2">
-    <a class="btn btn-outline-secondary" href="/compras">
-        Cancelar
-    </a>
-
-    <button class="btn btn-primary" @onclick="Volver">
-        Guardar
-    </button>
-</div>
+}
 
 @code {
-    [Parameter]
-    public int? Id { get; set; }
-
-    private class LineaEdicion
-    {
-        public string Codigo { get; set; } = "";
-        public decimal Cantidad { get; set; } = 1m;
-        public decimal Costo { get; set; }
-    }
-
-    private int proveedorId;
-    private DateTime fecha = new(2026, 10, 20);
-    private DateTime fechaEstimada = new(2026, 10, 27);
-    private List<LineaEdicion> lineas = new();
+    [Parameter] public int? Id { get; set; }
 
     private bool EsNuevo => Id is null;
+    private string Titulo => EsNuevo ? "Nueva compra" : "Editar compra";
+    private List<Proveedor> proveedores = new();
+    private List<ProductoCompraRest> productos = new();
+    private List<SolicitudDetalleCompraRest> lineas = new();
+    private readonly Dictionary<SolicitudDetalleCompraRest, string> textosProductos = new();
+    private string numero = "";
+    private int proveedorId;
+    private DateTime fecha = DateTime.Today;
+    private DateTime? fechaEstimada;
+    private string? observaciones;
+    private bool cargando;
+    private bool guardando;
+    private string? error;
 
-    private string Titulo =>
-        EsNuevo ? "Nueva compra" : "Editar compra";
-
-    private decimal SubTotal => lineas.Sum(l => l.Cantidad * l.Costo);
-    private decimal Igv => Math.Round(SubTotal * MuestrasCompras.TasaIgv, 2);
+    private decimal Importe(SolicitudDetalleCompraRest l) =>
+        Math.Round(l.Cantidad * l.PrecioUnitario - l.Descuento, 2);
+    private decimal SubTotal => lineas.Sum(Importe);
+    private decimal Igv => Math.Round(SubTotal * 0.18m, 2, MidpointRounding.AwayFromZero);
     private decimal Total => SubTotal + Igv;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        var compra = MuestrasCompras.Compras.FirstOrDefault(c => c.Id == Id);
-        if (compra is null)
+        cargando = true;
+        error = null;
+        try
         {
-            lineas = new() { NuevaLinea() };
+            proveedores = await Api.Get<List<Proveedor>>("proveedores") ?? new();
+            productos = await Api.Get<List<ProductoCompraRest>>("productos") ?? new();
+            if (EsNuevo)
+            {
+                numero = "";
+                proveedorId = 0;
+                fecha = DateTime.Today;
+                fechaEstimada = null;
+                observaciones = null;
+                textosProductos.Clear();
+                lineas = new() { NuevaLinea() };
+            }
+            else
+            {
+                CompraRest? compra = await Api.Get<CompraRest>($"compras/{Id}");
+                if (compra is null)
+                {
+                    error = "No se encontró la compra solicitada.";
+                    return;
+                }
+                if (compra.Estado != "REGISTRADA" || compra.Anulado)
+                {
+                    error = "Solo se pueden modificar compras registradas y no anuladas.";
+                    return;
+                }
+                numero = compra.Numero;
+                proveedorId = compra.IdProveedor;
+                fecha = DateTime.TryParse(compra.FechaEmision, out var f) ? f : DateTime.Today;
+                fechaEstimada = DateTime.TryParse(compra.FechaRecepcionEstimada, out var fe) ? fe : null;
+                observaciones = compra.Observaciones;
+                textosProductos.Clear();
+                lineas = compra.Detalles.Select(d => new SolicitudDetalleCompraRest
+                {
+                    NumeroLinea = d.NumeroLinea,
+                    IdProducto = d.IdProducto,
+                    Cantidad = d.Cantidad,
+                    PrecioUnitario = d.PrecioUnitario,
+                    Descuento = d.Descuento,
+                    UnidadCompra = d.UnidadCompra,
+                    FactorConversion = d.FactorConversion
+                }).ToList();
+                foreach (var linea in lineas)
+                {
+                    textosProductos[linea] = productos.FirstOrDefault(p => p.Id == linea.IdProducto) is { } p
+                        ? EtiquetaProducto(p)
+                        : "";
+                }
+            }
+        }
+        catch (ErrorApi e) { error = e.Message; }
+        finally { cargando = false; }
+    }
+
+    private static string EtiquetaProducto(ProductoCompraRest p) =>
+        $"{p.CodigoInterno} · {p.Nombre}";
+
+    private string TextoProducto(SolicitudDetalleCompraRest linea) =>
+        textosProductos.TryGetValue(linea, out var texto) ? texto : "";
+
+    private void CambiarProducto(SolicitudDetalleCompraRest linea, string? texto)
+    {
+        texto = texto?.Trim() ?? "";
+        textosProductos[linea] = texto;
+        // No enviamos el texto al Java: solo el ID de un producto elegido de la lista.
+        var producto = productos.FirstOrDefault(p => (p.Estado || p.Id == linea.IdProducto)
+            && string.Equals(EtiquetaProducto(p), texto, StringComparison.OrdinalIgnoreCase));
+        if (producto is null)
+        {
+            linea.IdProducto = 0;
             return;
         }
-
-        proveedorId = compra.ProveedorId;
-        fecha = compra.Fecha.ToDateTime(TimeOnly.MinValue);
-        fechaEstimada = compra.FechaEstimada.ToDateTime(TimeOnly.MinValue);
-        lineas = compra.Lineas
-            .Select(l => new LineaEdicion { Codigo = l.CodigoInterno, Cantidad = l.Cantidad, Costo = l.CostoUnitario })
-            .ToList();
+        if (linea.IdProducto != producto.Id)
+        {
+            linea.IdProducto = producto.Id;
+            linea.UnidadCompra = producto.UnidadCompra;
+            linea.FactorConversion = producto.FactorConversion;
+            linea.PrecioUnitario = producto.CostoUnitario;
+        }
     }
 
-    // El costo se propone desde el catálogo al elegir el producto, y puede editarse.
-    private static LineaEdicion NuevaLinea()
+    private SolicitudDetalleCompraRest NuevaLinea()
     {
-        var p = MuestrasCompras.ProductosActivos.First();
-        return new LineaEdicion { Codigo = p.CodigoInterno, Costo = p.CostoUnitario };
+        var linea = new SolicitudDetalleCompraRest { Cantidad = 1, IdProducto = 0 };
+        textosProductos[linea] = "";
+        return linea;
     }
-
-    private void CambiarProducto(LineaEdicion l, string? codigo)
-    {
-        var p = MuestrasCompras.ProductosActivos.FirstOrDefault(x => x.CodigoInterno == codigo);
-        if (p is null) return;
-        l.Codigo = p.CodigoInterno;
-        l.Costo = p.CostoUnitario;
-    }
-
     private void Agregar() => lineas.Add(NuevaLinea());
-
-    private void Quitar(LineaEdicion l)
+    private void Quitar(SolicitudDetalleCompraRest linea)
     {
-        if (lineas.Count > 1) lineas.Remove(l);
+        if (lineas.Count > 1)
+        {
+            lineas.Remove(linea);
+            textosProductos.Remove(linea);
+        }
     }
 
-    // Lab 9: Guardar no registra información.
-    private void Volver()
+    private async Task Guardar()
     {
-        Nav.NavigateTo("/compras");
+        error = null;
+        if (string.IsNullOrWhiteSpace(numero) || proveedorId <= 0)
+        {
+            error = "Ingrese un número de orden y seleccione un proveedor.";
+            return;
+        }
+        if (EsNuevo && !proveedores.Any(p => p.Id == proveedorId && p.Estado))
+        {
+            error = "Seleccione un proveedor activo.";
+            return;
+        }
+        if (lineas.Count == 0 || lineas.Any(l =>
+             l.IdProducto <= 0 ||
+             !productos.Any(p => p.Id == l.IdProducto &&
+                 string.Equals(EtiquetaProducto(p), TextoProducto(l), StringComparison.OrdinalIgnoreCase)) ||
+             l.Cantidad <= 0 || l.PrecioUnitario < 0 ||
+             l.Descuento < 0 || l.Descuento > l.Cantidad * l.PrecioUnitario ||
+             l.FactorConversion <= 0))
+        {
+            error = "Revise los productos, cantidades, precios y descuentos.";
+            return;
+        }
+        if (fechaEstimada.HasValue && fechaEstimada.Value.Date < fecha.Date)
+        {
+            error = "La recepción estimada no puede ser anterior a la emisión.";
+            return;
+        }
+        guardando = true;
+        try
+        {
+            var pedido = new SolicitudCompraRest
+            {
+                Numero = numero.Trim(),
+                IdProveedor = proveedorId,
+                FechaEmision = fecha.ToString("yyyy-MM-dd"),
+                FechaRecepcionEstimada = fechaEstimada?.ToString("yyyy-MM-dd"),
+                Observaciones = observaciones,
+                Detalles = lineas.Select((l, i) => new SolicitudDetalleCompraRest
+                {
+                    NumeroLinea = i + 1,
+                    IdProducto = l.IdProducto,
+                    Cantidad = l.Cantidad,
+                    PrecioUnitario = l.PrecioUnitario,
+                    Descuento = l.Descuento,
+                    UnidadCompra = l.UnidadCompra,
+                    FactorConversion = l.FactorConversion
+                }).ToList()
+            };
+            if (EsNuevo)
+                await Api.Post<CompraRest>("compras", pedido);
+            else
+                await Api.Put<CompraRest>($"compras/{Id}", pedido);
+            Nav.NavigateTo("/compras");
+        }
+        catch (ErrorApi e) { error = e.Message; }
+        finally { guardando = false; }
     }
 }
