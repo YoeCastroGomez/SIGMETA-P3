@@ -477,3 +477,130 @@ html[data-bs-theme="dark"] .inicio-icono-rojo {background:#573b4a;color:#f7c2d0;
 @media(prefers-reduced-motion:reduce) {
     .sigmeta-tema-btn {transition:none!important;}
 }
+
+/* SIGMETA: naranja institucional predominante, sin sacrificar el contraste */
+:root, html[data-bs-theme="light"] {
+    --bs-primary:#b65b19;
+    --bs-primary-rgb:182,91,25;
+    --bs-link-color:#a34e16;
+    --bs-link-color-rgb:163,78,22;
+    --bs-link-hover-color:#793910;
+    --bs-link-hover-color-rgb:121,57,16;
+    --bs-focus-ring-color:rgba(185,95,30,.24);
+    --bs-body-bg:#f7f6f3;
+    --bs-body-color:#303641;
+    --bs-border-color:#e2ded8;
+    --bs-tertiary-bg:#f5f0e9;
+}
+.btn-primary {
+    --bs-btn-bg:#b65b19;--bs-btn-border-color:#b65b19;
+    --bs-btn-hover-bg:#924512;--bs-btn-hover-border-color:#924512;
+    --bs-btn-active-bg:#924512;--bs-btn-active-border-color:#924512;
+    --bs-btn-disabled-bg:#b65b19;--bs-btn-disabled-border-color:#b65b19;
+}
+.form-control:focus,.form-select:focus,.form-check-input:focus {
+    border-color:#b65b19;box-shadow:0 0 0 .22rem rgba(185,95,30,.19);
+}
+.form-check-input:checked {background-color:#b65b19;border-color:#b65b19;}
+.sigmeta-sidebar {background:linear-gradient(180deg,#302b2a 0%,#272a30 100%);}
+.sigmeta-brand-emblema {background:linear-gradient(145deg,#ec9a47,#ae5018);box-shadow:0 7px 20px rgba(64,30,13,.22);}
+.sigmeta-brand-punto {color:#f5ad69;}
+.sigmeta-brand-leyenda {color:#d2bbaa;}
+.sigmeta-sidebar .nav-link.active {
+    background:linear-gradient(90deg,rgba(220,122,44,.27),rgba(220,122,44,.06));
+    color:#ffdfc1;box-shadow:inset 3px 0 0 #f3a154;
+}
+.sigmeta-grupo-sigla {background:#4a3c35;color:#f4bb87;}
+.sigmeta-nav-icono {color:#f3b37f;}
+.sigmeta-sidebar .nav-submenu .nav-link.active .sigmeta-submenu-punto {
+    background:#ed9d58;border-color:#ed9d58;
+}
+.sigmeta-topbar-indicador {background:#cf7833;}
+.sigmeta-topbar-avatar {background:#fbe9d8;color:#9a4817;}
+.sigmeta-tema-btn {background:#fbefe5;color:#a45a26;border-color:#f0ddcd;}
+.sigmeta-tema-btn:hover {background:#f5dfca;color:#7f3d13;}
+.sigmeta-tema-btn:focus-visible {outline-color:#b65b19;}
+html[data-bs-theme="dark"] {
+    --bs-primary:#eda15e;
+    --bs-primary-rgb:237,161,94;
+    --bs-link-color:#ffbb80;
+    --bs-link-color-rgb:255,187,128;
+    --bs-link-hover-color:#ffdab8;
+    --bs-link-hover-color-rgb:255,218,184;
+    --bs-focus-ring-color:rgba(237,161,94,.26);
+    --bs-body-bg:#201f23;
+    --bs-body-color:#f1ece7;
+    --bs-secondary-color:#c6bab2;
+    --bs-tertiary-color:#ad9e94;
+    --bs-secondary-bg:#332f30;
+    --bs-tertiary-bg:#302c2d;
+    --bs-border-color:#514744;
+    --bs-emphasis-color:#fff9f2;
+}
+html[data-bs-theme="dark"] body {background:#201f23;color:#f1ece7;}
+html[data-bs-theme="dark"] .card,
+html[data-bs-theme="dark"] .dropdown-menu,
+html[data-bs-theme="dark"] .modal-content {background:#302c2d;color:#f1ece7;border-color:#514744;}
+html[data-bs-theme="dark"] .table {
+    --bs-table-bg:#302c2d;--bs-table-color:#f1ece7;
+    --bs-table-border-color:#514744;--bs-table-hover-bg:#413834;
+    --bs-table-hover-color:#fffaf6;--bs-table-striped-bg:#393232;
+    --bs-table-striped-color:#fffaf6;
+}
+html[data-bs-theme="dark"] .table-light,
+html[data-bs-theme="dark"] .table thead.table-light {
+    --bs-table-bg:#3d3531;--bs-table-color:#f3e4d6;--bs-table-border-color:#514744;
+}
+html[data-bs-theme="dark"] .bg-white,
+html[data-bs-theme="dark"] .card-header.bg-white {background:#302c2d!important;color:#f1ece7;}
+html[data-bs-theme="dark"] .text-body {color:#f1ece7!important;}
+html[data-bs-theme="dark"] .text-muted {color:#c6b7ad!important;}
+html[data-bs-theme="dark"] .form-control,
+html[data-bs-theme="dark"] .form-select,
+html[data-bs-theme="dark"] .form-check-input {
+    background:#29272a;border-color:#68564c;color:#fff4e9;
+}
+html[data-bs-theme="dark"] .form-control::placeholder {color:#b7a69b;}
+html[data-bs-theme="dark"] .btn-primary {
+    --bs-btn-color:#291708;--bs-btn-bg:#f0ab6f;--bs-btn-border-color:#f0ab6f;
+    --bs-btn-hover-color:#291708;--bs-btn-hover-bg:#ffca9a;--bs-btn-hover-border-color:#ffca9a;
+}
+html[data-bs-theme="dark"] .sigmeta-topbar {
+    background:rgba(43,39,40,.96);border-color:#514744;
+}
+html[data-bs-theme="dark"] .sigmeta-topbar-avatar {background:#594131;color:#ffd0a3;}
+html[data-bs-theme="dark"] .sigmeta-topbar-usuario small {color:#d0bcb0;}
+html[data-bs-theme="dark"] .sigmeta-tema-btn,
+html[data-bs-theme="dark"] .sigmeta-salir,
+html[data-bs-theme="dark"] .sigmeta-menu-movil {
+    background:#49372e;color:#ffceaa;border-color:#76533b;
+}
+html[data-bs-theme="dark"] .sigmeta-tema-btn:hover {background:#62442f;color:#fff;}
+html[data-bs-theme="dark"] .inicio-hero {
+    background:linear-gradient(110deg,#493126,#3a302f 70%,#503b2f 100%);
+}
+html[data-bs-theme="dark"] .inicio-indicador,
+html[data-bs-theme="dark"] .inicio-acceso,
+html[data-bs-theme="dark"] .inicio-grafico,
+html[data-bs-theme="dark"] .inicio-tabla-card {
+    background:#302c2d;border-color:#514744;color:#f1ece7;
+}
+html[data-bs-theme="dark"] .inicio-seccion-titulo,
+html[data-bs-theme="dark"] .inicio-indicador-valor {color:#fff4e9;}
+html[data-bs-theme="dark"] .inicio-indicador-etiqueta,
+html[data-bs-theme="dark"] .inicio-indicador-pie,
+html[data-bs-theme="dark"] .inicio-columna-etiqueta,
+html[data-bs-theme="dark"] .inicio-columna-importe {color:#d9c7b9;}
+html[data-bs-theme="dark"] .inicio-columnas {
+    background:linear-gradient(to top,rgba(171,119,76,.15) 1px,transparent 1px) 0 0/100% 25%;
+    border-color:#665043;
+}
+html[data-bs-theme="dark"] .inicio-proveedor,
+html[data-bs-theme="dark"] .inicio-aviso-datos {
+    background:#3c3330;border-color:#675245;color:#eadbd0;
+}
+html[data-bs-theme="dark"] .inicio-aviso-datos strong {color:#fff1e5;}
+html[data-bs-theme="dark"] .inicio-barra-pista,
+html[data-bs-theme="dark"] .inicio-estado-fila .progress {background:#51423d;}
+html[data-bs-theme="dark"] .inicio-grafico-etiqueta {background:#5a4030;color:#ffceaa;}
+html[data-bs-theme="dark"] .inicio-icono-naranja {background:#594030;color:#ffd0a4;}
