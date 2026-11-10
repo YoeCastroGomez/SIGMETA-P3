@@ -94,7 +94,7 @@ else
                     {
                         <tr><td colspan="7" class="text-center text-muted py-4">No se encontraron cotizaciones.</td></tr>
                     }
-                    @foreach (var c in cotizaciones)
+                    @foreach (var c in CotizacionesPagina)
                     {
                         <tr>
                             <td><strong>@c.Numero</strong></td>
@@ -131,6 +131,8 @@ else
                 </tbody>
             </table>
         </div>
+        <Paginacion TotalRegistros="@cotizaciones.Count"
+                    @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
 }
 
@@ -145,6 +147,14 @@ else
 
     private CotizacionDatos? anulando;
     private string motivo = "";
+
+    // paginacion (componente compartido Shared/Paginacion), igual que en Compras
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private int TotalPaginas => tamanoPagina == 0 ? 1 : Math.Max(1, (int)Math.Ceiling((double)(cotizaciones?.Count ?? 0) / tamanoPagina));
+    private IEnumerable<CotizacionDatos> CotizacionesPagina => cotizaciones is null ? Enumerable.Empty<CotizacionDatos>()
+        : tamanoPagina == 0 ? cotizaciones
+        : cotizaciones.Skip((Math.Clamp(paginaActual, 1, TotalPaginas) - 1) * tamanoPagina).Take(tamanoPagina);
 
     protected override async Task OnInitializedAsync()
     {
@@ -162,6 +172,7 @@ else
     private async Task Buscar()
     {
         exito = null;
+        paginaActual = 1;
         await Cargar();
     }
 
@@ -170,6 +181,7 @@ else
         filtroCliente = 0;
         filtroEstado = "";
         exito = null;
+        paginaActual = 1;
         await Cargar();
     }
 

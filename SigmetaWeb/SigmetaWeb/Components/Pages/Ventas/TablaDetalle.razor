@@ -1,0 +1,77 @@
+@* RF007 y RF008 · Tabla de solo lectura con las líneas reales de una cotización, orden, venta o comprobante
+   (LineaDatos del Java) y los totales que calculó el BO.
+   Es aparte de TablaLineas.razor, que sigue con los datos de ejemplo de Despachos y Notas de crédito.
+   MostrarAtendida: columna "Atendida" de una orden (lo entregado con despachos).
+   MostrarDespachada: columna "Despachada" de una venta. *@
+<div class="table-responsive">
+    <table class="table align-middle mb-0">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 3rem;">#</th>
+                <th>Producto</th>
+                <th class="text-end">Cantidad</th>
+                @if (MostrarAtendida)
+                {
+                    <th class="text-end">Atendida</th>
+                }
+                @if (MostrarDespachada)
+                {
+                    <th class="text-end">Despachada</th>
+                }
+                <th class="text-end">Precio unit. (S/)</th>
+                <th class="text-end">Descuento (S/)</th>
+                <th class="text-end">Importe (S/)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Lineas.Count == 0)
+            {
+                <tr><td colspan="@Columnas" class="text-center text-muted py-3">Sin líneas.</td></tr>
+            }
+            @foreach (var l in Lineas)
+            {
+                <tr>
+                    <td>@l.NumeroLinea</td>
+                    <td><span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto</td>
+                    <td class="text-end">@l.Cantidad.ToString("0.###")</td>
+                    @if (MostrarAtendida)
+                    {
+                        <td class="text-end">@l.CantidadAtendida.ToString("0.###")</td>
+                    }
+                    @if (MostrarDespachada)
+                    {
+                        <td class="text-end">@l.CantidadDespachada.ToString("0.###")</td>
+                    }
+                    <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
+                    <td class="text-end">@l.Descuento.ToString("N2")</td>
+                    <td class="text-end fw-semibold">@l.Importe.ToString("N2")</td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="@(Columnas - 1)" class="text-end text-muted">Subtotal</td>
+                <td class="text-end">@SubTotal.ToString("N2")</td>
+            </tr>
+            <tr>
+                <td colspan="@(Columnas - 1)" class="text-end text-muted">IGV (18 %)</td>
+                <td class="text-end">@Igv.ToString("N2")</td>
+            </tr>
+            <tr>
+                <td colspan="@(Columnas - 1)" class="text-end fw-bold">Total S/</td>
+                <td class="text-end fw-bold">@Total.ToString("N2")</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public List<LineaDatos> Lineas { get; set; } = new();
+    [Parameter] public decimal SubTotal { get; set; }
+    [Parameter] public decimal Igv { get; set; }
+    [Parameter] public decimal Total { get; set; }
+    [Parameter] public bool MostrarAtendida { get; set; }
+    [Parameter] public bool MostrarDespachada { get; set; }
+
+    private int Columnas => 6 + (MostrarAtendida ? 1 : 0) + (MostrarDespachada ? 1 : 0);
+}
