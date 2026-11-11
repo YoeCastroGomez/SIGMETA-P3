@@ -5,14 +5,14 @@ USE sigmeta;
 -- Ejecutar ANTES de recargar los archivos SP_*.sql (SP_yoe, SP_claudia y SP_daniel
 -- usan CREATE PROCEDURE sin DROP IF EXISTS y fallan si el SP ya existe).
 -- No toca tablas ni datos: solo borra procedimientos.
--- Los sql_prueba_*.sql no se eliminan: no crean objetos en la base, solo ejecutan CALL.
+-- Los sql/5_pruebas/sql_prueba_*.sql no se eliminan: no crean objetos en la base, solo ejecutan CALL.
 --
 -- Uso: 1) ejecutar este archivo  2) ejecutar SP_yoe, SP_claudia, SP_daniel, SP_sebastian, SP_adriano
 -- Total actual: 182 procedimientos.
 --      3) comprobar: SELECT COUNT(*) FROM information_schema.routines WHERE routine_schema = 'sigmeta';
 -- =========================================================================
 
--- ---------- SP_yoe.sql (37) ----------
+-- ---------- 01_SP_yoe.sql (37) ----------
 DROP PROCEDURE IF EXISTS sp_rol_insertar;
 DROP PROCEDURE IF EXISTS sp_rol_modificar;
 DROP PROCEDURE IF EXISTS sp_rol_eliminar;
@@ -51,7 +51,7 @@ DROP PROCEDURE IF EXISTS sp_solicitud_autorizacion_listar_por_estado;
 DROP PROCEDURE IF EXISTS sp_solicitud_autorizacion_listar_por_solicitante;
 DROP PROCEDURE IF EXISTS sp_solicitud_autorizacion_buscar_vigente;
 
--- ---------- SP_claudia.sql (23) ----------
+-- ---------- 02_SP_claudia.sql (23) ----------
 DROP PROCEDURE IF EXISTS sp_categoria_insertar;
 DROP PROCEDURE IF EXISTS sp_categoria_modificar;
 DROP PROCEDURE IF EXISTS sp_categoria_eliminar;
@@ -76,7 +76,7 @@ DROP PROCEDURE IF EXISTS sp_categoria_listar_por_estado;
 DROP PROCEDURE IF EXISTS sp_producto_listar_por_estado;
 DROP PROCEDURE IF EXISTS sp_detalle_cotizacion_listar_todos;
 
--- ---------- SP_daniel.sql (23) ----------
+-- ---------- 03_SP_daniel.sql (23) ----------
 DROP PROCEDURE IF EXISTS sp_compra_insertar;
 DROP PROCEDURE IF EXISTS sp_compra_modificar;
 DROP PROCEDURE IF EXISTS sp_compra_eliminar;
@@ -101,7 +101,7 @@ DROP PROCEDURE IF EXISTS sp_movimiento_inventario_obtener;
 DROP PROCEDURE IF EXISTS sp_movimiento_inventario_listar;
 DROP PROCEDURE IF EXISTS sp_compra_actualizar_estado;
 
--- ---------- SP_sebastian.sql (60) ----------
+-- ---------- 04_SP_sebastian.sql (60) ----------
 DROP PROCEDURE IF EXISTS sp_orden_compra_cliente_insertar;
 DROP PROCEDURE IF EXISTS sp_orden_compra_cliente_modificar;
 DROP PROCEDURE IF EXISTS sp_orden_compra_cliente_eliminar;
@@ -165,7 +165,7 @@ DROP PROCEDURE IF EXISTS sp_detalle_despacho_obtener;
 DROP PROCEDURE IF EXISTS sp_detalle_despacho_listar;
 DROP PROCEDURE IF EXISTS sp_detalle_despacho_listar_por_despacho;
 
--- ---------- SP_adriano.sql (39) ----------
+-- ---------- 05_SP_adriano.sql (39) ----------
 DROP PROCEDURE IF EXISTS sp_caja_insertar;
 DROP PROCEDURE IF EXISTS sp_caja_modificar;
 DROP PROCEDURE IF EXISTS sp_caja_eliminar;

@@ -1,6 +1,6 @@
 -- 05_caja.sql | Estudiante 5 | SIGMETA
 -- Caja y cobranza: caja, movimiento, cierre, cuenta por cobrar y cobro
--- Generado a partir de sql/sigmeta.sql, que es el script oficial: ejecutar 00_base.sql y luego
+-- Generado a partir de sql/1_base/sigmeta.sql, que es el script oficial: ejecutar 00_base.sql y luego
 -- 01 a 05 en orden sobre una base nueva equivale a ejecutar sigmeta.sql. No ejecutar ambos.
 
 USE sigmeta;

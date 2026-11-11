@@ -55,30 +55,32 @@ SET PERSIST sql_mode = (SELECT REPLACE(@@GLOBAL.sql_mode, 'ONLY_FULL_GROUP_BY', 
 SET SESSION sql_mode = (SELECT REPLACE(@@SESSION.sql_mode, 'ONLY_FULL_GROUP_BY', ''));
 ```
 
-Con Workbench, ejecutar uno por uno y en este orden:
+Los scripts estan en `sql/`, ordenados por carpetas (ver `sql/LEEME.md`). Con Workbench, ejecutar uno por
+uno y en este orden:
 
-1. `sql/sigmeta.sql` (tablas y datos de ejemplo)
-2. `sql_sp/00_drop_sps.sql`
-3. `sql_sp/SP_yoe.sql`
-4. `sql_sp/SP_claudia.sql`
-5. `sql_sp/SP_daniel.sql`
-6. `sql_sp/SP_sebastian.sql`
-7. `sql_sp/SP_adriano.sql`
-8. `sql_sp/SP_integridad.sql` (siempre al final)
+1. `sql/1_base/sigmeta.sql` (tablas y datos de ejemplo)
+2. `sql/2_procedimientos/00_drop_sps.sql`
+3. `sql/2_procedimientos/01_SP_yoe.sql`
+4. `sql/2_procedimientos/02_SP_claudia.sql`
+5. `sql/2_procedimientos/03_SP_daniel.sql`
+6. `sql/2_procedimientos/04_SP_sebastian.sql`
+7. `sql/2_procedimientos/05_SP_adriano.sql`
+8. `sql/2_procedimientos/06_SP_integridad.sql` (siempre al final)
+9. Opcional: `sql/4_datos_demo/datos_demo.sql` (borra los datos y carga tres meses de operacion simulada)
 
 Antes de los pasos 3 y 4, seleccionar `sigmeta` como schema por defecto (doble clic en el panel de Schemas),
 porque esos dos archivos no tienen `USE sigmeta;`.
 
-En vez de `sql/sigmeta.sql` se pueden correr `sql/00_base.sql` a `sql/06_integridad.sql` en orden.
+En vez de `sql/1_base/sigmeta.sql` se pueden correr los de `sql/1_base/por_modulo/` (00 a 06) en orden.
 Una opcion o la otra, no las dos.
 
 Para revisar que quedo bien: 29 tablas y 203 procedimientos en el schema `sigmeta`.
 
-Los archivos `sql_sp/sql_prueba_*.sql` son consultas para probar a mano los procedimientos de cada integrante.
+Los archivos `sql/5_pruebas/sql_prueba_*.sql` son consultas para probar a mano los procedimientos de cada integrante.
 
-**Base ya instalada (por ejemplo la de AWS):** no reinstalar. Aplicar las migraciones pendientes de `sql/`
-(por ejemplo `migracion_lab9_sebastian.sql`) y despues recargar todos los procedimientos en el mismo orden
-de los pasos 2 a 8.
+**Base ya instalada (por ejemplo la de AWS):** no reinstalar. Aplicar las migraciones pendientes de
+`sql/3_migraciones/` (en orden de numero; por ejemplo `04_migracion_lab9_sebastian.sql`) y despues recargar
+todos los procedimientos en el mismo orden de los pasos 2 a 8.
 
 ## 2. Configurar la conexion
 

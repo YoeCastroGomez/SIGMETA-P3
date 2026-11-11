@@ -1,5 +1,5 @@
 -- Ejecutar una sola vez SOBRE una BD existente que ya tenga la migracion
--- migracion_reversion_despacho.sql. Para BD nueva, usar sql/sigmeta.sql.
+-- sql/3_migraciones/01_migracion_reversion_despacho.sql. Para BD nueva, usar sql/1_base/sigmeta.sql.
 ALTER TABLE recepcion_compra
     ADD COLUMN anulada BOOLEAN NOT NULL DEFAULT FALSE;
 

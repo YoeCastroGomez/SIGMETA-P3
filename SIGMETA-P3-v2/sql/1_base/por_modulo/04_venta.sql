@@ -1,6 +1,6 @@
 -- 04_venta.sql | Estudiante 4 | SIGMETA
 -- Comercial: orden de compra del cliente, venta, comprobante, nota de credito y despacho
--- Generado a partir de sql/sigmeta.sql, que es el script oficial: ejecutar 00_base.sql y luego
+-- Generado a partir de sql/1_base/sigmeta.sql, que es el script oficial: ejecutar 00_base.sql y luego
 -- 01 a 05 en orden sobre una base nueva equivale a ejecutar sigmeta.sql. No ejecutar ambos.
 
 USE sigmeta;

@@ -76,7 +76,7 @@ import java.util.List;
  * Almacenero: la nota de credito usa la autorizacion aprobada (RF014) y solo devuelve lo entregado (RF013).
  * Las pruebas 12 y 13 demuestran las nuevas funcionalidades del Laboratorio 9 (estudiante 4):
  * registro de envio de comprobante (RF008) y busqueda de notas de credito autorizadas (RF013).
- * Requiere la base cargada con sigmeta.sql y los procedimientos de sql_sp.
+ * Requiere la base cargada con sigmeta.sql y los procedimientos de sql/2_procedimientos.
  */
 public class PruebaCrud {
 

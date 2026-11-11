@@ -1,5 +1,5 @@
 -- Ejecutar una sola vez sobre una base SIGMETA existente.
--- Si se crea la base desde cero con sql/sigmeta.sql, NO ejecutar esta migracion.
+-- Si se crea la base desde cero con sql/1_base/sigmeta.sql, NO ejecutar esta migracion.
 ALTER TABLE movimiento_inventario
     MODIFY COLUMN tipo ENUM(
         'INGRESO_COMPRA',

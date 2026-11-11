@@ -1,6 +1,6 @@
 -- 02_catalogo.sql | Estudiante 2 | SIGMETA
 -- Catalogo y cotizaciones: categoria, producto, cotizacion, detalle_cotizacion
--- Generado a partir de sql/sigmeta.sql, que es el script oficial: ejecutar 00_base.sql y luego
+-- Generado a partir de sql/1_base/sigmeta.sql, que es el script oficial: ejecutar 00_base.sql y luego
 -- 01 a 05 en orden sobre una base nueva equivale a ejecutar sigmeta.sql. No ejecutar ambos.
 
 USE sigmeta;
