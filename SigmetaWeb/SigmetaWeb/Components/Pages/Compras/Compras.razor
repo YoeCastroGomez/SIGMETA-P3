@@ -145,7 +145,7 @@
         }
         catch (Exception)
         {
-            error = "No se pudo cargar la lista. Comprueba la conexión con Java REST e inténtalo de nuevo.";
+            error = "No se pudo cargar la lista. Comprueba la conexión e inténtalo de nuevo.";
         }
         finally
         {
@@ -157,52 +157,71 @@
     private string NombreProveedor(int id) =>
         nombresProveedores.TryGetValue(id, out var nombre) ? nombre : $"Proveedor #{id}";
 
+    // RF011: el historial por proveedor y fechas lo filtra el BO (CompraBO.listarPorProveedorYFechas) con
+    // GET /api/compras?idProveedor=&fechaInicio=&fechaFin=. Sin esos filtros: GET /api/compras (todas).
+    private string rutaConsulta = "compras";
+
     private async Task Cargar()
     {
         cargando = true;
         error = null;
         try
         {
-            compras = await Api.Get<List<CompraRest>>("compras") ?? new();
+            compras = await Api.Get<List<CompraRest>>(rutaConsulta) ?? new();
             AplicarFiltros();
         }
-        catch (ErrorApi e) { error = e.Message; }
+        catch (ErrorApi e) { error = e.Message; }   // por ejemplo "La fecha de inicio no puede ser posterior a la fecha de fin"
         catch (Exception) { error = "Ocurrió un problema al consultar las compras. Inténtalo otra vez."; }
         finally { cargando = false; }
     }
 
+    // Solo el número de compra se filtra aquí (el BO no tiene esa búsqueda); proveedor y fechas los filtra el BO
     private void AplicarFiltros()
     {
         resultado = compras
             .Where(c => string.IsNullOrWhiteSpace(filtroNumero) ||
                 c.Numero.Contains(filtroNumero.Trim(), StringComparison.OrdinalIgnoreCase))
-            .Where(c => string.IsNullOrWhiteSpace(filtroProveedorTexto) ||
-                NombreProveedor(c.IdProveedor).Contains(filtroProveedorTexto.Trim(), StringComparison.OrdinalIgnoreCase))
-            .Where(c => filtroDesde is null ||
-                 (DateTime.TryParse(c.FechaEmision, out var fecha) && fecha.Date >= filtroDesde.Value.Date))
-            .Where(c => filtroHasta is null ||
-                 (DateTime.TryParse(c.FechaEmision, out var fecha) && fecha.Date <= filtroHasta.Value.Date))
             .OrderByDescending(c => c.Id)
             .ToList();
         AjustarPagina();
     }
 
-    private Task Buscar()
+    private async Task Buscar()
     {
-        if (filtroDesde.HasValue && filtroHasta.HasValue && filtroDesde > filtroHasta)
-        {
-            error = "La fecha de inicio no puede ser posterior a la fecha de fin.";
-            return Task.CompletedTask;
-        }
         error = null;
         exito = null;
         paginaActual = 1;
         confirmarId = null;
-        AplicarFiltros();
-        return Task.CompletedTask;
+
+        var hayProveedor = !string.IsNullOrWhiteSpace(filtroProveedorTexto);
+        if (hayProveedor || filtroDesde.HasValue || filtroHasta.HasValue)
+        {
+            // historial (RF011): el BO pide los tres datos juntos
+            if (!hayProveedor || !filtroDesde.HasValue || !filtroHasta.HasValue)
+            {
+                error = "Para consultar el historial elige el proveedor y las fechas desde y hasta.";
+                return;
+            }
+            var proveedor = proveedores.FirstOrDefault(p =>
+                string.Equals(p.RazonSocial, filtroProveedorTexto.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (proveedor is null)
+            {
+                error = "Selecciona un proveedor de la lista.";
+                return;
+            }
+            var cultura = System.Globalization.CultureInfo.InvariantCulture;
+            rutaConsulta = $"compras?idProveedor={proveedor.Id}" +
+                           $"&fechaInicio={filtroDesde.Value.ToString("yyyy-MM-dd", cultura)}" +
+                           $"&fechaFin={filtroHasta.Value.ToString("yyyy-MM-dd", cultura)}";
+        }
+        else
+        {
+            rutaConsulta = "compras";
+        }
+        await Cargar();
     }
 
-    private Task Limpiar()
+    private async Task Limpiar()
     {
         filtroProveedorTexto = "";
         filtroNumero = "";
@@ -211,8 +230,8 @@
         error = null;
         confirmarId = null;
         paginaActual = 1;
-        AplicarFiltros();
-        return Task.CompletedTask;
+        rutaConsulta = "compras";
+        await Cargar();
     }
 
     private async Task Anular(CompraRest compra)
@@ -223,11 +242,17 @@
         {
             await Api.Delete($"compras/{compra.Id}");
             confirmarId = null;
-            compras = await Api.Get<List<CompraRest>>("compras") ?? new();
-            AplicarFiltros();
-            exito = $"Se anuló la compra {compra.Numero}.";
         }
         catch (ErrorApi e) { error = e.Message; }
         finally { cargando = false; }
+
+        if (error is null)
+        {
+            await Cargar();   // respeta el filtro vigente (rutaConsulta)
+            if (error is null)
+            {
+                exito = $"Se anuló la compra {compra.Numero}.";
+            }
+        }
     }
 }
