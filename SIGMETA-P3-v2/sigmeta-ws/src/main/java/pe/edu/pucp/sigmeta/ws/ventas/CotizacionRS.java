@@ -29,7 +29,8 @@ import pe.edu.pucp.sigmeta.ws.caja.Utilidades;
 
 // RF007: servicio REST de cotizaciones (Vendedor; anular tambien el Administrador).
 //
-//   GET    /api/cotizaciones                  listar todas (no anuladas)
+//   GET    /api/cotizaciones                  listar todas (no anuladas); antes de listar marca como VENCIDA
+//                                             las REGISTRADA o ENVIADA con vigencia pasada (marcarVencidas)
 //   GET    /api/cotizaciones?cliente=3        listar por cliente (listarPorCliente)
 //   GET    /api/cotizaciones?estado=ENVIADA   listar por estado (listarPorEstado)
 //   GET    /api/cotizaciones/5                una cotizacion con sus lineas
@@ -57,6 +58,8 @@ public class CotizacionRS extends VentanillaBase {
                            @QueryParam("estado") String estado) {
         return ejecutar(ticket, id -> {
             permitirConsulta(id);
+            // RF007: las cotizaciones con vigencia pasada se muestran como VENCIDA
+            cotizacionBO.marcarVencidas();
             List<Cotizacion> cotizaciones;
             if (idCliente != null) {
                 cotizaciones = cotizacionBO.listarPorCliente(idCliente);
