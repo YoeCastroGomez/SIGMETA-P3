@@ -51,6 +51,7 @@ public class CompraBOImpl implements CompraBO {
 
         return Transaccion.ejecutar(() -> {
             verificarProveedorActivo(compra.getProveedor().getId());
+            validarNumeroUnico(compra.getNumero(), 0);
             compraDAO.save(compra);
             for (DetalleCompra detalle : compra.getDetalles()) {
                 detalle.setCompra(compra);
@@ -81,6 +82,7 @@ public class CompraBOImpl implements CompraBO {
             if (existente.getProveedor().getId() != compra.getProveedor().getId()) {
                 verificarProveedorActivo(compra.getProveedor().getId());
             }
+            validarNumeroUnico(compra.getNumero(), compra.getId());
             // Si se envian detalles, reemplazamos las lineas de una compra aun no recibida.
             // Si no se envian, conservamos las lineas existentes (edicion solo de cabecera).
             List<DetalleCompra> anteriores = detalleCompraDAO.listarPorCompra(compra.getId());
@@ -193,6 +195,21 @@ public class CompraBOImpl implements CompraBO {
         return Transaccion.ejecutar(() -> {
             return compraDAO.listarPorProveedorYFechas(idProveedor, fechaInicio, fechaFin);
         });
+    }
+
+    // RF011: el numero documental es ingresado por el Administrador, pero debe ser unico
+    // en el historial completo, incluso en compras anuladas. El ID interno es independiente.
+    // Se consulta bajo la misma transaccion de escritura que guarda o actualiza la compra,
+    // protegida por sp_transaccion_bloquear contra registros simultaneos del sistema.
+    private void validarNumeroUnico(String numero, int idCompraActual) throws SQLException {
+        boolean repetido = compraDAO.listAll().stream()
+                .anyMatch(c -> c.getId() != idCompraActual
+                        && c.getNumero() != null
+                        && c.getNumero().trim().equalsIgnoreCase(numero.trim()));
+        if (repetido) {
+            throw new IllegalArgumentException(
+                    "Ya existe una compra con el número " + numero + ". Ingrese un número diferente.");
+        }
     }
 
     private void validarCompra(Compra compra) {
