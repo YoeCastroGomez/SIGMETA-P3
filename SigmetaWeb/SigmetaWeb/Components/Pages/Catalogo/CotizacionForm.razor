@@ -222,6 +222,7 @@ else
             else
             {
                 cotizacion = await Api.Get<CotizacionDatos>($"cotizaciones/{Id}");   // GET /api/cotizaciones/{Id}
+                emisionOriginal = cotizacion?.FechaEmision;
                 // si el cliente de la cotización ya no está activo, igual se muestra en la lista
                 if (cotizacion is not null && clientes.All(c => c.Id != cotizacion.IdCliente))
                 {
@@ -254,6 +255,7 @@ else
     // ---------------- Validación en pantalla (RNF004) ----------------
     // Mismas reglas que CotizacionBOImpl. Cada error sale debajo de su cuadro; el BO vuelve a validar todo.
     private readonly ValidacionEnVivo v = new();
+    private DateOnly? emisionOriginal;   // al editar: la fecha ya registrada se puede conservar aunque sea pasada
 
     private Dictionary<string, string> Errores()
     {
@@ -270,9 +272,15 @@ else
         {
             e["cliente"] = "Seleccione el cliente.";
         }
+        var hoy = DateOnly.FromDateTime(DateTime.Today);
         if (cotizacion.FechaEmision is null)
         {
             e["fechaEmision"] = "La fecha de emisión es obligatoria.";
+        }
+        else if (cotizacion.FechaEmision < hoy && (EsNuevo || cotizacion.FechaEmision != emisionOriginal))
+        {
+            // igual que el BO: no se emite con fecha pasada (al editar se puede conservar la ya registrada)
+            e["fechaEmision"] = "La fecha de emisión no puede ser anterior a hoy.";
         }
         if (cotizacion.FechaVigencia is null)
         {
@@ -281,6 +289,10 @@ else
         else if (cotizacion.FechaEmision is not null && cotizacion.FechaVigencia < cotizacion.FechaEmision)
         {
             e["fechaVigencia"] = "La vigencia no puede ser anterior a la emisión.";
+        }
+        else if (cotizacion.FechaVigencia < hoy)
+        {
+            e["fechaVigencia"] = "La vigencia no puede ser anterior a hoy.";
         }
         if (cotizacion.Lineas.Count == 0)
         {

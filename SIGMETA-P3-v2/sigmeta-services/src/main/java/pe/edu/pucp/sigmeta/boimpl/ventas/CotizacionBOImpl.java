@@ -55,6 +55,8 @@ public class CotizacionBOImpl implements CotizacionBO {
     public Cotizacion registrar(Cotizacion cotizacion, int idResponsable) throws SQLException {
         Usuario responsable = verificarPermiso(idResponsable);
         validarCabecera(cotizacion);
+        // RF007: una cotizacion nueva no se emite con fecha pasada (la vigencia ya no puede ser anterior a hoy)
+        validarEmisionNoPasada(cotizacion.getFechaEmision());
         validarDetalles(cotizacion.getDetalles());
         verificarClienteActivo(cotizacion.getCliente().getId());
 
@@ -84,6 +86,14 @@ public class CotizacionBOImpl implements CotizacionBO {
             Cotizacion actual = obtenerExistente(cotizacion.getId());
             if (actual.isAnulado() || actual.getEstado() != EstadoCotizacion.REGISTRADA) {
                 throw new IllegalStateException("Solo se puede modificar una cotizacion en estado REGISTRADA");
+            }
+            // RF007: si se cambia la fecha de emision, no a una fecha pasada (la ya registrada se puede conservar);
+            // y la cotizacion que se modifica tiene que seguir vigente
+            if (!cotizacion.getFechaEmision().equals(actual.getFechaEmision())) {
+                validarEmisionNoPasada(cotizacion.getFechaEmision());
+            }
+            if (cotizacion.getFechaVigencia().isBefore(LocalDate.now())) {
+                throw new IllegalArgumentException("La fecha de vigencia no puede ser anterior a hoy");
             }
             verificarProductosActivos(cotizacion.getDetalles());
             // los datos de auditoria y el estado no se cambian desde la edicion
@@ -312,6 +322,12 @@ public class CotizacionBOImpl implements CotizacionBO {
         cotizacion.setObservaciones(Validador.textoOpcional(cotizacion.getObservaciones(), "observaciones", 255));
         if (cotizacion.getFechaVigencia().isBefore(cotizacion.getFechaEmision())) {
             throw new IllegalArgumentException("La fecha de vigencia no puede ser anterior a la fecha de emision");
+        }
+    }
+
+    private void validarEmisionNoPasada(LocalDate fechaEmision) {
+        if (fechaEmision.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("La fecha de emision no puede ser anterior a hoy");
         }
     }
 
