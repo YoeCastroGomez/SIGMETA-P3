@@ -193,15 +193,15 @@
         paginaActual = 1;
         confirmarId = null;
 
-        var hayProveedor = !string.IsNullOrWhiteSpace(filtroProveedorTexto);
-        if (hayProveedor || filtroDesde.HasValue || filtroHasta.HasValue)
+        if (filtroDesde.HasValue && filtroHasta.HasValue && filtroDesde.Value.Date > filtroHasta.Value.Date)
         {
-            // historial (RF011): el BO pide los tres datos juntos
-            if (!hayProveedor || !filtroDesde.HasValue || !filtroHasta.HasValue)
-            {
-                error = "Para consultar el historial elige el proveedor y las fechas desde y hasta.";
-                return;
-            }
+            error = "La fecha de inicio no puede ser posterior a la fecha de fin.";
+            return;
+        }
+
+        var parametros = new List<string>();
+        if (!string.IsNullOrWhiteSpace(filtroProveedorTexto))
+        {
             var proveedor = proveedores.FirstOrDefault(p =>
                 string.Equals(p.RazonSocial, filtroProveedorTexto.Trim(), StringComparison.OrdinalIgnoreCase));
             if (proveedor is null)
@@ -209,15 +209,14 @@
                 error = "Selecciona un proveedor de la lista.";
                 return;
             }
-            var cultura = System.Globalization.CultureInfo.InvariantCulture;
-            rutaConsulta = $"compras?idProveedor={proveedor.Id}" +
-                           $"&fechaInicio={filtroDesde.Value.ToString("yyyy-MM-dd", cultura)}" +
-                           $"&fechaFin={filtroHasta.Value.ToString("yyyy-MM-dd", cultura)}";
+            parametros.Add($"idProveedor={proveedor.Id}");
         }
-        else
-        {
-            rutaConsulta = "compras";
-        }
+        var cultura = System.Globalization.CultureInfo.InvariantCulture;
+        if (filtroDesde.HasValue)
+            parametros.Add($"fechaInicio={filtroDesde.Value.ToString("yyyy-MM-dd", cultura)}");
+        if (filtroHasta.HasValue)
+            parametros.Add($"fechaFin={filtroHasta.Value.ToString("yyyy-MM-dd", cultura)}");
+        rutaConsulta = parametros.Count == 0 ? "compras" : $"compras?{string.Join("&", parametros)}";
         await Cargar();
     }
 
