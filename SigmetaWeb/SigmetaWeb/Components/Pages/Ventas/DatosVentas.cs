@@ -163,8 +163,9 @@ public static class TextosVentas
         _ => valor ?? ""
     };
 
-    public static string Fecha(DateOnly? f) => f?.ToString("dd/MM/yyyy") ?? "—";
-    public static string FechaHora(DateTime? f) => f?.ToString("dd/MM/yyyy HH:mm") ?? "—";
+    // mismo formato que el resto del sistema (AAAA-MM-DD), igual que TextosCaja
+    public static string Fecha(DateOnly? f) => f?.ToString("yyyy-MM-dd") ?? "—";
+    public static string FechaHora(DateTime? f) => f?.ToString("yyyy-MM-dd HH:mm") ?? "—";
 
     // totales de referencia mientras se editan las lineas (los definitivos los calcula el BO)
     public const decimal TasaIgv = 0.18m;
