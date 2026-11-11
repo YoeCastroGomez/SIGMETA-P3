@@ -12,4 +12,5 @@ public interface CompraBO {
     Compra obtener(int idCompra) throws SQLException;
     List<Compra> listarTodos() throws SQLException;
     List<Compra> listarPorProveedorYFechas(int idProveedor, LocalDate fechaInicio, LocalDate fechaFin) throws SQLException;
+    List<Compra> buscar(Integer idProveedor, LocalDate fechaInicio, LocalDate fechaFin) throws SQLException;
 }
