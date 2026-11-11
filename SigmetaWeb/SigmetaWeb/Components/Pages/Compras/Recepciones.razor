@@ -23,12 +23,12 @@
             </thead>
 
             <tbody>
-                @foreach (var c in MuestrasCompras.Compras.Where(c => c.Estado is "REGISTRADA" or "RECIBIDA_PARCIAL"))
+                @foreach (var c in Paginar(MuestrasCompras.Compras.Where(c => c.Estado is "REGISTRADA" or "RECIBIDA_PARCIAL"), paginaActual, tamanoPagina))
                 {
                     <tr>
                         <td>@c.Numero</td>
                         <td>@c.Proveedor</td>
-                        <td>@c.Fecha.ToString("dd/MM/yyyy")</td>
+                        <td>@c.Fecha.ToString("yyyy-MM-dd")</td>
                         <td><Estado Texto="@c.Estado" /></td>
                         <td class="text-end">
                             <a class="btn btn-sm btn-primary"
@@ -41,4 +41,17 @@
             </tbody>
         </table>
     </div>
+        <Paginacion TotalRegistros="@(MuestrasCompras.Compras.Where(c => c.Estado is "REGISTRADA" or "RECIBIDA_PARCIAL").Count())" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
 </div>
+
+@code {
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+    {
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((segura - 1) * tamano).Take(tamano);
+    }
+}

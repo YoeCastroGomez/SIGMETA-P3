@@ -51,7 +51,7 @@
                           AlEncontrar="MostrarResultadoBuscador" />
     </div>
 
-    <form class="row g-3 align-items-end border-top pt-3" @onsubmit="Buscar" @onsubmit:preventDefault>
+    <form class="row g-3 align-items-end sigmeta-filtros border-top pt-3" @onsubmit="Buscar" @onsubmit:preventDefault>
         <Campo Etiqueta="Nombre" Id="fNombre" Clase="col-sm-6 col-md">
             <input id="fNombre" class="form-control" maxlength="150" @bind="filtroNombre" />
         </Campo>
@@ -112,7 +112,7 @@ else
                     {
                         <tr><td colspan="@(EsAdministrador ? 8 : 7)" class="text-center text-muted py-4">No se encontraron productos.</td></tr>
                     }
-                    @foreach (var p in productos)
+                    @foreach (var p in Paginar(productos, paginaActual, tamanoPagina))
                     {
                         <tr>
                             <td>
@@ -149,10 +149,22 @@ else
                 </tbody>
             </table>
         </div>
+        <Paginacion TotalRegistros="@((productos)?.Count ?? 0)" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
 }
 
 @code {
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T>? registros, int pagina, int tamano)
+    {
+        if (registros is null) return Enumerable.Empty<T>();
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int paginaSegura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((paginaSegura - 1) * tamano).Take(tamano);
+    }
+
     // RF001: el rol sale de la sesión (MainLayout). Solo decide qué botones se ven; el permiso lo valida el BO.
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
     private bool EsAdministrador => Rol == "Administrador";

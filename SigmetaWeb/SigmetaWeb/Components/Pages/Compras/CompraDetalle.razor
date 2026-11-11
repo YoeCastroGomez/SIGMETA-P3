@@ -68,7 +68,7 @@ else if (compra is not null)
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var d in compra.Detalles.OrderBy(d => d.NumeroLinea))
+                    @foreach (var d in Paginar(compra.Detalles.OrderBy(d => d.NumeroLinea), paginaActual, tamanoPagina))
                     {
                         <tr>
                             <td>@d.NumeroLinea</td>
@@ -90,6 +90,7 @@ else if (compra is not null)
                 </tbody>
             </table>
         </div>
+        <Paginacion TotalRegistros="@(compra.Detalles.Count())" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
 
     <div class="card card-body mb-3">
@@ -119,6 +120,16 @@ else if (compra is not null)
 }
 
 @code {
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+    {
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((segura - 1) * tamano).Take(tamano);
+    }
+
     [Parameter] public int Id { get; set; }
     private CompraRest? compra;
     private List<Proveedor> proveedores = new();
@@ -131,7 +142,7 @@ else if (compra is not null)
         ?? $"Proveedor #{compra?.IdProveedor}";
 
     private static string MostrarFecha(string? valor) =>
-        DateTime.TryParse(valor, out var fecha) ? fecha.ToString("dd/MM/yyyy") : "—";
+        DateTime.TryParse(valor, out var fecha) ? fecha.ToString("yyyy-MM-dd") : "—";
 
     private string NombreProducto(int id)
     {

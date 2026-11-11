@@ -102,7 +102,7 @@ else
                     {
                         <tr><td colspan="7" class="text-center text-muted py-4">Todavía no hay movimientos en esta caja.</td></tr>
                     }
-                    @foreach (var m in movimientos)
+                    @foreach (var m in Paginar(movimientos, paginaActual, tamanoPagina))
                     {
                         <tr>
                             <td class="text-nowrap">@TextosCaja.FechaHora(m.FechaMovimiento)</td>
@@ -116,7 +116,7 @@ else
                                 }
                                 @if (m.EsDevolucion)
                                 {
-                                    <div><span class="badge text-bg-secondary">no cuenta como cobro</span></div>
+                                    <div><span class="badge rounded-pill border bg-secondary-subtle text-secondary-emphasis border-secondary-subtle">no cuenta como cobro</span></div>
                                 }
                             </td>
                             <td>@m.UsuarioRegistro</td>
@@ -137,10 +137,22 @@ else
                 </tbody>
             </table>
         </div>
+        <Paginacion TotalRegistros="@((movimientos)?.Count ?? 0)" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
 }
 
 @code {
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T>? registros, int pagina, int tamano)
+    {
+        if (registros is null) return Enumerable.Empty<T>();
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int paginaSegura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((paginaSegura - 1) * tamano).Take(tamano);
+    }
+
     private CajaDatos? caja;
     private List<MovimientoDatos> movimientos = new();
     private MovimientoDatos? formulario;   // null = formulario cerrado; Id 0 = nuevo

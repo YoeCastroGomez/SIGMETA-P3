@@ -22,7 +22,7 @@
             Buscar producto
         </h2>
 
-        <div class="row g-3 align-items-end">
+        <div class="row g-3 align-items-end sigmeta-filtros">
             <Campo Etiqueta="Código o nombre"
                    Id="buscarProducto"
                    Clase="col-sm-6 col-md-6">
@@ -53,7 +53,7 @@
                 </thead>
 
                 <tbody>
-                    @foreach (var p in resultado)
+                    @foreach (var p in Paginar(resultado, paginaActual1, tamanoPagina1))
                     {
                         <tr>
                             <td>@p.CodigoInterno</td>
@@ -78,6 +78,7 @@
                 </tbody>
             </table>
         </div>
+        <Paginacion TotalRegistros="@(resultado.Count())" @bind-PaginaActual="paginaActual1" @bind-TamanoPagina="tamanoPagina1" />
     </div>
 }
 else
@@ -121,10 +122,10 @@ else
                 </thead>
 
                 <tbody>
-                    @foreach (var m in movimientos)
+                    @foreach (var m in Paginar(movimientos, paginaActual2, tamanoPagina2))
                     {
                         <tr>
-                            <td>@m.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td>@m.Fecha.ToString("yyyy-MM-dd")</td>
                             <td><Estado Texto="@m.Tipo" /></td>
                             <td>@(m.Tipo == "ENTRADA" ? m.Cantidad.ToString("0.###") : "—")</td>
                             <td>@(m.Tipo == "SALIDA" ? m.Cantidad.ToString("0.###") : "—")</td>
@@ -135,6 +136,7 @@ else
                 </tbody>
             </table>
         </div>
+        <Paginacion TotalRegistros="@(movimientos.Count())" @bind-PaginaActual="paginaActual2" @bind-TamanoPagina="tamanoPagina2" />
     </div>
 
     <div class="alert alert-secondary">
@@ -144,6 +146,18 @@ else
 }
 
 @code {
+    private int paginaActual1 = 1;
+    private int tamanoPagina1 = 10;
+    private int paginaActual2 = 1;
+    private int tamanoPagina2 = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+    {
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((segura - 1) * tamano).Take(tamano);
+    }
+
     [Parameter]
     public int? Id { get; set; }
 

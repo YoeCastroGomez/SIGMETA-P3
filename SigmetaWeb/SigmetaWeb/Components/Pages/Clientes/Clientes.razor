@@ -17,7 +17,7 @@
 }
 
 <div class="card card-body mb-3">
-    <form class="row g-3 align-items-end" @onsubmit="Buscar" @onsubmit:preventDefault>
+    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault>
         <Campo Etiqueta="Número de documento" Id="fDoc" Clase="col-sm-6 col-md-3">
             <input id="fDoc" class="form-control" maxlength="20" @bind="filtroDocumento" />
         </Campo>
@@ -63,7 +63,7 @@ else
                     {
                         <tr><td colspan="6" class="text-center text-muted py-4">No se encontraron clientes.</td></tr>
                     }
-                    @foreach (var c in clientes)
+                    @foreach (var c in Paginar(clientes, paginaActual, tamanoPagina))
                     {
                         <tr>
                             <td><span class="small text-muted">@Cliente.Texto(c.TipoDocumento)</span><br />@c.NumeroDocumento</td>
@@ -97,10 +97,22 @@ else
                 </tbody>
             </table>
         </div>
+        <Paginacion TotalRegistros="@((clientes)?.Count ?? 0)" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
 }
 
 @code {
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T>? registros, int pagina, int tamano)
+    {
+        if (registros is null) return Enumerable.Empty<T>();
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int paginaSegura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((paginaSegura - 1) * tamano).Take(tamano);
+    }
+
     private List<Cliente>? clientes;
     private string filtroDocumento = "";
     private string filtroRazonSocial = "";
