@@ -1,157 +1,288 @@
 @page "/ventas/{Id:int}/comprobante"
-@inject NavigationManager Nav
+@inject ApiJava Api
 
 <PageTitle>Comprobante de la venta · SIGMETA</PageTitle>
 
-@* RF008 · Emisión del comprobante electrónico de una venta y registro de su envío (Vendedor y Cajero).
-   Solo visual (Lab 9): Emitir y Registrar envío no registran nada, solo vuelven a la lista. *@
-<Encabezado Rf="RF008" Titulo="Comprobante de la venta" Subtitulo="@($"Venta {venta.Numero} · {venta.Cliente}")">
+@* RF008 · Emisión del comprobante electrónico de una venta y registro de su envío (Vendedor y Cajero). Datos reales del Java:
+   - GET  /api/ventas/{Id}                       la venta, sus líneas y su comprobante vigente
+   - GET  /api/comprobantes/{id}                 el comprobante con el cliente
+   - POST /api/comprobantes {"idVenta", "tipo"}  emitir BOLETA o FACTURA (la serie y el número los pone el BO)
+   - POST /api/comprobantes/{id}/envio {"medioEnvio"}  registrar el envío (CORREO, MENSAJERIA o IMPRESO; la fecha la pone el BO)
+   Mensajes del BO: factura a un cliente sin RUC, venta que ya tiene comprobante, venta anulada... *@
+<Encabezado Rf="RF008" Titulo="Comprobante de la venta" Subtitulo="@Subtitulo">
     <a class="btn btn-outline-secondary" href="/ventas">Volver a la lista</a>
 </Encabezado>
 
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Venta</h2>
-    <div class="row">
-        <div class="col-sm-6 col-md-3 mb-3">
-            <div class="small text-muted text-uppercase">Número</div>
-            <div class="fw-semibold">@venta.Numero</div>
-        </div>
-        <div class="col-sm-6 col-md-3 mb-3">
-            <div class="small text-muted text-uppercase">Fecha</div>
-            <div class="fw-semibold">@venta.FechaEmision.ToString("yyyy-MM-dd")</div>
-        </div>
-        <div class="col-sm-6 col-md-3 mb-3">
-            <div class="small text-muted text-uppercase">Condición de pago</div>
-            <div class="fw-semibold">@MuestrasVentas.Texto(venta.CondicionPago)</div>
-        </div>
-        <div class="col-sm-6 col-md-3 mb-3">
-            <div class="small text-muted text-uppercase">Total</div>
-            <div class="fw-semibold">S/ @MuestrasVentas.Total(venta.Detalles).ToString("N2")</div>
-        </div>
-    </div>
-</div>
-
-@if (comprobante is null)
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
 {
-    @* La venta todavía no tiene comprobante vigente: se emite factura o boleta *@
+    <div class="alert alert-success">@exito</div>
+}
+
+@if (cargando)
+{
+    <p class="text-muted">Cargando venta...</p>
+}
+else if (venta is not null)
+{
     <div class="card card-body mb-3">
-        <h2 class="h6 fw-semibold mb-3">Emitir comprobante</h2>
+        <h2 class="h6 fw-semibold mb-3">Venta</h2>
         <div class="row">
-            <div class="col-md-6">
-                <Campo Etiqueta="Tipo de comprobante" Obligatorio="true"
-                       Ayuda="La factura exige que el cliente tenga RUC. Una venta tiene un solo comprobante vigente.">
-                    <div class="d-flex gap-4">
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="tipo" id="tipoFactura"
-                                   checked="@esFactura" @onchange="() => esFactura = true" />
-                            <label class="form-check-label" for="tipoFactura">Factura</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="tipo" id="tipoBoleta"
-                                   checked="@(!esFactura)" @onchange="() => esFactura = false" />
-                            <label class="form-check-label" for="tipoBoleta">Boleta</label>
-                        </div>
-                    </div>
-                </Campo>
-            </div>
-            <div class="col-sm-6 col-md-3 mb-3">
-                <div class="small text-muted text-uppercase">Serie</div>
-                <div class="fw-semibold">@(esFactura ? "F001" : "B001")</div>
-            </div>
             <div class="col-sm-6 col-md-3 mb-3">
                 <div class="small text-muted text-uppercase">Número</div>
-                <div class="text-muted">Se asigna al emitir</div>
+                <div class="fw-semibold">@venta.Numero</div>
             </div>
-        </div>
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
-            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-            <div class="d-flex gap-2">
-                <a class="btn btn-outline-secondary" href="/ventas">Cancelar</a>
-                <button class="btn btn-primary" @onclick="Volver">Emitir comprobante</button>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Fecha</div>
+                <div class="fw-semibold">@TextosVentas.Fecha(venta.FechaEmision)</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Condición de pago</div>
+                <div class="fw-semibold">@TextosVentas.Texto(venta.CondicionPago)</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted text-uppercase">Total</div>
+                <div class="fw-semibold">S/ @venta.Total.ToString("N2")</div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="small text-muted text-uppercase">Cliente</div>
+                <div class="fw-semibold">@venta.Cliente <span class="small text-muted">@venta.DocumentoCliente</span></div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="small text-muted text-uppercase">Estado</div>
+                <div><Estado Texto="@TextosVentas.Texto(venta.Estado)" /></div>
             </div>
         </div>
     </div>
-}
-else
-{
-    <div class="card card-body mb-3">
-        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-            <h2 class="h6 fw-semibold mb-0">Comprobante emitido</h2>
-            <Estado Texto="@MuestrasVentas.Texto(comprobante.Estado)" />
-        </div>
-        <div class="row">
-            <div class="col-sm-6 col-md-3 mb-3">
-                <div class="small text-muted text-uppercase">Tipo</div>
-                <div class="fw-semibold">@MuestrasVentas.Texto(comprobante.Tipo)</div>
+
+    @if (venta.Estado == "ANULADA")
+    {
+        <div class="alert alert-secondary">La venta está anulada: no se emite comprobante.</div>
+    }
+    else if (comprobante is null)
+    {
+        @* La venta todavía no tiene comprobante vigente: se emite factura o boleta *@
+        <div class="card card-body mb-3">
+            <h2 class="h6 fw-semibold mb-3">Emitir comprobante</h2>
+            <div class="row">
+                <div class="col-md-6">
+                    <Campo Etiqueta="Tipo de comprobante" Obligatorio="true"
+                           Ayuda="La factura exige que el cliente tenga RUC. Una venta tiene un solo comprobante vigente.">
+                        <div class="d-flex gap-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipo" id="tipoFactura"
+                                       checked="@esFactura" @onchange="ElegirFactura" />
+                                <label class="form-check-label" for="tipoFactura">Factura</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipo" id="tipoBoleta"
+                                       checked="@(!esFactura)" @onchange="ElegirBoleta" />
+                                <label class="form-check-label" for="tipoBoleta">Boleta</label>
+                            </div>
+                        </div>
+                    </Campo>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-3">
+                    <div class="small text-muted text-uppercase">Serie</div>
+                    <div class="fw-semibold">@(esFactura ? "F001" : "B001")</div>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-3">
+                    <div class="small text-muted text-uppercase">Número</div>
+                    <div class="text-muted">Se asigna al emitir</div>
+                </div>
             </div>
-            <div class="col-sm-6 col-md-3 mb-3">
-                <div class="small text-muted text-uppercase">Serie y número</div>
-                <div class="fw-semibold">@comprobante.SerieNumero</div>
-            </div>
-            <div class="col-sm-6 col-md-3 mb-3">
-                <div class="small text-muted text-uppercase">Fecha de emisión</div>
-                <div class="fw-semibold">@comprobante.FechaEmision.ToString("yyyy-MM-dd")</div>
-            </div>
-            <div class="col-sm-6 col-md-3 mb-3">
-                <div class="small text-muted text-uppercase">Último envío</div>
-                <div class="fw-semibold">
-                    @if (comprobante.MedioEnvio is null)
-                    {
-                        <span class="text-muted">Sin enviar</span>
-                    }
-                    else
-                    {
-                        @MuestrasVentas.Texto(comprobante.MedioEnvio)
-                        <div class="small text-muted">@comprobante.FechaEnvio?.ToString("yyyy-MM-dd HH:mm")</div>
-                    }
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+                <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-outline-secondary" href="/ventas">Cancelar</a>
+                    <button class="btn btn-primary" disabled="@trabajando" @onclick="Emitir">
+                        @(trabajando ? "Emitiendo..." : "Emitir comprobante")
+                    </button>
                 </div>
             </div>
         </div>
-    </div>
-
-    @* RF008: se deja registro del medio y la fecha de envío (ComprobanteBO.registrarEnvio) *@
-    <div class="card card-body mb-3">
-        <h2 class="h6 fw-semibold mb-3">Entregar al cliente</h2>
-        <div class="row align-items-end">
-            <div class="col-md-6">
-                <Campo Etiqueta="Medio de envío" Id="medio" Obligatorio="true"
-                       Ayuda="La fecha y hora del envío se registran automáticamente.">
-                    <select id="medio" class="form-select">
-                        <option value="CORREO">Correo electrónico</option>
-                        <option value="MENSAJERIA">Mensajería al contacto registrado</option>
-                        <option value="IMPRESO">Formato imprimible</option>
-                    </select>
-                </Campo>
+    }
+    else
+    {
+        <div class="card card-body mb-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <h2 class="h6 fw-semibold mb-0">Comprobante emitido</h2>
+                <Estado Texto="@TextosVentas.Texto(comprobante.Estado)" />
             </div>
-            <div class="col-md-6 mb-3 d-flex flex-wrap gap-2 justify-content-md-end">
-                @if (Rol == "Cajero")
-                {
-                    @* RF013: la nota de crédito la registra el Cajero sobre un comprobante emitido *@
-                    <a class="btn btn-outline-secondary" href="/notas-credito/nueva">Nota de crédito</a>
-                }
-                <button class="btn btn-primary" @onclick="Volver">Registrar envío</button>
+            <div class="row">
+                <div class="col-sm-6 col-md-3 mb-3">
+                    <div class="small text-muted text-uppercase">Tipo</div>
+                    <div class="fw-semibold">@TextosVentas.Texto(comprobante.Tipo)</div>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-3">
+                    <div class="small text-muted text-uppercase">Serie y número</div>
+                    <div class="fw-semibold">@comprobante.Comprobante</div>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-3">
+                    <div class="small text-muted text-uppercase">Fecha de emisión</div>
+                    <div class="fw-semibold">@TextosVentas.Fecha(comprobante.FechaEmision)</div>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-3">
+                    <div class="small text-muted text-uppercase">Último envío</div>
+                    <div class="fw-semibold">
+                        @if (comprobante.MedioEnvio is null)
+                        {
+                            <span class="text-muted">Sin enviar</span>
+                        }
+                        else
+                        {
+                            @TextosVentas.Texto(comprobante.MedioEnvio)
+                            <div class="small text-muted">@TextosVentas.FechaHora(comprobante.FechaEnvio)</div>
+                        }
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="small text-muted text-uppercase">Cliente</div>
+                    <div class="fw-semibold">@comprobante.Cliente</div>
+                    <div class="small text-muted">@TextosVentas.Texto(comprobante.TipoDocumentoCliente) @comprobante.DocumentoCliente</div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="small text-muted text-uppercase">Contacto</div>
+                    <div>@(comprobante.CorreoCliente ?? "—")</div>
+                    <div class="small text-muted">@comprobante.DireccionCliente</div>
+                </div>
+                <div class="col-md-12">
+                    <div class="d-flex justify-content-end gap-4 border-top pt-2">
+                        <span class="text-muted">Subtotal S/ @comprobante.SubTotal.ToString("N2")</span>
+                        <span class="text-muted">IGV S/ @comprobante.Igv.ToString("N2")</span>
+                        <span class="fw-semibold">Total S/ @comprobante.Total.ToString("N2")</span>
+                    </div>
+                </div>
             </div>
         </div>
+
+        @* RF008: se deja registro del medio y la fecha de envío (ComprobanteBO.registrarEnvio) *@
+        @if (comprobante.Estado != "ANULADO")
+        {
+            <div class="card card-body mb-3">
+                <h2 class="h6 fw-semibold mb-3">Entregar al cliente</h2>
+                <div class="row align-items-end">
+                    <div class="col-md-6">
+                        <Campo Etiqueta="Medio de envío" Id="medio" Obligatorio="true"
+                               Ayuda="La fecha y hora del envío se registran automáticamente.">
+                            <select id="medio" class="form-select" @bind="medioEnvio">
+                                <option value="CORREO">Correo electrónico</option>
+                                <option value="MENSAJERIA">Mensajería al contacto registrado</option>
+                                <option value="IMPRESO">Formato imprimible</option>
+                            </select>
+                        </Campo>
+                    </div>
+                    <div class="col-md-6 mb-3 d-flex flex-wrap gap-2 justify-content-md-end">
+                        @if (Rol == "Cajero")
+                        {
+                            @* RF013: la nota de crédito la registra el Cajero sobre un comprobante emitido (no entra en este laboratorio) *@
+                            <a class="btn btn-outline-secondary" href="/notas-credito/nueva">Nota de crédito</a>
+                        }
+                        <button class="btn btn-primary" disabled="@trabajando" @onclick="RegistrarEnvio">
+                            @(trabajando ? "Registrando..." : "Registrar envío")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    <div class="card mb-3">
+        <div class="card-body pb-0">
+            <h2 class="h6 fw-semibold mb-1">Detalle de la venta</h2>
+        </div>
+        <TablaDetalle Lineas="@venta.Lineas" SubTotal="@venta.SubTotal" Igv="@venta.Igv" Total="@venta.Total" MostrarDespachada="true" />
     </div>
 }
 
-<div class="card mb-3">
-    <div class="card-body pb-0">
-        <h2 class="h6 fw-semibold mb-1">Detalle de la venta</h2>
-    </div>
-    <TablaLineas Lineas="@venta.Detalles" />
-</div>
-
 @code {
     [Parameter] public int Id { get; set; }
-    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Administrador";
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
 
-    private bool esFactura = true;   // solo controla qué serie se muestra
+    private VentaDatos? venta;
+    private ComprobanteDatos? comprobante;
+    private bool esFactura;
+    private string medioEnvio = "CORREO";
+    private bool cargando = true;
+    private bool trabajando;
+    private string? error;
+    private string? exito;
 
-    // Lab 9: sin consultas; si el id no existe se muestra la primera venta de ejemplo.
-    private VentaFila venta => MuestrasVentas.Venta(Id) ?? MuestrasVentas.Ventas[0];
-    private ComprobanteFila? comprobante => MuestrasVentas.ComprobanteDeVenta(venta.Id);
+    private string Subtitulo => venta is null ? "" : $"Venta {venta.Numero} · {venta.Cliente}";
 
-    // Lab 9: no se registra nada, solo se navega.
-    private void Volver() => Nav.NavigateTo("/ventas");
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        await Cargar();
+        cargando = false;
+    }
+
+    private async Task Cargar()
+    {
+        try
+        {
+            venta = await Api.Get<VentaDatos>($"ventas/{Id}");          // GET /api/ventas/{Id}
+            comprobante = null;
+            if (venta is not null && venta.IdComprobante > 0)
+            {
+                comprobante = await Api.Get<ComprobanteDatos>($"comprobantes/{venta.IdComprobante}");
+            }
+            // por defecto se propone factura si el cliente tiene RUC (11 dígitos) y boleta si no
+            esFactura = venta?.DocumentoCliente?.Length == 11;
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "No existe la venta con id 99"
+        }
+    }
+
+    private void ElegirFactura() => esFactura = true;
+    private void ElegirBoleta() => esFactura = false;
+
+    // POST /api/comprobantes {"idVenta", "tipo"}
+    private async Task Emitir()
+    {
+        error = null;
+        exito = null;
+        trabajando = true;
+        try
+        {
+            var emitido = await Api.Post<ComprobanteDatos>("comprobantes",
+                new ComprobanteDatos { IdVenta = Id, Tipo = esFactura ? "FACTURA" : "BOLETA" });
+            exito = $"Se emitió el comprobante {emitido?.Comprobante}.";
+            await Cargar();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "La FACTURA requiere que el cliente cuente con RUC (cliente tiene: DNI)"
+        }
+        finally
+        {
+            trabajando = false;
+        }
+    }
+
+    // POST /api/comprobantes/{id}/envio {"medioEnvio"}
+    private async Task RegistrarEnvio()
+    {
+        if (comprobante is null) return;
+        error = null;
+        exito = null;
+        trabajando = true;
+        try
+        {
+            await Api.Post<ComprobanteDatos>($"comprobantes/{comprobante.Id}/envio",
+                new ComprobanteDatos { MedioEnvio = medioEnvio });
+            exito = $"Se registró el envío por {TextosVentas.Texto(medioEnvio).ToLowerInvariant()}.";
+            await Cargar();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        finally
+        {
+            trabajando = false;
+        }
+    }
 }

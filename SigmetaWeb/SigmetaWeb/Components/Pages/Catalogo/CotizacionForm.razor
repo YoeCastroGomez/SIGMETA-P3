@@ -1,158 +1,264 @@
 @page "/cotizaciones/nueva"
 @page "/cotizaciones/editar/{Id:int}"
+@using SigmetaWeb.Components.Pages.Ventas
+@using SigmetaWeb.Components.Pages.Clientes
+@inject ApiJava Api
 @inject NavigationManager Nav
 
 <PageTitle>@Titulo · SIGMETA</PageTitle>
 
-@* RF007 · Formulario de cotización: cabecera y líneas. Solo visual (Lab 9): ningún botón registra ni calcula,
-   todos vuelven a la lista. Importes solo en soles. *@
+@* RF007 · Formulario de cotización: cabecera y líneas (Vendedor).
+   Nueva: POST /api/cotizaciones. Editar: GET /api/cotizaciones/{Id} para cargarla y PUT /api/cotizaciones/{Id}.
+   Los productos se agregan con el BuscadorProducto de RF005 (código exacto, lector de barras o parte del nombre).
+   El subtotal, el IGV y el total los calcula el BO al guardar; aquí se muestran como referencia mientras se edita.
+   Los mensajes del BO (cliente desactivado, vigencia anterior a la emisión, cotización sin líneas...) salen en el aviso rojo. *@
 <Encabezado Rf="RF007" Titulo="@Titulo">
     <a class="btn btn-outline-secondary" href="/cotizaciones">Volver a la lista</a>
 </Encabezado>
 
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Cabecera</h2>
-    <div class="row">
-        @* RF007: el número lo ingresa el usuario (CotizacionBOImpl lo exige, máx. 20). *@
-        <div class="col-md-4">
-            <Campo Etiqueta="Número" Id="numero" Obligatorio="true">
-                <input id="numero" class="form-control" maxlength="20" value="@ejemplo?.Numero" placeholder="COT-2026-0001" />
-            </Campo>
-        </div>
-        <div class="col-md-4 mb-3">
-            @* Solo lectura: toda cotización nueva empieza REGISTRADA y solo cambia con los botones de la lista. *@
-            <div class="small text-muted text-uppercase">Estado</div>
-            <div class="fw-semibold mt-1"><Estado Texto="@MuestrasCatalogo.Texto(ejemplo?.Estado ?? "REGISTRADA")" /></div>
-        </div>
-        <div class="col-12"></div>
-        <div class="col-md-6">
-            <Campo Etiqueta="Cliente" Id="cliente" Obligatorio="true" Ayuda="Solo clientes activos.">
-                <select id="cliente" class="form-select">
-                    <option value="">Seleccione…</option>
-                    @foreach (var c in MuestrasCatalogo.Clientes)
-                    {
-                        <option selected="@(ejemplo?.Cliente == c)">@c</option>
-                    }
-                </select>
-            </Campo>
-        </div>
-        <div class="col-md-3">
-            <Campo Etiqueta="Fecha de emisión" Id="fechaEmision" Obligatorio="true">
-                <input id="fechaEmision" type="date" class="form-control" value="@(EsNuevo ? null : "2026-09-14")" />
-            </Campo>
-        </div>
-        <div class="col-md-3">
-            <Campo Etiqueta="Vigencia hasta" Id="fechaVigencia" Obligatorio="true" Ayuda="No antes de la emisión.">
-                <input id="fechaVigencia" type="date" class="form-control" value="@(EsNuevo ? null : "2026-09-28")" />
-            </Campo>
-        </div>
-        <div class="col-12">
-            <Campo Etiqueta="Observaciones" Id="observaciones">
-                <input id="observaciones" class="form-control" maxlength="255" value="@ejemplo?.Observaciones" />
-            </Campo>
-        </div>
-    </div>
-</div>
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 
-<div class="card mb-3">
-    <div class="card-body pb-0">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <h2 class="h6 fw-semibold mb-0">Líneas</h2>
-            <button class="btn btn-sm btn-outline-secondary">Agregar línea</button>
+@if (cotizacion is null)
+{
+    <p class="text-muted">Cargando cotización...</p>
+}
+else
+{
+    @if (!Editable)
+    {
+        <div class="alert alert-secondary">
+            Esta cotización está <strong>@TextosVentas.Texto(cotizacion.Estado)</strong>: solo se modifica una cotización registrada.
         </div>
-    </div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>#</th>
-                    <th class="w-25">Producto</th>
-                    <th>Cantidad</th>
-                    <th>Precio unitario (S/)</th>
-                    <th>Descuento (S/)</th>
-                    <th class="text-end">Importe (S/)</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (EsNuevo)
-                {
-                    @* Cotización nueva: una línea vacía para mostrar cómo se llena. *@
-                    <tr>
-                        <td>1</td>
-                        <td>
-                            <select class="form-select" aria-label="Producto">
-                                <option value="">Seleccione…</option>
-                                @foreach (var p in MuestrasCatalogo.Productos.Where(p => p.Activo))
-                                {
-                                    <option>@p.CodigoInterno · @p.Nombre</option>
-                                }
-                            </select>
-                        </td>
-                        <td><input type="number" min="0" step="0.001" class="form-control" aria-label="Cantidad" /></td>
-                        <td><input type="number" min="0" step="0.01" class="form-control" aria-label="Precio unitario" /></td>
-                        <td><input type="number" min="0" step="0.01" class="form-control" aria-label="Descuento" /></td>
-                        <td class="text-end">0.00</td>
-                        <td class="text-end"><button class="btn btn-sm btn-outline-danger">Quitar</button></td>
-                    </tr>
-                }
-                else
-                {
-                    @foreach (var l in ejemplo!.Lineas)
-                    {
-                        <tr>
-                            <td>@l.NumeroLinea</td>
-                            <td>
-                                <select class="form-select" aria-label="Producto">
-                                    @foreach (var p in MuestrasCatalogo.Productos)
-                                    {
-                                        var texto = $"{p.CodigoInterno} · {p.Nombre}";
-                                        <option selected="@(texto == l.Producto)">@texto</option>
-                                    }
-                                </select>
-                            </td>
-                            <td><input type="number" min="0" step="0.001" class="form-control" aria-label="Cantidad" value="@l.Cantidad" /></td>
-                            <td><input type="number" min="0" step="0.01" class="form-control" aria-label="Precio unitario" value="@l.PrecioUnitario" /></td>
-                            <td><input type="number" min="0" step="0.01" class="form-control" aria-label="Descuento" value="@l.Descuento" /></td>
-                            <td class="text-end">@l.Importe.ToString("N2")</td>
-                            <td class="text-end"><button class="btn btn-sm btn-outline-danger">Quitar</button></td>
-                        </tr>
-                    }
-                }
-            </tbody>
-        </table>
-    </div>
-    <div class="card-body">
-        <div class="row justify-content-end">
-            <div class="col-sm-6 col-md-4">
-                <div class="d-flex justify-content-between"><span class="text-muted">Subtotal</span><span>S/ @(EsNuevo ? "0.00" : ejemplo!.SubTotal.ToString("N2"))</span></div>
-                <div class="d-flex justify-content-between"><span class="text-muted">IGV (18%)</span><span>S/ @(EsNuevo ? "0.00" : ejemplo!.Igv.ToString("N2"))</span></div>
-                <div class="d-flex justify-content-between border-top mt-2 pt-2 fw-semibold"><span>Total</span><span>S/ @(EsNuevo ? "0.00" : ejemplo!.Total.ToString("N2"))</span></div>
+    }
+
+    <div class="card card-body mb-3">
+        <h2 class="h6 fw-semibold mb-3">Cabecera</h2>
+        <div class="row">
+            @* RF007: el número lo ingresa el usuario (CotizacionBOImpl lo exige, máx. 20). *@
+            <div class="col-md-4">
+                <Campo Etiqueta="Número" Id="numero" Obligatorio="true">
+                    <input id="numero" class="form-control" maxlength="20" placeholder="COT-2026-0010"
+                           @bind="cotizacion.Numero" disabled="@(!Editable)" />
+                </Campo>
+            </div>
+            <div class="col-md-4 mb-3">
+                @* Solo lectura: toda cotización nueva empieza REGISTRADA y solo cambia con los botones de la lista. *@
+                <div class="small text-muted text-uppercase">Estado</div>
+                <div class="fw-semibold mt-1"><Estado Texto="@TextosVentas.Texto(cotizacion.Estado ?? "REGISTRADA")" /></div>
+            </div>
+            @if (!EsNuevo)
+            {
+                <div class="col-md-4 mb-3">
+                    <div class="small text-muted text-uppercase">Registrada por</div>
+                    <div class="fw-semibold mt-1">@cotizacion.UsuarioRegistro <span class="small text-muted">@TextosVentas.FechaHora(cotizacion.FechaRegistro)</span></div>
+                </div>
+            }
+            <div class="col-12"></div>
+            <div class="col-md-6">
+                <Campo Etiqueta="Cliente" Id="cliente" Obligatorio="true" Ayuda="Solo clientes activos.">
+                    <select id="cliente" class="form-select" @bind="cotizacion.IdCliente" disabled="@(!Editable)">
+                        <option value="0">Seleccione…</option>
+                        @foreach (var c in clientes)
+                        {
+                            <option value="@c.Id">@c.NombreMostrado · @Cliente.Texto(c.TipoDocumento) @c.NumeroDocumento</option>
+                        }
+                    </select>
+                </Campo>
+            </div>
+            <div class="col-md-3">
+                <Campo Etiqueta="Fecha de emisión" Id="fechaEmision" Obligatorio="true">
+                    <input id="fechaEmision" type="date" class="form-control"
+                           @bind="cotizacion.FechaEmision" @bind:format="yyyy-MM-dd" disabled="@(!Editable)" />
+                </Campo>
+            </div>
+            <div class="col-md-3">
+                <Campo Etiqueta="Vigencia hasta" Id="fechaVigencia" Obligatorio="true" Ayuda="No antes de la emisión.">
+                    <input id="fechaVigencia" type="date" class="form-control"
+                           @bind="cotizacion.FechaVigencia" @bind:format="yyyy-MM-dd" disabled="@(!Editable)" />
+                </Campo>
+            </div>
+            <div class="col-12">
+                <Campo Etiqueta="Observaciones" Id="observaciones">
+                    <input id="observaciones" class="form-control" maxlength="255"
+                           @bind="cotizacion.Observaciones" disabled="@(!Editable)" />
+                </Campo>
             </div>
         </div>
     </div>
-</div>
 
-@* Solo se edita una cotización REGISTRADA. Enviar, Aceptar, Rechazar y Anular están en la lista. *@
-<div class="card card-body mb-3">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-        <div class="d-flex flex-wrap gap-2">
-            <a class="btn btn-outline-secondary" href="/cotizaciones">Cancelar</a>
-            <button class="btn btn-primary" @onclick="Volver">Guardar</button>
+    <div class="card mb-3">
+        <div class="card-body pb-0">
+            <h2 class="h6 fw-semibold mb-3">Líneas</h2>
+            @if (Editable)
+            {
+                @* RF005: buscador compartido de Claudia. Con código exacto (o lector) el producto se agrega solo. *@
+                <BuscadorProducto Etiqueta="Agregar producto" Id="buscadorCotizacion" AlElegir="AgregarProducto" />
+            }
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 3rem;">#</th>
+                        <th>Producto</th>
+                        <th style="width: 8rem;">Cantidad</th>
+                        <th style="width: 9rem;">Precio unit. (S/)</th>
+                        <th style="width: 9rem;">Descuento (S/)</th>
+                        <th class="text-end">Importe (S/)</th>
+                        @if (Editable) { <th></th> }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (cotizacion.Lineas.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">Agregue al menos un producto con el buscador.</td></tr>
+                    }
+                    @for (var i = 0; i < cotizacion.Lineas.Count; i++)
+                    {
+                        var l = cotizacion.Lineas[i];
+                        <tr>
+                            <td>@(i + 1)</td>
+                            <td><span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto</td>
+                            @if (Editable)
+                            {
+                                <td><input type="number" min="0.001" step="0.001" class="form-control form-control-sm text-end" aria-label="Cantidad" @bind="l.Cantidad" /></td>
+                                <td><input type="number" min="0" step="0.01" class="form-control form-control-sm text-end" aria-label="Precio unitario" @bind="l.PrecioUnitario" /></td>
+                                <td><input type="number" min="0" step="0.01" class="form-control form-control-sm text-end" aria-label="Descuento" @bind="l.Descuento" /></td>
+                                <td class="text-end fw-semibold">@l.ImporteCalculado.ToString("N2")</td>
+                                <td class="text-end"><button class="btn btn-sm btn-outline-danger" @onclick="() => Quitar(l)">Quitar</button></td>
+                            }
+                            else
+                            {
+                                <td class="text-end">@l.Cantidad.ToString("0.###")</td>
+                                <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
+                                <td class="text-end">@l.Descuento.ToString("N2")</td>
+                                <td class="text-end fw-semibold">@l.Importe.ToString("N2")</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-body">
+            <div class="row justify-content-end">
+                <div class="col-sm-6 col-md-4">
+                    <div class="d-flex justify-content-between"><span class="text-muted">Subtotal</span><span>S/ @SubTotal.ToString("N2")</span></div>
+                    <div class="d-flex justify-content-between"><span class="text-muted">IGV (18%)</span><span>S/ @Igv.ToString("N2")</span></div>
+                    <div class="d-flex justify-content-between border-top mt-2 pt-2 fw-semibold"><span>Total</span><span>S/ @Total.ToString("N2")</span></div>
+                    @if (Editable)
+                    {
+                        <div class="form-text text-end">Referencial: el sistema calcula los importes al guardar.</div>
+                    }
+                </div>
+            </div>
         </div>
     </div>
-</div>
+
+    @* Enviar, Aceptar, Rechazar y Anular están en la lista. *@
+    <div class="card card-body mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-outline-secondary" href="/cotizaciones">Cancelar</a>
+                @if (Editable)
+                {
+                    <button class="btn btn-primary" disabled="@guardando" @onclick="Guardar">
+                        @(guardando ? "Guardando..." : "Guardar")
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     [Parameter] public int? Id { get; set; }
 
+    private CotizacionDatos? cotizacion;
+    private List<Cliente> clientes = new();
+    private string? error;
+    private bool guardando;
+
     private bool EsNuevo => Id is null;
     private string Titulo => EsNuevo ? "Nueva cotización" : "Editar cotización";
+    private bool Editable => EsNuevo || cotizacion?.Estado == "REGISTRADA";
 
-    // Al editar se muestra una cotización de ejemplo fija (Lab 9: sin consultas).
-    private CotizacionFila? ejemplo => EsNuevo ? null : MuestrasCatalogo.Cotizaciones[2];
+    // Mientras se edita se muestran los importes de referencia; una cotización ya cerrada muestra los del BO.
+    private decimal SubTotal => Editable ? TextosVentas.SubTotal(cotizacion!.Lineas) : cotizacion!.SubTotal;
+    private decimal Igv => Editable ? TextosVentas.Igv(cotizacion!.Lineas) : cotizacion!.Igv;
+    private decimal Total => Editable ? TextosVentas.Total(cotizacion!.Lineas) : cotizacion!.Total;
 
-    // Lab 9: no se registra ni se cambia ningún estado, solo se navega.
-    private void Volver() => Nav.NavigateTo("/cotizaciones");
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            clientes = await Api.Get<List<Cliente>>("clientes?estado=true") ?? new();   // solo clientes activos
+            if (EsNuevo)
+            {
+                var hoy = DateOnly.FromDateTime(DateTime.Today);
+                cotizacion = new CotizacionDatos { FechaEmision = hoy, FechaVigencia = hoy.AddDays(15), Estado = "REGISTRADA" };
+            }
+            else
+            {
+                cotizacion = await Api.Get<CotizacionDatos>($"cotizaciones/{Id}");   // GET /api/cotizaciones/{Id}
+                // si el cliente de la cotización ya no está activo, igual se muestra en la lista
+                if (cotizacion is not null && clientes.All(c => c.Id != cotizacion.IdCliente))
+                {
+                    clientes.Add(new Cliente { Id = cotizacion.IdCliente, TipoPersona = "JURIDICA", RazonSocial = cotizacion.Cliente, NumeroDocumento = cotizacion.DocumentoCliente ?? "" });
+                }
+            }
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+    }
+
+    // Lo llama el BuscadorProducto con el producto elegido: nueva línea con su precio de venta
+    private void AgregarProducto(Producto p)
+    {
+        cotizacion!.Lineas.Add(new LineaDatos
+        {
+            IdProducto = p.Id,
+            Producto = p.Nombre,
+            CodigoProducto = p.CodigoInterno,
+            Cantidad = 1,
+            PrecioUnitario = p.PrecioVenta,
+            Descuento = 0
+        });
+    }
+
+    private void Quitar(LineaDatos l) => cotizacion!.Lineas.Remove(l);
+
+    private async Task Guardar()
+    {
+        error = null;
+        guardando = true;
+        try
+        {
+            // las líneas se numeran en el orden de la pantalla
+            for (var i = 0; i < cotizacion!.Lineas.Count; i++)
+            {
+                cotizacion.Lineas[i].NumeroLinea = i + 1;
+            }
+
+            if (EsNuevo)
+            {
+                await Api.Post<CotizacionDatos>("cotizaciones", cotizacion);          // POST /api/cotizaciones
+            }
+            else
+            {
+                await Api.Put<CotizacionDatos>($"cotizaciones/{Id}", cotizacion);    // PUT /api/cotizaciones/{Id}
+            }
+            Nav.NavigateTo("/cotizaciones");
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // mensaje del BO, por ejemplo "La fecha de vigencia no puede ser anterior a la fecha de emision"
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
 }
