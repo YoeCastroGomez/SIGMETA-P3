@@ -110,6 +110,25 @@ public class ClienteBOImpl implements ClienteBO {
         });
     }
 
+    // RF003: busqueda combinada. Ej.: "constructora" + inactivos. Sin filtros devuelve todos.
+    @Override
+    public List<Cliente> buscar(String razonSocial, Boolean estado) throws SQLException {
+        String texto = Validador.textoOpcional(razonSocial, "razon social", 150);
+        return Transaccion.ejecutar(() -> {
+            List<Cliente> clientes;
+            if (texto != null) {
+                clientes = clienteDAO.buscarPorRazonSocial(texto);
+            } else if (estado != null) {
+                return clienteDAO.listarPorEstado(estado);
+            } else {
+                clientes = clienteDAO.listarTodos();
+            }
+            return clientes.stream()
+                    .filter(c -> estado == null || c.isEstado() == estado)
+                    .toList();
+        });
+    }
+
     // RF003
     @Override
     public Cliente asignarLineaCredito(int idCliente, java.math.BigDecimal limiteCredito, int plazoCreditoDias,

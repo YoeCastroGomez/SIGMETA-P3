@@ -25,7 +25,8 @@ import java.util.List;
 //   GET    /api/clientes                     listar todos
 //   GET    /api/clientes?estado=true         listar por estado (true activos, false desactivados)
 //   GET    /api/clientes?documento=4578...   buscar por documento
-//   GET    /api/clientes?razonSocial=andina  buscar por razon social
+//   GET    /api/clientes?razonSocial=andina  buscar por razon social o nombre
+//   GET    /api/clientes?razonSocial=andina&estado=false   los dos filtros juntos (ClienteBO.buscar)
 //   GET    /api/clientes/5                   obtener uno por id
 //   POST   /api/clientes                     registrar (Vendedor o Administrador)
 //   PUT    /api/clientes/5                   modificar
@@ -55,13 +56,8 @@ public class ClienteRS extends VentanillaBase {
                 }
                 return lista;
             }
-            if (razonSocial != null && !razonSocial.isBlank()) {
-                return clienteBO.buscarPorRazonSocial(razonSocial.trim());
-            }
-            if (estado != null) {
-                return clienteBO.listarPorEstado(estado);
-            }
-            return clienteBO.listarTodos();
+            // razon social y estado se combinan (cada uno opcional)
+            return clienteBO.buscar(razonSocial, estado);
         });
     }
 

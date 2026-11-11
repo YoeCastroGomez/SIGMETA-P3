@@ -1,3 +1,8 @@
 # Configuración local de IntelliJ IDEA
 .idea/
 *.iml
+
+# Archivos sueltos de la carpeta principal: entregables en PDF, copias en ZIP y el GlassFish local (no van al repo)
+/*.pdf
+/*.zip
+/glassfish8/

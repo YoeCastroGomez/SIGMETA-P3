@@ -1026,3 +1026,24 @@ html[data-bs-theme="dark"] .text-danger.small,
 html[data-bs-theme="dark"] .small.text-danger {
     color: #ff7b86 !important;   /* más claro en oscuro para que se lea (contraste) */
 }
+
+/* ===================== RADIOS, CASILLAS E INTERRUPTORES EN TEMA OSCURO =====================
+   Las reglas del tema oscuro usan "background:" (atajo) y borraban el punto del radio, el check de la casilla y
+   la bolita del interruptor: en oscuro nada se veía marcado. Aquí se devuelven el dibujo y el color de marcado. */
+html[data-bs-theme="dark"] .form-check-input {
+    background-image: var(--bs-form-check-bg-image);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+html[data-bs-theme="dark"] .form-check-input:checked {
+    background-color: #f0ab6f;
+    border-color: #f0ab6f;
+}
+html[data-bs-theme="dark"] .form-switch .form-check-input {
+    background-image: var(--bs-form-switch-bg);
+    background-position: left center;
+}
+html[data-bs-theme="dark"] .form-switch .form-check-input:checked {
+    background-position: right center;
+}

@@ -11,6 +11,16 @@
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+
+@* Mismo aviso que Categorías y Productos antes de una baja lógica *@
+<Confirmacion Visible="@(porDesactivar is not null)"
+              Titulo="Desactivar cliente"
+              TextoConfirmar="Desactivar"
+              AlConfirmar="ConfirmarDesactivar"
+              AlCancelar="() => porDesactivar = null">
+    ¿Seguro que desea desactivar a <strong>@porDesactivar?.NombreMostrado</strong>?
+    <div class="small text-muted mt-2">Conserva su historial, pero ya no podrá elegirse en cotizaciones ni ventas.</div>
+</Confirmacion>
 @if (!string.IsNullOrEmpty(exito))
 {
     <div class="alert alert-success">@exito</div>
@@ -36,7 +46,7 @@
             <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
         </div>
     </form>
-    <div class="form-text">Se busca por documento; si está vacío, por razón social; si también está vacía, por estado.</div>
+    <div class="form-text">El documento busca un cliente exacto. Razón social o nombre y estado se pueden combinar.</div>
 </div>
 
 @if (clientes is null)
@@ -81,14 +91,15 @@ else
                                 <div class="d-inline-flex gap-1 text-nowrap">
                                     <a class="btn btn-sm btn-outline-secondary" href="@($"/clientes/editar/{c.Id}")">Editar</a>
                                     @* RF003: la línea de crédito solo la maneja el Administrador *@
-                                    <AuthorizeView Roles="Administrador">
-                                        <Authorized>
-                                            <a class="btn btn-sm btn-outline-secondary" href="@($"/clientes/credito/{c.Id}")">Crédito</a>
-                                        </Authorized>
-                                    </AuthorizeView>
                                     @if (c.Activo)
                                     {
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Desactivar(c)">Desactivar</button>
+                                        @* a un cliente desactivado no se le asigna crédito (el BO lo rechaza) *@
+                                        <AuthorizeView Roles="Administrador">
+                                            <Authorized>
+                                                <a class="btn btn-sm btn-outline-secondary" href="@($"/clientes/credito/{c.Id}")">Crédito</a>
+                                            </Authorized>
+                                        </AuthorizeView>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => porDesactivar = c">Desactivar</button>
                                     }
                                 </div>
                             </td>
@@ -132,19 +143,19 @@ else
         if (!string.IsNullOrWhiteSpace(filtroDocumento))
         {
             await Cargar($"clientes?documento={Uri.EscapeDataString(filtroDocumento.Trim())}");      // buscarPorDocumento
+            return;
         }
-        else if (!string.IsNullOrWhiteSpace(filtroRazonSocial))
+        // razón social y estado juntos: los combina el BO (ClienteBO.buscar)
+        var parametros = new List<string>();
+        if (!string.IsNullOrWhiteSpace(filtroRazonSocial))
         {
-            await Cargar($"clientes?razonSocial={Uri.EscapeDataString(filtroRazonSocial.Trim())}");  // buscarPorRazonSocial
+            parametros.Add($"razonSocial={Uri.EscapeDataString(filtroRazonSocial.Trim())}");
         }
-        else if (filtroEstado != "")
+        if (filtroEstado != "")
         {
-            await Cargar($"clientes?estado={filtroEstado}");                                         // listarPorEstado
+            parametros.Add($"estado={filtroEstado}");
         }
-        else
-        {
-            await Cargar("clientes");                                                                // listarTodos
-        }
+        await Cargar(parametros.Count == 0 ? "clientes" : "clientes?" + string.Join("&", parametros));
     }
 
     private async Task Limpiar()
@@ -168,16 +179,20 @@ else
         }
     }
 
+    private Cliente? porDesactivar;   // cliente esperando la confirmación
+
     // DELETE /api/clientes/{id}: baja lógica, el cliente queda inactivo
-    private async Task Desactivar(Cliente c)
+    private async Task ConfirmarDesactivar()
     {
+        var c = porDesactivar!;
+        porDesactivar = null;
         error = null;
         exito = null;
         try
         {
             await Api.Delete($"clientes/{c.Id}");
             await Buscar();
-            exito = $"Se desactivó el cliente {c.NombreMostrado}.";
+            exito = $"Se desactivó el cliente {c.NombreMostrado.TrimEnd('.')}.";
         }
         catch (ErrorApi e)
         {
