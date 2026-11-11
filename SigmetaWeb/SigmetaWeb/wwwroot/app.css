@@ -978,3 +978,32 @@ html[data-bs-theme="light"] .form-select option {
     outline: 2px solid var(--bs-primary);
     outline-offset: 2px;
 }
+
+
+/* Home: variables de tema globales para estilos aislados de Blazor */
+html[data-bs-theme="dark"] .sg-dashboard {
+    --sg-linea: #594b44;
+    --sg-superficie: #302b2b;
+    --sg-texto: #f5ece6;
+    --sg-secundario: #c7b7ac;
+    --sg-pista: #49403b;
+}
+html[data-bs-theme="dark"] .sg-dashboard .sg-kpi:first-child {
+    background: linear-gradient(125deg, #4d352b, var(--sg-superficie));
+}
+html[data-bs-theme="dark"] .sg-dashboard .sg-chip,
+html[data-bs-theme="dark"] .sg-dashboard .sg-actualizar,
+html[data-bs-theme="dark"] .sg-dashboard .sg-enlace {
+    color: #ffbe8c;
+}
+html[data-bs-theme="dark"] .sg-dashboard .sg-kpi-icono,
+html[data-bs-theme="dark"] .sg-dashboard .sg-acceso-icono {
+    color: #f6b579;
+}
+html[data-bs-theme="dark"] .sg-dashboard .sg-actualizar:hover,
+html[data-bs-theme="dark"] .sg-dashboard .sg-enlace:hover {
+    color: #20130b;
+    background: #ffbe8c;
+}
+html[data-bs-theme="dark"] .sg-dashboard .sg-estado { color: #9bdfaf; }
+html[data-bs-theme="dark"] .sg-dashboard .sg-estado-anulado { color: #f2a3a0; }
