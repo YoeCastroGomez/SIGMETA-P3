@@ -16,8 +16,9 @@ public interface ClienteBO {
     Cliente buscarPorDocumento(String numeroDocumento) throws SQLException;
     List<Cliente> buscarPorRazonSocial(String razonSocial) throws SQLException;
     List<Cliente> listarPorEstado(boolean estado) throws SQLException;
-    // RF003: razon social (o nombre) y estado juntos; cada filtro es opcional (null no filtra)
-    List<Cliente> buscar(String razonSocial, Boolean estado) throws SQLException;
+    // RF003: documento, razon social (o nombre) y estado. Cada filtro es opcional (null o vacio no filtra);
+    // si se dan varios, el cliente debe cumplir todos (por separado o combinados).
+    List<Cliente> buscar(String documento, String razonSocial, Boolean estado) throws SQLException;
 
     // solo el Administrador asigna o retira la linea de credito
     Cliente asignarLineaCredito(int idCliente, java.math.BigDecimal limiteCredito, int plazoCreditoDias,

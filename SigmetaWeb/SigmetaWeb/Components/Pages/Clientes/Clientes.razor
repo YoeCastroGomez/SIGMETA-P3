@@ -46,7 +46,7 @@
             <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
         </div>
     </form>
-    <div class="form-text">El documento busca un cliente exacto. Razón social o nombre y estado se pueden combinar.</div>
+    <div class="form-text">Usa uno o varios filtros: si llenas varios, se muestran los clientes que cumplen todos.</div>
 </div>
 
 @if (clientes is null)
@@ -140,13 +140,12 @@ else
     private async Task Buscar()
     {
         exito = null;
+        // documento, razón social y estado: por separado o juntos; los combina el BO (ClienteBO.buscar)
+        var parametros = new List<string>();
         if (!string.IsNullOrWhiteSpace(filtroDocumento))
         {
-            await Cargar($"clientes?documento={Uri.EscapeDataString(filtroDocumento.Trim())}");      // buscarPorDocumento
-            return;
+            parametros.Add($"documento={Uri.EscapeDataString(filtroDocumento.Trim())}");
         }
-        // razón social y estado juntos: los combina el BO (ClienteBO.buscar)
-        var parametros = new List<string>();
         if (!string.IsNullOrWhiteSpace(filtroRazonSocial))
         {
             parametros.Add($"razonSocial={Uri.EscapeDataString(filtroRazonSocial.Trim())}");

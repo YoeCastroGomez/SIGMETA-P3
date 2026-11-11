@@ -17,8 +17,6 @@ import pe.edu.pucp.sigmeta.boimpl.socio.ClienteBOImpl;
 import pe.edu.pucp.sigmeta.model.socio.Cliente;
 import pe.edu.pucp.sigmeta.ws.base.VentanillaBase;
 
-import java.util.ArrayList;
-import java.util.List;
 
 // RF003: servicio REST de clientes. Es el EJEMPLO que copian los demas servicios.
 //
@@ -26,7 +24,7 @@ import java.util.List;
 //   GET    /api/clientes?estado=true         listar por estado (true activos, false desactivados)
 //   GET    /api/clientes?documento=4578...   buscar por documento
 //   GET    /api/clientes?razonSocial=andina  buscar por razon social o nombre
-//   GET    /api/clientes?razonSocial=andina&estado=false   los dos filtros juntos (ClienteBO.buscar)
+//   GET    /api/clientes?documento=...&razonSocial=...&estado=...   cualquier combinacion (ClienteBO.buscar)
 //   GET    /api/clientes/5                   obtener uno por id
 //   POST   /api/clientes                     registrar (Vendedor o Administrador)
 //   PUT    /api/clientes/5                   modificar
@@ -47,18 +45,8 @@ public class ClienteRS extends VentanillaBase {
                            @QueryParam("estado") Boolean estado,
                            @QueryParam("documento") String documento,
                            @QueryParam("razonSocial") String razonSocial) {
-        return ejecutar(ticket, id -> {
-            if (documento != null && !documento.isBlank()) {
-                List<Cliente> lista = new ArrayList<>();
-                Cliente cliente = clienteBO.buscarPorDocumento(documento.trim());
-                if (cliente != null) {
-                    lista.add(cliente);
-                }
-                return lista;
-            }
-            // razon social y estado se combinan (cada uno opcional)
-            return clienteBO.buscar(razonSocial, estado);
-        });
+        // documento, razon social y estado: por separado o combinados (ClienteBO.buscar)
+        return ejecutar(ticket, id -> clienteBO.buscar(documento, razonSocial, estado));
     }
 
     @GET

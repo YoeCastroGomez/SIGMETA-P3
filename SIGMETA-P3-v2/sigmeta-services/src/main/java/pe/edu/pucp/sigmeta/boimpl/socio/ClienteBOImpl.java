@@ -110,23 +110,39 @@ public class ClienteBOImpl implements ClienteBO {
         });
     }
 
-    // RF003: busqueda combinada. Ej.: "constructora" + inactivos. Sin filtros devuelve todos.
+    // RF003: busqueda por documento, razon social y estado, por separado o combinados.
+    // Ej.: solo "constructora"; "constructora" + inactivos; un documento + activos. Sin filtros devuelve todos.
+    // Se consulta por el filtro mas preciso (documento, luego razon social, luego estado) y los demas se aplican
+    // sobre ese resultado.
     @Override
-    public List<Cliente> buscar(String razonSocial, Boolean estado) throws SQLException {
+    public List<Cliente> buscar(String documento, String razonSocial, Boolean estado) throws SQLException {
+        String numero = Validador.textoOpcional(documento, "numero de documento", 20);
         String texto = Validador.textoOpcional(razonSocial, "razon social", 150);
         return Transaccion.ejecutar(() -> {
             List<Cliente> clientes;
-            if (texto != null) {
+            if (numero != null) {
+                Cliente cliente = clienteDAO.buscarPorDocumento(numero);
+                clientes = cliente == null ? List.of() : List.of(cliente);
+            } else if (texto != null) {
                 clientes = clienteDAO.buscarPorRazonSocial(texto);
             } else if (estado != null) {
                 return clienteDAO.listarPorEstado(estado);
             } else {
-                clientes = clienteDAO.listarTodos();
+                return clienteDAO.listarTodos();
             }
+            String buscado = texto == null ? null : texto.toLowerCase();
             return clientes.stream()
                     .filter(c -> estado == null || c.isEstado() == estado)
+                    .filter(c -> buscado == null || nombreCompleto(c).toLowerCase().contains(buscado))
                     .toList();
         });
+    }
+
+    // razon social de una empresa o nombres y apellidos de una persona (lo mismo que mira el SP de busqueda)
+    private static String nombreCompleto(Cliente c) {
+        return (c.getRazonSocial() == null ? "" : c.getRazonSocial()) + " "
+                + (c.getNombres() == null ? "" : c.getNombres()) + " "
+                + (c.getApellidos() == null ? "" : c.getApellidos());
     }
 
     // RF003

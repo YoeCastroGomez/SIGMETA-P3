@@ -64,7 +64,7 @@ else
                 @if (cliente.TipoPersona == "JURIDICA")
                 {
                     <div class="col-12">
-                        <Campo Etiqueta="Razón social" Id="razonSocial" Obligatorio="true" Ayuda="No puede repetirse." Error="@(v.Error("razonSocial", Errores()))">
+                        <Campo Etiqueta="Razón social" Id="razonSocial" Obligatorio="true" Ayuda="Debe ser única: no puede haber dos clientes con la misma razón social." Error="@(v.Error("razonSocial", Errores()))">
                             <InputText id="razonSocial" class="@(v.Clase("razonSocial", Errores()))" maxlength="150"
                                        @bind-Value="cliente.RazonSocial" @oninput="@(e => v.Escribiendo("razonSocial", e))" />
                         </Campo>
