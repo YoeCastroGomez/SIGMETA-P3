@@ -159,6 +159,27 @@ public class CompraBOImpl implements CompraBO {
     }
 
     @Override
+    public List<Compra> buscar(Integer idProveedor, LocalDate fechaInicio, LocalDate fechaFin)
+            throws SQLException {
+        if (idProveedor != null && idProveedor <= 0) {
+            throw new IllegalArgumentException("El ID del proveedor debe ser positivo");
+        }
+        if (fechaInicio != null && fechaFin != null && fechaInicio.isAfter(fechaFin)) {
+            throw new IllegalArgumentException("La fecha de inicio no puede ser posterior a la fecha de fin");
+        }
+
+        if (idProveedor != null && fechaInicio != null && fechaFin != null) {
+            return listarPorProveedorYFechas(idProveedor, fechaInicio, fechaFin);
+        }
+
+        return Transaccion.consultar(() -> compraDAO.listAll().stream()
+                .filter(c -> idProveedor == null || c.getProveedor().getId() == idProveedor)
+                .filter(c -> fechaInicio == null || !c.getFechaEmision().isBefore(fechaInicio))
+                .filter(c -> fechaFin == null || !c.getFechaEmision().isAfter(fechaFin))
+                .toList());
+    }
+
+    @Override
     public List<Compra> listarPorProveedorYFechas(int idProveedor, LocalDate fechaInicio, LocalDate fechaFin)
             throws SQLException {
         if (idProveedor <= 0) {
