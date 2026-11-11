@@ -37,19 +37,19 @@ else
 
         <hr />
 
-        <EditForm Model="@linea" OnValidSubmit="Guardar">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="alert alert-warning" />
-
+        @* novalidate: sin globos del navegador; cada error sale debajo de su campo (estándar RNF004) *@
+        <EditForm Model="@linea" OnSubmit="Guardar" novalidate>
             <div class="row">
                 <div class="col-md-4">
-                    <Campo Etiqueta="Límite de crédito (S/)" Id="limite" Obligatorio="true" Ayuda="Mayor a 0.">
-                        <InputNumber id="limite" class="form-control" step="0.01" @bind-Value="linea.LimiteCredito" />
+                    <Campo Etiqueta="Límite de crédito (S/)" Id="limite" Obligatorio="true" Ayuda="Mayor a 0." Error="@(v.Error("limite", Errores()))">
+                        <InputNumber id="limite" class="@(v.Clase("limite", Errores()))" step="0.01" onkeydown="@ValidacionEnVivo.SoloPositivos"
+                                     @bind-Value="linea.LimiteCredito" @oninput="@(e => v.Escribiendo("limite", e))" />
                     </Campo>
                 </div>
                 <div class="col-md-4">
-                    <Campo Etiqueta="Plazo (días)" Id="plazo" Obligatorio="true" Ayuda="Mayor a 0. Máximo por venta.">
-                        <InputNumber id="plazo" class="form-control" @bind-Value="linea.PlazoCreditoDias" />
+                    <Campo Etiqueta="Plazo (días)" Id="plazo" Obligatorio="true" Ayuda="Mayor a 0. Máximo por venta." Error="@(v.Error("plazo", Errores()))">
+                        <InputNumber id="plazo" class="@(v.Clase("plazo", Errores()))" onkeydown="@ValidacionEnVivo.SoloPositivos"
+                                     @bind-Value="linea.PlazoCreditoDias" @oninput="@(e => v.Escribiendo("plazo", e))" />
                     </Campo>
                 </div>
                 <div class="col-md-4">
@@ -106,10 +106,47 @@ else
         }
     }
 
+    // ---------------- Validación en pantalla (RNF004) ----------------
+    // Mismas reglas que ClienteBOImpl.asignarLineaCredito: límite y plazo mayores a 0.
+    private readonly ValidacionEnVivo v = new();
+
+    private Dictionary<string, string> Errores()
+    {
+        var e = new Dictionary<string, string>();
+        var limite = v.Numero("limite", linea.LimiteCredito);
+        if (limite is null or <= 0)
+        {
+            e["limite"] = "El límite de crédito es obligatorio y debe ser mayor a 0.";
+        }
+        else if (ValidacionEnVivo.MasDecimales(limite.Value, 2))
+        {
+            e["limite"] = "El límite de crédito admite como máximo 2 decimales.";
+        }
+        var plazo = v.Numero("plazo", linea.PlazoCreditoDias);
+        if (plazo is null or <= 0)
+        {
+            e["plazo"] = "El plazo es obligatorio y debe ser mayor a 0 días.";
+        }
+        else if (ValidacionEnVivo.MasDecimales(plazo.Value, 0))
+        {
+            e["plazo"] = "El plazo debe ser un número entero de días.";
+        }
+        else if (plazo > 3650)
+        {
+            e["plazo"] = "El plazo no puede pasar de 3650 días.";
+        }
+        return e;
+    }
+
     // PUT /api/clientes/{Id}/linea-credito -> asignarLineaCredito del BO
     private async Task Guardar()
     {
         error = null;
+        if (!v.Intentar(Errores()))
+        {
+            error = "Revise los campos marcados en rojo.";
+            return;
+        }
         try
         {
             await Api.Put<Cliente>($"clientes/{Id}/linea-credito", linea);

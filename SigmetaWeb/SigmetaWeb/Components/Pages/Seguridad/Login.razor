@@ -55,19 +55,24 @@
 
             <AvisoError Mensaje="@Error" />
 
-            <form method="post" action="/auth/login" class="login-campos">
+            @* novalidate: sin globos del navegador (estándar RNF004). Si falta un dato, el botón no envía: marca el
+               error en rojo debajo del cuadro. Con los dos datos, el formulario se envía a /auth/login. *@
+            <form method="post" action="/auth/login" class="login-campos" novalidate
+                  onsubmit="if (!this.usuario.value.trim() || !this.clave.value) { event.preventDefault(); }">
                 <div>
                     <label class="form-label fw-semibold" for="usuario">Usuario <span class="login-requerido">*</span></label>
-                    <input id="usuario" name="usuario" class="form-control login-input"
-                           autocomplete="username" placeholder="Escribe tu usuario" maxlength="100"
-                           autofocus required />
+                    <input id="usuario" name="usuario" class="@(v.Clase("usuario", Errores(), "form-control login-input"))"
+                           autocomplete="username" placeholder="Escribe tu usuario" maxlength="100" autofocus
+                           @bind="usuario" @bind:event="oninput" @bind:after="@(() => v.Tocado("usuario"))" />
+                    <ErrorCampo Mensaje="@(v.Error("usuario", Errores()))" />
                 </div>
                 <div>
                     <label class="form-label fw-semibold" for="clave">Contraseña <span class="login-requerido">*</span></label>
                     <div class="login-clave-contenedor">
                         <input id="clave" name="clave" type="@(mostrarClave ? "text" : "password")"
-                               class="form-control login-input login-clave-input"
-                               autocomplete="current-password" placeholder="Ingresa tu contraseña" required />
+                               class="@(v.Clase("clave", Errores(), "form-control login-input login-clave-input"))"
+                               autocomplete="current-password" placeholder="Ingresa tu contraseña"
+                               @bind="clave" @bind:event="oninput" @bind:after="@(() => v.Tocado("clave"))" />
                         <button type="button" class="login-ver-clave"
                                 @onclick="() => mostrarClave = !mostrarClave"
                                 aria-label="@(mostrarClave ? "Ocultar contraseña" : "Mostrar contraseña")"
@@ -89,8 +94,11 @@
                             }
                         </button>
                     </div>
+                    <ErrorCampo Mensaje="@(v.Error("clave", Errores()))" />
                 </div>
-                <button type="submit" class="btn btn-primary login-ingresar">
+                @* Al pulsar se marcan los errores; el formulario solo se envía si los dos cuadros tienen algo
+                   (se revisa en el navegador para que también funcione con usuario y clave autocompletados). *@
+                <button type="submit" class="btn btn-primary login-ingresar" @onclick="@(() => v.Intentar(Errores()))">
                     Ingresar a SIGMETA
                     <span aria-hidden="true">→</span>
                 </button>
@@ -111,4 +119,23 @@
     public string? Error { get; set; }
 
     private bool mostrarClave;
+
+    // ---------------- Validación en pantalla (RNF004) ----------------
+    private string usuario = "";
+    private string clave = "";
+    private readonly ValidacionEnVivo v = new();
+
+    private Dictionary<string, string> Errores()
+    {
+        var e = new Dictionary<string, string>();
+        if (string.IsNullOrWhiteSpace(usuario))
+        {
+            e["usuario"] = "Escribe tu usuario.";
+        }
+        if (string.IsNullOrEmpty(clave))
+        {
+            e["clave"] = "Ingresa tu contraseña.";
+        }
+        return e;
+    }
 }

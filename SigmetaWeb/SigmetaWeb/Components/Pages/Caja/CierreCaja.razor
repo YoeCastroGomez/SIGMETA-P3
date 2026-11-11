@@ -102,10 +102,11 @@ else
                     <input id="calculado" class="form-control" readonly value="@caja.MontoEsperado.ToString("N2")" />
                 </Campo>
 
-                <Campo Etiqueta="Monto declarado (S/)" Id="declarado" Obligatorio="true"
+                @* Estándar RNF004: el error sale en rojo debajo del cuadro mientras se escribe; los del BO, arriba *@
+                <Campo Etiqueta="Monto declarado (S/)" Id="declarado" Obligatorio="true" Error="@(v.Error("declarado", Errores()))"
                        Ayuda="Dinero contado al final de la jornada. No puede ser negativo.">
-                    <input id="declarado" type="number" step="0.01" class="form-control"
-                           @bind="declarado" @bind:event="oninput" />
+                    <input id="declarado" type="number" step="0.01" class="@(v.Clase("declarado", Errores()))" onkeydown="@ValidacionEnVivo.SoloPositivos"
+                           @bind="declarado" @bind:event="oninput" @bind:after="@(() => v.Tocado("declarado"))" />
                 </Campo>
 
                 @* Solo para mostrar: la diferencia real la calcula y guarda el BO (declarado − calculado). *@
@@ -147,13 +148,34 @@ else
         cargando = false;
     }
 
+    // ---------------- Validación en pantalla (RNF004) ----------------
+    private readonly ValidacionEnVivo v = new();
+
+    private Dictionary<string, string> Errores()
+    {
+        var e = new Dictionary<string, string>();
+        if (declarado is null)
+        {
+            e["declarado"] = "Ingrese el monto declarado (el dinero que contó).";
+        }
+        else if (declarado < 0)
+        {
+            e["declarado"] = "El monto declarado no puede ser negativo.";
+        }
+        else if (ValidacionEnVivo.MasDecimales(declarado.Value, 2))
+        {
+            e["declarado"] = "Máximo 2 decimales.";
+        }
+        return e;
+    }
+
     private async Task Cerrar()
     {
         if (caja is null) return;
         error = null;
-        if (declarado is null)
+        if (!v.Intentar(Errores()))
         {
-            error = "Ingrese el monto declarado (el dinero que contó).";
+            error = "Revise los campos marcados en rojo.";
             return;
         }
         guardando = true;

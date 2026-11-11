@@ -20,10 +20,9 @@
 }
 else
 {
-    <EditForm Model="@cliente" OnValidSubmit="Guardar">
-        <DataAnnotationsValidator />
-        <ValidationSummary class="alert alert-warning" />
-
+    @* novalidate: sin globos del navegador. Cada error sale en rojo debajo de su campo mientras se escribe
+       (estándar RNF004, ValidacionEnVivo); los del BO (documento repetido...) en el aviso rojo de arriba. *@
+    <EditForm Model="@cliente" OnSubmit="Guardar" novalidate>
         <div class="card card-body mb-3">
             <h2 class="h6 fw-semibold mb-3">Identificación</h2>
 
@@ -46,7 +45,7 @@ else
             <div class="row">
                 <div class="col-md-4">
                     <Campo Etiqueta="Tipo de documento" Id="tipoDoc" Obligatorio="true">
-                        <InputSelect id="tipoDoc" class="form-select" @bind-Value="cliente.TipoDocumento">
+                        <InputSelect id="tipoDoc" class="form-select" @bind-Value="cliente.TipoDocumento" @bind-Value:after="@(() => v.Tocado("tipoDoc"))">
                             <option value="RUC">RUC</option>
                             <option value="DNI">DNI</option>
                             <option value="CARNET_EXTRANJERIA">Carné de extranjería</option>
@@ -55,31 +54,34 @@ else
                     </Campo>
                 </div>
                 <div class="col-md-8">
-                    <Campo Etiqueta="Número de documento" Id="numDoc" Obligatorio="true"
+                    <Campo Etiqueta="Número de documento" Id="numDoc" Obligatorio="true" Error="@(v.Error("numDoc", Errores(), "tipoDoc"))"
                            Ayuda="Único. RUC: 11 dígitos (empieza en 10, 15, 16, 17 o 20) · DNI: 8 dígitos · Carné: 9 a 12 · Pasaporte: 6 a 12.">
-                        <InputText id="numDoc" class="form-control" maxlength="20" @bind-Value="cliente.NumeroDocumento" />
-                        <ValidationMessage For="@(() => cliente.NumeroDocumento)" />
+                        <InputText id="numDoc" class="@(v.Clase("numDoc", Errores(), "form-control", "tipoDoc"))" maxlength="20"
+                                   @bind-Value="cliente.NumeroDocumento" @oninput="@(e => v.Escribiendo("numDoc", e))" />
                     </Campo>
                 </div>
 
                 @if (cliente.TipoPersona == "JURIDICA")
                 {
                     <div class="col-12">
-                        <Campo Etiqueta="Razón social" Id="razonSocial" Obligatorio="true" Ayuda="No puede repetirse.">
-                            <InputText id="razonSocial" class="form-control" maxlength="150" @bind-Value="cliente.RazonSocial" />
+                        <Campo Etiqueta="Razón social" Id="razonSocial" Obligatorio="true" Ayuda="No puede repetirse." Error="@(v.Error("razonSocial", Errores()))">
+                            <InputText id="razonSocial" class="@(v.Clase("razonSocial", Errores()))" maxlength="150"
+                                       @bind-Value="cliente.RazonSocial" @oninput="@(e => v.Escribiendo("razonSocial", e))" />
                         </Campo>
                     </div>
                 }
                 else
                 {
                     <div class="col-md-6">
-                        <Campo Etiqueta="Nombres" Id="nombres" Obligatorio="true">
-                            <InputText id="nombres" class="form-control" maxlength="100" @bind-Value="cliente.Nombres" />
+                        <Campo Etiqueta="Nombres" Id="nombres" Obligatorio="true" Error="@(v.Error("nombres", Errores()))">
+                            <InputText id="nombres" class="@(v.Clase("nombres", Errores()))" maxlength="100"
+                                       @bind-Value="cliente.Nombres" @oninput="@(e => v.Escribiendo("nombres", e))" />
                         </Campo>
                     </div>
                     <div class="col-md-6">
-                        <Campo Etiqueta="Apellidos" Id="apellidos" Obligatorio="true">
-                            <InputText id="apellidos" class="form-control" maxlength="100" @bind-Value="cliente.Apellidos" />
+                        <Campo Etiqueta="Apellidos" Id="apellidos" Obligatorio="true" Error="@(v.Error("apellidos", Errores()))">
+                            <InputText id="apellidos" class="@(v.Clase("apellidos", Errores()))" maxlength="100"
+                                       @bind-Value="cliente.Apellidos" @oninput="@(e => v.Escribiendo("apellidos", e))" />
                         </Campo>
                     </div>
                 }
@@ -95,13 +97,15 @@ else
                     </Campo>
                 </div>
                 <div class="col-md-4">
-                    <Campo Etiqueta="Teléfono" Id="telefono" Ayuda="Dígitos, espacios, + y -.">
-                        <InputText id="telefono" type="tel" class="form-control" maxlength="20" @bind-Value="cliente.Contacto.Telefono" />
+                    <Campo Etiqueta="Teléfono" Id="telefono" Ayuda="Dígitos, espacios, + y -." Error="@(v.Error("telefono", Errores()))">
+                        <InputText id="telefono" type="tel" class="@(v.Clase("telefono", Errores()))" maxlength="20"
+                                   @bind-Value="cliente.Contacto.Telefono" @oninput="@(e => v.Escribiendo("telefono", e))" />
                     </Campo>
                 </div>
                 <div class="col-md-4">
-                    <Campo Etiqueta="Correo" Id="correo">
-                        <InputText id="correo" type="email" class="form-control" maxlength="120" @bind-Value="cliente.Contacto.Correo" />
+                    <Campo Etiqueta="Correo" Id="correo" Error="@(v.Error("correo", Errores()))">
+                        <InputText id="correo" type="email" class="@(v.Clase("correo", Errores()))" maxlength="120"
+                                   @bind-Value="cliente.Contacto.Correo" @oninput="@(e => v.Escribiendo("correo", e))" />
                     </Campo>
                 </div>
                 <div class="col-md-4">
@@ -192,10 +196,60 @@ else
         }
     }
 
-    // solo se ejecuta si pasan las validaciones de la pantalla (OnValidSubmit)
+    // ---------------- Validación en pantalla (RNF004) ----------------
+    // Mismas reglas que ClienteBOImpl.validarDatos y Validador. El BO vuelve a validar todo, y lo que solo él
+    // sabe (documento o razón social repetidos) sale en el aviso rojo de arriba.
+    private readonly ValidacionEnVivo v = new();
+
+    private Dictionary<string, string> Errores()
+    {
+        var e = new Dictionary<string, string>();
+        if (cliente is null)
+        {
+            return e;
+        }
+        var documento = ValidacionEnVivo.ErrorDocumento(cliente.TipoDocumento, v.Texto("numDoc", cliente.NumeroDocumento).Trim());
+        if (documento is not null)
+        {
+            e["numDoc"] = documento;
+        }
+        if (cliente.TipoPersona == "JURIDICA")
+        {
+            if (string.IsNullOrWhiteSpace(v.Texto("razonSocial", cliente.RazonSocial)))
+            {
+                e["razonSocial"] = "La razón social es obligatoria para una empresa.";
+            }
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(v.Texto("nombres", cliente.Nombres)))
+            {
+                e["nombres"] = "Los nombres son obligatorios para una persona natural.";
+            }
+            if (string.IsNullOrWhiteSpace(v.Texto("apellidos", cliente.Apellidos)))
+            {
+                e["apellidos"] = "Los apellidos son obligatorios para una persona natural.";
+            }
+        }
+        if (ValidacionEnVivo.ErrorTelefono(v.Texto("telefono", cliente.Contacto.Telefono)) is { } telefono)
+        {
+            e["telefono"] = telefono;
+        }
+        if (ValidacionEnVivo.ErrorCorreo(v.Texto("correo", cliente.Contacto.Correo)) is { } correo)
+        {
+            e["correo"] = correo;
+        }
+        return e;
+    }
+
     private async Task Guardar()
     {
         error = null;
+        if (!v.Intentar(Errores()))
+        {
+            error = "Revise los campos marcados en rojo.";
+            return;
+        }
         guardando = true;
         try
         {

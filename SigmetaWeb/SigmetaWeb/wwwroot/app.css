@@ -978,3 +978,23 @@ html[data-bs-theme="light"] .form-select option {
     outline: 2px solid var(--bs-primary);
     outline-offset: 2px;
 }
+
+/* ===================== ERRORES DE CAMPO (RNF004) =====================
+   Estándar de SIGMETA: el cuadro con error se marca en rojo y el mensaje sale debajo en texto rojo.
+   Va al final para ganarle a los bordes de los temas claro y oscuro (y de los filtros). */
+.form-control.is-invalid,
+.form-select.is-invalid,
+html[data-bs-theme="dark"] .form-control.is-invalid,
+html[data-bs-theme="dark"] .form-select.is-invalid,
+.sigmeta-filtros .form-control.is-invalid,
+html[data-bs-theme="dark"] .sigmeta-filtros .form-control.is-invalid {
+    border-color: #dc3545 !important;
+}
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus {
+    box-shadow: 0 0 0 .2rem rgba(220, 53, 69, .25) !important;
+}
+html[data-bs-theme="dark"] .text-danger.small,
+html[data-bs-theme="dark"] .small.text-danger {
+    color: #ff7b86 !important;   /* más claro en oscuro para que se lea (contraste) */
+}

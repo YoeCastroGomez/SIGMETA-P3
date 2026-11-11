@@ -18,7 +18,7 @@
 }
 
 <div class="card card-body mb-3">
-    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault>
+    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
         <Campo Etiqueta="Número de compra" Id="numeroCompraFiltro" Clase="col-sm-6 col-md-3">
             <input id="numeroCompraFiltro" type="text" class="form-control"
                    placeholder="Ej. OC-LAB11" @bind="filtroNumero" />
@@ -37,8 +37,8 @@
         <Campo Etiqueta="Desde" Id="fechaDesdeCompra" Clase="col-sm-6 col-md-2">
             <input id="fechaDesdeCompra" type="date" class="form-control" @bind="filtroDesde" />
         </Campo>
-        <Campo Etiqueta="Hasta" Id="fechaHastaCompra" Clase="col-sm-6 col-md-2">
-            <input id="fechaHastaCompra" type="date" class="form-control" @bind="filtroHasta" />
+        <Campo Etiqueta="Hasta" Id="fechaHastaCompra" Error="@(ValidacionEnVivo.ErrorRango(filtroDesde, filtroHasta))" Clase="col-sm-6 col-md-2">
+            <input id="fechaHastaCompra" type="date" class="@(ValidacionEnVivo.ClaseRango(filtroDesde, filtroHasta))" @bind="filtroHasta" />
         </Campo>
         <div class="col-auto d-flex gap-2">
             <button type="submit" class="btn btn-dark" disabled="@cargando">Buscar</button>

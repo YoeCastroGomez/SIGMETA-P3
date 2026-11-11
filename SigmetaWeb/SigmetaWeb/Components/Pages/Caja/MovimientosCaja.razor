@@ -62,13 +62,16 @@ else
                     </Campo>
                 </div>
                 <div class="col-md-4">
-                    <Campo Etiqueta="Monto (S/)" Id="monto" Obligatorio="true" Ayuda="Mayor a 0.">
-                        <input id="monto" type="number" step="0.01" class="form-control" @bind="formulario.Monto" />
+                    @* Estándar RNF004: cada error sale en rojo debajo de su cuadro; los del BO, en el aviso de arriba *@
+                    <Campo Etiqueta="Monto (S/)" Id="monto" Obligatorio="true" Ayuda="Mayor a 0." Error="@(v.Error("monto", Errores()))">
+                        <input id="monto" type="number" step="0.01" class="@(v.Clase("monto", Errores()))" onkeydown="@ValidacionEnVivo.SoloPositivos"
+                               @bind="formulario.Monto" @bind:event="oninput" @bind:after="@(() => v.Tocado("monto"))" />
                     </Campo>
                 </div>
                 <div class="col-12">
-                    <Campo Etiqueta="Concepto" Id="concepto" Obligatorio="true" Ayuda="Motivo del ingreso o egreso.">
-                        <input id="concepto" class="form-control" maxlength="150" @bind="formulario.Concepto" />
+                    <Campo Etiqueta="Concepto" Id="concepto" Obligatorio="true" Ayuda="Motivo del ingreso o egreso." Error="@(v.Error("concepto", Errores()))">
+                        <input id="concepto" class="@(v.Clase("concepto", Errores()))" maxlength="150"
+                               @bind="formulario.Concepto" @bind:event="oninput" @bind:after="@(() => v.Tocado("concepto"))" />
                     </Campo>
                 </div>
             </div>
@@ -183,15 +186,43 @@ else
         }
     }
 
+    // ---------------- Validación en pantalla (RNF004) ----------------
+    // Monto mayor a 0 y concepto obligatorio (igual que el BO). Lo demás (efectivo suficiente, caja abierta) es del BO.
+    private readonly ValidacionEnVivo v = new();
+
+    private Dictionary<string, string> Errores()
+    {
+        var e = new Dictionary<string, string>();
+        if (formulario is null)
+        {
+            return e;
+        }
+        if (formulario.Monto <= 0)
+        {
+            e["monto"] = "El monto debe ser mayor a 0.";
+        }
+        else if (ValidacionEnVivo.MasDecimales(formulario.Monto, 2))
+        {
+            e["monto"] = "Máximo 2 decimales.";
+        }
+        if (string.IsNullOrWhiteSpace(formulario.Concepto))
+        {
+            e["concepto"] = "El concepto es obligatorio.";
+        }
+        return e;
+    }
+
     private void Nuevo()
     {
         exito = null;
+        v.Reiniciar();
         formulario = new MovimientoDatos();
     }
 
     private void Editar(MovimientoDatos m)
     {
         exito = null;
+        v.Reiniciar();
         formulario = new MovimientoDatos { Id = m.Id, Tipo = m.Tipo, MedioPago = m.MedioPago, Monto = m.Monto, Concepto = m.Concepto };
     }
 
@@ -201,6 +232,11 @@ else
         if (caja is null || formulario is null) return;
         error = null;
         exito = null;
+        if (!v.Intentar(Errores()))
+        {
+            error = "Revise los campos marcados en rojo.";
+            return;
+        }
         guardando = true;
         try
         {

@@ -20,11 +20,15 @@ else
     <div class="card card-body mb-3">
         <h2 class="h6 fw-semibold mb-3">Datos de la compra</h2>
         <div class="row g-3">
-            <Campo Etiqueta="Número de orden" Id="numeroCompra" Clase="col-md-4" Obligatorio="true">
-                <input id="numeroCompra" class="form-control" maxlength="50" @bind="numero" />
+            @* Estándar RNF004: cada error sale en rojo debajo de su cuadro mientras se escribe (ValidacionEnVivo);
+               los del BO (proveedor desactivado...) en el aviso rojo de arriba. *@
+            <Campo Etiqueta="Número de orden" Id="numeroCompra" Clase="col-md-4" Obligatorio="true" Error="@(v.Error("numero", Errores()))">
+                <input id="numeroCompra" class="@(v.Clase("numero", Errores()))" maxlength="50"
+                       @bind="numero" @bind:event="oninput" @bind:after="@(() => v.Tocado("numero"))" />
             </Campo>
-            <Campo Etiqueta="Proveedor" Id="proveedorCompra" Clase="col-md-8" Obligatorio="true">
-                <select id="proveedorCompra" class="form-select" @bind="proveedorId">
+            <Campo Etiqueta="Proveedor" Id="proveedorCompra" Clase="col-md-8" Obligatorio="true" Error="@(v.Error("proveedor", Errores()))">
+                <select id="proveedorCompra" class="@(v.Clase("proveedor", Errores(), "form-select"))"
+                        @bind="proveedorId" @bind:after="@(() => v.Tocado("proveedor"))">
                     <option value="0">Seleccione un proveedor</option>
                     @foreach (var p in proveedores.Where(p => p.Estado || p.Id == proveedorId))
                     {
@@ -33,10 +37,11 @@ else
                 </select>
             </Campo>
             <Campo Etiqueta="Fecha de emisión" Id="fechaCompra" Clase="col-md-6" Obligatorio="true">
-                <input id="fechaCompra" type="date" class="form-control" @bind="fecha" />
+                <input id="fechaCompra" type="date" class="form-control" @bind="fecha" @bind:after="@(() => v.Tocado("fecha"))" />
             </Campo>
-            <Campo Etiqueta="Fecha estimada de recepción" Id="fechaEstimadaCompra" Clase="col-md-6">
-                <input id="fechaEstimadaCompra" type="date" class="form-control" @bind="fechaEstimada" />
+            <Campo Etiqueta="Fecha estimada de recepción" Id="fechaEstimadaCompra" Clase="col-md-6" Error="@(v.Error("fechaEstimada", Errores(), "fecha"))">
+                <input id="fechaEstimadaCompra" type="date" class="@(v.Clase("fechaEstimada", Errores(), "form-control", "fecha"))"
+                       @bind="fechaEstimada" @bind:after="@(() => v.Tocado("fechaEstimada"))" />
             </Campo>
             <Campo Etiqueta="Observaciones" Id="observacionesCompra" Clase="col-12">
                 <textarea id="observacionesCompra" class="form-control" maxlength="255" rows="2" @bind="observaciones"></textarea>
@@ -60,12 +65,14 @@ else
                 <tbody>
                     @foreach (var linea in lineas)
                     {
+                        var n = Clave(linea);
                         <tr @key="linea">
                             <td>
-                                <input type="text" class="form-control" list="productosCompraDisponibles"
+                                <input type="text" class="@(v.Clase(n + "producto", Errores()))" list="productosCompraDisponibles"
                                        autocomplete="off" placeholder="Código o nombre del producto"
                                        value="@TextoProducto(linea)"
-                                       @oninput="e => CambiarProducto(linea, e.Value?.ToString())" />
+                                       @oninput="@(e => EscribiendoProducto(linea, e))" />
+                                <ErrorCampo Mensaje="@(v.Error(n + "producto", Errores()))" />
                             </td>
                             <td>
                                 <select class="form-select" @bind="linea.UnidadCompra">
@@ -75,9 +82,24 @@ else
                                     }
                                 </select>
                             </td>
-                            <td><input type="number" min="0.001" step="0.001" class="form-control sin-flechas" @bind="linea.Cantidad" @bind:event="oninput" /></td>
-                            <td><input type="number" min="0" step="0.01" class="form-control sin-flechas" @bind="linea.PrecioUnitario" @bind:event="oninput" /></td>
-                            <td><input type="number" min="0" step="0.01" class="form-control sin-flechas" @bind="linea.Descuento" @bind:event="oninput" /></td>
+                            <td>
+                                <input type="number" step="0.001" class="@(v.Clase(n + "cantidad", Errores(), "form-control sin-flechas"))"
+                                       onkeydown="@ValidacionEnVivo.SoloPositivos"
+                                       @bind="linea.Cantidad" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "cantidad"))" />
+                                <ErrorCampo Mensaje="@(v.Error(n + "cantidad", Errores()))" />
+                            </td>
+                            <td>
+                                <input type="number" step="0.01" class="@(v.Clase(n + "precio", Errores(), "form-control sin-flechas"))"
+                                       onkeydown="@ValidacionEnVivo.SoloPositivos"
+                                       @bind="linea.PrecioUnitario" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "precio"))" />
+                                <ErrorCampo Mensaje="@(v.Error(n + "precio", Errores()))" />
+                            </td>
+                            <td>
+                                <input type="number" step="0.01" class="@(v.Clase(n + "descuento", Errores(), "form-control sin-flechas", n + "cantidad", n + "precio"))"
+                                       onkeydown="@ValidacionEnVivo.SoloPositivos"
+                                       @bind="linea.Descuento" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "descuento"))" />
+                                <ErrorCampo Mensaje="@(v.Error(n + "descuento", Errores(), n + "cantidad", n + "precio"))" />
+                            </td>
                             <td>S/ @Importe(linea).ToString("N2")</td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-outline-danger"
@@ -226,6 +248,12 @@ else
         }
     }
 
+    private void EscribiendoProducto(SolicitudDetalleCompraRest linea, ChangeEventArgs e)
+    {
+        v.Tocado(Clave(linea) + "producto");
+        CambiarProducto(linea, e.Value?.ToString());
+    }
+
     private SolicitudDetalleCompraRest NuevaLinea()
     {
         var linea = new SolicitudDetalleCompraRest { Cantidad = 1, IdProducto = 0 };
@@ -242,33 +270,86 @@ else
         }
     }
 
-    private async Task Guardar()
+    // ---------------- Validación en pantalla (RNF004) ----------------
+    // Mismas reglas que CompraBOImpl. Cada error sale debajo de su cuadro; el BO vuelve a validar todo.
+    private readonly ValidacionEnVivo v = new();
+
+    // Clave de una línea para sus errores (las líneas se agregan y se quitan, por eso no se usa la posición)
+    private readonly Dictionary<SolicitudDetalleCompraRest, int> claves = new();
+    private int ultimaClave;
+    private string Clave(SolicitudDetalleCompraRest l)
     {
-        error = null;
-        if (string.IsNullOrWhiteSpace(numero) || proveedorId <= 0)
+        if (!claves.TryGetValue(l, out var c))
         {
-            error = "Ingrese un número de orden y seleccione un proveedor.";
-            return;
+            c = claves[l] = ++ultimaClave;
         }
-        if (EsNuevo && !proveedores.Any(p => p.Id == proveedorId && p.Estado))
+        return $"l{c}.";
+    }
+
+    private Dictionary<string, string> Errores()
+    {
+        var e = new Dictionary<string, string>();
+        if (string.IsNullOrWhiteSpace(numero))
         {
-            error = "Seleccione un proveedor activo.";
-            return;
+            e["numero"] = "El número de orden es obligatorio.";
         }
-        if (lineas.Count == 0 || lineas.Any(l =>
-             l.IdProducto <= 0 ||
-             !productos.Any(p => p.Id == l.IdProducto &&
-                 string.Equals(EtiquetaProducto(p), TextoProducto(l), StringComparison.OrdinalIgnoreCase)) ||
-             l.Cantidad <= 0 || l.PrecioUnitario < 0 ||
-             l.Descuento < 0 || l.Descuento > l.Cantidad * l.PrecioUnitario ||
-             l.FactorConversion <= 0))
+        if (proveedorId <= 0)
         {
-            error = "Revise los productos, cantidades, precios y descuentos.";
-            return;
+            e["proveedor"] = "Seleccione el proveedor.";
+        }
+        else if (EsNuevo && !proveedores.Any(p => p.Id == proveedorId && p.Estado))
+        {
+            e["proveedor"] = "El proveedor está desactivado: elija uno activo.";
         }
         if (fechaEstimada.HasValue && fechaEstimada.Value.Date < fecha.Date)
         {
-            error = "La recepción estimada no puede ser anterior a la emisión.";
+            e["fechaEstimada"] = "La recepción estimada no puede ser anterior a la emisión.";
+        }
+        foreach (var l in lineas)
+        {
+            var n = Clave(l);
+            var elegido = l.IdProducto > 0 && productos.Any(p => p.Id == l.IdProducto &&
+                string.Equals(EtiquetaProducto(p), TextoProducto(l), StringComparison.OrdinalIgnoreCase));
+            if (!elegido)
+            {
+                e[n + "producto"] = string.IsNullOrWhiteSpace(TextoProducto(l))
+                    ? "Elija el producto."
+                    : "Elija un producto de la lista.";
+            }
+            if (l.Cantidad <= 0)
+            {
+                e[n + "cantidad"] = "La cantidad debe ser mayor a 0.";
+            }
+            else if (ValidacionEnVivo.MasDecimales(l.Cantidad, 3))
+            {
+                e[n + "cantidad"] = "Máximo 3 decimales.";
+            }
+            if (l.PrecioUnitario < 0)
+            {
+                e[n + "precio"] = "El precio no puede ser negativo.";
+            }
+            else if (ValidacionEnVivo.MasDecimales(l.PrecioUnitario, 2))
+            {
+                e[n + "precio"] = "Máximo 2 decimales.";
+            }
+            if (l.Descuento < 0)
+            {
+                e[n + "descuento"] = "El descuento no puede ser negativo.";
+            }
+            else if (l.Descuento > l.Cantidad * l.PrecioUnitario)
+            {
+                e[n + "descuento"] = "El descuento no puede ser mayor que cantidad × precio.";
+            }
+        }
+        return e;
+    }
+
+    private async Task Guardar()
+    {
+        error = null;
+        if (!v.Intentar(Errores()))
+        {
+            error = "Revise los campos marcados en rojo.";
             return;
         }
         guardando = true;

@@ -20,7 +20,7 @@
 }
 
 <div class="card card-body mb-3">
-    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault>
+    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
         <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
             <select id="fCliente" class="form-select" @bind="fCliente">
                 <option value="0">Todos</option>
@@ -33,8 +33,8 @@
         <Campo Etiqueta="Cobrado desde" Id="fDesde" Clase="col-sm-6 col-md-3">
             <input id="fDesde" type="date" class="form-control" @bind="fDesde" />
         </Campo>
-        <Campo Etiqueta="Cobrado hasta" Id="fHasta" Clase="col-sm-6 col-md-3">
-            <input id="fHasta" type="date" class="form-control" @bind="fHasta" />
+        <Campo Etiqueta="Cobrado hasta" Id="fHasta" Error="@(ValidacionEnVivo.ErrorRango(fDesde, fHasta))" Clase="col-sm-6 col-md-3">
+            <input id="fHasta" type="date" class="@(ValidacionEnVivo.ClaseRango(fDesde, fHasta))" @bind="fHasta" />
         </Campo>
         <div class="col-auto d-flex gap-2">
             <button type="submit" class="btn btn-dark">Buscar</button>

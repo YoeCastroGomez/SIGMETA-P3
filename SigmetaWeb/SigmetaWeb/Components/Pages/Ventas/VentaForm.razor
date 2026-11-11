@@ -58,11 +58,13 @@ else
             @if (desdeOrden)
             {
                 <div class="col-md-6">
-                    <Campo Etiqueta="Orden de compra de cliente" Id="orden" Obligatorio="true"
+                    @* Estándar RNF004: cada error sale en rojo debajo de su cuadro mientras se escribe (ValidacionEnVivo);
+                       los del BO (stock insuficiente, límite de crédito...) en el aviso rojo de arriba. *@
+                    <Campo Etiqueta="Orden de compra de cliente" Id="orden" Obligatorio="true" Error="@(v.Error("orden", Errores()))"
                            Ayuda="Solo órdenes pendientes o atendidas parcialmente.">
                         @if (EsNuevo)
                         {
-                            <select id="orden" class="form-select" value="@venta.IdOrden" @onchange="CambiarOrden">
+                            <select id="orden" class="@(v.Clase("orden", Errores(), "form-select"))" value="@venta.IdOrden" @onchange="CambiarOrden">
                                 <option value="0">Seleccione…</option>
                                 @foreach (var o in ordenesAbiertas)
                                 {
@@ -84,8 +86,9 @@ else
             else
             {
                 <div class="col-md-6">
-                    <Campo Etiqueta="Cliente" Id="cliente" Obligatorio="true" Ayuda="Solo clientes activos.">
-                        <select id="cliente" class="form-select" @bind="venta.IdCliente" disabled="@(!Editable)">
+                    <Campo Etiqueta="Cliente" Id="cliente" Obligatorio="true" Ayuda="Solo clientes activos." Error="@(v.Error("cliente", Errores()))">
+                        <select id="cliente" class="@(v.Clase("cliente", Errores(), "form-select"))"
+                                @bind="venta.IdCliente" @bind:after="@(() => v.Tocado("cliente"))" disabled="@(!Editable)">
                             <option value="0">Seleccione…</option>
                             @foreach (var c in clientes)
                             {
@@ -102,9 +105,9 @@ else
         <h2 class="h6 fw-semibold mb-3">Condiciones</h2>
         <div class="row">
             <div class="col-md-4">
-                <Campo Etiqueta="Fecha de emisión" Id="fecha" Obligatorio="true">
-                    <input id="fecha" type="date" class="form-control"
-                           @bind="venta.FechaEmision" @bind:format="yyyy-MM-dd" disabled="@(!Editable)" />
+                <Campo Etiqueta="Fecha de emisión" Id="fecha" Obligatorio="true" Error="@(v.Error("fecha", Errores()))">
+                    <input id="fecha" type="date" class="@(v.Clase("fecha", Errores()))"
+                           @bind="venta.FechaEmision" @bind:format="yyyy-MM-dd" @bind:after="@(() => v.Tocado("fecha"))" disabled="@(!Editable)" />
                 </Campo>
             </div>
             <div class="col-md-4">
@@ -119,9 +122,10 @@ else
             @if (venta.CondicionPago == "CREDITO")
             {
                 <div class="col-md-4">
-                    <Campo Etiqueta="Plazo de crédito (días)" Id="plazo"
+                    <Campo Etiqueta="Plazo de crédito (días)" Id="plazo" Error="@(v.Error("plazo", Errores()))"
                            Ayuda="No puede superar el plazo autorizado del cliente. En 0 se usa el plazo del cliente.">
-                        <input id="plazo" type="number" min="0" class="form-control" @bind="venta.PlazoCreditoDias" disabled="@(!EsNuevo)" />
+                        <input id="plazo" type="number" class="@(v.Clase("plazo", Errores()))" onkeydown="@ValidacionEnVivo.SoloPositivos"
+                               @bind="venta.PlazoCreditoDias" @bind:event="oninput" @bind:after="@(() => v.Tocado("plazo"))" disabled="@(!EsNuevo)" />
                     </Campo>
                 </div>
             }
@@ -180,7 +184,8 @@ else
                     @for (var i = 0; i < venta.Lineas.Count; i++)
                     {
                         var l = venta.Lineas[i];
-                        <tr>
+                        var n = v.Clave(l);
+                        <tr @key="l">
                             <td>@(i + 1)</td>
                             <td><span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto</td>
                             @if (desdeOrden)
@@ -189,7 +194,11 @@ else
                             }
                             @if (Editable)
                             {
-                                <td><input type="number" min="0.001" step="0.001" class="form-control form-control-sm text-end" aria-label="Cantidad" @bind="l.Cantidad" /></td>
+                                <td>
+                                    <input type="number" step="0.001" class="@(v.Clase(n + "cantidad", Errores(), "form-control form-control-sm text-end"))" aria-label="Cantidad"
+                                           onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.Cantidad" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "cantidad"))" />
+                                    <ErrorCampo Mensaje="@(v.Error(n + "cantidad", Errores()))" />
+                                </td>
                                 @if (desdeOrden)
                                 {
                                     @* desde una orden el precio es el pactado en la orden *@
@@ -197,9 +206,17 @@ else
                                 }
                                 else
                                 {
-                                    <td><input type="number" min="0" step="0.01" class="form-control form-control-sm text-end" aria-label="Precio unitario" @bind="l.PrecioUnitario" /></td>
+                                    <td>
+                                        <input type="number" step="0.01" class="@(v.Clase(n + "precio", Errores(), "form-control form-control-sm text-end"))" aria-label="Precio unitario"
+                                               onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.PrecioUnitario" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "precio"))" />
+                                        <ErrorCampo Mensaje="@(v.Error(n + "precio", Errores()))" />
+                                    </td>
                                 }
-                                <td><input type="number" min="0" step="0.01" class="form-control form-control-sm text-end" aria-label="Descuento" @bind="l.Descuento" /></td>
+                                <td>
+                                    <input type="number" step="0.01" class="@(v.Clase(n + "descuento", Errores(), "form-control form-control-sm text-end", n + "cantidad", n + "precio"))" aria-label="Descuento"
+                                           onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.Descuento" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "descuento"))" />
+                                    <ErrorCampo Mensaje="@(v.Error(n + "descuento", Errores(), n + "cantidad", n + "precio"))" />
+                                </td>
                                 <td class="text-end fw-semibold">@l.ImporteCalculado.ToString("N2")</td>
                                 <td class="text-end"><button class="btn btn-sm btn-outline-danger" @onclick="() => Quitar(l)">Quitar</button></td>
                             }
@@ -216,6 +233,10 @@ else
             </table>
         </div>
         <div class="card-body">
+            @if (v.Error("lineas", Errores()) is { } errorLineas)
+            {
+                <div class="small text-danger mb-2">@errorLineas</div>
+            }
             <div class="row justify-content-end">
                 <div class="col-sm-6 col-md-4">
                     <div class="d-flex justify-content-between"><span class="text-muted">Subtotal</span><span>S/ @SubTotal.ToString("N2")</span></div>
@@ -329,6 +350,7 @@ else
 
     private async Task CambiarOrden(ChangeEventArgs e)
     {
+        v.Tocado("orden");
         var id = int.TryParse(e.Value?.ToString(), out var valor) ? valor : 0;
         await ElegirOrden(id);
     }
@@ -391,12 +413,65 @@ else
 
     private void Quitar(LineaDatos l) => venta!.Lineas.Remove(l);
 
+    // ---------------- Validación en pantalla (RNF004) ----------------
+    // Mismas reglas que VentaBOImpl. Lo que solo sabe el BO (stock, línea de crédito, límite) sale en el aviso rojo.
+    private readonly ValidacionEnVivo v = new();
+
+    // Lo que falta entregar de la línea de la orden (no se puede vender más)
+    private decimal PendienteEnOrden(LineaDatos l) =>
+        ordenElegida?.Lineas.FirstOrDefault(o => o.IdLinea == l.IdDetalleOrden) is { } lo
+            ? lo.Cantidad - lo.CantidadAtendida
+            : decimal.MaxValue;
+
+    private Dictionary<string, string> Errores()
+    {
+        var e = new Dictionary<string, string>();
+        if (venta is null || !Editable)
+        {
+            return e;
+        }
+        if (desdeOrden)
+        {
+            if (EsNuevo && venta.IdOrden <= 0)
+            {
+                e["orden"] = "Elija la orden de compra del cliente.";
+            }
+        }
+        else if (venta.IdCliente <= 0)
+        {
+            e["cliente"] = "Seleccione el cliente.";
+        }
+        if (venta.FechaEmision is null)
+        {
+            e["fecha"] = "La fecha de emisión es obligatoria.";
+        }
+        if (venta.CondicionPago == "CREDITO" && venta.PlazoCreditoDias < 0)
+        {
+            e["plazo"] = "El plazo no puede ser negativo.";
+        }
+        if (venta.Lineas.Count == 0)
+        {
+            e["lineas"] = desdeOrden ? "La orden elegida no tiene nada pendiente de vender." : "Agregue al menos un producto con el buscador.";
+        }
+        foreach (var l in venta.Lineas)
+        {
+            var n = v.Clave(l);
+            ValidacionEnVivo.ErroresLinea(e, n, l.Cantidad, l.PrecioUnitario, l.Descuento);
+            // en una venta nueva desde una orden, no más de lo que falta entregar de esa línea
+            if (EsNuevo && desdeOrden && !e.ContainsKey(n + "cantidad") && l.Cantidad > PendienteEnOrden(l))
+            {
+                e[n + "cantidad"] = $"No puede pasar de lo pendiente en la orden ({PendienteEnOrden(l):0.###}).";
+            }
+        }
+        return e;
+    }
+
     private async Task Guardar()
     {
         error = null;
-        if (EsNuevo && desdeOrden && venta!.IdOrden <= 0)
+        if (!v.Intentar(Errores()))
         {
-            error = "Elija la orden de compra del cliente.";
+            error = "Revise los campos marcados en rojo.";
             return;
         }
         guardando = true;

@@ -51,7 +51,7 @@
 }
 
 <div class="card card-body mb-3">
-    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault>
+    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
         <Campo Etiqueta="Comprobante" Id="fComprobante" Clase="col-sm-6 col-md-2">
             <input id="fComprobante" class="form-control" maxlength="20" placeholder="F001-00000123" @bind="fComprobante" />
         </Campo>
@@ -73,8 +73,8 @@
         <Campo Etiqueta="Desde" Id="fDesde" Clase="col-sm-6 col-md-2">
             <input id="fDesde" type="date" class="form-control" @bind="fDesde" />
         </Campo>
-        <Campo Etiqueta="Hasta" Id="fHasta" Clase="col-sm-6 col-md-2">
-            <input id="fHasta" type="date" class="form-control" @bind="fHasta" />
+        <Campo Etiqueta="Hasta" Id="fHasta" Error="@(ValidacionEnVivo.ErrorRango(fDesde, fHasta))" Clase="col-sm-6 col-md-2">
+            <input id="fHasta" type="date" class="@(ValidacionEnVivo.ClaseRango(fDesde, fHasta))" @bind="fHasta" />
         </Campo>
         <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-2">
             <select id="fEstado" class="form-select" @bind="fEstado">

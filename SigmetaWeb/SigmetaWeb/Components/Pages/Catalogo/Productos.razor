@@ -51,7 +51,7 @@
                           AlEncontrar="MostrarResultadoBuscador" />
     </div>
 
-    <form class="row g-3 align-items-end sigmeta-filtros border-top pt-3" @onsubmit="Buscar" @onsubmit:preventDefault>
+    <form class="row g-3 align-items-end sigmeta-filtros border-top pt-3" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
         <Campo Etiqueta="Nombre" Id="fNombre" Clase="col-sm-6 col-md">
             <input id="fNombre" class="form-control" maxlength="150" @bind="filtroNombre" />
         </Campo>

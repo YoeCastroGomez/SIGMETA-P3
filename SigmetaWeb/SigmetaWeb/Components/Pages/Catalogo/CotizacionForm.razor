@@ -36,9 +36,11 @@ else
         <div class="row">
             @* RF007: el número lo ingresa el usuario (CotizacionBOImpl lo exige, máx. 20). *@
             <div class="col-md-4">
-                <Campo Etiqueta="Número" Id="numero" Obligatorio="true">
-                    <input id="numero" class="form-control" maxlength="20" placeholder="COT-2026-0010"
-                           @bind="cotizacion.Numero" disabled="@(!Editable)" />
+                @* Estándar RNF004: cada error sale en rojo debajo de su cuadro mientras se escribe (ValidacionEnVivo);
+                   los del BO (cliente desactivado...) en el aviso rojo de arriba. *@
+                <Campo Etiqueta="Número" Id="numero" Obligatorio="true" Error="@(v.Error("numero", Errores()))">
+                    <input id="numero" class="@(v.Clase("numero", Errores()))" maxlength="20" placeholder="COT-2026-0010"
+                           @bind="cotizacion.Numero" @bind:event="oninput" @bind:after="@(() => v.Tocado("numero"))" disabled="@(!Editable)" />
                 </Campo>
             </div>
             <div class="col-md-4 mb-3">
@@ -55,8 +57,9 @@ else
             }
             <div class="col-12"></div>
             <div class="col-md-6">
-                <Campo Etiqueta="Cliente" Id="cliente" Obligatorio="true" Ayuda="Solo clientes activos.">
-                    <select id="cliente" class="form-select" @bind="cotizacion.IdCliente" disabled="@(!Editable)">
+                <Campo Etiqueta="Cliente" Id="cliente" Obligatorio="true" Ayuda="Solo clientes activos." Error="@(v.Error("cliente", Errores()))">
+                    <select id="cliente" class="@(v.Clase("cliente", Errores(), "form-select"))"
+                            @bind="cotizacion.IdCliente" @bind:after="@(() => v.Tocado("cliente"))" disabled="@(!Editable)">
                         <option value="0">Seleccione…</option>
                         @foreach (var c in clientes)
                         {
@@ -66,15 +69,16 @@ else
                 </Campo>
             </div>
             <div class="col-md-3">
-                <Campo Etiqueta="Fecha de emisión" Id="fechaEmision" Obligatorio="true">
-                    <input id="fechaEmision" type="date" class="form-control"
-                           @bind="cotizacion.FechaEmision" @bind:format="yyyy-MM-dd" disabled="@(!Editable)" />
+                <Campo Etiqueta="Fecha de emisión" Id="fechaEmision" Obligatorio="true" Error="@(v.Error("fechaEmision", Errores()))">
+                    <input id="fechaEmision" type="date" class="@(v.Clase("fechaEmision", Errores()))"
+                           @bind="cotizacion.FechaEmision" @bind:format="yyyy-MM-dd" @bind:after="@(() => v.Tocado("fechaEmision"))" disabled="@(!Editable)" />
                 </Campo>
             </div>
             <div class="col-md-3">
-                <Campo Etiqueta="Vigencia hasta" Id="fechaVigencia" Obligatorio="true" Ayuda="No antes de la emisión.">
-                    <input id="fechaVigencia" type="date" class="form-control"
-                           @bind="cotizacion.FechaVigencia" @bind:format="yyyy-MM-dd" disabled="@(!Editable)" />
+                <Campo Etiqueta="Vigencia hasta" Id="fechaVigencia" Obligatorio="true" Ayuda="No antes de la emisión."
+                       Error="@(v.Error("fechaVigencia", Errores(), "fechaEmision"))">
+                    <input id="fechaVigencia" type="date" class="@(v.Clase("fechaVigencia", Errores(), "form-control", "fechaEmision"))"
+                           @bind="cotizacion.FechaVigencia" @bind:format="yyyy-MM-dd" @bind:after="@(() => v.Tocado("fechaVigencia"))" disabled="@(!Editable)" />
                 </Campo>
             </div>
             <div class="col-12">
@@ -116,14 +120,27 @@ else
                     @for (var i = 0; i < cotizacion.Lineas.Count; i++)
                     {
                         var l = cotizacion.Lineas[i];
-                        <tr>
+                        var n = v.Clave(l);
+                        <tr @key="l">
                             <td>@(i + 1)</td>
                             <td><span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto</td>
                             @if (Editable)
                             {
-                                <td><input type="number" min="0.001" step="0.001" class="form-control form-control-sm text-end" aria-label="Cantidad" @bind="l.Cantidad" /></td>
-                                <td><input type="number" min="0" step="0.01" class="form-control form-control-sm text-end" aria-label="Precio unitario" @bind="l.PrecioUnitario" /></td>
-                                <td><input type="number" min="0" step="0.01" class="form-control form-control-sm text-end" aria-label="Descuento" @bind="l.Descuento" /></td>
+                                <td>
+                                    <input type="number" step="0.001" class="@(v.Clase(n + "cantidad", Errores(), "form-control form-control-sm text-end"))" aria-label="Cantidad"
+                                           onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.Cantidad" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "cantidad"))" />
+                                    <ErrorCampo Mensaje="@(v.Error(n + "cantidad", Errores()))" />
+                                </td>
+                                <td>
+                                    <input type="number" step="0.01" class="@(v.Clase(n + "precio", Errores(), "form-control form-control-sm text-end"))" aria-label="Precio unitario"
+                                           onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.PrecioUnitario" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "precio"))" />
+                                    <ErrorCampo Mensaje="@(v.Error(n + "precio", Errores()))" />
+                                </td>
+                                <td>
+                                    <input type="number" step="0.01" class="@(v.Clase(n + "descuento", Errores(), "form-control form-control-sm text-end", n + "cantidad", n + "precio"))" aria-label="Descuento"
+                                           onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.Descuento" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "descuento"))" />
+                                    <ErrorCampo Mensaje="@(v.Error(n + "descuento", Errores(), n + "cantidad", n + "precio"))" />
+                                </td>
                                 <td class="text-end fw-semibold">@l.ImporteCalculado.ToString("N2")</td>
                                 <td class="text-end"><button class="btn btn-sm btn-outline-danger" @onclick="() => Quitar(l)">Quitar</button></td>
                             }
@@ -140,6 +157,10 @@ else
             </table>
         </div>
         <div class="card-body">
+            @if (v.Error("lineas", Errores()) is { } errorLineas)
+            {
+                <div class="small text-danger mb-2">@errorLineas</div>
+            }
             <div class="row justify-content-end">
                 <div class="col-sm-6 col-md-4">
                     <div class="d-flex justify-content-between"><span class="text-muted">Subtotal</span><span>S/ @SubTotal.ToString("N2")</span></div>
@@ -230,9 +251,56 @@ else
 
     private void Quitar(LineaDatos l) => cotizacion!.Lineas.Remove(l);
 
+    // ---------------- Validación en pantalla (RNF004) ----------------
+    // Mismas reglas que CotizacionBOImpl. Cada error sale debajo de su cuadro; el BO vuelve a validar todo.
+    private readonly ValidacionEnVivo v = new();
+
+    private Dictionary<string, string> Errores()
+    {
+        var e = new Dictionary<string, string>();
+        if (cotizacion is null || !Editable)
+        {
+            return e;
+        }
+        if (string.IsNullOrWhiteSpace(cotizacion.Numero))
+        {
+            e["numero"] = "El número es obligatorio.";
+        }
+        if (cotizacion.IdCliente <= 0)
+        {
+            e["cliente"] = "Seleccione el cliente.";
+        }
+        if (cotizacion.FechaEmision is null)
+        {
+            e["fechaEmision"] = "La fecha de emisión es obligatoria.";
+        }
+        if (cotizacion.FechaVigencia is null)
+        {
+            e["fechaVigencia"] = "La fecha de vigencia es obligatoria.";
+        }
+        else if (cotizacion.FechaEmision is not null && cotizacion.FechaVigencia < cotizacion.FechaEmision)
+        {
+            e["fechaVigencia"] = "La vigencia no puede ser anterior a la emisión.";
+        }
+        if (cotizacion.Lineas.Count == 0)
+        {
+            e["lineas"] = "Agregue al menos un producto con el buscador.";
+        }
+        foreach (var l in cotizacion.Lineas)
+        {
+            ValidacionEnVivo.ErroresLinea(e, v.Clave(l), l.Cantidad, l.PrecioUnitario, l.Descuento);
+        }
+        return e;
+    }
+
     private async Task Guardar()
     {
         error = null;
+        if (!v.Intentar(Errores()))
+        {
+            error = "Revise los campos marcados en rojo.";
+            return;
+        }
         guardando = true;
         try
         {

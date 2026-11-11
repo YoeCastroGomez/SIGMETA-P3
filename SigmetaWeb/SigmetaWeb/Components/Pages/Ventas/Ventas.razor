@@ -29,8 +29,9 @@
     @* RF008: anular pide un motivo (anulación lógica). *@
     <div class="card card-body mb-3">
         <h2 class="h6 fw-semibold mb-3">Anular venta @anulando.Numero</h2>
-        <Campo Etiqueta="Motivo de anulación" Id="motivo" Obligatorio="true">
-            <input id="motivo" class="form-control" maxlength="200" @bind="motivo" />
+        <Campo Etiqueta="Motivo de anulación" Id="motivo" Obligatorio="true" Error="@(validacion.Error("motivo", Errores()))">
+            <input id="motivo" class="@(validacion.Clase("motivo", Errores()))" maxlength="200"
+                   @bind="motivo" @bind:event="oninput" @bind:after="@(() => validacion.Tocado("motivo"))" />
         </Campo>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
             <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
@@ -43,7 +44,7 @@
 }
 
 <div class="card card-body mb-3">
-    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault>
+    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
         <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-8 col-md">
             <select id="fCliente" class="form-select" @bind="filtroCliente">
                 <option value="0">Todos</option>
@@ -228,7 +229,22 @@ else
     {
         anulando = v;
         motivo = "";
+        validacion.Reiniciar();
         exito = null;
+    }
+
+    // ---------------- Validación en pantalla (RNF004) ----------------
+    // El motivo es obligatorio (igual que el BO): el error sale debajo del cuadro.
+    private readonly ValidacionEnVivo validacion = new();
+
+    private Dictionary<string, string> Errores()
+    {
+        var e = new Dictionary<string, string>();
+        if (string.IsNullOrWhiteSpace(motivo))
+        {
+            e["motivo"] = "Escriba el motivo de la anulación.";
+        }
+        return e;
     }
 
     private void CerrarAnulacion() => anulando = null;
@@ -238,6 +254,10 @@ else
     {
         if (anulando is null) return;
         error = null;
+        if (!validacion.Intentar(Errores()))
+        {
+            return;
+        }
         trabajando = true;
         try
         {

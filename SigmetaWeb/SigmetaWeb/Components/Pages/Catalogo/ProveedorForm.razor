@@ -18,23 +18,22 @@
 }
 else
 {
-    <EditForm Model="@proveedor" OnValidSubmit="Guardar">
-        <DataAnnotationsValidator />
-        <ValidationSummary class="alert alert-warning" />
-
+    @* novalidate: sin globos del navegador. Cada error sale en rojo debajo de su campo mientras se escribe
+       (estándar RNF004, ValidacionEnVivo); los del BO (RUC repetido...) en el aviso rojo de arriba. *@
+    <EditForm Model="@proveedor" OnSubmit="Guardar" novalidate>
         <div class="card card-body mb-3">
             <h2 class="h6 fw-semibold mb-3">Identificación</h2>
             <div class="row">
                 <div class="col-md-4">
-                    <Campo Etiqueta="RUC" Id="ruc" Obligatorio="true" Ayuda="Único, 11 dígitos.">
-                        <InputText id="ruc" class="form-control" maxlength="11" @bind-Value="proveedor.Ruc" />
-                        <ValidationMessage For="@(() => proveedor.Ruc)" />
+                    <Campo Etiqueta="RUC" Id="ruc" Obligatorio="true" Ayuda="Único, 11 dígitos." Error="@(v.Error("ruc", Errores()))">
+                        <InputText id="ruc" class="@(v.Clase("ruc", Errores()))" maxlength="11" inputmode="numeric"
+                                   @bind-Value="proveedor.Ruc" @oninput="@(e => v.Escribiendo("ruc", e))" />
                     </Campo>
                 </div>
                 <div class="col-md-8">
-                    <Campo Etiqueta="Razón social" Id="razonSocial" Obligatorio="true">
-                        <InputText id="razonSocial" class="form-control" maxlength="150" @bind-Value="proveedor.RazonSocial" />
-                        <ValidationMessage For="@(() => proveedor.RazonSocial)" />
+                    <Campo Etiqueta="Razón social" Id="razonSocial" Obligatorio="true" Error="@(v.Error("razonSocial", Errores()))">
+                        <InputText id="razonSocial" class="@(v.Clase("razonSocial", Errores()))" maxlength="150"
+                                   @bind-Value="proveedor.RazonSocial" @oninput="@(e => v.Escribiendo("razonSocial", e))" />
                     </Campo>
                 </div>
                 <div class="col-12">
@@ -54,13 +53,15 @@ else
                     </Campo>
                 </div>
                 <div class="col-md-4">
-                    <Campo Etiqueta="Teléfono" Id="telefono">
-                        <InputText id="telefono" class="form-control" maxlength="20" @bind-Value="proveedor.Contacto.Telefono" />
+                    <Campo Etiqueta="Teléfono" Id="telefono" Ayuda="Dígitos, espacios, + y -." Error="@(v.Error("telefono", Errores()))">
+                        <InputText id="telefono" type="tel" class="@(v.Clase("telefono", Errores()))" maxlength="20"
+                                   @bind-Value="proveedor.Contacto.Telefono" @oninput="@(e => v.Escribiendo("telefono", e))" />
                     </Campo>
                 </div>
                 <div class="col-md-4">
-                    <Campo Etiqueta="Correo" Id="correo">
-                        <InputText id="correo" type="email" class="form-control" maxlength="120" @bind-Value="proveedor.Contacto.Correo" />
+                    <Campo Etiqueta="Correo" Id="correo" Error="@(v.Error("correo", Errores()))">
+                        <InputText id="correo" type="email" class="@(v.Clase("correo", Errores()))" maxlength="120"
+                                   @bind-Value="proveedor.Contacto.Correo" @oninput="@(e => v.Escribiendo("correo", e))" />
                     </Campo>
                 </div>
                 <div class="col-md-4">
@@ -75,9 +76,9 @@ else
             <h2 class="h6 fw-semibold mb-3">Condición comercial</h2>
             <div class="row">
                 <div class="col-md-4">
-                    <Campo Etiqueta="Plazo de entrega (días)" Id="plazo">
-                        <InputNumber id="plazo" class="form-control" min="0" @bind-Value="proveedor.PlazoEntregaDias" />
-                        <ValidationMessage For="@(() => proveedor.PlazoEntregaDias)" />
+                    <Campo Etiqueta="Plazo de entrega (días)" Id="plazo" Error="@(v.Error("plazo", Errores()))">
+                        <InputNumber id="plazo" class="@(v.Clase("plazo", Errores()))" onkeydown="@ValidacionEnVivo.SoloPositivos"
+                                     @bind-Value="proveedor.PlazoEntregaDias" @oninput="@(e => v.Escribiendo("plazo", e))" />
                     </Campo>
                 </div>
                 <div class="col-md-4">
@@ -142,10 +143,59 @@ else
         }
     }
 
+    // ---------------- Validación en pantalla (RNF004) ----------------
+    // Mismas reglas que ProveedorBOImpl.validarDatos y Validador. El BO vuelve a validar todo, y lo que solo él
+    // sabe (RUC o razón social repetidos) sale en el aviso rojo de arriba.
+    private readonly ValidacionEnVivo v = new();
+
+    private Dictionary<string, string> Errores()
+    {
+        var e = new Dictionary<string, string>();
+        if (proveedor is null)
+        {
+            return e;
+        }
+        if (ValidacionEnVivo.ErrorRuc(v.Texto("ruc", proveedor.Ruc).Trim()) is { } ruc)
+        {
+            e["ruc"] = ruc;
+        }
+        if (string.IsNullOrWhiteSpace(v.Texto("razonSocial", proveedor.RazonSocial)))
+        {
+            e["razonSocial"] = "La razón social es obligatoria.";
+        }
+        if (ValidacionEnVivo.ErrorTelefono(v.Texto("telefono", proveedor.Contacto.Telefono)) is { } telefono)
+        {
+            e["telefono"] = telefono;
+        }
+        if (ValidacionEnVivo.ErrorCorreo(v.Texto("correo", proveedor.Contacto.Correo)) is { } correo)
+        {
+            e["correo"] = correo;
+        }
+        var plazo = v.Numero("plazo", proveedor.PlazoEntregaDias);
+        if (plazo is null)
+        {
+            e["plazo"] = "Escriba el plazo de entrega en días (0 si entrega el mismo día).";
+        }
+        else if (plazo < 0)
+        {
+            e["plazo"] = "El plazo de entrega no puede ser negativo.";
+        }
+        else if (ValidacionEnVivo.MasDecimales(plazo.Value, 0))
+        {
+            e["plazo"] = "El plazo de entrega debe ser un número entero de días.";
+        }
+        return e;
+    }
+
     private async Task Guardar()
     {
         if (proveedor is null) return;
         error = null;
+        if (!v.Intentar(Errores()))
+        {
+            error = "Revise los campos marcados en rojo.";
+            return;
+        }
         guardando = true;
         try
         {
