@@ -37,7 +37,7 @@
         <div class="sg-seccion-cabecera">
             <div>
                 <h2>@TituloResumen</h2>
-                <p>Datos obtenidos de los servicios Java REST de SIGMETA.</p>
+                <p>Indicadores actualizados de la operación de la empresa.</p>
             </div>
             <button type="button" class="sg-actualizar" disabled="@cargando" @onclick="CargarDashboard">
                 <span aria-hidden="true">↻</span> @(cargando ? "Actualizando..." : "Actualizar datos")
@@ -402,7 +402,7 @@
                         <a href="/despachos" class="sg-alerta-fila"><span><span class="sg-alerta-icono">↑</span>Despachos <small>Consultar ventas por despachar</small></span><span>↗</span></a>
                         <a href="/almacen/kardex" class="sg-alerta-fila"><span><span class="sg-alerta-icono">≡</span>Kardex <small>Consultar movimientos históricos</small></span><span>↗</span></a>
                     </div>
-                    <p class="sg-nota">Estos flujos no se cuentan aquí hasta disponer de sus servicios REST de almacén.</p>
+                    <p class="sg-nota">Los conteos de almacén se mostrarán aquí en una próxima versión.</p>
                 </section>
             </div>
         }
