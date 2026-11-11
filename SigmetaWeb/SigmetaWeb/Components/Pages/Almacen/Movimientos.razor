@@ -35,10 +35,10 @@
             </thead>
 
             <tbody>
-                @foreach (var m in historial)
+                @foreach (var m in Paginar(historial, paginaActual, tamanoPagina))
                 {
                     <tr>
-                        <td>@m.Fecha.ToString("dd/MM/yyyy")</td>
+                        <td>@m.Fecha.ToString("yyyy-MM-dd")</td>
                         <td>@MuestrasCompras.NombreProducto(m.CodigoInterno)</td>
                         <td><Estado Texto="@m.Tipo" /></td>
                         <td>@m.Cantidad.ToString("0.###")</td>
@@ -71,9 +71,20 @@
             </tbody>
         </table>
     </div>
+        <Paginacion TotalRegistros="@(historial.Count())" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
 </div>
 
 @code {
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+    {
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((segura - 1) * tamano).Take(tamano);
+    }
+
     private readonly HashSet<int> revertidos = new();
 
     // Más reciente primero. Las reversiones agregadas en pantalla quedan arriba.

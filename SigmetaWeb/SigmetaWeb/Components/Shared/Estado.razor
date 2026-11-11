@@ -1,14 +1,51 @@
-@* Etiqueta de estado con badge de Bootstrap. *@
+@* Etiqueta de estado. ESTÁNDAR DE COLORES de SIGMETA para todos los estados del sistema:
+     verde   = está bien / vigente      (Activo, Vigente, Aprobada, Aceptada, Pagada, Recibida, Atendida, Abierta...)
+     ámbar   = a medias / por atender   (Pendiente, Pagada parcial, Recibida parcial, En el mínimo...)
+     rojo    = fuera de uso / problema  (Inactivo, Anulada, Rechazada, Revertido, Vencida, Bajo el mínimo...)
+     gris    = estado normal de trámite (Registrada, Enviada, Cerrada, Salida...)
+   Acepta el código del Java ("RECIBIDA_PARCIAL") o el texto ya legible ("Recibida parcialmente"). *@
 <span class="badge rounded-pill border @Color">@Texto</span>
 
 @code {
     [Parameter, EditorRequired] public string Texto { get; set; } = "";
 
-    private string Color => Texto.ToLowerInvariant() switch
+    private const string Verde = "bg-success-subtle text-success-emphasis border-success-subtle";
+    private const string Ambar = "bg-warning-subtle text-warning-emphasis border-warning-subtle";
+    private const string Rojo = "bg-danger-subtle text-danger-emphasis border-danger-subtle";
+    private const string Gris = "bg-secondary-subtle text-secondary-emphasis border-secondary-subtle";
+
+    private static readonly HashSet<string> Rojos = new()
     {
-        "activo" or "aprobada" or "vigente" or "atendida" or "recibida" or "entrada" => "bg-success-subtle text-success-emphasis border-success-subtle",
-        "inactivo" or "rechazada" or "anulada" or "revertido" => "bg-danger-subtle text-danger-emphasis border-danger-subtle",
-        "pendiente" or "atendida parcial" or "recibida_parcial" => "bg-warning-subtle text-warning-emphasis border-warning-subtle",
-        _ => "bg-secondary-subtle text-secondary-emphasis border-secondary-subtle",
+        "inactivo", "inactiva", "rechazada", "rechazado", "anulada", "anulado", "revertido", "revertida",
+        "vencida", "vencido", "bajo el minimo", "sin stock"
     };
+    private static readonly HashSet<string> Ambares = new() { "pendiente", "en el minimo", "por vencer" };
+    private static readonly HashSet<string> Verdes = new()
+    {
+        "activo", "activa", "aprobada", "aprobado", "vigente", "atendida", "recibida", "entrada", "ingreso",
+        "pagada", "aceptada", "emitida", "abierta", "despachada"
+    };
+
+    private string Color
+    {
+        get
+        {
+            var t = Normalizar(Texto);
+            if (Rojos.Contains(t)) return Rojo;
+            if (t.Contains("parcial") || Ambares.Contains(t)) return Ambar;   // "pagada parcial", "recibida parcialmente"...
+            if (Verdes.Contains(t)) return Verde;
+            return Gris;
+        }
+    }
+
+    // "RECIBIDA_PARCIAL" -> "recibida parcial", "Bajo el mínimo" -> "bajo el minimo"
+    private static string Normalizar(string texto)
+    {
+        var sinTildes = new string((texto ?? "").Replace('_', ' ').Trim().ToLowerInvariant()
+            .Normalize(System.Text.NormalizationForm.FormD)
+            .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c)
+                        != System.Globalization.UnicodeCategory.NonSpacingMark)
+            .ToArray());
+        return sinTildes;
+    }
 }

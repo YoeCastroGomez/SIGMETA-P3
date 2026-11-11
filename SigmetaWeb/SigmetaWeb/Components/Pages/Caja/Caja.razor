@@ -64,7 +64,7 @@ else
                 </div>
                 @if (caja is not null)
                 {
-                    <span class="badge text-bg-light border">@porCobrar.Count por cobrar</span>
+                    <span class="badge rounded-pill border bg-secondary-subtle text-secondary-emphasis border-secondary-subtle">@porCobrar.Count por cobrar</span>
                 }
                 else
                 {
@@ -162,7 +162,7 @@ else
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var v in porCobrar)
+                            @foreach (var v in Paginar(porCobrar, paginaActual, tamanoPagina))
                             {
                                 <tr>
                                     <td><strong>@v.Numero</strong><div class="small text-muted">@TextosCaja.Fecha(v.FechaEmision)</div></td>
@@ -177,6 +177,7 @@ else
                         </tbody>
                     </table>
                 </div>
+        <Paginacion TotalRegistros="@(porCobrar.Count())" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
             }
         </div>
 
@@ -247,6 +248,16 @@ else
 }
 
 @code {
+    private int paginaActual = 1;
+    private int tamanoPagina = 10;
+    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+    {
+        if (tamano == 0) return registros;
+        int total = registros.Count();
+        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
+        return registros.Skip((segura - 1) * tamano).Take(tamano);
+    }
+
     private CajaDatos? caja;
     private List<VentaPorCobrar> porCobrar = new();
     private decimal? montoInicial;
