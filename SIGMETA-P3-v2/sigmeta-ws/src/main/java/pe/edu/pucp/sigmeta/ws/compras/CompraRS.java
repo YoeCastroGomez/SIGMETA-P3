@@ -48,16 +48,9 @@ public class CompraRS extends VentanillaBase {
                            @QueryParam("fechaFin") String fechaFin) {
         return ejecutar(ticket, id -> {
             usuarioBO.verificarRol(id, TipoRol.ADMINISTRADOR);
-            List<Compra> compras;
-            if (idProveedor != null || fechaInicio != null || fechaFin != null) {
-                if (idProveedor == null || fechaInicio == null || fechaFin == null) {
-                    throw new IllegalArgumentException("El filtro requiere idProveedor, fechaInicio y fechaFin");
-                }
-                compras = compraBO.listarPorProveedorYFechas(idProveedor,
-                        fecha(fechaInicio), fecha(fechaFin));
-            } else {
-                compras = compraBO.listarTodos();
-            }
+            List<Compra> compras = compraBO.buscar(idProveedor,
+                    fechaInicio == null || fechaInicio.isBlank() ? null : fecha(fechaInicio),
+                    fechaFin == null || fechaFin.isBlank() ? null : fecha(fechaFin));
             List<Map<String, Object>> resultado = new ArrayList<>();
             for (Compra c : compras) resultado.add(respuesta(c));
             return resultado;
