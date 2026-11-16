@@ -53,34 +53,34 @@ public class OrdenCompraClienteBOImpl implements OrdenCompraClienteBO {
         // Lectura de cotizacion previa antes de abrir transaccion de escritura
         Cotizacion cotizacion = cotizacionBO.obtener(idCotizacion);
         if (cotizacion == null) {
-            throw new IllegalArgumentException("No existe la cotizacion con id " + idCotizacion);
+            throw new IllegalArgumentException("No existe la cotización con id " + idCotizacion);
         }
         if (cotizacion.isAnulado()) {
-            throw new IllegalStateException("La cotizacion se encuentra anulada");
+            throw new IllegalStateException("La cotización se encuentra anulada");
         }
         if (cotizacion.getEstado() != EstadoCotizacion.ACEPTADA) {
-            throw new IllegalStateException("La cotizacion debe estar en estado ACEPTADA (estado actual: " + cotizacion.getEstado() + ")");
+            throw new IllegalStateException("La cotización debe estar en estado ACEPTADA (estado actual: " + cotizacion.getEstado() + ")");
         }
         if (cotizacion.getDetalles() == null || cotizacion.getDetalles().isEmpty()) {
-            throw new IllegalStateException("La cotizacion no tiene lineas de detalle");
+            throw new IllegalStateException("La cotización no tiene líneas de detalle");
         }
 
         return Transaccion.ejecutar(() -> {
             OrdenCompraCliente existente = ordenCompraClienteDAO.buscarPorCotizacion(idCotizacion);
             if (existente != null) {
-                throw new IllegalStateException("Ya existe una orden de compra activa para la cotizacion " + idCotizacion);
+                throw new IllegalStateException("Ya existe una orden de compra activa para la cotización " + idCotizacion);
             }
 
             // RF003: El cliente debe estar activo
             Cliente cliente = clienteDAO.load(cotizacion.getCliente().getId());
             if (cliente == null || !cliente.isEstado()) {
-                throw new IllegalStateException("El cliente de la cotizacion esta inactivo o no existe");
+                throw new IllegalStateException("El cliente de la cotización está inactivo o no existe");
             }
 
             OrdenCompraCliente oc = new OrdenCompraCliente();
             oc.setCliente(cliente);
             oc.setCotizacion(cotizacion);
-            oc.setNumeroOrdenCliente(Validador.textoOpcional(numeroOrdenCliente, "numero de orden del cliente", 30));
+            oc.setNumeroOrdenCliente(Validador.textoOpcional(numeroOrdenCliente, "número de orden del cliente", 30));
             oc.setEstado(EstadoOrdenCompraCliente.PENDIENTE);
 
             int totalExistentes = ordenCompraClienteDAO.listarTodos().size();
@@ -89,7 +89,7 @@ public class OrdenCompraClienteBOImpl implements OrdenCompraClienteBO {
             oc.setSubTotal(cotizacion.getSubTotal());
             oc.setIgv(cotizacion.getIgv());
             oc.setTotal(cotizacion.getTotal());
-            oc.setObservaciones("Orden generada a partir de Cotizacion " + cotizacion.getNumero());
+            oc.setObservaciones("Orden generada a partir de Cotización " + cotizacion.getNumero());
             oc.setUsuarioRegistro(responsable);
             oc.setFechaRegistro(LocalDateTime.now());
             oc.setAnulado(false);
@@ -135,7 +135,7 @@ public class OrdenCompraClienteBOImpl implements OrdenCompraClienteBO {
                 throw new IllegalStateException("Solo se puede modificar una orden de compra en estado PENDIENTE");
             }
 
-            actual.setNumeroOrdenCliente(Validador.textoOpcional(oc.getNumeroOrdenCliente(), "numero de orden del cliente", 30));
+            actual.setNumeroOrdenCliente(Validador.textoOpcional(oc.getNumeroOrdenCliente(), "número de orden del cliente", 30));
             actual.setObservaciones(Validador.textoOpcional(oc.getObservaciones(), "observaciones", 300));
 
             ordenCompraClienteDAO.update(actual);
@@ -146,14 +146,14 @@ public class OrdenCompraClienteBOImpl implements OrdenCompraClienteBO {
     @Override
     public void anular(int idOrden, String motivo, int idResponsable) throws SQLException {
         usuarioBO.verificarRol(idResponsable, TipoRol.VENDEDOR, TipoRol.ADMINISTRADOR);
-        String motivoValidado = Validador.textoObligatorio(motivo, "motivo de anulacion", 200);
+        String motivoValidado = Validador.textoObligatorio(motivo, "motivo de anulación", 200);
         Transaccion.ejecutar(() -> {
             OrdenCompraCliente actual = ordenCompraClienteDAO.load(idOrden);
             if (actual == null) {
                 throw new IllegalArgumentException("No existe la orden de compra con id " + idOrden);
             }
             if (actual.isAnulado()) {
-                throw new IllegalStateException("La orden de compra ya esta anulada");
+                throw new IllegalStateException("La orden de compra ya está anulada");
             }
             if (actual.getEstado() != EstadoOrdenCompraCliente.PENDIENTE) {
                 throw new IllegalStateException("Solo se puede anular una orden de compra en estado PENDIENTE");

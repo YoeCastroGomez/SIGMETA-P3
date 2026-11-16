@@ -14,7 +14,7 @@ final class CalculoCompra {
         if (!Double.isFinite(d.getCantidad()) || d.getCantidad() <= 0
                 || !Double.isFinite(d.getPrecioUnitario()) || d.getPrecioUnitario() < 0
                 || !Double.isFinite(d.getDescuento()) || d.getDescuento() < 0) {
-            throw new IllegalArgumentException("Cantidad, precio o descuento invalido");
+            throw new IllegalArgumentException("Cantidad, precio o descuento inválido");
         }
         BigDecimal cantidad = BigDecimal.valueOf(d.getCantidad()).setScale(3, RoundingMode.HALF_UP);
         BigDecimal precio = BigDecimal.valueOf(d.getPrecioUnitario()).setScale(2, RoundingMode.HALF_UP);

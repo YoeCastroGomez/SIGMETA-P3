@@ -1,169 +1,206 @@
 ﻿@page "/compras/{Id:int}/recepcion"
+@inject ApiJava Api
 @inject NavigationManager Nav
+@using SigmetaWeb.Components.Pages.Almacen
 
-@* RF012 - Recepción de compra.
-   Solo presentación visual para el Laboratorio 9. *@
+<PageTitle>Registrar recepción · SIGMETA</PageTitle>
 
-<PageTitle>Recepción de compra · SIGMETA</PageTitle>
-
-<Encabezado Rf="RF012"
-            Titulo="Recepción de mercadería"
-            Subtitulo="Registrar visualmente una recepción total o parcial.">
-    <a class="btn btn-outline-secondary" href="/recepciones">
-        Volver a compras por recibir
-    </a>
+@* RF012 · Recepción total o parcial de una compra (solo el Almacenero).
+   GET /api/almacen/compras/{id}/lineas · POST /api/almacen/recepciones.
+   Se recibe en unidad de compra; el stock sube en unidad de venta (cantidad × factor). *@
+<Encabezado Rf="RF012" Titulo="@($"Recibir compra {compra?.Numero}")"
+            Subtitulo="Escribe lo que llegó de cada producto. Deja en 0 lo que todavía no llegó.">
+    <a class="btn btn-outline-secondary" href="/recepciones">Volver</a>
 </Encabezado>
 
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Datos de la compra</h2>
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 
-    <div class="row">
-        <div class="col-md-4 mb-3">
-            <div class="small text-muted text-uppercase">
-                Número de compra
-            </div>
-            <div class="fw-semibold">
-                @NumeroCompra
+@if (lineas is null)
+{
+    @if (error is null)
+    {
+        <p class="text-muted">Cargando compra...</p>
+    }
+}
+else
+{
+    @if (compra is not null)
+    {
+        <div class="card card-body mb-3">
+            <div class="row">
+                <div class="col-sm-6 col-md-3 mb-2">
+                    <div class="small text-muted text-uppercase">Proveedor</div>
+                    <div class="fw-semibold">@compra.Proveedor</div>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-2">
+                    <div class="small text-muted text-uppercase">Emisión</div>
+                    <div class="fw-semibold">@Formato.Fecha(compra.FechaEmision)</div>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-2">
+                    <div class="small text-muted text-uppercase">Llegada estimada</div>
+                    <div class="fw-semibold">@Formato.Fecha(compra.FechaRecepcionEstimada)</div>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-2">
+                    <div class="small text-muted text-uppercase">Estado</div>
+                    <div class="fw-semibold"><Estado Texto="@Formato.Legible(compra.Estado)" /></div>
+                </div>
             </div>
         </div>
+    }
 
-        <div class="col-md-4 mb-3">
-            <div class="small text-muted text-uppercase">
-                Proveedor
-            </div>
-            <div class="fw-semibold">
-                @Proveedor
-            </div>
+    <div class="card mb-3">
+        <div class="card-body pb-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h2 class="h6 fw-semibold mb-0">Mercadería</h2>
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="RecibirTodo">Recibir todo lo pendiente</button>
         </div>
-
-        <div class="col-md-4 mb-3">
-            <div class="small text-muted text-uppercase">
-                Estado
-            </div>
-            <Estado Texto="@EstadoCompra" />
-        </div>
-    </div>
-</div>
-
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">
-        Datos de la recepción
-    </h2>
-
-    <div class="row">
-        <div class="col-md-4">
-            <Campo Etiqueta="Fecha de recepción"
-                   Id="fechaRecepcion"
-                   Obligatorio="true">
-                <input id="fechaRecepcion"
-                       type="date"
-                       class="form-control"
-                       value="2026-10-26" />
-            </Campo>
-        </div>
-
-        <div class="col-md-8">
-            <Campo Etiqueta="Observaciones"
-                   Id="observaciones">
-                <textarea id="observaciones"
-                          class="form-control"
-                          rows="2"
-                          maxlength="250"
-                          placeholder="Observaciones de la recepción"></textarea>
-            </Campo>
-        </div>
-    </div>
-</div>
-
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">
-        Productos de la compra
-    </h2>
-
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Producto</th>
-                    <th>Pedido</th>
-                    <th>Ya recibido</th>
-                    <th>Pendiente</th>
-                    <th>Recibir ahora *</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var l in Lineas)
-                {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
                     <tr>
-                        <td>@MuestrasCompras.NombreProducto(l.Linea.CodigoInterno)</td>
-                        <td>@l.Linea.Cantidad.ToString("0.###")</td>
-                        <td>@l.Linea.Recibido.ToString("0.###")</td>
-                        <td>@l.Linea.Pendiente.ToString("0.###")</td>
-                        <td>
-                            <input type="number"
-                                   class="form-control"
-                                   min="0"
-                                   max="@l.Linea.Pendiente"
-                                   step="1"
-                                   @bind="l.Ahora" @bind:event="oninput" />
-                        </td>
+                        <th>Producto</th>
+                        <th class="text-end">Pedido</th>
+                        <th class="text-end">Ya recibido</th>
+                        <th class="text-end">Pendiente</th>
+                        <th style="width: 170px;">Recibir ahora</th>
+                        <th class="text-end">Ingresa al stock</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var l in lineas)
+                    {
+                        var problema = Problema(l);
+                        <tr class="@(l.Pendiente <= 0 ? "text-muted" : "")">
+                            <td><strong>@l.CodigoInterno</strong> · @l.Producto
+                                <div class="small text-muted">1 @TextosAlmacen.Unidad(l.UnidadCompra) = @Formato.Cantidad(l.FactorConversion) @TextosAlmacen.Unidad(l.UnidadVenta) · stock actual @Formato.Cantidad(l.StockActual)</div>
+                            </td>
+                            <td class="text-end">@Formato.Cantidad(l.Cantidad)</td>
+                            <td class="text-end">@Formato.Cantidad(l.CantidadRecibida)</td>
+                            <td class="text-end fw-semibold">@Formato.Cantidad(l.Pendiente)</td>
+                            <td>
+                                @if (l.Pendiente > 0)
+                                {
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" min="0" max="@l.Pendiente" step="any" class="form-control @(problema is null ? "" : "is-invalid")"
+                                               aria-label="@($"Cantidad a recibir de {l.Producto}")" @bind="l.Recibir" @bind:event="oninput" />
+                                        <span class="input-group-text">@TextosAlmacen.Unidad(l.UnidadCompra)</span>
+                                    </div>
+                                    @if (problema is not null)
+                                    {
+                                        <div class="small text-danger mt-1">@problema</div>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="small">Completa</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                @if (l.Recibir > 0)
+                                {
+                                    <span>+@Formato.Cantidad(l.Recibir * l.FactorConversion) @TextosAlmacen.Unidad(l.UnidadVenta)</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
-    <span class="small text-muted">
-        <span class="text-danger">*</span> Campo obligatorio
-    </span>
-
-    <div class="d-flex gap-2">
-        <a class="btn btn-outline-secondary"
-           href="/recepciones">
-            Cancelar
-        </a>
-
-        <button class="btn btn-primary"
-                @onclick="Volver">
-            Registrar recepción
-        </button>
+    <div class="card card-body mb-3">
+        <div class="row">
+            <Campo Etiqueta="Fecha de recepción" Id="fecha" Obligatorio="true" Error="@ErrorFecha" Clase="col-md-3 mb-3">
+                <input id="fecha" type="date" class="form-control @(ErrorFecha is null ? "" : "is-invalid")" max="@Formato.Iso(DateTime.Today)" @bind="fecha" />
+            </Campo>
+            <Campo Etiqueta="Observaciones" Id="obs" Clase="col-md-9 mb-3" Ayuda="Guía del proveedor, estado de la mercadería, faltantes.">
+                <input id="obs" class="form-control" maxlength="255" @bind="observaciones" />
+            </Campo>
+        </div>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3">
+            <span class="small text-muted">@Resumen</span>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" href="/recepciones">Cancelar</a>
+                <button class="btn btn-primary" disabled="@(guardando || !HayAlgo)" @onclick="Guardar">Registrar recepción</button>
+            </div>
+        </div>
     </div>
-</div>
+}
 
 @code {
-    [Parameter]
-    public int Id { get; set; }
+    [Parameter] public int Id { get; set; }
 
-    private class LineaRecepcion
+    private CompraPorRecibir? compra;
+    private List<LineaCompra>? lineas;
+    private DateTime fecha = DateTime.Today;
+    private string? observaciones;
+    private bool guardando;
+    private string? error;
+
+    private bool HayAlgo => lineas?.Any(l => l.Recibir > 0) == true;
+    private string? ErrorFecha => fecha.Date > DateTime.Today ? "La fecha no puede ser futura." : null;
+    private string Resumen => HayAlgo
+        ? $"Se recibirán {lineas!.Count(l => l.Recibir > 0)} de {lineas!.Count(l => l.Pendiente > 0)} productos pendientes."
+        : "Escribe al menos una cantidad mayor a 0.";
+
+    // misma regla que el BO: no se recibe más de lo pendiente
+    private static string? Problema(LineaCompra l) =>
+        l.Recibir < 0 ? "No puede ser negativa."
+        : l.Recibir > l.Pendiente + 0.0005 ? $"Máximo {Formato.Cantidad(l.Pendiente)}."
+        : null;
+
+    protected override async Task OnParametersSetAsync()
     {
-        public LineaCompraFila Linea { get; init; } = default!;
-        public decimal Ahora { get; set; }
+        try
+        {
+            var compras = await Api.Get<List<CompraPorRecibir>>("almacen/compras-por-recibir") ?? new();
+            compra = compras.FirstOrDefault(c => c.Id == Id);
+            lineas = await Api.Get<List<LineaCompra>>($"almacen/compras/{Id}/lineas") ?? new();
+            if (compra is null)
+            {
+                error = "Esta compra ya no admite recepciones (está completa, anulada o no existe).";
+            }
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
     }
 
-    // Datos de demostración (los mismos de Compras). No se consulta la BD.
-    private CompraFila? Compra => MuestrasCompras.Compras.FirstOrDefault(c => c.Id == Id);
-
-    private string NumeroCompra => Compra?.Numero ?? $"COMP-{Id:000}";
-
-    private string Proveedor => Compra?.Proveedor ?? "—";
-
-    private string EstadoCompra => Compra?.Estado ?? "REGISTRADA";
-
-    private List<LineaRecepcion> Lineas = new();
-
-    // Por defecto se propone recibir todo lo pendiente.
-    protected override void OnParametersSet()
+    private void RecibirTodo()
     {
-        Lineas = (Compra?.Lineas ?? Array.Empty<LineaCompraFila>())
-            .Select(l => new LineaRecepcion { Linea = l, Ahora = l.Pendiente })
-            .ToList();
+        foreach (var l in lineas ?? new())
+        {
+            l.Recibir = Math.Max(l.Pendiente, 0);
+        }
     }
 
-    // Lab 9: no se registra ninguna recepción.
-    private void Volver()
+    private async Task Guardar()
     {
-        Nav.NavigateTo("/recepciones");
+        error = null;
+        if (lineas is null || ErrorFecha is not null || lineas.Any(l => Problema(l) is not null))
+        {
+            error = "Revise las cantidades marcadas en rojo.";
+            return;
+        }
+        guardando = true;
+        try
+        {
+            await Api.Post<object>("almacen/recepciones", new
+            {
+                idCompra = Id,
+                fecha = Formato.Iso(fecha),
+                observaciones,
+                lineas = lineas.Where(l => l.Recibir > 0).Select(l => new { idLinea = l.IdDetalleCompra, cantidad = l.Recibir })
+            });
+            Nav.NavigateTo(AvisoGuardado.Ruta("/recepciones", AvisoGuardado.Nuevo, compra?.Numero));
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
     }
 }

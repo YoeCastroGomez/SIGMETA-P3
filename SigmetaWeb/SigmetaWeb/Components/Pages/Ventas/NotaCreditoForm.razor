@@ -1,221 +1,268 @@
 @page "/notas-credito/nueva"
-@using SigmetaWeb.Components.Pages.Seguridad
+@inject ApiJava Api
 @inject NavigationManager Nav
+@using SigmetaWeb.Components.Pages.Almacen
+@using SigmetaWeb.Components.Pages.Seguridad
 
 <PageTitle>Nueva nota de crédito · SIGMETA</PageTitle>
 
-@* RF013 · Registrar una nota de crédito sobre una factura o boleta (Cajero, con autorización del Administrador).
-   La autorización no se elige aquí: es la solicitud EMITIR_NOTA_CREDITO que el Cajero pidió y el Administrador
-   aprobó en su propia sesión (RF014). El BO toma de ahí quién autorizó, lo guarda en la nota y consume la
-   autorización (APROBADA -> VENCIDA) para que no se use dos veces.
-   Solo se devuelve lo ENTREGADO al cliente (cantidad despachada) menos lo ya acreditado, así el reingreso
-   al stock siempre tiene una salida previa por despacho.
-   Cada línea apunta a una línea concreta de la venta (DetalleNotaCredito.detalleVenta) y el importe
-   se calcula con el precio efectivamente cobrado (con descuento), como en ComprobanteBOImpl.
-   Solo visual (Lab 9): el cálculo es de pantalla y Guardar no registra nada, solo vuelve a la lista. *@
-<Encabezado Rf="RF013" Titulo="Nueva nota de crédito">
-    <a class="btn btn-outline-secondary" href="/notas-credito">Volver a la lista</a>
+@* RF013 y RF014 · Nota de crédito por devolución (Cajero con autorización del Administrador).
+   GET /api/solicitudes/vigente?operacion=EMITIR_NOTA_CREDITO · GET /api/notas-credito/comprobantes
+   · GET /api/notas-credito/comprobantes/{id}/lineas · POST /api/notas-credito.
+   Los importes de esta pantalla son una vista previa: el Java los vuelve a calcular. *@
+<Encabezado Rf="RF013" Titulo="Nueva nota de crédito"
+            Subtitulo="Devolución de mercadería ya entregada. Se devuelve el precio que realmente pagó el cliente.">
+    <a class="btn btn-outline-secondary" href="/notas-credito">Volver</a>
 </Encabezado>
 
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Comprobante de origen y autorización</h2>
-    <div class="row">
-        <div class="col-md-6">
-            <Campo Etiqueta="Comprobante de origen" Id="origen" Obligatorio="true"
-                   Ayuda="Solo facturas o boletas emitidas o aceptadas.">
-                <select id="origen" class="form-select" @bind="IdComprobante">
-                    @foreach (var c in MuestrasVentas.Comprobantes)
-                    {
-                        <option value="@c.Id">@c.SerieNumero · @MuestrasVentas.Venta(c.IdVenta)?.Cliente</option>
-                    }
-                </select>
-            </Campo>
-        </div>
-        <div class="col-md-6 mb-3">
-            <div class="form-label">Autorización del Administrador</div>
-            @if (autorizacion is not null)
-            {
-                <div class="alert alert-success py-2 mb-1">
-                    Autorizado por <strong>@autorizacion.Administrador</strong>, vence a las
-                    <strong>@autorizacion.FechaVencimiento?.Split(' ').Last()</strong>
-                </div>
-                <div class="form-text">
-                    Solicitud N.º @autorizacion.Id (RF014). Al registrar la nota la autorización se consume y no sirve para otra.
-                </div>
-            }
-            else
-            {
-                <div class="alert alert-warning py-2 mb-1 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <span>No tiene autorización vigente</span>
-                    <a class="btn btn-sm btn-primary"
-                       href="@($"/autorizaciones/nueva?operacion={MuestrasSeguridad.OperacionNotaCredito}")">Solicitar autorización</a>
-                </div>
-                <div class="form-text">El Administrador la aprueba en su sesión con una vigencia en minutos.</div>
-            }
-        </div>
-        <div class="col-sm-6 col-md-3 mb-3">
-            <div class="small text-muted text-uppercase">Venta</div>
-            <div class="fw-semibold">@Venta.Numero</div>
-        </div>
-        <div class="col-sm-6 col-md-3 mb-3">
-            <div class="small text-muted text-uppercase">Condición de pago</div>
-            <div class="fw-semibold">@MuestrasVentas.Texto(Venta.CondicionPago)</div>
-        </div>
-        <div class="col-sm-6 col-md-3 mb-3">
-            <div class="small text-muted text-uppercase">Serie de la nota</div>
-            <div class="fw-semibold">@(Comprobante.Tipo == "FACTURA" ? "FC01" : "BC01")</div>
-        </div>
-        <div class="col-sm-6 col-md-3 mb-3">
-            <div class="small text-muted text-uppercase">Número</div>
-            <div class="text-muted">Se asigna al registrar</div>
-        </div>
-        <div class="col-12">
-            <Campo Etiqueta="Motivo" Id="motivo" Obligatorio="true">
-                <textarea id="motivo" class="form-control" rows="2" maxlength="200"
-                          placeholder="Ejemplo: devolución de producto por defecto de fábrica"></textarea>
-            </Campo>
-        </div>
-    </div>
-</div>
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 
-<div class="card mb-3">
-    <div class="card-body pb-0">
-        <h2 class="h6 fw-semibold mb-1">Productos devueltos</h2>
-        <p class="small text-muted">
-            Indique la cantidad a devolver de cada línea de la venta. No se puede devolver más de lo entregado menos lo ya acreditado.
-            El importe usa el precio efectivamente cobrado, con el descuento de la venta.
-        </p>
-    </div>
-    <div class="table-responsive">
-        <table class="table align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th style="width: 3rem;">#</th>
-                    <th>Producto</th>
-                    <th class="text-end">Vendido</th>
-                    <th class="text-end">Entregado</th>
-                    <th class="text-end">Ya acreditado</th>
-                    <th class="text-end" style="width: 9rem;">A devolver</th>
-                    <th class="text-end">Precio unit. (S/)</th>
-                    <th class="text-end">Descuento (S/)</th>
-                    <th class="text-end">Importe (S/)</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (var i = 0; i < Venta.Detalles.Length; i++)
-                {
-                    var idx = i;
-                    var l = Venta.Detalles[idx];
-                    var entregado = MuestrasVentas.CantidadDespachada(Venta.Id, l.NumeroLinea);
-                    var acreditado = MuestrasVentas.CantidadAcreditada(Venta.Id, l.NumeroLinea);
-                    // Mismo límite que ComprobanteBOImpl.registrarNotaCredito: entregado − ya acreditado
-                    var disponible = Math.Max(0, entregado - acreditado);
-                    <tr>
-                        <td>@l.NumeroLinea</td>
-                        <td><span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto</td>
-                        <td class="text-end">@l.Cantidad.ToString("0.###")</td>
-                        <td class="text-end">@entregado.ToString("0.###")</td>
-                        <td class="text-end">@acreditado.ToString("0.###")</td>
-                        <td>
-                            <input type="number" min="0" max="@disponible" step="0.001" class="form-control form-control-sm text-end"
-                                   @bind="devolver[idx]" disabled="@(disponible <= 0)" aria-label="Cantidad a devolver" />
-                            @if (entregado == 0)
-                            {
-                                <div class="small text-muted text-end">Sin entregar</div>
-                            }
-                            else if (devolver[idx] > disponible)
-                            {
-                                <div class="small text-danger text-end">Máximo @disponible.ToString("0.###")</div>
-                            }
-                        </td>
-                        <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
-                        <td class="text-end">@DescuentoDevuelto(l, devolver[idx]).ToString("N2")</td>
-                        <td class="text-end fw-semibold">@ImporteDevuelto(l, devolver[idx]).ToString("N2")</td>
-                    </tr>
-                }
-            </tbody>
-            <tfoot>
-                <tr>
-                    <td colspan="8" class="text-end text-muted">Subtotal</td>
-                    <td class="text-end">@SubTotal.ToString("N2")</td>
-                </tr>
-                <tr>
-                    <td colspan="8" class="text-end text-muted">IGV (18 %)</td>
-                    <td class="text-end">@Igv.ToString("N2")</td>
-                </tr>
-                <tr>
-                    <td colspan="8" class="text-end fw-bold">Total S/</td>
-                    <td class="text-end fw-bold">@((SubTotal + Igv).ToString("N2"))</td>
-                </tr>
-            </tfoot>
-        </table>
-    </div>
-</div>
-
-<div class="alert alert-secondary">
-    Al registrar la nota: los productos devueltos <strong>reingresan al inventario</strong>;
-    @if (Venta.CondicionPago == "CREDITO")
+@if (!cargado)
+{
+    <p class="text-muted">Cargando...</p>
+}
+else
+{
+    @if (autorizacion is null)
     {
-        <span>se <strong>rebaja el saldo de la cuenta por cobrar</strong> del cliente;</span>
+        <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span>Para emitir una nota de crédito necesitas una <strong>autorización vigente del Administrador</strong>. Cada autorización sirve para una nota.</span>
+            <a class="btn btn-sm btn-dark" href="@($"/autorizaciones/nueva?operacion={TextosSeguridad.OperacionNotaCredito}&volver=/notas-credito/nueva")">Solicitar autorización</a>
+        </div>
     }
     else
     {
-        <span>si la venta ya se cobró, la devolución sale como <strong>egreso de la caja</strong> abierta;</span>
-    }
-    y la nota <strong>no cuenta como cobro válido</strong> en el cierre de caja.
-</div>
-
-<div class="card card-body mb-3">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-        <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary" href="/notas-credito">Cancelar</a>
-            <button class="btn btn-primary" @onclick="Volver" disabled="@(autorizacion is null)">Registrar nota de crédito</button>
+        <div class="alert alert-success">
+            Autorización vigente hasta las <strong>@Formato.FechaHora(autorizacion.FechaVencimiento)</strong>,
+            aprobada por @autorizacion.Administrador. Se usará en esta nota.
         </div>
+    }
+
+    <div class="card card-body mb-3">
+        <div class="row">
+            <Campo Etiqueta="Comprobante de origen" Id="comprobante" Obligatorio="true" Error="@E("comprobante")" Clase="col-md-7 mb-3"
+                   Ayuda="Facturas y boletas vigentes que ya tienen mercadería entregada.">
+                <select id="comprobante" class="form-select @Invalido("comprobante")" @bind="idComprobante" @bind:after="AlElegirComprobante">
+                    <option value="0">Elige el comprobante</option>
+                    @foreach (var c in comprobantes)
+                    {
+                        <option value="@c.Id">@c.Comprobante · @c.Cliente · @Formato.Soles(c.Total)</option>
+                    }
+                </select>
+            </Campo>
+            <Campo Etiqueta="Motivo de la devolución" Id="motivo" Obligatorio="true" Error="@E("motivo")" Clase="col-md-5 mb-3">
+                <input id="motivo" class="form-control @Invalido("motivo")" maxlength="200" @bind="motivo" @bind:event="oninput" />
+            </Campo>
+        </div>
+
+        @if (Origen is not null)
+        {
+            <div class="row border-top pt-3">
+                <div class="col-sm-6 col-md-4 mb-2">
+                    <div class="small text-muted text-uppercase">Cliente</div>
+                    <div class="fw-semibold">@Origen.Cliente</div>
+                    <div class="small text-muted">@Origen.NumeroDocumento</div>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-2">
+                    <div class="small text-muted text-uppercase">Venta</div>
+                    <div class="fw-semibold">@Origen.Venta</div>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-2">
+                    <div class="small text-muted text-uppercase">Condición de pago</div>
+                    <div class="fw-semibold">@Formato.Legible(Origen.CondicionPago)</div>
+                </div>
+                <div class="col-sm-6 col-md-2 mb-2">
+                    <div class="small text-muted text-uppercase">Emisión</div>
+                    <div class="fw-semibold">@Formato.Fecha(Origen.FechaEmision)</div>
+                </div>
+            </div>
+        }
     </div>
-</div>
+
+    @if (Origen is not null)
+    {
+        <div class="card mb-3">
+            <div class="card-body pb-0"><h2 class="h6 fw-semibold mb-0">Mercadería que se devuelve</h2></div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Producto</th>
+                            <th class="text-end">Vendido</th>
+                            <th class="text-end">Entregado</th>
+                            <th class="text-end">Ya devuelto</th>
+                            <th class="text-end">Precio cobrado</th>
+                            <th style="width: 160px;">Devolver</th>
+                            <th class="text-end">Importe</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in lineas)
+                        {
+                            var problema = Problema(l);
+                            <tr class="@(l.Devolvible <= 0 ? "text-muted" : "")">
+                                <td><strong>@l.CodigoInterno</strong> · @l.Producto</td>
+                                <td class="text-end">@Formato.Cantidad(l.Cantidad)</td>
+                                <td class="text-end">@Formato.Cantidad(l.CantidadDespachada)</td>
+                                <td class="text-end">@Formato.Cantidad(l.Acreditado)</td>
+                                <td class="text-end">@l.PrecioEfectivo.ToString("N2")</td>
+                                <td>
+                                    @if (l.Devolvible > 0)
+                                    {
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" min="0" max="@l.Devolvible" step="any" class="form-control @(problema is null ? "" : "is-invalid")"
+                                                   aria-label="@($"Cantidad a devolver de {l.Producto}")" @bind="l.Devolver" @bind:event="oninput" />
+                                            <span class="input-group-text">@TextosAlmacen.Unidad(l.UnidadVenta)</span>
+                                        </div>
+                                        <div class="small @(problema is null ? "text-muted" : "text-danger") mt-1">@(problema ?? $"Máximo {Formato.Cantidad(l.Devolvible)}")</div>
+                                    }
+                                    else
+                                    {
+                                        <span class="small">@(l.CantidadDespachada <= 0 ? "Sin entregar" : "Ya devuelto")</span>
+                                    }
+                                </td>
+                                <td class="text-end">@(l.Devolver > 0 ? l.ImporteDevolucion.ToString("N2") : "")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr><td colspan="6" class="text-end">Subtotal</td><td class="text-end">@SubTotal.ToString("N2")</td></tr>
+                        <tr><td colspan="6" class="text-end">IGV (18 %)</td><td class="text-end">@Igv.ToString("N2")</td></tr>
+                        <tr><td colspan="6" class="text-end fw-bold">Total de la nota</td><td class="text-end fw-bold">@Formato.Soles(Total)</td></tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="card card-body mb-3">
+            <h2 class="h6 fw-semibold mb-2">Qué pasará al registrar</h2>
+            <ul class="small mb-3">
+                <li>La mercadería devuelta <strong>reingresa al stock</strong>.</li>
+                @if (Origen.CondicionPago == "CREDITO")
+                {
+                    <li>Venta al crédito: <strong>se rebaja la deuda</strong> del cliente por @Formato.Soles(Total). Si ya la había pagado,
+                        lo que exceda su saldo se le devuelve en efectivo desde tu caja abierta.</li>
+                }
+                else
+                {
+                    <li>Venta al contado: si ya se cobró, se registra un <strong>egreso de @Formato.Soles(Total)</strong> en tu caja abierta
+                        por el mismo medio de pago del cobro.</li>
+                }
+                <li>La autorización queda usada: para otra nota hay que pedir una nueva.</li>
+            </ul>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3">
+                <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-outline-secondary" href="/notas-credito">Cancelar</a>
+                    <button class="btn btn-primary" disabled="@(guardando || autorizacion is null)" @onclick="Guardar">Registrar nota de crédito</button>
+                </div>
+            </div>
+        </div>
+    }
+}
 
 @code {
-    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Cajero";
+    private const double TasaIgv = 0.18;
 
-    // Autorización vigente del Cajero de la sesión (SolicitudAutorizacionBO.obtenerAutorizacionVigente).
-    private SolicitudFila? autorizacion => MuestrasSeguridad.AutorizacionVigente(
-        MuestrasSeguridad.UsuarioPorRol.GetValueOrDefault(Rol, ""), MuestrasSeguridad.OperacionNotaCredito);
+    private SolicitudDatos? autorizacion;
+    private List<ComprobanteParaNota> comprobantes = new();
+    private List<LineaDevolvible> lineas = new();
+    private int idComprobante;
+    private string motivo = "";
+    private bool cargado;
+    private bool intento;
+    private bool guardando;
+    private string? error;
 
-    // Estas variables solo controlan lo que se muestra (Lab 9: sin consultas).
-    private int idComprobante = MuestrasVentas.Comprobantes[0].Id;
-    private decimal[] devolver = new decimal[LineasDe(MuestrasVentas.Comprobantes[0]).Length];
+    private ComprobanteParaNota? Origen => comprobantes.FirstOrDefault(c => c.Id == idComprobante);
+    private double SubTotal => Math.Round(lineas.Where(l => l.Devolver > 0).Sum(l => l.ImporteDevolucion), 2);
+    private double Igv => Math.Round(SubTotal * TasaIgv, 2, MidpointRounding.AwayFromZero);
+    private double Total => Math.Round(SubTotal + Igv, 2);
 
-    // Al cambiar el comprobante de origen se reinician las cantidades a devolver
-    private int IdComprobante
+    // misma regla que el BO: solo lo entregado y todavía no devuelto
+    private static string? Problema(LineaDevolvible l) =>
+        l.Devolver < 0 ? "No puede ser negativa."
+        : l.Devolver > l.Devolvible + 0.0005 ? $"Máximo {Formato.Cantidad(l.Devolvible)}."
+        : null;
+
+    private Dictionary<string, string> Errores()
     {
-        get => idComprobante;
-        set
+        var e = new Dictionary<string, string>();
+        if (Origen is null) e["comprobante"] = "Elige el comprobante que se corrige.";
+        if (string.IsNullOrWhiteSpace(motivo)) e["motivo"] = "El motivo es obligatorio.";
+        return e;
+    }
+
+    private string? E(string campo) => intento && Errores().TryGetValue(campo, out var m) ? m : null;
+    private string Invalido(string campo) => E(campo) is null ? "" : "is-invalid";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
         {
-            idComprobante = value;
-            devolver = new decimal[Venta.Detalles.Length];
+            comprobantes = await Api.Get<List<ComprobanteParaNota>>("notas-credito/comprobantes") ?? new();
+            autorizacion = await Api.Get<SolicitudDatos>($"solicitudes/vigente?operacion={TextosSeguridad.OperacionNotaCredito}");
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        cargado = true;
+    }
+
+    private async Task AlElegirComprobante()
+    {
+        lineas = new();
+        error = null;
+        if (idComprobante == 0) return;
+        try
+        {
+            lineas = await Api.Get<List<LineaDevolvible>>($"notas-credito/comprobantes/{idComprobante}/lineas") ?? new();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
         }
     }
 
-    private ComprobanteFila Comprobante =>
-        MuestrasVentas.Comprobantes.FirstOrDefault(c => c.Id == idComprobante) ?? MuestrasVentas.Comprobantes[0];
-    private VentaFila Venta => MuestrasVentas.Venta(Comprobante.IdVenta) ?? MuestrasVentas.Ventas[0];
+    private async Task Guardar()
+    {
+        intento = true;
+        error = null;
+        if (Errores().Count > 0 || lineas.Any(l => Problema(l) is not null))
+        {
+            error = "Revise los campos marcados en rojo.";
+            return;
+        }
+        if (!lineas.Any(l => l.Devolver > 0))
+        {
+            error = "Escribe la cantidad que se devuelve en al menos un producto.";
+            return;
+        }
+        guardando = true;
+        try
+        {
+            var guardada = await Api.Post<NotaGuardada>("notas-credito", new
+            {
+                idComprobanteOrigen = idComprobante,
+                motivo = motivo.Trim(),
+                lineas = lineas.Where(l => l.Devolver > 0).Select(l => new { idLinea = l.IdDetalleVenta, cantidad = l.Devolver })
+            });
+            Nav.NavigateTo(AvisoGuardado.Ruta("/notas-credito", AvisoGuardado.Nuevo, guardada?.Nota));
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
 
-    private static LineaFila[] LineasDe(ComprobanteFila c) =>
-        (MuestrasVentas.Venta(c.IdVenta) ?? MuestrasVentas.Ventas[0]).Detalles;
-
-    // Mismo cálculo que ComprobanteBOImpl.registrarNotaCredito:
-    // importe = importe de la línea (con descuento) × cantidad devuelta ÷ cantidad vendida
-    private static decimal ImporteDevuelto(LineaFila l, decimal cantidad) =>
-        l.Cantidad == 0 ? 0 : Math.Round(l.Importe * cantidad / l.Cantidad, 2);
-
-    // descuento = bruto − importe (la parte proporcional del descuento de la línea)
-    private static decimal DescuentoDevuelto(LineaFila l, decimal cantidad) =>
-        Math.Round(cantidad * l.PrecioUnitario, 2) - ImporteDevuelto(l, cantidad);
-
-    private decimal SubTotal => Venta.Detalles.Select((l, i) => ImporteDevuelto(l, devolver[i])).Sum();
-    private decimal Igv => Math.Round(SubTotal * MuestrasVentas.TasaIgv, 2);
-
-    // Lab 9: no se registra nada, solo se navega.
-    private void Volver() => Nav.NavigateTo("/notas-credito");
+    private class NotaGuardada
+    {
+        public int Id { get; set; }
+        public string? Nota { get; set; }
+    }
 }

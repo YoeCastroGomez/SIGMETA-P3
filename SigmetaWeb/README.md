@@ -1,7 +1,8 @@
 # SIGMETA · Frontend Blazor (Lab 9) — proyecto base del grupo
 
-Blazor Web App, **.NET 10**, Bootstrap. Solo capa de presentación (Lab 9):
-sin lógica de negocio, sin consultas ni registros, sin BD ni servicios web. La navegación sí funciona.
+Blazor Web App, **.NET 10**, Bootstrap. Es solo la capa de presentación: no tiene lógica de negocio ni acceso a la base.
+Todas las pantallas (RF001 a RF015) consumen el servicio REST de Java (`sigmeta-ws`) con `Servicios/ApiJava.cs`.
+Para usarla hay que tener GlassFish encendido con `sigmeta-ws` desplegado y la base con sus procedimientos (incluido `07_SP_reforma.sql`).
 Las tablas muestran datos de ejemplo fijos, que se reemplazan al integrar con Java por servicios web.
 
 ## Moneda de los importes
@@ -10,8 +11,8 @@ Las pantallas que presenten o reciban importes monetarios deben indicar **soles 
 
 ## Abrir
 1. Visual Studio 2026 → abrir `SigmetaWeb.slnx` → F5.
-2. En `/login`, "Demostración: entrar como" muestra el sistema con el menú de cada rol (RF001).
-   Para cambiar de rol: "Cerrar sesión" y entrar con otro. El login no valida la clave.
+2. En `/login` se inicia sesión con un usuario de la base. Con los datos de demostración la clave de todos es `Meta2026`
+   (`lrojas` Vendedor, `mchavez` Cajero, `jtorres` Almacenero, `aquispe` Administrador). El menú depende del rol (RF001).
 
 ## Estructura
 ```

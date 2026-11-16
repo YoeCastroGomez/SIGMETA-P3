@@ -1,102 +1,223 @@
 @page "/despachos/{Id:int}"
+@inject ApiJava Api
 @inject NavigationManager Nav
+@using SigmetaWeb.Components.Pages.Almacen
 
 <PageTitle>Registrar despacho · SIGMETA</PageTitle>
 
-@* RF012 · Registrar el despacho de una venta con su guía de remisión (Almacenero).
-   Cada línea del despacho apunta a una línea de la venta (DetalleDespacho.detalleVenta).
-   Solo visual (Lab 9): Registrar no guarda nada, solo vuelve a la lista. *@
-<Encabezado Rf="RF012" Titulo="Registrar despacho" Subtitulo="@($"Venta {venta.Numero} · {venta.Cliente}")">
-    <a class="btn btn-outline-secondary" href="/despachos">Volver a la lista</a>
+@* RF012 · Despacho total o parcial de una venta (solo el Almacenero). Id es el de la venta.
+   GET /api/almacen/ventas/{id}/lineas · POST /api/almacen/despachos. La serie y el número de guía los pone el Java. *@
+<Encabezado Rf="RF012" Titulo="@($"Despachar venta {venta?.Numero}")"
+            Subtitulo="Escribe lo que sale ahora de cada línea. Lo que quede pendiente se despacha en otra guía.">
+    <a class="btn btn-outline-secondary" href="/despachos">Volver</a>
 </Encabezado>
 
-<div class="card card-body mb-3">
-    <h2 class="h6 fw-semibold mb-3">Guía de remisión</h2>
-    <div class="row">
-        <div class="col-sm-6 col-md-3 mb-3">
-            <div class="small text-muted text-uppercase">Serie</div>
-            <div class="fw-semibold">T001</div>
-        </div>
-        <div class="col-sm-6 col-md-3 mb-3">
-            <div class="small text-muted text-uppercase">Número</div>
-            <div class="text-muted">Se asigna al registrar</div>
-        </div>
-        <div class="col-md-6">
-            <Campo Etiqueta="Fecha de despacho" Id="fecha" Obligatorio="true">
-                <input id="fecha" type="date" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
-            </Campo>
-        </div>
-        <div class="col-md-8">
-            <Campo Etiqueta="Dirección de entrega" Id="direccion" Ayuda="Por defecto, la dirección registrada del cliente.">
-                <input id="direccion" class="form-control" maxlength="200" />
-            </Campo>
-        </div>
-        <div class="col-md-4">
-            <Campo Etiqueta="Transportista" Id="transportista">
-                <input id="transportista" class="form-control" maxlength="100" />
-            </Campo>
-        </div>
-    </div>
-</div>
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 
-<div class="card mb-3">
-    <div class="card-body pb-0">
-        <h2 class="h6 fw-semibold mb-1">Líneas de la venta</h2>
-        <p class="small text-muted">
-            No se puede despachar más de lo pendiente de cada línea, ni más del stock disponible.
-            Deje en 0 las líneas que no salen en este despacho.
-        </p>
-    </div>
-    <div class="table-responsive">
-        <table class="table align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th style="width: 3rem;">#</th>
-                    <th>Producto</th>
-                    <th class="text-end">Vendido</th>
-                    <th class="text-end">Despachado</th>
-                    <th class="text-end">Pendiente</th>
-                    <th class="text-end" style="width: 10rem;">A despachar <span class="text-danger" title="Obligatorio">*</span></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var l in venta.Detalles)
-                {
-                    var despachado = MuestrasVentas.CantidadDespachada(venta.Id, l.NumeroLinea);
-                    var pendiente = l.Cantidad - despachado;
+@if (lineas is null)
+{
+    @if (error is null)
+    {
+        <p class="text-muted">Cargando venta...</p>
+    }
+}
+else
+{
+    @if (venta is not null)
+    {
+        <div class="card card-body mb-3">
+            <div class="row">
+                <div class="col-sm-6 col-md-4 mb-2">
+                    <div class="small text-muted text-uppercase">Cliente</div>
+                    <div class="fw-semibold">@venta.Cliente</div>
+                    <div class="small text-muted">@venta.NumeroDocumento</div>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-2">
+                    <div class="small text-muted text-uppercase">Comprobante</div>
+                    <div class="fw-semibold">@(venta.Comprobante ?? "Sin emitir")</div>
+                </div>
+                <div class="col-sm-6 col-md-3 mb-2">
+                    <div class="small text-muted text-uppercase">Condición de pago</div>
+                    <div class="fw-semibold">@Formato.Legible(venta.CondicionPago) @(venta.SinCobro ? "(sin cobrar)" : "")</div>
+                </div>
+                <div class="col-sm-6 col-md-2 mb-2">
+                    <div class="small text-muted text-uppercase">Estado</div>
+                    <div class="fw-semibold"><Estado Texto="@Formato.Legible(venta.Estado)" /></div>
+                </div>
+            </div>
+            @if (!venta.Lista)
+            {
+                <div class="alert alert-warning mb-0 mt-2">
+                    @(venta.SinComprobante
+                        ? "Esta venta todavía no tiene factura ni boleta emitida. Se despacha después de emitir el comprobante."
+                        : "Esta venta es al contado y todavía no se cobró en caja. Se despacha después del cobro.")
+                </div>
+            }
+        </div>
+    }
+
+    <div class="card mb-3">
+        <div class="card-body pb-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h2 class="h6 fw-semibold mb-0">Mercadería</h2>
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="DespacharTodo">Despachar todo lo pendiente</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
                     <tr>
-                        <td>@l.NumeroLinea</td>
-                        <td><span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto <span class="small text-muted">(@l.Unidad)</span></td>
-                        <td class="text-end">@l.Cantidad.ToString("0.###")</td>
-                        <td class="text-end">@despachado.ToString("0.###")</td>
-                        <td class="text-end fw-semibold">@pendiente.ToString("0.###")</td>
-                        <td>
-                            <input type="number" min="0" max="@pendiente" step="0.001" class="form-control form-control-sm text-end"
-                                   value="@pendiente" disabled="@(pendiente <= 0)" aria-label="Cantidad a despachar" />
-                        </td>
+                        <th>Producto</th>
+                        <th class="text-end">Vendido</th>
+                        <th class="text-end">Ya despachado</th>
+                        <th class="text-end">Pendiente</th>
+                        <th class="text-end">En almacén</th>
+                        <th style="width: 170px;">Despachar ahora</th>
                     </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<div class="card card-body mb-3">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-        <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary" href="/despachos">Cancelar</a>
-            <button class="btn btn-primary" @onclick="Volver">Registrar despacho</button>
+                </thead>
+                <tbody>
+                    @foreach (var l in lineas)
+                    {
+                        var problema = Problema(l);
+                        <tr class="@(l.Pendiente <= 0 ? "text-muted" : "")">
+                            <td><strong>@l.CodigoInterno</strong> · @l.Producto</td>
+                            <td class="text-end">@Formato.Cantidad(l.Cantidad)</td>
+                            <td class="text-end">@Formato.Cantidad(l.CantidadDespachada)</td>
+                            <td class="text-end fw-semibold">@Formato.Cantidad(l.Pendiente)</td>
+                            <td class="text-end @(l.StockActual < l.Pendiente ? "text-danger fw-semibold" : "")">@Formato.Cantidad(l.StockActual)</td>
+                            <td>
+                                @if (l.Pendiente > 0)
+                                {
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" min="0" max="@l.Pendiente" step="any" class="form-control @(problema is null ? "" : "is-invalid")"
+                                               aria-label="@($"Cantidad a despachar de {l.Producto}")" @bind="l.Despachar" @bind:event="oninput" />
+                                        <span class="input-group-text">@TextosAlmacen.Unidad(l.UnidadVenta)</span>
+                                    </div>
+                                    @if (problema is not null)
+                                    {
+                                        <div class="small text-danger mt-1">@problema</div>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="small">Completa</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
-</div>
+
+    <div class="card card-body mb-3">
+        <div class="row">
+            <Campo Etiqueta="Fecha de despacho" Id="fecha" Obligatorio="true" Error="@ErrorFecha" Clase="col-md-3 mb-3">
+                <input id="fecha" type="date" class="form-control @(ErrorFecha is null ? "" : "is-invalid")" max="@Formato.Iso(DateTime.Today)" @bind="fecha" />
+            </Campo>
+            <Campo Etiqueta="Dirección de entrega" Id="direccion" Clase="col-md-5 mb-3">
+                <input id="direccion" class="form-control" maxlength="200" @bind="direccion" />
+            </Campo>
+            <Campo Etiqueta="Transportista" Id="transportista" Clase="col-md-4 mb-3" Ayuda="Vacío si el cliente recoge en tienda.">
+                <input id="transportista" class="form-control" maxlength="100" @bind="transportista" />
+            </Campo>
+        </div>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3">
+            <span class="small text-muted">@Resumen</span>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" href="/despachos">Cancelar</a>
+                <button class="btn btn-primary" disabled="@(guardando || !HayAlgo || venta is not { Lista: true })" @onclick="Guardar">Registrar despacho</button>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     [Parameter] public int Id { get; set; }
 
-    // Lab 9: sin consultas; si el id no existe se muestra la primera venta de ejemplo.
-    private VentaFila venta => MuestrasVentas.Venta(Id) ?? MuestrasVentas.Ventas[0];
+    private VentaPorDespachar? venta;
+    private List<LineaVentaDespacho>? lineas;
+    private DateTime fecha = DateTime.Today;
+    private string? direccion;
+    private string? transportista;
+    private bool guardando;
+    private string? error;
 
-    // Lab 9: no se registra nada, solo se navega.
-    private void Volver() => Nav.NavigateTo("/despachos");
+    private bool HayAlgo => lineas?.Any(l => l.Despachar > 0) == true;
+    private string? ErrorFecha => fecha.Date > DateTime.Today ? "La fecha no puede ser futura." : null;
+    private string Resumen => HayAlgo
+        ? (lineas!.All(l => l.Despachar >= l.Pendiente - 0.0005) ? "Despacho total: la venta quedará despachada." : "Despacho parcial: quedará mercadería pendiente.")
+        : "Escribe al menos una cantidad mayor a 0.";
+
+    // mismas reglas que el BO: no más de lo pendiente ni más de lo que hay en almacén
+    private static string? Problema(LineaVentaDespacho l) =>
+        l.Despachar < 0 ? "No puede ser negativa."
+        : l.Despachar > l.Pendiente + 0.0005 ? $"Máximo {Formato.Cantidad(l.Pendiente)}."
+        : l.Despachar > l.StockActual + 0.0005 ? $"Solo hay {Formato.Cantidad(l.StockActual)} en almacén."
+        : null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            var ventas = await Api.Get<List<VentaPorDespachar>>("almacen/ventas-por-despachar") ?? new();
+            venta = ventas.FirstOrDefault(v => v.Id == Id);
+            lineas = await Api.Get<List<LineaVentaDespacho>>($"almacen/ventas/{Id}/lineas") ?? new();
+            if (venta is null)
+            {
+                error = "Esta venta ya no admite despachos (está completa, anulada o no existe).";
+            }
+            else
+            {
+                direccion ??= venta.Direccion;
+            }
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+    }
+
+    private void DespacharTodo()
+    {
+        foreach (var l in lineas ?? new())
+        {
+            l.Despachar = Math.Max(Math.Min(l.Pendiente, l.StockActual), 0);
+        }
+    }
+
+    private async Task Guardar()
+    {
+        error = null;
+        if (lineas is null || ErrorFecha is not null || lineas.Any(l => Problema(l) is not null))
+        {
+            error = "Revise las cantidades marcadas en rojo.";
+            return;
+        }
+        guardando = true;
+        try
+        {
+            var guardado = await Api.Post<DespachoGuardado>("almacen/despachos", new
+            {
+                idVenta = Id,
+                fecha = Formato.Iso(fecha),
+                direccionEntrega = direccion,
+                transportista,
+                lineas = lineas.Where(l => l.Despachar > 0).Select(l => new { idLinea = l.IdDetalleVenta, cantidad = l.Despachar })
+            });
+            Nav.NavigateTo(AvisoGuardado.Ruta("/despachos", AvisoGuardado.Nuevo, guardado?.Guia));
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private class DespachoGuardado
+    {
+        public int Id { get; set; }
+        public string? Guia { get; set; }
+    }
 }

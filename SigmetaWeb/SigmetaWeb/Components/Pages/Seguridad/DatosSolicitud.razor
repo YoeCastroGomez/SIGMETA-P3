@@ -1,41 +1,43 @@
-@* Bloque de solo lectura con los campos de SolicitudAutorizacion. Lo usan Resolver y Detalle. *@
+@* Bloque de solo lectura con los datos de una solicitud de autorización. Lo usan Resolver y Detalle. *@
 <div class="row">
     <div class="col-sm-6 mb-3">
         <div class="small text-muted text-uppercase">Solicitante</div>
-        <div class="fw-semibold">@Solicitud.Solicitante (@MuestrasSeguridad.Texto(Solicitud.Rol))</div>
+        <div class="fw-semibold">@Solicitud.NombreSolicitante</div>
+        <div class="small text-muted">@Solicitud.Solicitante · @TextosSeguridad.Texto(Solicitud.RolSolicitante)</div>
     </div>
     <div class="col-sm-6 mb-3">
         <div class="small text-muted text-uppercase">Fecha y hora de solicitud</div>
-        <div class="fw-semibold">@Solicitud.FechaSolicitud</div>
+        <div class="fw-semibold">@Formato.FechaHora(Solicitud.FechaSolicitud)</div>
     </div>
     <div class="col-sm-6 mb-3">
         <div class="small text-muted text-uppercase">Operación restringida</div>
-        <div class="fw-semibold">@Solicitud.OperacionRestringida</div>
+        <div class="fw-semibold">@TextosSeguridad.Texto(Solicitud.Operacion)</div>
+        <div class="small text-muted">@Solicitud.DescripcionOperacion</div>
     </div>
     <div class="col-sm-6 mb-3">
         <div class="small text-muted text-uppercase">Estado</div>
-        <div class="fw-semibold"><Estado Texto="@MuestrasSeguridad.Texto(Solicitud.Estado)" /></div>
+        <div class="fw-semibold"><Estado Texto="@TextosSeguridad.Texto(Solicitud.Estado)" /></div>
     </div>
     <div class="col-12 mb-3">
         <div class="small text-muted text-uppercase">Motivo</div>
         <div>@Solicitud.Motivo</div>
     </div>
-    @if (Solicitud.Administrador is not null)
+    @if (!string.IsNullOrEmpty(Solicitud.Administrador))
     {
         <div class="col-sm-6 mb-3">
             <div class="small text-muted text-uppercase">Resuelta por</div>
-            <div class="fw-semibold">@Solicitud.Administrador · @Solicitud.FechaResolucion</div>
+            <div class="fw-semibold">@Solicitud.Administrador · @Formato.FechaHora(Solicitud.FechaResolucion)</div>
         </div>
     }
-    @if (Solicitud.VigenciaMinutos is not null)
+    @if (Solicitud.VigenciaMinutos > 0)
     {
         <div class="col-sm-6 mb-3">
             <div class="small text-muted text-uppercase">Vigencia</div>
-            <div class="fw-semibold">@Solicitud.VigenciaMinutos min · vence @Solicitud.FechaVencimiento</div>
+            <div class="fw-semibold">@Solicitud.VigenciaMinutos min · vence @Formato.FechaHora(Solicitud.FechaVencimiento)</div>
         </div>
     }
 </div>
 
 @code {
-    [Parameter, EditorRequired] public SolicitudFila Solicitud { get; set; } = default!;
+    [Parameter, EditorRequired] public SolicitudDatos Solicitud { get; set; } = default!;
 }

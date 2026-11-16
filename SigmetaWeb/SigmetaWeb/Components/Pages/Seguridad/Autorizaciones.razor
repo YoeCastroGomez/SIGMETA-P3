@@ -1,79 +1,202 @@
 @page "/autorizaciones"
+@inject ApiJava Api
 
 <PageTitle>Solicitudes de autorización · SIGMETA</PageTitle>
 
-@* RF014 · Solicitudes, vista del Administrador. Solo visual (Lab 9): los filtros y botones no hacen nada. *@
+@* RF014 · Solicitudes de todos los usuarios, vista del Administrador.
+   GET /api/solicitudes (?estado=PENDIENTE) · POST /api/solicitudes/{id}/anular para revocar una aprobada. *@
 <Encabezado Rf="RF014" Titulo="Solicitudes de autorización"
-            Subtitulo="Solicitudes de todos los usuarios. Aprobar o rechazar se hace desde Resolver." />
+            Subtitulo="Operaciones restringidas que piden el Vendedor, el Cajero y el Almacenero. Cada autorización aprobada sirve para una sola operación." />
 
-<div class="card card-body mb-3">
-    <div class="row g-3 align-items-end sigmeta-filtros">
-        <Campo Etiqueta="Mostrar" Id="fMostrar" Clase="col-sm-6 col-md-3">
-            <select id="fMostrar" class="form-select">
-                <option>Todas</option>
-                <option>Solo pendientes</option>
-            </select>
-        </Campo>
-        <div class="col-auto">
-            <button class="btn btn-dark">Buscar</button>
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
+{
+    <div class="alert alert-success">@exito</div>
+}
+
+<Confirmacion Visible="@(porRevocar is not null)" Titulo="Revocar autorización" TextoConfirmar="Revocar"
+              AlConfirmar="ConfirmarRevocar" AlCancelar="() => porRevocar = null">
+    <p class="mb-2">¿Seguro que desea revocar la autorización de <strong>@porRevocar?.Solicitante</strong>
+        para <strong>@TextosSeguridad.Texto(porRevocar?.Operacion)</strong>?</p>
+    <p class="small text-muted mb-0">Quedará vencida y el usuario ya no podrá usarla.</p>
+</Confirmacion>
+
+<div class="row g-3 mb-3">
+    <div class="col-sm-4">
+        <div class="card card-body h-100">
+            <div class="small text-muted text-uppercase">Pendientes de resolver</div>
+            <div class="h4 fw-bold mb-0 @(Pendientes > 0 ? "text-warning-emphasis" : "")">@Pendientes</div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card card-body h-100">
+            <div class="small text-muted text-uppercase">Aprobadas vigentes</div>
+            <div class="h4 fw-bold mb-0">@Vigentes</div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card card-body h-100">
+            <div class="small text-muted text-uppercase">Total registradas</div>
+            <div class="h4 fw-bold mb-0">@(solicitudes?.Count ?? 0)</div>
         </div>
     </div>
 </div>
 
-<div class="card mb-3">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Solicitante</th>
-                    <th>Operación</th>
-                    <th>Motivo</th>
-                    <th>Fecha</th>
-                    <th>Estado</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var s in Paginar(MuestrasSeguridad.Solicitudes, paginaActual, tamanoPagina))
-                {
-                    <tr>
-                        <td><strong>@s.Solicitante</strong><div class="small text-muted">@MuestrasSeguridad.Texto(s.Rol)</div></td>
-                        <td>@s.OperacionRestringida</td>
-                        <td>@s.Motivo</td>
-                        <td>@s.FechaSolicitud</td>
-                        <td><Estado Texto="@MuestrasSeguridad.Texto(s.Estado)" /></td>
-                        <td class="text-end">
-                            <div class="d-inline-flex gap-1 text-nowrap">
-                                @if (s.Estado == "PENDIENTE")
-                                {
-                                    <a class="btn btn-sm btn-primary" href="@($"/autorizaciones/aprobar/{s.Id}")">Resolver</a>
-                                }
-                                else
-                                {
-                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/autorizaciones/detalle/{s.Id}")">Ver</a>
-                                    @if (s.Estado == "APROBADA")
-                                    {
-                                        <button class="btn btn-sm btn-outline-danger">Revocar</button>
-                                    }
-                                }
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end sigmeta-filtros">
+        <Campo Etiqueta="Mostrar" Id="fMostrar" Clase="col-sm-6 col-md-3">
+            <select id="fMostrar" class="form-select" @bind="filtroEstado" @bind:after="AlFiltrar">
+                <option value="">Todas</option>
+                <option value="PENDIENTE">Pendientes</option>
+                <option value="APROBADA">Aprobadas vigentes</option>
+                <option value="RECHAZADA">Rechazadas</option>
+                <option value="VENCIDA">Vencidas o usadas</option>
+            </select>
+        </Campo>
+        <Campo Etiqueta="Solicitante u operación" Id="fTexto" Clase="col-sm-6 col-md">
+            <input id="fTexto" class="form-control" maxlength="60" @bind="filtroTexto" @bind:event="oninput" @bind:after="AlFiltrar" />
+        </Campo>
+        <div class="col-auto">
+            <button class="btn btn-outline-secondary" @onclick="Cargar" disabled="@cargando">Actualizar</button>
+        </div>
     </div>
-        <Paginacion TotalRegistros="@(MuestrasSeguridad.Solicitudes.Count())" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
 </div>
 
+@if (solicitudes is null)
+{
+    <p class="text-muted">Cargando solicitudes...</p>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Solicitante</th>
+                        <th>Operación</th>
+                        <th>Motivo</th>
+                        <th>Fecha</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Filtradas.Count == 0)
+                    {
+                        <tr><td colspan="6" class="text-center text-muted py-4">No hay solicitudes con ese filtro.</td></tr>
+                    }
+                    @foreach (var s in Pagina)
+                    {
+                        <tr>
+                            <td><strong>@s.Solicitante</strong><div class="small text-muted">@TextosSeguridad.Texto(s.RolSolicitante)</div></td>
+                            <td>@TextosSeguridad.Texto(s.Operacion)</td>
+                            <td style="max-width: 320px;">@s.Motivo</td>
+                            <td class="text-nowrap">@Formato.FechaHora(s.FechaSolicitud)</td>
+                            <td>
+                                <Estado Texto="@TextosSeguridad.Texto(s.Estado)" />
+                                @if (s.Vigente)
+                                {
+                                    <div class="small text-muted">hasta @Formato.FechaHora(s.FechaVencimiento)</div>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1 text-nowrap">
+                                    @if (s.Estado == "PENDIENTE")
+                                    {
+                                        <a class="btn btn-sm btn-primary" href="@($"/autorizaciones/aprobar/{s.Id}")">Resolver</a>
+                                    }
+                                    else
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary" href="@($"/autorizaciones/detalle/{s.Id}")">Ver</a>
+                                        @if (s.Vigente)
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => { error = exito = null; porRevocar = s; }">Revocar</button>
+                                        }
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <Paginacion TotalRegistros="@Filtradas.Count" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
+    </div>
+}
+
 @code {
+    private List<SolicitudDatos>? solicitudes;
+    private string filtroEstado = "";
+    private string filtroTexto = "";
+    private string? error;
+    private string? exito;
+    private bool cargando;
+    private SolicitudDatos? porRevocar;
     private int paginaActual = 1;
     private int tamanoPagina = 10;
-    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+
+    [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
+    [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
+
+    private int Pendientes => solicitudes?.Count(s => s.Estado == "PENDIENTE") ?? 0;
+    private int Vigentes => solicitudes?.Count(s => s.Vigente) ?? 0;
+
+    private List<SolicitudDatos> Filtradas => (solicitudes ?? new())
+        .Where(s => filtroEstado == "" || s.Estado == filtroEstado)
+        .Where(s => string.IsNullOrWhiteSpace(filtroTexto)
+                    || (s.Solicitante ?? "").Contains(filtroTexto.Trim(), StringComparison.OrdinalIgnoreCase)
+                    || TextosSeguridad.Texto(s.Operacion).Contains(filtroTexto.Trim(), StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    private IEnumerable<SolicitudDatos> Pagina => tamanoPagina == 0 ? Filtradas
+        : Filtradas.Skip((Math.Max(paginaActual, 1) - 1) * tamanoPagina).Take(tamanoPagina);
+
+    private void AlFiltrar() => paginaActual = 1;
+
+    protected override async Task OnInitializedAsync()
     {
-        if (tamano == 0) return registros;
-        int total = registros.Count();
-        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
-        return registros.Skip((segura - 1) * tamano).Take(tamano);
+        await Cargar();
+        exito = Guardado switch
+        {
+            "aprobada" => $"Se aprobó la solicitud de {Referencia}.",
+            "rechazada" => $"Se rechazó la solicitud de {Referencia}.",
+            _ => null
+        };
+    }
+
+    private async Task Cargar()
+    {
+        cargando = true;
+        try
+        {
+            solicitudes = await Api.Get<List<SolicitudDatos>>("solicitudes") ?? new();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+            solicitudes ??= new();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task ConfirmarRevocar()
+    {
+        var s = porRevocar;
+        porRevocar = null;
+        if (s is null) return;
+        try
+        {
+            await Api.Post<object>($"solicitudes/{s.Id}/anular", null);
+            await Cargar();
+            exito = $"Se revocó la autorización de {s.Solicitante} para {TextosSeguridad.Texto(s.Operacion).ToLower()}.";
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
     }
 }

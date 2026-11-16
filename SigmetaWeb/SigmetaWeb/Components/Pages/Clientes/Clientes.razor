@@ -131,6 +131,23 @@ else
     private string? error;
     private string? exito;
 
+    // Aviso de éxito con el patrón único (AvisoGuardado): el formulario vuelve aquí con ?guardado=…&ref=…
+    [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
+    [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
+    private bool avisoLeido;
+
+    protected override void OnParametersSet()
+    {
+        if (avisoLeido) return;   // solo al llegar: después manda lo que haga el usuario en la lista
+        avisoLeido = true;
+        var nombre = string.IsNullOrWhiteSpace(Referencia) ? "" : " " + Referencia.Trim().TrimEnd('.');
+        exito = Guardado switch
+        {
+            "linea" => $"Se asignó la línea de crédito del cliente{nombre}.",       // vuelve de LineaCredito
+            "sinlinea" => $"Se retiró la línea de crédito del cliente{nombre}.",
+            _ => AvisoGuardado.Texto(Guardado, "el cliente", Referencia) ?? exito
+        };
+    }
     // al abrir la pantalla se piden los clientes al Java
     protected override async Task OnInitializedAsync()
     {

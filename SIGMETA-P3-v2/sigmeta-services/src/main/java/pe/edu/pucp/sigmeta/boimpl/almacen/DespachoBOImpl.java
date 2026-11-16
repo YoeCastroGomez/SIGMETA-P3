@@ -84,7 +84,7 @@ public class DespachoBOImpl implements DespachoBO {
 
         List<DetalleDespacho> detalles = despacho.getDetalles();
         if (detalles == null || detalles.isEmpty()) {
-            throw new IllegalArgumentException("El despacho debe tener al menos una linea de detalle");
+            throw new IllegalArgumentException("El despacho debe tener al menos una línea de detalle");
         }
 
         return Transaccion.ejecutar(() -> {
@@ -101,6 +101,21 @@ public class DespachoBOImpl implements DespachoBO {
             if (venta.getEstado() != EstadoVenta.REGISTRADA && venta.getEstado() != EstadoVenta.DESPACHADA_PARCIAL) {
                 throw new IllegalStateException("La venta no admite nuevos despachos (estado actual: " + venta.getEstado() + ")");
             }
+            // RF012: la mercaderia sale del almacen con su comprobante emitido y, si la venta es al contado,
+            // ya cobrada en caja. Al credito basta el comprobante: la deuda esta en la cuenta por cobrar.
+            boolean tieneComprobante = comprobanteDAO.listarPorVenta(idVenta).stream()
+                    .anyMatch(c -> c.getTipo() != pe.edu.pucp.sigmeta.model.enums.TipoComprobante.NOTA_CREDITO
+                            && c.getEstado() != pe.edu.pucp.sigmeta.model.enums.EstadoComprobante.ANULADO);
+            if (!tieneComprobante) {
+                throw new IllegalStateException("La venta " + venta.getNumero()
+                        + " todavía no tiene factura ni boleta emitida; emita el comprobante antes de despachar");
+            }
+            if (venta.getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CONTADO
+                    && new pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl()
+                            .numero("sp_venta_contar_cobros_contado", idVenta).signum() == 0) {
+                throw new IllegalStateException("La venta " + venta.getNumero()
+                        + " es al contado y todavía no se cobró en caja; se despacha después del cobro");
+            }
 
             // RF012: cada linea del despacho apunta a una linea de venta concreta (no a un producto),
             // asi una venta con varias lineas del mismo producto se controla linea por linea
@@ -112,21 +127,21 @@ public class DespachoBOImpl implements DespachoBO {
 
             Set<Integer> lineasEnDespacho = new HashSet<>();
             for (DetalleDespacho d : detalles) {
-                Validador.obligatorio(d.getDetalleVenta(), "linea de venta");
+                Validador.obligatorio(d.getDetalleVenta(), "línea de venta");
                 int idLinea = d.getDetalleVenta().getId();
                 if (!lineasEnDespacho.add(idLinea)) {
-                    throw new IllegalArgumentException("No se puede repetir la misma linea de venta en una guia de despacho");
+                    throw new IllegalArgumentException("No se puede repetir la misma línea de venta en una guía de despacho");
                 }
                 DetalleVenta lineaVenta = mapaLineasVenta.get(idLinea);
                 if (lineaVenta == null) {
-                    throw new IllegalArgumentException("La linea " + idLinea + " no pertenece a la venta");
+                    throw new IllegalArgumentException("La línea " + idLinea + " no pertenece a la venta");
                 }
                 double cant = d.getCantidadDespachada();
                 if (!Double.isFinite(cant) || cant <= 0) {
                     throw new IllegalArgumentException("La cantidad a despachar debe ser mayor a 0");
                 }
                 if (lineaVenta.getCantidadDespachada() + cant > lineaVenta.getCantidad() + EPSILON) {
-                    throw new IllegalArgumentException("La cantidad excede lo pendiente de despachar en la linea " + lineaVenta.getNumeroLinea()
+                    throw new IllegalArgumentException("La cantidad excede lo pendiente de despachar en la línea " + lineaVenta.getNumeroLinea()
                             + " (Vendido: " + lineaVenta.getCantidad() + ", Despachado: " + lineaVenta.getCantidadDespachada() + ", Solicitado: " + cant + ")");
                 }
                 d.setDetalleVenta(lineaVenta);
@@ -141,7 +156,7 @@ public class DespachoBOImpl implements DespachoBO {
             if (despacho.getFechaDespacho() == null) {
                 despacho.setFechaDespacho(LocalDate.now());
             }
-            despacho.setDireccionEntrega(Validador.textoOpcional(despacho.getDireccionEntrega(), "direccion de entrega", 200));
+            despacho.setDireccionEntrega(Validador.textoOpcional(despacho.getDireccionEntrega(), "dirección de entrega", 200));
             despacho.setTransportista(Validador.textoOpcional(despacho.getTransportista(), "transportista", 100));
             despacho.setAnulado(false);
             despacho.setUsuarioRegistro(almacenero);
@@ -250,7 +265,7 @@ public class DespachoBOImpl implements DespachoBO {
                 throw new IllegalStateException("No se puede modificar un despacho anulado");
             }
 
-            actual.setDireccionEntrega(Validador.textoOpcional(despacho.getDireccionEntrega(), "direccion de entrega", 200));
+            actual.setDireccionEntrega(Validador.textoOpcional(despacho.getDireccionEntrega(), "dirección de entrega", 200));
             actual.setTransportista(Validador.textoOpcional(despacho.getTransportista(), "transportista", 100));
 
             despachoDAO.update(actual);
@@ -262,7 +277,7 @@ public class DespachoBOImpl implements DespachoBO {
     @Override
     public void anular(int idDespacho, String motivo, int idAlmacenero) throws SQLException {
         usuarioBO.verificarRol(idAlmacenero, TipoRol.ALMACENERO, TipoRol.ADMINISTRADOR);
-        String motivoValidado = Validador.textoObligatorio(motivo, "motivo de anulacion", 255);
+        String motivoValidado = Validador.textoObligatorio(motivo, "motivo de anulación", 255);
 
         Transaccion.ejecutar(() -> {
             Despacho despacho = despachoDAO.load(idDespacho);
@@ -391,8 +406,8 @@ public class DespachoBOImpl implements DespachoBO {
             }
             double quedaEntregado = dv.getCantidadDespachada() - dd.getCantidadDespachada();
             if (quedaEntregado + EPSILON < acreditado.getOrDefault(dv.getId(), 0.0)) {
-                throw new IllegalStateException("No se puede anular el despacho: la linea " + dv.getNumeroLinea()
-                        + " ya tiene devoluciones por nota de credito. Primero anule la nota de credito");
+                throw new IllegalStateException("No se puede anular el despacho: la línea " + dv.getNumeroLinea()
+                        + " ya tiene devoluciones por nota de crédito. Primero anule la nota de crédito");
             }
         }
     }

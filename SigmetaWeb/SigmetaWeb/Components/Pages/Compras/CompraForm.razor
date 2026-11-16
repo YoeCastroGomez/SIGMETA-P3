@@ -377,7 +377,8 @@ else
                 await Api.Post<CompraRest>("compras", pedido);
             else
                 await Api.Put<CompraRest>($"compras/{Id}", pedido);
-            Nav.NavigateTo("/compras");
+            // vuelve a la lista y allí sale el aviso verde (Compras.razor lee "guardado")
+            Nav.NavigateTo(AvisoGuardado.Ruta("/compras", EsNuevo ? AvisoGuardado.Nuevo : AvisoGuardado.Editado, pedido.Numero));
         }
         catch (ErrorApi e) { error = e.Message; }
         finally { guardando = false; }

@@ -6,7 +6,7 @@ namespace SigmetaWeb.Components.Pages.Ventas;
 // (clases CotizacionDatos, OrdenDatos, VentaDatos, ComprobanteDatos y LineaDatos del Java, paquete ws.ventas).
 // Los enums viajan como texto ("REGISTRADA", "CONTADO", "BOLETA"...) y las fechas como AAAA-MM-DD.
 // Los totales, el estado y los numeros correlativos los calcula el BO en el Java; aqui solo se muestran.
-// Los nombres no chocan con los de MuestrasVentas (datos de ejemplo que aun usan Despachos y Notas de credito).
+// Despachos usa DatosAlmacen.cs y las notas de credito DatosNotaCredito.cs.
 
 // Una linea de cotizacion, de orden o de venta
 public class LineaDatos

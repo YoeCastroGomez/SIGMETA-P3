@@ -1,19 +1,49 @@
 @page "/autorizaciones/detalle/{Id:int}"
+@inject ApiJava Api
 
 <PageTitle>Detalle de solicitud · SIGMETA</PageTitle>
 
-@* RF014 · obtener(id). Solicitud ya resuelta: solo lectura. *@
+@* RF014 · GET /api/solicitudes/{id}. Solo lectura. La ve su solicitante o el Administrador. *@
 <Encabezado Rf="RF014" Titulo="Detalle de la solicitud">
-    <a class="btn btn-outline-secondary" href="/autorizaciones">Volver a la lista</a>
+    <a class="btn btn-outline-secondary" href="@Volver">Volver</a>
 </Encabezado>
 
-<div class="card card-body mb-3" style="max-width: 720px;">
-    <DatosSolicitud Solicitud="ejemplo" />
-</div>
+<AvisoError Mensaje="@error" />
+
+@if (solicitud is not null)
+{
+    <div class="card card-body mb-3" style="max-width: 720px;">
+        <DatosSolicitud Solicitud="solicitud" />
+        @if (solicitud.Estado == "VENCIDA")
+        {
+            <div class="alert alert-secondary mb-0">
+                Esta autorización ya no se puede usar: se usó en una operación, se revocó o pasó su vigencia.
+            </div>
+        }
+    </div>
+}
+else if (error is null)
+{
+    <p class="text-muted">Cargando solicitud...</p>
+}
 
 @code {
     [Parameter] public int Id { get; set; }
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
 
-    // Ejemplo fijo de una solicitud aprobada (Lab 9: sin consultas).
-    private readonly SolicitudFila ejemplo = MuestrasSeguridad.Solicitudes[1];
+    private SolicitudDatos? solicitud;
+    private string? error;
+    private string Volver => Rol == "Administrador" ? "/autorizaciones" : "/autorizaciones/mias";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            solicitud = await Api.Get<SolicitudDatos>($"solicitudes/{Id}");
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+    }
 }

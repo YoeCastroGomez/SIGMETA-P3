@@ -88,7 +88,7 @@ public class ClienteRS extends VentanillaBase {
     public Response asignarLineaCredito(@HeaderParam("ticket") String ticket, @PathParam("id") int idCliente,
                                         LineaCredito linea) {
         if (linea == null) {
-            return error(Response.Status.BAD_REQUEST, "Faltan los datos de la linea de credito");
+            return error(Response.Status.BAD_REQUEST, "Faltan los datos de la línea de crédito");
         }
         return ejecutar(ticket, id -> clienteBO.asignarLineaCredito(idCliente, linea.getLimiteCredito(),
                 linea.getPlazoCreditoDias(), linea.getCalificacionCrediticia(), id));

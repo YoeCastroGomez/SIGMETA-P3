@@ -1,57 +1,258 @@
 ﻿@page "/recepciones"
+@inject ApiJava Api
+@using SigmetaWeb.Components.Pages.Almacen
 
-@* RF012 - Compras pendientes de recepción.
-   Solo presentación visual para el Laboratorio 9. *@
+<PageTitle>Recepción de compras · SIGMETA</PageTitle>
 
-<PageTitle>Compras por recibir · SIGMETA</PageTitle>
+@* RF012 · Compras que esperan mercadería y recepciones ya registradas.
+   GET /api/almacen/compras-por-recibir · GET /api/almacen/recepciones · POST /api/almacen/recepciones/{id}/revertir *@
+<Encabezado Rf="RF012" Titulo="Recepción de compras"
+            Subtitulo="Cada recepción ingresa la mercadería al stock y recalcula el costo promedio del producto." />
 
-<Encabezado Rf="RF012"
-            Titulo="Compras por recibir"
-            Subtitulo="Compras con mercadería pendiente de recepción." />
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
+{
+    <div class="alert alert-success">@exito</div>
+}
 
-<div class="card mb-3">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Número</th>
-                    <th>Proveedor</th>
-                    <th>Fecha</th>
-                    <th>Estado</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-            </thead>
+<Confirmacion Visible="@(porRevertir is not null)" Titulo="Revertir recepción" TextoConfirmar="Revertir"
+              AlConfirmar="ConfirmarRevertir" AlCancelar="() => porRevertir = null">
+    <p class="mb-2">Se retirará del stock lo que ingresó con la recepción N.º <strong>@porRevertir?.Id</strong>
+        de la compra <strong>@porRevertir?.Compra</strong>, y la compra volverá a esperar esa mercadería.</p>
+    <Campo Etiqueta="Motivo" Id="motivoRev" Obligatorio="true" Error="@errorMotivo">
+        <textarea id="motivoRev" class="form-control" rows="2" maxlength="255" @bind="motivo" @bind:event="oninput"></textarea>
+    </Campo>
+</Confirmacion>
 
-            <tbody>
-                @foreach (var c in Paginar(MuestrasCompras.Compras.Where(c => c.Estado is "REGISTRADA" or "RECIBIDA_PARCIAL"), paginaActual, tamanoPagina))
-                {
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <button class="nav-link @(pestana == "pendientes" ? "active" : "")" @onclick="@(() => pestana = "pendientes")">
+            Compras por recibir <span class="badge text-bg-secondary ms-1">@(porRecibir?.Count ?? 0)</span>
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(pestana == "registradas" ? "active" : "")" @onclick="@(() => pestana = "registradas")">
+            Recepciones registradas
+        </button>
+    </li>
+</ul>
+
+@if (porRecibir is null || recepciones is null)
+{
+    <p class="text-muted">Cargando...</p>
+}
+else if (pestana == "pendientes")
+{
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
                     <tr>
-                        <td>@c.Numero</td>
-                        <td>@c.Proveedor</td>
-                        <td>@c.Fecha.ToString("yyyy-MM-dd")</td>
-                        <td><Estado Texto="@c.Estado" /></td>
-                        <td class="text-end">
-                            <a class="btn btn-sm btn-primary"
-                               href="/compras/@c.Id/recepcion">
-                                Recibir
-                            </a>
-                        </td>
+                        <th>Compra</th>
+                        <th>Proveedor</th>
+                        <th>Emisión</th>
+                        <th>Llegada estimada</th>
+                        <th>Estado</th>
+                        <th class="text-end">Líneas pendientes</th>
+                        <th class="text-end">Acciones</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @if (porRecibir.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">No hay compras esperando mercadería.</td></tr>
+                    }
+                    @foreach (var c in porRecibir)
+                    {
+                        <tr>
+                            <td><strong>@c.Numero</strong></td>
+                            <td>@c.Proveedor<div class="small text-muted">RUC @c.Ruc</div></td>
+                            <td class="text-nowrap">@Formato.Fecha(c.FechaEmision)</td>
+                            <td class="text-nowrap">@Formato.Fecha(c.FechaRecepcionEstimada)</td>
+                            <td><Estado Texto="@Formato.Legible(c.Estado)" /></td>
+                            <td class="text-end">@c.LineasPendientes de @c.Lineas</td>
+                            <td class="text-end">
+                                @if (EsAlmacenero)
+                                {
+                                    <a class="btn btn-sm btn-primary" href="@($"/compras/{c.Id}/recepcion")">Recibir</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
-        <Paginacion TotalRegistros="@(MuestrasCompras.Compras.Where(c => c.Estado is "REGISTRADA" or "RECIBIDA_PARCIAL").Count())" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
-</div>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>N.º</th>
+                        <th>Compra</th>
+                        <th>Proveedor</th>
+                        <th>Fecha</th>
+                        <th>Registró</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (recepciones.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">Todavía no hay recepciones registradas.</td></tr>
+                    }
+                    @foreach (var r in PaginaRecepciones)
+                    {
+                        <tr>
+                            <td>@r.Id</td>
+                            <td><strong>@r.Compra</strong></td>
+                            <td>@r.Proveedor</td>
+                            <td class="text-nowrap">@Formato.Fecha(r.FechaRecepcion)</td>
+                            <td>@r.Usuario</td>
+                            <td><Estado Texto="@(r.Anulada ? "Revertida" : "Vigente")" /></td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1 text-nowrap">
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => VerDetalle(r)">
+                                        @(detalleDe == r.Id ? "Ocultar" : "Ver detalle")
+                                    </button>
+                                    @if (!r.Anulada && EsAlmacenero)
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirRevertir(r)">Revertir</button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                        @if (detalleDe == r.Id)
+                        {
+                            <tr>
+                                <td colspan="7" class="bg-body-tertiary">
+                                    @if (!string.IsNullOrEmpty(r.Observaciones))
+                                    {
+                                        <div class="small mb-2"><strong>Observaciones:</strong> @r.Observaciones</div>
+                                    }
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr><th>Producto</th><th class="text-end">Recibido</th><th class="text-end">Ingresó al stock</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var l in detalle)
+                                            {
+                                                <tr>
+                                                    <td>@l.CodigoInterno · @l.Producto</td>
+                                                    <td class="text-end">@Formato.Cantidad(l.CantidadRecibida) @TextosAlmacen.Unidad(l.UnidadCompra)</td>
+                                                    <td class="text-end">@Formato.Cantidad(l.CantidadStock) @TextosAlmacen.Unidad(l.UnidadVenta)</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+        <Paginacion TotalRegistros="@recepciones.Count" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
+    </div>
+}
 
 @code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
+    private bool EsAlmacenero => Rol == "Almacenero";
+
+    [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
+    [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
+
+    private List<CompraPorRecibir>? porRecibir;
+    private List<RecepcionFila>? recepciones;
+    private List<RecepcionLinea> detalle = new();
+    private int? detalleDe;
+    private string pestana = "pendientes";
+    private RecepcionFila? porRevertir;
+    private string motivo = "";
+    private string? errorMotivo;
+    private string? error;
+    private string? exito;
     private int paginaActual = 1;
     private int tamanoPagina = 10;
-    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+
+    private IEnumerable<RecepcionFila> PaginaRecepciones => tamanoPagina == 0 ? recepciones!
+        : recepciones!.Skip((Math.Max(paginaActual, 1) - 1) * tamanoPagina).Take(tamanoPagina);
+
+    protected override async Task OnInitializedAsync()
     {
-        if (tamano == 0) return registros;
-        int total = registros.Count();
-        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
-        return registros.Skip((segura - 1) * tamano).Take(tamano);
+        await Cargar();
+        if (Guardado == AvisoGuardado.Nuevo)
+        {
+            exito = $"Se registró la recepción de la compra {Referencia}. El stock y el costo promedio ya están actualizados.";
+            pestana = "registradas";
+        }
+    }
+
+    private async Task Cargar()
+    {
+        try
+        {
+            porRecibir = await Api.Get<List<CompraPorRecibir>>("almacen/compras-por-recibir") ?? new();
+            recepciones = await Api.Get<List<RecepcionFila>>("almacen/recepciones") ?? new();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+            porRecibir ??= new();
+            recepciones ??= new();
+        }
+    }
+
+    private async Task VerDetalle(RecepcionFila r)
+    {
+        if (detalleDe == r.Id)
+        {
+            detalleDe = null;
+            return;
+        }
+        try
+        {
+            detalle = await Api.Get<List<RecepcionLinea>>($"almacen/recepciones/{r.Id}/lineas") ?? new();
+            detalleDe = r.Id;
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+    }
+
+    private void PedirRevertir(RecepcionFila r)
+    {
+        error = exito = errorMotivo = null;
+        motivo = "";
+        porRevertir = r;
+    }
+
+    private async Task ConfirmarRevertir()
+    {
+        if (string.IsNullOrWhiteSpace(motivo))
+        {
+            errorMotivo = "El motivo es obligatorio.";
+            return;
+        }
+        var r = porRevertir;
+        porRevertir = null;
+        if (r is null) return;
+        try
+        {
+            await Api.Post<object>($"almacen/recepciones/{r.Id}/revertir", new { motivo = motivo.Trim() });
+            detalleDe = null;
+            await Cargar();
+            exito = $"Se revirtió la recepción N.º {r.Id} de la compra {r.Compra}.";
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "Stock insuficiente para revertir la recepción"
+        }
     }
 }

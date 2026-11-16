@@ -91,4 +91,11 @@ public class CategoriaRS extends VentanillaBase {
             return null; // 204 sin cuerpo
         });
     }
+
+    // POST /api/categorias/4/activar: vuelve a activar una categoria desactivada (solo el Administrador)
+    @POST
+    @Path("{id}/activar")
+    public Response activar(@HeaderParam("ticket") String ticket, @PathParam("id") int idCategoria) {
+        return ejecutar(ticket, id -> categoriaBO.activar(idCategoria, id));
+    }
 }

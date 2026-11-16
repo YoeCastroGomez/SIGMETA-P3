@@ -4,6 +4,7 @@ import pe.edu.pucp.sigmeta.boimpl.Transaccion;
 import pe.edu.pucp.sigmeta.bo.socio.ClienteBO;
 import pe.edu.pucp.sigmeta.bo.usuario.UsuarioBO;
 import pe.edu.pucp.sigmeta.boimpl.Validador;
+import pe.edu.pucp.sigmeta.boimpl.producto.TextoNormalizado;
 import pe.edu.pucp.sigmeta.boimpl.usuario.UsuarioBOImpl;
 import pe.edu.pucp.sigmeta.dao.socio.ClienteDAO;
 import pe.edu.pucp.sigmeta.daoimpl.socio.ClienteDAOImpl;
@@ -89,7 +90,7 @@ public class ClienteBOImpl implements ClienteBO {
     public Cliente buscarPorDocumento(String numeroDocumento) throws SQLException {
         return Transaccion.ejecutar(() -> {
             return clienteDAO.buscarPorDocumento(
-                    Validador.textoObligatorio(numeroDocumento, "numero de documento", 20));
+                    Validador.textoObligatorio(numeroDocumento, "número de documento", 20));
         });
     }
 
@@ -98,7 +99,7 @@ public class ClienteBOImpl implements ClienteBO {
     public List<Cliente> buscarPorRazonSocial(String razonSocial) throws SQLException {
         return Transaccion.ejecutar(() -> {
             return clienteDAO.buscarPorRazonSocial(
-                    Validador.textoObligatorio(razonSocial, "razon social", 150));
+                    Validador.textoObligatorio(razonSocial, "razón social", 150));
         });
     }
 
@@ -116,8 +117,8 @@ public class ClienteBOImpl implements ClienteBO {
     // sobre ese resultado.
     @Override
     public List<Cliente> buscar(String documento, String razonSocial, Boolean estado) throws SQLException {
-        String numero = Validador.textoOpcional(documento, "numero de documento", 20);
-        String texto = Validador.textoOpcional(razonSocial, "razon social", 150);
+        String numero = Validador.textoOpcional(documento, "número de documento", 20);
+        String texto = Validador.textoOpcional(razonSocial, "razón social", 150);
         return Transaccion.ejecutar(() -> {
             List<Cliente> clientes;
             if (numero != null) {
@@ -130,10 +131,10 @@ public class ClienteBOImpl implements ClienteBO {
             } else {
                 return clienteDAO.listarTodos();
             }
-            String buscado = texto == null ? null : texto.toLowerCase();
+            String buscado = texto == null ? null : TextoNormalizado.clave(texto);
             return clientes.stream()
                     .filter(c -> estado == null || c.isEstado() == estado)
-                    .filter(c -> buscado == null || nombreCompleto(c).toLowerCase().contains(buscado))
+                    .filter(c -> buscado == null || TextoNormalizado.clave(nombreCompleto(c)).contains(buscado))
                     .toList();
         });
     }
@@ -153,19 +154,19 @@ public class ClienteBOImpl implements ClienteBO {
             usuarioBO.obtenerAdministradorActivo(idAdministrador);
             Cliente cliente = obtenerExistente(idCliente);
             if(!cliente.isEstado()){
-                throw new IllegalStateException("No se puede asignar credito a un cliente desactivado");
+                throw new IllegalStateException("No se puede asignar crédito a un cliente desactivado");
             }
             if(limiteCredito == null || limiteCredito.setScale(2, java.math.RoundingMode.HALF_UP).signum() <= 0){
-                throw new IllegalArgumentException("El limite de credito debe ser mayor a 0");
+                throw new IllegalArgumentException("El límite de crédito debe ser mayor a 0");
             }
             if(plazoCreditoDias <= 0){
-                throw new IllegalArgumentException("El plazo de credito debe ser mayor a 0 dias");
+                throw new IllegalArgumentException("El plazo de crédito debe ser mayor a 0 días");
             }
             cliente.setCondicionPago(CondicionPago.CREDITO);
             cliente.setLimiteCredito(limiteCredito);
             cliente.setPlazoCreditoDias(plazoCreditoDias);
             cliente.setCalificacionCrediticia(
-                    Validador.textoOpcional(calificacionCrediticia, "calificacion crediticia", 20));
+                    Validador.textoOpcional(calificacionCrediticia, "calificación crediticia", 20));
             return clienteDAO.update(cliente);
         });
     }
@@ -204,17 +205,18 @@ public class ClienteBOImpl implements ClienteBO {
         cliente.setNumeroDocumento(Validador.numeroDocumento(cliente.getTipoDocumento(), cliente.getNumeroDocumento()));
         if (cliente.esEmpresa()) {
             // una empresa se identifica por su razon social, que es unica
-            cliente.setRazonSocial(Validador.textoObligatorio(cliente.getRazonSocial(), "razon social", 150));
+            cliente.setRazonSocial(TextoNormalizado.nombre(
+                    Validador.textoObligatorio(cliente.getRazonSocial(), "razón social", 150)));
             cliente.setNombres(null);
             cliente.setApellidos(null);
         } else {
             // una persona natural no tiene razon social: nombres y apellidos
-            cliente.setNombres(Validador.textoObligatorio(cliente.getNombres(), "nombres", 100));
-            cliente.setApellidos(Validador.textoObligatorio(cliente.getApellidos(), "apellidos", 100));
+            cliente.setNombres(TextoNormalizado.nombre(Validador.textoObligatorio(cliente.getNombres(), "nombres", 100)));
+            cliente.setApellidos(TextoNormalizado.nombre(Validador.textoObligatorio(cliente.getApellidos(), "apellidos", 100)));
             cliente.setRazonSocial(null);
         }
         Validador.obligatorio(cliente.getContacto(), "datos de contacto");
-        cliente.getContacto().setDireccion(Validador.textoOpcional(cliente.getContacto().getDireccion(), "direccion", 200));
+        cliente.getContacto().setDireccion(Validador.textoOpcional(cliente.getContacto().getDireccion(), "dirección", 200));
         cliente.getContacto().setTelefono(Validador.telefono(cliente.getContacto().getTelefono()));
         cliente.getContacto().setCorreo(Validador.correo(cliente.getContacto().getCorreo()));
         cliente.getContacto().setNombreContacto(Validador.textoOpcional(cliente.getContacto().getNombreContacto(), "contacto", 100));
@@ -225,9 +227,11 @@ public class ClienteBOImpl implements ClienteBO {
         if (!cliente.esEmpresa()) {
             return;
         }
+        // se compara por clave: "Constructora Perú" y "CONSTRUCTORA PERU" son el mismo cliente
+        String nueva = TextoNormalizado.clave(cliente.getRazonSocial());
         for (Cliente otro : clienteDAO.buscarPorRazonSocial(cliente.getRazonSocial())) {
-            if (otro.getId() != cliente.getId() && cliente.getRazonSocial().equalsIgnoreCase(otro.getRazonSocial())) {
-                throw new IllegalArgumentException("Ya existe un cliente con la razon social " + cliente.getRazonSocial());
+            if (otro.getId() != cliente.getId() && nueva.equals(TextoNormalizado.clave(otro.getRazonSocial()))) {
+                throw new IllegalArgumentException("Ya existe un cliente con la razón social " + cliente.getRazonSocial());
             }
         }
     }

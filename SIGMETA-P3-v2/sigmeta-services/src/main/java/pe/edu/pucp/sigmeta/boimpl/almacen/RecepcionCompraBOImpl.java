@@ -56,13 +56,40 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
         this.usuarioBO = new UsuarioBOImpl();
     }
 
+    // Metodo de costeo: PROMEDIO PONDERADO. Cada ingreso por compra recalcula el costo unitario del
+    // producto (en unidad de venta, sin IGV):
+    //   costo nuevo = (stock anterior x costo anterior + cantidad que ingresa x costo de la compra)
+    //                 / (stock anterior + cantidad que ingresa)
+    // El costo de la compra es el importe neto de la linea (ya con su descuento) entre lo comprado,
+    // llevado a unidad de venta con el factor de conversion. Si no habia stock, queda el costo de la compra.
+    // Revertir una recepcion devuelve las unidades pero no recalcula el promedio (criterio conservador).
+    private void actualizarCostoPromedio(int idProducto, double stockAnterior, double cantidadStock,
+                                         DetalleCompra linea) throws SQLException {
+        if (linea.getCantidad() <= 0 || linea.getFactorConversion() <= 0) {
+            return;
+        }
+        Producto producto = new pe.edu.pucp.sigmeta.daoimpl.producto.ProductoDAOImpl().load(idProducto);
+        if (producto == null) {
+            return;
+        }
+        java.math.BigDecimal costoCompra = java.math.BigDecimal.valueOf(linea.getImporte())
+                .divide(java.math.BigDecimal.valueOf(linea.getCantidad() * linea.getFactorConversion()),
+                        6, java.math.RoundingMode.HALF_UP);
+        java.math.BigDecimal anterior = java.math.BigDecimal.valueOf(Math.max(stockAnterior, 0));
+        java.math.BigDecimal ingreso = java.math.BigDecimal.valueOf(cantidadStock);
+        java.math.BigDecimal costoNuevo = anterior.multiply(java.math.BigDecimal.valueOf(producto.getCostoUnitario()))
+                .add(ingreso.multiply(costoCompra))
+                .divide(anterior.add(ingreso), 2, java.math.RoundingMode.HALF_UP);
+        new pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl().ejecutar("sp_producto_actualizar_costo", idProducto, costoNuevo);
+    }
+
     @Override
     public RecepcionCompra registrar(RecepcionCompra recepcion) throws SQLException {
         validarRecepcion(recepcion);
         usuarioBO.verificarRol(recepcion.getUsuarioRegistro().getId(), TipoRol.ALMACENERO);
         List<DetalleRecepcionCompra> detalles = recepcion.getDetalles();
         if (detalles == null || detalles.isEmpty()) {
-            throw new IllegalArgumentException("La recepcion debe tener al menos un detalle");
+            throw new IllegalArgumentException("La recepción debe tener al menos un detalle");
         }
 
         return Transaccion.ejecutar(() -> {
@@ -87,11 +114,11 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
 
             Set<Integer> idsRecibidos = new HashSet<>();
             for (DetalleRecepcionCompra detalle : detalles) {
-                Validador.obligatorio(detalle, "detalle de recepcion");
+                Validador.obligatorio(detalle, "detalle de recepción");
                 Validador.obligatorio(detalle.getDetalleCompra(), "detalle de compra");
                 int idLinea = detalle.getDetalleCompra().getId();
                 if (!idsRecibidos.add(idLinea)) {
-                    throw new IllegalArgumentException("Un detalle de compra no puede repetirse en una recepcion");
+                    throw new IllegalArgumentException("Un detalle de compra no puede repetirse en una recepción");
                 }
                 DetalleCompra linea = lineas.get(idLinea);
                 if (linea == null) {
@@ -102,10 +129,10 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
                     throw new IllegalArgumentException("La cantidad recibida debe ser positiva");
                 }
                 if (cantidad + linea.getCantidadRecibida() > linea.getCantidad() + EPSILON) {
-                    throw new IllegalArgumentException("La recepcion excede la cantidad pendiente de la linea " + linea.getNumeroLinea());
+                    throw new IllegalArgumentException("La recepción excede la cantidad pendiente de la línea " + linea.getNumeroLinea());
                 }
                 if (!Double.isFinite(linea.getFactorConversion()) || linea.getFactorConversion() <= 0) {
-                    throw new IllegalArgumentException("El factor de conversion debe ser positivo");
+                    throw new IllegalArgumentException("El factor de conversión debe ser positivo");
                 }
             }
 
@@ -122,11 +149,12 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
                 // La cantidad recibida esta en unidad de compra; el stock se lleva en unidad de venta.
                 double cantidadStock = detalle.getCantidadRecibida() * linea.getFactorConversion();
                 if (!Double.isFinite(cantidadStock) || cantidadStock <= 0) {
-                    throw new IllegalArgumentException("La cantidad convertida no es valida");
+                    throw new IllegalArgumentException("La cantidad convertida no es válida");
                 }
                 int idProducto = linea.getProducto().getId();
                 double stockAnterior = stockDAO.obtenerStockParaActualizar(idProducto);
                 double nuevoStock = stockAnterior + cantidadStock;
+                actualizarCostoPromedio(idProducto, stockAnterior, cantidadStock, linea);
                 stockDAO.actualizarStock(idProducto, nuevoStock);
 
                 MovimientoInventario movimiento = new MovimientoInventario();
@@ -138,7 +166,7 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
                 movimiento.setStockResultante(nuevoStock);
                 movimiento.setRecepcionCompra(recepcion);
                 movimiento.setUsuarioRegistro(recepcion.getUsuarioRegistro());
-                movimiento.setMotivo("Ingreso por recepcion de compra");
+                movimiento.setMotivo("Ingreso por recepción de compra");
                 movimientoDAO.save(movimiento);
             }
 
@@ -164,19 +192,19 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
         return Transaccion.ejecutar(() -> {
             RecepcionCompra existente = recepcionDAO.load(recepcion.getId());
             if (existente == null) {
-                throw new IllegalArgumentException("No existe la recepcion con ID " + recepcion.getId());
+                throw new IllegalArgumentException("No existe la recepción con ID " + recepcion.getId());
             }
             if (existente.isAnulada()) {
-                throw new IllegalStateException("No se puede modificar una recepcion anulada");
+                throw new IllegalStateException("No se puede modificar una recepción anulada");
             }
             if (existente.getUsuarioRegistro().getId() != recepcion.getUsuarioRegistro().getId()) {
-                throw new IllegalArgumentException("No se puede cambiar el usuario que registro la recepcion");
+                throw new IllegalArgumentException("No se puede cambiar el usuario que registró la recepción");
             }
             if (!existente.getFechaRecepcion().equals(recepcion.getFechaRecepcion())) {
-                throw new IllegalArgumentException("La fecha historica de recepcion no puede modificarse");
+                throw new IllegalArgumentException("La fecha histórica de recepción no puede modificarse");
             }
             if (existente.getCompra().getId() != recepcion.getCompra().getId()) {
-                throw new IllegalArgumentException("No se puede cambiar la compra de una recepcion");
+                throw new IllegalArgumentException("No se puede cambiar la compra de una recepción");
             }
             // La fecha permanece inalterada; se permite corregir solo las observaciones.
             recepcionDAO.update(recepcion);
@@ -200,10 +228,10 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
     }
 
     private void validarRecepcion(RecepcionCompra recepcion) {
-        Validador.obligatorio(recepcion, "recepcion");
+        Validador.obligatorio(recepcion, "recepción");
         Validador.obligatorio(recepcion.getCompra(), "compra");
         Validador.obligatorio(recepcion.getUsuarioRegistro(), "usuario de registro");
-        Validador.obligatorio(recepcion.getFechaRecepcion(), "fecha de recepcion");
+        Validador.obligatorio(recepcion.getFechaRecepcion(), "fecha de recepción");
         validarId(recepcion.getCompra().getId());
         validarId(recepcion.getUsuarioRegistro().getId());
         recepcion.setObservaciones(

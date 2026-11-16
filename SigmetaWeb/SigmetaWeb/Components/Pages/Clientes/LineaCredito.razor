@@ -149,8 +149,8 @@ else
         }
         try
         {
-            await Api.Put<Cliente>($"clientes/{Id}/linea-credito", linea);
-            Nav.NavigateTo("/clientes");
+            var conLinea = await Api.Put<Cliente>($"clientes/{Id}/linea-credito", linea);
+            Nav.NavigateTo(AvisoGuardado.Ruta("/clientes", "linea", conLinea?.NombreMostrado ?? cliente?.NombreMostrado));
         }
         catch (ErrorApi e)
         {
@@ -164,8 +164,8 @@ else
         error = null;
         try
         {
-            await Api.Delete<Cliente>($"clientes/{Id}/linea-credito");
-            Nav.NavigateTo("/clientes");
+            var sinLinea = await Api.Delete<Cliente>($"clientes/{Id}/linea-credito");
+            Nav.NavigateTo(AvisoGuardado.Ruta("/clientes", "sinlinea", sinLinea?.NombreMostrado ?? cliente?.NombreMostrado));
         }
         catch (ErrorApi e)
         {

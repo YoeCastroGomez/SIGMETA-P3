@@ -1,61 +1,126 @@
 @page "/autorizaciones/mias"
+@inject ApiJava Api
 
 <PageTitle>Mis solicitudes · SIGMETA</PageTitle>
 
-@* RF014 · Mis solicitudes, vista del solicitante. Datos de ejemplo fijos por rol. Solo visual (Lab 9). *@
+@* RF014 · Solicitudes del usuario conectado. GET /api/solicitudes/mias · POST /api/solicitudes/{id}/anular. *@
 <Encabezado Rf="RF014" Titulo="Mis solicitudes de autorización"
-            Subtitulo="Operaciones restringidas que pediste al Administrador.">
+            Subtitulo="Operaciones restringidas que pediste al Administrador. Una autorización aprobada sirve para una sola operación.">
     <a class="btn btn-primary" href="/autorizaciones/nueva">Nueva solicitud</a>
 </Encabezado>
 
-<div class="card mb-3">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Operación</th>
-                    <th>Motivo</th>
-                    <th>Fecha</th>
-                    <th>Estado</th>
-                    <th>Vence</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var s in Paginar(MuestrasSeguridad.MisSolicitudes.GetValueOrDefault(Rol, Array.Empty<SolicitudFila>()), paginaActual, tamanoPagina))
-                {
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
+{
+    <div class="alert alert-success">@exito</div>
+}
+
+<Confirmacion Visible="@(porAnular is not null)" Titulo="Anular solicitud" TextoConfirmar="Anular"
+              AlConfirmar="ConfirmarAnular" AlCancelar="() => porAnular = null">
+    <p class="mb-0">¿Seguro que ya no necesita la autorización para
+        <strong>@TextosSeguridad.Texto(porAnular?.Operacion)</strong>?</p>
+</Confirmacion>
+
+@if (solicitudes is null)
+{
+    <p class="text-muted">Cargando solicitudes...</p>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
                     <tr>
-                        <td>@s.OperacionRestringida</td>
-                        <td>@s.Motivo</td>
-                        <td>@s.FechaSolicitud</td>
-                        <td><Estado Texto="@MuestrasSeguridad.Texto(s.Estado)" /></td>
-                        <td>@(s.FechaVencimiento ?? "—")</td>
-                        <td class="text-end">
-                            <div class="d-inline-flex gap-1 text-nowrap">
-                                @if (s.Estado == "PENDIENTE" || s.Estado == "APROBADA")
-                                {
-                                    <button class="btn btn-sm btn-outline-danger">Anular</button>
-                                }
-                            </div>
-                        </td>
+                        <th>Operación</th>
+                        <th>Motivo</th>
+                        <th>Fecha</th>
+                        <th>Estado</th>
+                        <th>Vence</th>
+                        <th class="text-end">Acciones</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @if (solicitudes.Count == 0)
+                    {
+                        <tr><td colspan="6" class="text-center text-muted py-4">Todavía no has pedido ninguna autorización.</td></tr>
+                    }
+                    @foreach (var s in Pagina)
+                    {
+                        <tr>
+                            <td>@TextosSeguridad.Texto(s.Operacion)</td>
+                            <td style="max-width: 340px;">@s.Motivo</td>
+                            <td class="text-nowrap">@Formato.FechaHora(s.FechaSolicitud)</td>
+                            <td><Estado Texto="@TextosSeguridad.Texto(s.Estado)" /></td>
+                            <td class="text-nowrap">@(s.VigenciaMinutos > 0 ? Formato.FechaHora(s.FechaVencimiento) : "—")</td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1 text-nowrap">
+                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/autorizaciones/detalle/{s.Id}")">Ver</a>
+                                    @if (s.Estado == "PENDIENTE" || s.Vigente)
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => { error = exito = null; porAnular = s; }">Anular</button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <Paginacion TotalRegistros="@solicitudes.Count" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
-        <Paginacion TotalRegistros="@(MuestrasSeguridad.MisSolicitudes.GetValueOrDefault(Rol, Array.Empty<SolicitudFila>()).Count())" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
-</div>
+}
 
 @code {
+    private List<SolicitudDatos>? solicitudes;
+    private SolicitudDatos? porAnular;
+    private string? error;
+    private string? exito;
     private int paginaActual = 1;
     private int tamanoPagina = 10;
-    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+
+    [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
+    [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
+
+    private IEnumerable<SolicitudDatos> Pagina => tamanoPagina == 0 ? solicitudes!
+        : solicitudes!.Skip((Math.Max(paginaActual, 1) - 1) * tamanoPagina).Take(tamanoPagina);
+
+    protected override async Task OnInitializedAsync()
     {
-        if (tamano == 0) return registros;
-        int total = registros.Count();
-        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
-        return registros.Skip((segura - 1) * tamano).Take(tamano);
+        await Cargar();
+        if (Guardado == AvisoGuardado.Nuevo)
+        {
+            exito = $"Se registró la solicitud de {TextosSeguridad.Texto(Referencia).ToLower()}. El Administrador debe aprobarla.";
+        }
     }
 
-    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Vendedor";
+    private async Task Cargar()
+    {
+        try
+        {
+            solicitudes = await Api.Get<List<SolicitudDatos>>("solicitudes/mias") ?? new();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+            solicitudes ??= new();
+        }
+    }
+
+    private async Task ConfirmarAnular()
+    {
+        var s = porAnular;
+        porAnular = null;
+        if (s is null) return;
+        try
+        {
+            await Api.Post<object>($"solicitudes/{s.Id}/anular", null);
+            await Cargar();
+            exito = $"Se anuló la solicitud de {TextosSeguridad.Texto(s.Operacion).ToLower()}.";
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+    }
 }

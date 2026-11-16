@@ -45,17 +45,17 @@
             <h2 class="h6 fw-semibold mb-3">@(formulario.Id == 0 ? "Nueva categoría" : "Editar categoría")</h2>
             <div class="row">
                 <div class="col-md-6">
-                    @* El BO guarda el nombre en MAYUSCULAS y sin tildes ("Látex" -> "LATEX"); aquí solo se muestra así al escribir *@
+                    @* El BO guarda el nombre como se escribe y lo compara sin mayúsculas ni tildes ("Látex" = "LATEX") para no repetirlo *@
                     <Campo Etiqueta="Nombre" Id="nombre" Obligatorio="true" Error="@ErrorNombre"
-                           Ayuda="Se guarda en mayúsculas y sin tildes. No puede repetirse.">
+                           Ayuda="Se guarda como lo escribes. No puede repetirse (no se distinguen mayúsculas ni tildes).">
                         <InputText id="nombre" class="@(ErrorNombre is null ? "form-control" : "form-control is-invalid")"
-                                   maxlength="100" style="text-transform: uppercase"
+                                   maxlength="100"
                                    @bind-Value="formulario.Nombre" @oninput="e => nombreEscrito = e.Value?.ToString()" />
                     </Campo>
                 </div>
                 <div class="col-md-6">
                     <Campo Etiqueta="Descripción" Id="descripcion">
-                        <InputText id="descripcion" class="form-control" maxlength="255" style="text-transform: uppercase"
+                        <InputText id="descripcion" class="form-control" maxlength="255"
                                    @bind-Value="formulario.Descripcion" />
                     </Campo>
                 </div>
@@ -123,13 +123,16 @@ else
                             <td>@(string.IsNullOrWhiteSpace(c.Descripcion) ? "—" : c.Descripcion)</td>
                             <td><Estado Texto="@(c.Activo ? "Activo" : "Inactivo")" /></td>
                             <td class="text-end">
-                                @* RF006: Editar se muestra siempre, también en las desactivadas, para que salga el mensaje
-                                   del BO "No se puede modificar una categoria desactivada". Desactivar solo en las activas. *@
+                                @* RF006: una categoría desactivada también se puede editar y volver a activar *@
                                 <div class="d-inline-flex gap-1 text-nowrap">
                                     <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(c)">Editar</button>
                                     @if (c.Activo)
                                     {
                                         <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirDesactivar(c)">Desactivar</button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-success" @onclick="() => Activar(c)">Activar</button>
                                     }
                                 </div>
 
@@ -266,7 +269,7 @@ else
         guardando = true;
         try
         {
-            // el BO preprocesa los textos (MAYUSCULAS y sin tildes) y devuelve la categoria ya guardada
+            // el BO preprocesa los textos (sin espacios de más) y devuelve la categoria ya guardada
             var nueva = formulario!.Id == 0;
             var guardada = nueva
                 ? await Api.Post<Categoria>("categorias", formulario)
@@ -280,10 +283,10 @@ else
         {
             error = e.Message;   // por ejemplo "Ya existe la categoria Herramientas" o "El rol VENDEDOR no tiene permiso..."
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // cualquier otro error (por ejemplo al leer la respuesta del Java) también sale en el aviso rojo
-            error = "Error inesperado: " + e.Message;
+            error = "No se pudo guardar la categoría. Inténtalo otra vez; si el problema continúa, avisa al Administrador.";
         }
         finally
         {
@@ -305,6 +308,27 @@ else
         }
     }
 
+    // POST /api/categorias/{id}/activar: vuelve a activar una categoría desactivada.
+    private async Task Activar(Categoria c)
+    {
+        error = exito = null;
+        try
+        {
+            await Api.Post<Categoria>($"categorias/{c.Id}/activar", null);
+            await Buscar();
+            exito = $"Se activó la categoría {c.Nombre}.";
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        catch (Exception)
+        {
+            error = "No se pudo completar la operación. Inténtalo otra vez; si el problema continúa, avisa al Administrador.";
+        }
+        await SubirAlAviso();
+    }
+
     // DELETE /api/categorias/{id}: baja lógica. Si tiene productos activos el BO responde
     // "La categoria tiene productos activos; reasignelos o desactivelos primero".
     private async Task Desactivar(Categoria c)
@@ -320,9 +344,9 @@ else
         {
             error = e.Message;
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            error = "Error inesperado: " + e.Message;
+            error = "No se pudo completar la operación. Inténtalo otra vez; si el problema continúa, avisa al Administrador.";
         }
         await SubirAlAviso();   // el botón Desactivar está en la tabla y el aviso arriba
     }

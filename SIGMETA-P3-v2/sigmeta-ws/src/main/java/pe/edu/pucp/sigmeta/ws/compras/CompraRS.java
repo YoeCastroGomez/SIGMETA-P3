@@ -135,7 +135,7 @@ public class CompraRS extends VentanillaBase {
         List<DetalleCompra> lineas = new ArrayList<>();
         if (s.detalles != null) {
             for (Linea linea : s.detalles) {
-                if (linea == null) throw new IllegalArgumentException("Detalle de compra invalido");
+                if (linea == null) throw new IllegalArgumentException("Detalle de compra inválido");
                 DetalleCompra detalle = new DetalleCompra();
                 detalle.setNumeroLinea(linea.numeroLinea);
                 Producto producto = new Producto();

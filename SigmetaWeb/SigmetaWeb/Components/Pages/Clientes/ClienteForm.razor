@@ -272,7 +272,8 @@ else
             {
                 await Api.Put<Cliente>($"clientes/{Id}", cliente);    // PUT /api/clientes/{Id}
             }
-            Nav.NavigateTo("/clientes");
+            // vuelve a la lista y allí sale el aviso verde (Clientes.razor lee "guardado")
+            Nav.NavigateTo(AvisoGuardado.Ruta("/clientes", EsNuevo ? AvisoGuardado.Nuevo : AvisoGuardado.Editado, cliente.NombreMostrado));
         }
         catch (ErrorApi e)
         {

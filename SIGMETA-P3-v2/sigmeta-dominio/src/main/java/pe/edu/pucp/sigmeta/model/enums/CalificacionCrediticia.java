@@ -6,6 +6,6 @@ public enum CalificacionCrediticia {
     public static CalificacionCrediticia desdeTexto(String texto) {
         if (texto == null || texto.isBlank() || texto.trim().equalsIgnoreCase("SIN LINEA")) return SIN_EVALUAR;
         try { return valueOf(texto.trim().toUpperCase(java.util.Locale.ROOT)); }
-        catch (IllegalArgumentException e) { throw new IllegalArgumentException("Calificacion permitida: A, B, C o SIN_EVALUAR"); }
+        catch (IllegalArgumentException e) { throw new IllegalArgumentException("Calificación permitida: A, B, C o SIN_EVALUAR"); }
     }
 }

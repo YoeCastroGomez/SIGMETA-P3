@@ -52,7 +52,7 @@ public class CuentaPorCobrarBOImpl implements CuentaPorCobrarBO {
             Validador.obligatorio(cxc.getCliente(), "cliente");
             pe.edu.pucp.sigmeta.model.ventas.Venta venta = new pe.edu.pucp.sigmeta.daoimpl.ventas.VentaDAOImpl().load(cxc.getVenta().getId());
             if (venta == null || venta.isAnulado() || venta.getCondicionPago() != pe.edu.pucp.sigmeta.model.enums.CondicionPago.CREDITO) {
-                throw new IllegalArgumentException("La cuenta exige una venta al credito vigente");
+                throw new IllegalArgumentException("La cuenta exige una venta al crédito vigente");
             }
             if (cxc.getCliente().getId() != venta.getCliente().getId()) throw new IllegalArgumentException("El cliente no corresponde a la venta");
             if (cuentaPorCobrarDAO.obtenerPorVenta(venta.getId()) != null) throw new IllegalStateException("La venta ya tiene cuenta por cobrar");
@@ -258,7 +258,7 @@ public class CuentaPorCobrarBOImpl implements CuentaPorCobrarBO {
     private void validarVencimiento(CuentaPorCobrar cxc) {
         Validador.obligatorio(cxc.getFechaVencimiento(), "fecha de vencimiento");
         if (cxc.getFechaVencimiento().isBefore(cxc.getFechaEmision())) {
-            throw new IllegalArgumentException("La fecha de vencimiento no puede ser anterior a la fecha de emision");
+            throw new IllegalArgumentException("La fecha de vencimiento no puede ser anterior a la fecha de emisión");
         }
     }
 

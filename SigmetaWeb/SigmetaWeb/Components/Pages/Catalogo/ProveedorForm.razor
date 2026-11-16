@@ -203,7 +203,8 @@ else
                 await Api.Post<Proveedor>("proveedores", proveedor);
             else
                 await Api.Put<Proveedor>($"proveedores/{Id}", proveedor);
-            Nav.NavigateTo("/proveedores");
+            // vuelve a la lista y allí sale el aviso verde (Proveedores.razor lee "guardado")
+            Nav.NavigateTo(AvisoGuardado.Ruta("/proveedores", EsNuevo ? AvisoGuardado.Nuevo : AvisoGuardado.Editado, proveedor.RazonSocial));
         }
         catch (ErrorApi e)
         {

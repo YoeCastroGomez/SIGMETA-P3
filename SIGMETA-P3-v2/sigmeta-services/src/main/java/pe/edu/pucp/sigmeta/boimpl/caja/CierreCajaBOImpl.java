@@ -48,10 +48,10 @@ public class CierreCajaBOImpl implements CierreCajaBO {
                 throw new IllegalArgumentException("No existe la caja con id " + cierreCaja.getCaja().getId());
             }
             if (!caja.isAbierta()) {
-                throw new IllegalStateException("La caja " + caja.getId() + " ya esta cerrada");
+                throw new IllegalStateException("La caja " + caja.getId() + " ya está cerrada");
             }
             if (caja.getUsuarioApertura() == null || caja.getUsuarioApertura().getId() != idResponsable) {
-                throw new IllegalStateException("Solo el cajero que abrio la caja puede cerrarla");
+                throw new IllegalStateException("Solo el cajero que abrió la caja puede cerrarla");
             }
             double montoCalculado = redondear(cierreCajaDAO.calcularMontoEsperado(caja.getId()));
             cierreCaja.setCaja(caja);

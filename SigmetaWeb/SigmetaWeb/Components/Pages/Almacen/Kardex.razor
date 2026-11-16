@@ -1,186 +1,207 @@
 ﻿@page "/almacen/kardex"
 @page "/almacen/kardex/{Id:int}"
-@using SigmetaWeb.Components.Pages.Catalogo
-@using SigmetaWeb.Components.Pages.Compras
-
-@* RF012 - Kardex de inventario.
-   Solo presentación visual para el Laboratorio 9. Usa los productos del Catálogo
-   (mismos códigos y existencias) y los movimientos de MuestrasCompras. *@
+@inject ApiJava Api
+@inject NavigationManager Nav
 
 <PageTitle>Kardex · SIGMETA</PageTitle>
 
-<Encabezado Rf="RF012"
-            Titulo="Kardex de inventario"
-            Subtitulo="Consulta de movimientos y stock por producto." />
+@* RF012 · Kardex de un producto: cada entrada y salida con el saldo que dejó. Consulta de los cuatro roles.
+   GET /api/almacen/existencias · GET /api/almacen/kardex?producto=&desde=&hasta= *@
+<Encabezado Rf="RF012" Titulo="Kardex"
+            Subtitulo="Historial de entradas y salidas de un producto. El stock solo cambia con estos movimientos." />
 
-@if (Id is null)
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+
+<div class="card card-body mb-3">
+    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
+        <Campo Etiqueta="Producto" Id="fProducto" Clase="col-md-6">
+            <select id="fProducto" class="form-select" @bind="idProducto" @bind:after="AlElegir">
+                <option value="0">Elige un producto</option>
+                @foreach (var p in existencias)
+                {
+                    <option value="@p.Id">@p.CodigoInterno · @p.Nombre</option>
+                }
+            </select>
+        </Campo>
+        <Campo Etiqueta="Desde" Id="fDesde" Clase="col-sm-6 col-md-2">
+            <input id="fDesde" type="date" class="form-control" @bind="desde" />
+        </Campo>
+        <Campo Etiqueta="Hasta" Id="fHasta" Clase="col-sm-6 col-md-2">
+            <input id="fHasta" type="date" class="form-control" @bind="hasta" />
+        </Campo>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-dark" disabled="@(cargando || idProducto == 0)">Buscar</button>
+        </div>
+    </form>
+</div>
+
+@if (Producto is not null)
 {
-    @* Primera vista: seleccionar producto *@
-
-    <div class="card card-body mb-3">
-        <h2 class="h6 fw-semibold mb-3">
-            Buscar producto
-        </h2>
-
-        <div class="row g-3 align-items-end sigmeta-filtros">
-            <Campo Etiqueta="Código o nombre"
-                   Id="buscarProducto"
-                   Clase="col-sm-6 col-md-6">
-                <input id="buscarProducto"
-                       class="form-control"
-                       placeholder="Buscar producto"
-                       @bind="filtro" @bind:event="oninput" />
-            </Campo>
-
-            <div class="col-auto">
-                <button class="btn btn-dark" @onclick="Buscar">
-                    Buscar
-                </button>
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-lg">
+            <div class="card card-body h-100">
+                <div class="small text-muted text-uppercase">En almacén</div>
+                <div class="h4 fw-bold mb-0">@Formato.Cantidad(Producto.StockActual) <span class="small text-muted fw-normal">@TextosAlmacen.Unidad(Producto.UnidadVenta)</span></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card card-body h-100">
+                <div class="small text-muted text-uppercase">Comprometido</div>
+                <div class="h4 fw-bold mb-0">@Formato.Cantidad(Producto.Comprometido)</div>
+                <div class="small text-muted">vendido sin despachar</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card card-body h-100">
+                <div class="small text-muted text-uppercase">Disponible para vender</div>
+                <div class="h4 fw-bold mb-0 @(Producto.Disponible <= 0 ? "text-danger" : "")">@Formato.Cantidad(Producto.Disponible)</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card card-body h-100">
+                <div class="small text-muted text-uppercase">Stock mínimo</div>
+                <div class="h4 fw-bold mb-0">@Formato.Cantidad(Producto.StockMinimo)</div>
+                <div><Estado Texto="@Producto.Situacion" /></div>
+            </div>
+        </div>
+        <div class="col-12 col-lg">
+            <div class="card card-body h-100">
+                <div class="small text-muted text-uppercase">Costo promedio</div>
+                <div class="h4 fw-bold mb-0">@Formato.Soles(Producto.CostoUnitario)</div>
+                <div class="small text-muted">valor en almacén @Formato.Soles(Producto.StockActual * Producto.CostoUnitario)</div>
             </div>
         </div>
     </div>
+}
 
-    <div class="card mb-3">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Código</th>
-                        <th>Producto</th>
-                        <th>Stock actual</th>
-                        <th class="text-end">Acciones</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach (var p in Paginar(resultado, paginaActual1, tamanoPagina1))
-                    {
-                        <tr>
-                            <td>@p.CodigoInterno</td>
-                            <td>@p.Nombre</td>
-                            <td>@p.StockActual.ToString("0.###")</td>
-                            <td class="text-end">
-                                <a class="btn btn-sm btn-outline-secondary"
-                                   href="/almacen/kardex/@p.Id">
-                                    Ver Kardex
-                                </a>
-                            </td>
-                        </tr>
-                    }
-                    @if (resultado.Count == 0)
-                    {
-                        <tr>
-                            <td colspan="4" class="text-center text-muted py-4">
-                                No hay productos que coincidan con la búsqueda.
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-        <Paginacion TotalRegistros="@(resultado.Count())" @bind-PaginaActual="paginaActual1" @bind-TamanoPagina="tamanoPagina1" />
-    </div>
+@if (idProducto == 0)
+{
+    <div class="card card-body text-center text-muted py-5">Elige un producto para ver su kardex.</div>
+}
+else if (movimientos is null)
+{
+    <p class="text-muted">Cargando movimientos...</p>
 }
 else
 {
-    @* Segunda vista: historial del producto *@
-
-    <div class="card card-body mb-3">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <div class="small text-muted text-uppercase">
-                    Producto seleccionado
-                </div>
-
-                <div class="fw-semibold">
-                    @producto?.CodigoInterno · @producto?.Nombre
-                </div>
-                <div class="small text-muted">
-                    Stock actual: @producto?.StockActual.ToString("0.###")
-                </div>
-            </div>
-
-            <a class="btn btn-outline-secondary"
-               href="/almacen/kardex">
-                Cambiar producto
-            </a>
-        </div>
-    </div>
-
     <div class="card mb-3">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Fecha</th>
-                        <th>Tipo</th>
-                        <th>Entrada</th>
-                        <th>Salida</th>
-                        <th>Stock resultante</th>
-                        <th>Referencia</th>
+                        <th>Fecha y hora</th>
+                        <th>Movimiento</th>
+                        <th>Detalle</th>
+                        <th class="text-end">Entrada</th>
+                        <th class="text-end">Salida</th>
+                        <th class="text-end">Saldo</th>
+                        <th>Usuario</th>
                     </tr>
                 </thead>
-
                 <tbody>
-                    @foreach (var m in Paginar(movimientos, paginaActual2, tamanoPagina2))
+                    @if (movimientos.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">El producto no tiene movimientos en ese periodo.</td></tr>
+                    }
+                    @foreach (var m in Pagina)
                     {
                         <tr>
-                            <td>@m.Fecha.ToString("yyyy-MM-dd")</td>
-                            <td><Estado Texto="@m.Tipo" /></td>
-                            <td>@(m.Tipo == "ENTRADA" ? m.Cantidad.ToString("0.###") : "—")</td>
-                            <td>@(m.Tipo == "SALIDA" ? m.Cantidad.ToString("0.###") : "—")</td>
-                            <td>@m.StockResultante.ToString("0.###")</td>
-                            <td>@m.Referencia</td>
+                            <td class="text-nowrap">@Formato.FechaHora(m.FechaMovimiento)</td>
+                            <td><Estado Texto="@(m.EsEntrada ? "Entrada" : "Salida")" /> <span class="ms-1">@TextosAlmacen.Movimiento(m.Tipo)</span></td>
+                            <td class="small" style="max-width: 300px;">@m.Motivo</td>
+                            <td class="text-end">@(m.EsEntrada ? Formato.Cantidad(m.Cantidad) : "")</td>
+                            <td class="text-end">@(m.EsEntrada ? "" : Formato.Cantidad(m.Cantidad))</td>
+                            <td class="text-end fw-semibold">@Formato.Cantidad(m.StockResultante)</td>
+                            <td>@m.Usuario</td>
                         </tr>
                     }
                 </tbody>
+                @if (movimientos.Count > 0)
+                {
+                    <tfoot class="table-light">
+                        <tr>
+                            <th colspan="3" class="text-end">Totales del periodo</th>
+                            <th class="text-end">@Formato.Cantidad(movimientos.Where(m => m.EsEntrada).Sum(m => m.Cantidad))</th>
+                            <th class="text-end">@Formato.Cantidad(movimientos.Where(m => !m.EsEntrada).Sum(m => m.Cantidad))</th>
+                            <th colspan="2"></th>
+                        </tr>
+                    </tfoot>
+                }
             </table>
         </div>
-        <Paginacion TotalRegistros="@(movimientos.Count())" @bind-PaginaActual="paginaActual2" @bind-TamanoPagina="tamanoPagina2" />
+        <Paginacion TotalRegistros="@movimientos.Count" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
-
-    <div class="alert alert-secondary">
-        Los movimientos se muestran en orden cronológico.
-        Cada operación conserva su registro histórico.
-    </div>
+    @if (movimientos.Count >= 500)
+    {
+        <p class="small text-muted">Se muestran los 500 movimientos más recientes. Acorta el periodo para ver los anteriores.</p>
+    }
 }
 
 @code {
-    private int paginaActual1 = 1;
-    private int tamanoPagina1 = 10;
-    private int paginaActual2 = 1;
-    private int tamanoPagina2 = 10;
-    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+    [Parameter] public int? Id { get; set; }
+
+    private List<ExistenciaFila> existencias = new();
+    private List<MovimientoFila>? movimientos;
+    private int idProducto;
+    private DateTime? desde;
+    private DateTime? hasta;
+    private bool cargando;
+    private string? error;
+    private int paginaActual = 1;
+    private int tamanoPagina = 25;
+
+    private ExistenciaFila? Producto => existencias.FirstOrDefault(p => p.Id == idProducto);
+    private IEnumerable<MovimientoFila> Pagina => tamanoPagina == 0 ? movimientos!
+        : movimientos!.Skip((Math.Max(paginaActual, 1) - 1) * tamanoPagina).Take(tamanoPagina);
+
+    protected override async Task OnParametersSetAsync()
     {
-        if (tamano == 0) return registros;
-        int total = registros.Count();
-        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
-        return registros.Skip((segura - 1) * tamano).Take(tamano);
+        try
+        {
+            if (existencias.Count == 0)
+            {
+                existencias = await Api.Get<List<ExistenciaFila>>("almacen/existencias") ?? new();
+            }
+            idProducto = Id ?? 0;
+            movimientos = null;
+            if (idProducto != 0)
+            {
+                await Buscar();
+            }
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
     }
 
-    [Parameter]
-    public int? Id { get; set; }
+    // al elegir otro producto cambia la dirección: así el kardex de un producto se puede enlazar
+    private void AlElegir() => Nav.NavigateTo(idProducto == 0 ? "/almacen/kardex" : $"/almacen/kardex/{idProducto}");
 
-    private string filtro = "";
-    private List<ProductoFila> resultado = MuestrasCatalogo.Productos.ToList();
-    private ProductoFila? producto;
-    private List<MovimientoFila> movimientos = new();
-
-    protected override void OnParametersSet()
+    private async Task Buscar()
     {
-        producto = MuestrasCatalogo.Productos.FirstOrDefault(p => p.Id == Id);
-        movimientos = producto is null
-            ? new()
-            : MuestrasCompras.MovimientosDe(producto.CodigoInterno).ToList();
-    }
-
-    private void Buscar()
-    {
-        var texto = filtro.Trim();
-        resultado = MuestrasCatalogo.Productos
-            .Where(p => texto.Length == 0
-                        || p.CodigoInterno.Contains(texto, StringComparison.OrdinalIgnoreCase)
-                        || p.Nombre.Contains(texto, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        if (idProducto == 0) return;
+        error = null;
+        if (desde is not null && hasta is not null && desde > hasta)
+        {
+            error = "La fecha de inicio no puede ser posterior a la fecha de fin.";
+            return;
+        }
+        cargando = true;
+        try
+        {
+            movimientos = await Api.Get<List<MovimientoFila>>(
+                $"almacen/kardex?producto={idProducto}&desde={Formato.Iso(desde)}&hasta={Formato.Iso(hasta)}") ?? new();
+            paginaActual = 1;
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+            movimientos ??= new();
+        }
+        finally
+        {
+            cargando = false;
+        }
     }
 }

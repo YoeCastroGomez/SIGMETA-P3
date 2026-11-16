@@ -36,15 +36,15 @@ public final class Validador {
     public static String correo(String valor) {
         String correo = textoOpcional(valor, "correo", 120);
         if(correo != null && !correo.matches(PATRON_CORREO)){
-            throw new IllegalArgumentException("El correo no tiene un formato valido");
+            throw new IllegalArgumentException("El correo no tiene un formato válido");
         }
         return correo;
     }
 
     public static String telefono(String valor) {
-        String telefono = textoOpcional(valor, "telefono", 20);
+        String telefono = textoOpcional(valor, "teléfono", 20);
         if(telefono != null && !telefono.matches(PATRON_TELEFONO)){
-            throw new IllegalArgumentException("El telefono solo puede contener digitos, espacios, '+' y '-'");
+            throw new IllegalArgumentException("El teléfono solo puede contener dígitos, espacios, '+' y '-'");
         }
         return telefono;
     }
@@ -53,7 +53,7 @@ public final class Validador {
         String ruc = textoObligatorio(valor, "RUC", 11);
         // SUNAT: 11 digitos, empieza en 10 (persona natural) o 15, 16, 17, 20 (otros contribuyentes)
         if(!ruc.matches("^(10|15|16|17|20)\\d{9}$")){
-            throw new IllegalArgumentException("El RUC debe tener 11 digitos y empezar en 10, 15, 16, 17 o 20");
+            throw new IllegalArgumentException("El RUC debe tener 11 dígitos y empezar en 10, 15, 16, 17 o 20");
         }
         return ruc;
     }
@@ -63,7 +63,7 @@ public final class Validador {
         if(tipo == TipoDocumentoIdentidad.RUC){
             return ruc(valor);
         }
-        String numero = textoObligatorio(valor, "numero de documento", 20);
+        String numero = textoObligatorio(valor, "número de documento", 20);
         boolean valido = switch (tipo) {
             case DNI -> numero.matches("^\\d{8}$");
             case CARNET_EXTRANJERIA -> numero.matches("^[A-Za-z0-9]{9,12}$");
@@ -71,14 +71,14 @@ public final class Validador {
             default -> true;
         };
         if(!valido){
-            throw new IllegalArgumentException("El numero de documento no es valido para el tipo " + tipo);
+            throw new IllegalArgumentException("El número de documento no es válido para el tipo " + tipo);
         }
         return numero;
     }
 
     private static String validarLongitud(String valor, String campo, int longitudMaxima) {
         if(valor.length() > longitudMaxima){
-            throw new IllegalArgumentException("El campo " + campo + " admite como maximo "
+            throw new IllegalArgumentException("El campo " + campo + " admite como máximo "
                     + longitudMaxima + " caracteres");
         }
         return valor;

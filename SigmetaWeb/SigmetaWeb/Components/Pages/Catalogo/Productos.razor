@@ -169,8 +169,10 @@ else
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
     private bool EsAdministrador => Rol == "Administrador";
 
-    // ProductoForm vuelve aquí con ?guardado=nuevo o ?guardado=editado para mostrar el aviso verde
+    // ProductoForm vuelve aquí con ?guardado=nuevo|editado&ref=código · nombre para mostrar el aviso verde
+    // con el patrón único (AvisoGuardado)
     [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
+    [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
 
     private List<Producto>? productos;
     private List<Categoria> categorias = new();
@@ -211,14 +213,7 @@ else
         {
             error = e.Message;
         }
-        if (Guardado == "nuevo")
-        {
-            exito = "Producto registrado correctamente.";
-        }
-        else if (Guardado == "editado")
-        {
-            exito = "Producto modificado correctamente.";
-        }
+        exito = AvisoGuardado.Texto(Guardado, "el producto", Referencia);
         await Cargar("productos", null);
     }
 
@@ -301,9 +296,9 @@ else
         {
             error = e.Message;
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            error = "Error inesperado: " + e.Message;
+            error = "No se pudo completar la operación. Inténtalo otra vez; si el problema continúa, avisa al Administrador.";
         }
         await SubirAlAviso();   // el botón Desactivar está en la tabla y el aviso arriba
     }

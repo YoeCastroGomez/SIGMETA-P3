@@ -58,7 +58,7 @@ public class CobroBOImpl implements CobroBO {
                 throw new IllegalArgumentException("No existe la cuenta por cobrar con id " + cobro.getCuentaPorCobrar().getId());
             }
             if (cxc.getEstado() == EstadoCuentaPorCobrar.PAGADA) {
-                throw new IllegalStateException("La cuenta por cobrar ya esta pagada");
+                throw new IllegalStateException("La cuenta por cobrar ya está pagada");
             }
             if (cobro.getMonto() > cxc.getSaldoPendiente() + 0.005) {
                 throw new IllegalArgumentException(String.format(
@@ -125,7 +125,7 @@ public class CobroBOImpl implements CobroBO {
         Transaccion.ejecutar(() -> {
             Cobro actual = obtenerExistente(cobro.getId());
             if (actual.isAnulado()) {
-                throw new IllegalStateException("El cobro " + actual.getId() + " ya esta anulado");
+                throw new IllegalStateException("El cobro " + actual.getId() + " ya está anulado");
             }
             MovimientoCaja ingreso = movimientoCajaDAO.listarTodosConDetalle().stream()
                     .filter(m -> DOCUMENTO_COBRO.equals(m.getDocumentoOrigen()) && m.getIdDocumentoOrigen() == actual.getId())
@@ -133,7 +133,7 @@ public class CobroBOImpl implements CobroBO {
             if (ingreso != null) {
                 Caja caja = cajaDAO.load(ingreso.getCaja().getId());
                 if (caja == null || !caja.isAbierta()) {
-                    throw new IllegalStateException("La caja donde se registro el cobro ya esta cerrada; "
+                    throw new IllegalStateException("La caja donde se registró el cobro ya está cerrada; "
                             + "el Administrador debe reabrirla para anularlo");
                 }
                 // el ingreso no se borra: se registra un egreso que lo compensa en la misma caja
@@ -142,7 +142,7 @@ public class CobroBOImpl implements CobroBO {
                 egreso.setTipo(TipoMovimientoCaja.EGRESO_MANUAL);
                 egreso.setMedioPago(ingreso.getMedioPago());
                 egreso.setMonto(ingreso.getMonto());
-                egreso.setConcepto("Anulacion del cobro " + actual.getId());
+                egreso.setConcepto("Anulación del cobro " + actual.getId());
                 egreso.setDocumentoOrigen(DOCUMENTO_ANULACION_COBRO);
                 egreso.setIdDocumentoOrigen(actual.getId());
                 egreso.setUsuarioRegistro(responsable);

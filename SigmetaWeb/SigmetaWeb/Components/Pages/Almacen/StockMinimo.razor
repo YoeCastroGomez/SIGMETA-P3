@@ -1,79 +1,129 @@
 ﻿@page "/almacen/stock-minimo"
-@using SigmetaWeb.Components.Pages.Catalogo
-
-@* RF012 - Consulta de productos con stock mínimo.
-   Solo presentación visual para el Laboratorio 9. Las existencias y mínimos vienen del Catálogo. *@
+@inject ApiJava Api
 
 <PageTitle>Stock mínimo · SIGMETA</PageTitle>
 
-<Encabezado Rf="RF012"
-            Titulo="Productos con stock mínimo"
-            Subtitulo="Productos cuyo stock actual es menor o igual al mínimo establecido." />
+@* RF012 · Productos que están en su stock mínimo o por debajo. Consulta de los cuatro roles.
+   GET /api/almacen/existencias (stock físico, comprometido y disponible por producto). *@
+<Encabezado Rf="RF012" Titulo="Stock mínimo"
+            Subtitulo="Productos que hay que reponer: su stock está en el mínimo o por debajo." />
 
-<div class="alert alert-secondary">
-    Los productos mostrados requieren atención porque su
-    stock actual alcanzó o está por debajo del mínimo.
-</div>
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 
-<div class="card mb-3">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Código</th>
-                    <th>Producto</th>
-                    <th>Stock actual</th>
-                    <th>Stock mínimo</th>
-                    <th>Estado</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @foreach (var p in Paginar(MuestrasCatalogo.Productos.Where(p => p.Activo && p.StockActual <= p.StockMinimo), paginaActual, tamanoPagina))
-                {
-                    <tr>
-                        <td>@p.CodigoInterno</td>
-                        <td>@p.Nombre</td>
-                        <td>@p.StockActual.ToString("0.###")</td>
-                        <td>@p.StockMinimo.ToString("0.###")</td>
-                        <td>
-                            @if (p.StockActual < p.StockMinimo)
-                            {
-                                <Estado Texto="Bajo el mínimo" />
-                            }
-                            else
-                            {
-                                <Estado Texto="En el mínimo" />
-                            }
-                        </td>
-                        <td class="text-end">
-                            <a class="btn btn-sm btn-outline-secondary"
-                               href="/almacen/kardex/@p.Id">
-                                Ver Kardex
-                            </a>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+@if (existencias is null)
+{
+    <p class="text-muted">Cargando existencias...</p>
+}
+else
+{
+    <div class="row g-3 mb-3">
+        <div class="col-sm-4">
+            <div class="card card-body h-100">
+                <div class="small text-muted text-uppercase">Sin stock</div>
+                <div class="h4 fw-bold mb-0 @(existencias.Any(p => p.SinStock) ? "text-danger" : "")">@existencias.Count(p => p.SinStock)</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card card-body h-100">
+                <div class="small text-muted text-uppercase">Bajo el mínimo</div>
+                <div class="h4 fw-bold mb-0">@existencias.Count(p => !p.SinStock && p.BajoMinimo)</div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card card-body h-100">
+                <div class="small text-muted text-uppercase">Justo en el mínimo</div>
+                <div class="h4 fw-bold mb-0">@existencias.Count(p => !p.BajoMinimo && p.EnMinimo && !p.SinStock)</div>
+            </div>
+        </div>
     </div>
-        <Paginacion TotalRegistros="@(MuestrasCatalogo.Productos.Where(p => p.Activo && p.StockActual <= p.StockMinimo).Count())" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
-</div>
 
-<div class="alert alert-secondary">
-    Los datos mostrados son de demostración.
-    La consulta del inventario real se habilitará en una próxima versión.
-</div>
+    <div class="card card-body mb-3">
+        <div class="row g-3 align-items-end sigmeta-filtros">
+            <Campo Etiqueta="Mostrar" Id="fMostrar" Clase="col-sm-6 col-md-3">
+                <select id="fMostrar" class="form-select" @bind="mostrar" @bind:after="() => paginaActual = 1">
+                    <option value="minimo">En el mínimo o por debajo</option>
+                    <option value="todos">Todos los productos</option>
+                </select>
+            </Campo>
+            <Campo Etiqueta="Producto o categoría" Id="fTexto" Clase="col-sm-6 col-md">
+                <input id="fTexto" class="form-control" maxlength="100" @bind="texto" @bind:event="oninput" @bind:after="() => paginaActual = 1" />
+            </Campo>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Producto</th>
+                        <th>Categoría</th>
+                        <th class="text-end">En almacén</th>
+                        <th class="text-end">Comprometido</th>
+                        <th class="text-end">Disponible</th>
+                        <th class="text-end">Mínimo</th>
+                        <th class="text-end">Falta reponer</th>
+                        <th>Situación</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Filtrados.Count == 0)
+                    {
+                        <tr><td colspan="9" class="text-center text-muted py-4">
+                            @(mostrar == "minimo" ? "Ningún producto está en su stock mínimo." : "No se encontraron productos.")</td></tr>
+                    }
+                    @foreach (var p in Pagina)
+                    {
+                        <tr>
+                            <td><strong>@p.CodigoInterno</strong><div class="small text-muted">@p.Nombre</div></td>
+                            <td>@p.Categoria</td>
+                            <td class="text-end">@Formato.Cantidad(p.StockActual) @TextosAlmacen.Unidad(p.UnidadVenta)</td>
+                            <td class="text-end">@Formato.Cantidad(p.Comprometido)</td>
+                            <td class="text-end @(p.Disponible <= 0 ? "text-danger fw-semibold" : "")">@Formato.Cantidad(p.Disponible)</td>
+                            <td class="text-end">@Formato.Cantidad(p.StockMinimo)</td>
+                            <td class="text-end fw-semibold">@(p.Faltante > 0 ? Formato.Cantidad(p.Faltante) : "—")</td>
+                            <td><Estado Texto="@p.Situacion" /></td>
+                            <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="@($"/almacen/kardex/{p.Id}")">Kardex</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <Paginacion TotalRegistros="@Filtrados.Count" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
+    </div>
+}
 
 @code {
+    private List<ExistenciaFila>? existencias;
+    private string mostrar = "minimo";
+    private string texto = "";
+    private string? error;
     private int paginaActual = 1;
-    private int tamanoPagina = 10;
-    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+    private int tamanoPagina = 25;
+
+    private List<ExistenciaFila> Filtrados => (existencias ?? new())
+        .Where(p => mostrar == "todos" || p.EnMinimo)
+        .Where(p => string.IsNullOrWhiteSpace(texto)
+                    || p.CodigoInterno.Contains(texto.Trim(), StringComparison.OrdinalIgnoreCase)
+                    || p.Nombre.Contains(texto.Trim(), StringComparison.OrdinalIgnoreCase)
+                    || (p.Categoria ?? "").Contains(texto.Trim(), StringComparison.OrdinalIgnoreCase))
+        .OrderByDescending(p => p.SinStock).ThenByDescending(p => p.Faltante).ThenBy(p => p.Nombre)
+        .ToList();
+
+    private IEnumerable<ExistenciaFila> Pagina => tamanoPagina == 0 ? Filtrados
+        : Filtrados.Skip((Math.Max(paginaActual, 1) - 1) * tamanoPagina).Take(tamanoPagina);
+
+    protected override async Task OnInitializedAsync()
     {
-        if (tamano == 0) return registros;
-        int total = registros.Count();
-        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
-        return registros.Skip((segura - 1) * tamano).Take(tamano);
+        try
+        {
+            existencias = await Api.Get<List<ExistenciaFila>>("almacen/existencias") ?? new();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+            existencias = new();
+        }
     }
 }

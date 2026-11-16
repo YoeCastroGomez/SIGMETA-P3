@@ -490,8 +490,8 @@ else
             }
             else
             {
-                await Api.Put<VentaDatos>($"ventas/{Id}", venta);                  // PUT /api/ventas/{Id}
-                Nav.NavigateTo("/ventas");
+                var guardada = await Api.Put<VentaDatos>($"ventas/{Id}", venta);   // PUT /api/ventas/{Id}
+                Nav.NavigateTo(AvisoGuardado.Ruta("/ventas", AvisoGuardado.Editado, guardada?.Numero ?? venta.Numero));
             }
         }
         catch (ErrorApi e)

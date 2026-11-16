@@ -120,6 +120,18 @@
     private DateTime? filtroHasta;
     private string? error;
     private string? exito;
+
+    // Aviso de éxito con el patrón único (AvisoGuardado): el formulario vuelve aquí con ?guardado=…&ref=…
+    [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
+    [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
+    private bool avisoLeido;
+
+    protected override void OnParametersSet()
+    {
+        if (avisoLeido) return;   // solo al llegar: después manda lo que haga el usuario en la lista
+        avisoLeido = true;
+        exito = AvisoGuardado.Texto(Guardado, "la compra", Referencia) ?? exito;
+    }
     private int? confirmarId;
     private bool cargando;
     private bool cargaInicial = true;

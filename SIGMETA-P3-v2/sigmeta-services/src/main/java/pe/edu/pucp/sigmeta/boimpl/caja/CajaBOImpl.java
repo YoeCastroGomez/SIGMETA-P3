@@ -84,10 +84,10 @@ public class CajaBOImpl implements CajaBO {
             Caja actual = obtenerExistente(caja.getId());
             boolean esAdministrador = responsable.getRol().getTipo() == TipoRol.ADMINISTRADOR;
             if (!actual.isAbierta() && !esAdministrador) {
-                throw new IllegalStateException("Unicamente el Administrador puede corregir una caja ya cerrada");
+                throw new IllegalStateException("Únicamente el Administrador puede corregir una caja ya cerrada");
             }
             if (!esAdministrador && actual.getUsuarioApertura().getId() != idResponsable) {
-                throw new IllegalStateException("Solo el cajero que abrio la caja puede modificarla");
+                throw new IllegalStateException("Solo el cajero que abrió la caja puede modificarla");
             }
             actual.setMontoInicial(caja.getMontoInicial());
             cajaDAO.update(actual);
@@ -110,7 +110,7 @@ public class CajaBOImpl implements CajaBO {
         Transaccion.ejecutar(() -> {
             Caja actual = obtenerExistente(caja.getId());
             if (responsable.getRol().getTipo() == TipoRol.CAJERO && actual.getUsuarioApertura().getId() != idResponsable) {
-                throw new IllegalStateException("Solo el cajero que abrio la caja puede eliminarla");
+                throw new IllegalStateException("Solo el cajero que abrió la caja puede eliminarla");
             }
             if (!movimientoCajaDAO.listarPorCaja(actual.getId()).isEmpty()
                     || !cierreCajaDAO.listarPorCaja(actual.getId()).isEmpty()) {

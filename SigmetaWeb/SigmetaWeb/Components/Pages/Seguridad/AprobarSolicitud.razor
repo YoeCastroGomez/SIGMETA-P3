@@ -1,37 +1,121 @@
 @page "/autorizaciones/aprobar/{Id:int}"
+@inject ApiJava Api
 @inject NavigationManager Nav
 
 <PageTitle>Resolver solicitud · SIGMETA</PageTitle>
 
-@* RF014 · aprobar(id, idAdministrador, vigenciaMinutos) / rechazar(id, idAdministrador). Solo una PENDIENTE. *@
+@* RF014 · POST /api/solicitudes/{id}/aprobar {"vigenciaMinutos": 30} · POST /api/solicitudes/{id}/rechazar.
+   Solo el Administrador y solo una solicitud PENDIENTE. *@
 <Encabezado Rf="RF014" Titulo="Resolver solicitud" Subtitulo="Solo el Administrador.">
     <a class="btn btn-outline-secondary" href="/autorizaciones">Volver a la lista</a>
 </Encabezado>
 
-<div class="card card-body mb-3" style="max-width: 720px;">
-    <DatosSolicitud Solicitud="ejemplo" />
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 
-    <hr />
+@if (solicitud is not null)
+{
+    <div class="card card-body mb-3" style="max-width: 720px;">
+        <DatosSolicitud Solicitud="solicitud" />
 
-    <Campo Etiqueta="Vigencia (minutos)" Id="vigencia" Obligatorio="true"
-           Ayuda="Mayor a 0. Tiempo durante el que el solicitante podrá hacer la operación. Solo se usa al aprobar.">
-        <input id="vigencia" type="number" min="1" class="form-control" style="max-width: 200px;" value="30" />
-    </Campo>
+        @if (solicitud.Estado == "PENDIENTE")
+        {
+            <hr />
+            <Campo Etiqueta="Vigencia (minutos)" Id="vigencia" Obligatorio="true" Error="@ErrorVigencia"
+                   Ayuda="Tiempo que tendrá el solicitante para hacer la operación. La autorización sirve para una sola operación.">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <input id="vigencia" type="number" min="1" max="1440" class="form-control @(ErrorVigencia is null ? "" : "is-invalid")"
+                           style="max-width: 140px;" @bind="vigencia" @bind:event="oninput" />
+                    @foreach (var m in new[] { 15, 30, 60, 120 })
+                    {
+                        <button type="button" class="btn btn-sm @(vigencia == m ? "btn-dark" : "btn-outline-secondary")"
+                                @onclick="() => vigencia = m">@m min</button>
+                    }
+                </div>
+            </Campo>
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
-        <span class="small text-muted"><span class="text-danger">*</span> Obligatorio para aprobar</span>
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline-danger" @onclick="Volver">Rechazar</button>
-            <button class="btn btn-primary" @onclick="Volver">Aprobar</button>
-        </div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+                <span class="small text-muted"><span class="text-danger">*</span> Obligatorio para aprobar</span>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-danger" disabled="@guardando" @onclick="Rechazar">Rechazar</button>
+                    <button class="btn btn-primary" disabled="@guardando" @onclick="Aprobar">Aprobar</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-secondary mb-0">Esta solicitud ya fue resuelta.</div>
+        }
     </div>
-</div>
+}
+else if (error is null)
+{
+    <p class="text-muted">Cargando solicitud...</p>
+}
 
 @code {
     [Parameter] public int Id { get; set; }
 
-    // Ejemplo fijo de una solicitud pendiente (Lab 9: sin consultas).
-    private readonly SolicitudFila ejemplo = MuestrasSeguridad.Solicitudes[0];
+    private SolicitudDatos? solicitud;
+    private int vigencia = 30;
+    private bool intento;
+    private bool guardando;
+    private string? error;
 
-    private void Volver() => Nav.NavigateTo("/autorizaciones");
+    // misma regla que el BO: la vigencia debe ser mayor a 0
+    private string? ErrorVigencia => !intento ? null
+        : vigencia <= 0 ? "La vigencia debe ser mayor a 0 minutos."
+        : vigencia > 1440 ? "La vigencia no puede pasar de 1440 minutos (un día)."
+        : null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            solicitud = await Api.Get<SolicitudDatos>($"solicitudes/{Id}");
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+    }
+
+    private async Task Aprobar()
+    {
+        intento = true;
+        error = null;
+        if (ErrorVigencia is not null) return;
+        guardando = true;
+        try
+        {
+            await Api.Post<SolicitudDatos>($"solicitudes/{Id}/aprobar", new { vigenciaMinutos = vigencia });
+            Nav.NavigateTo(AvisoGuardado.Ruta("/autorizaciones", "aprobada", solicitud?.Solicitante));
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private async Task Rechazar()
+    {
+        error = null;
+        guardando = true;
+        try
+        {
+            await Api.Post<SolicitudDatos>($"solicitudes/{Id}/rechazar", null);
+            Nav.NavigateTo(AvisoGuardado.Ruta("/autorizaciones", "rechazada", solicitud?.Solicitante));
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
 }

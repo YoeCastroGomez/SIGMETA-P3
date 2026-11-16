@@ -65,8 +65,9 @@ uno y en este orden:
 5. `sql/2_procedimientos/03_SP_daniel.sql`
 6. `sql/2_procedimientos/04_SP_sebastian.sql`
 7. `sql/2_procedimientos/05_SP_adriano.sql`
-8. `sql/2_procedimientos/06_SP_integridad.sql` (siempre al final)
-9. Opcional: `sql/4_datos_demo/datos_demo.sql` (borra los datos y carga tres meses de operacion simulada)
+8. `sql/2_procedimientos/06_SP_integridad.sql`
+9. `sql/2_procedimientos/07_SP_reforma.sql` (siempre al final: almacén, notas de crédito, reportes y reglas de stock y costo)
+10. Opcional: `sql/4_datos_demo/datos_demo.sql` (borra los datos y carga tres meses de operacion simulada)
 
 Antes de los pasos 3 y 4, seleccionar `sigmeta` como schema por defecto (doble clic en el panel de Schemas),
 porque esos dos archivos no tienen `USE sigmeta;`.
@@ -74,7 +75,7 @@ porque esos dos archivos no tienen `USE sigmeta;`.
 En vez de `sql/1_base/sigmeta.sql` se pueden correr los de `sql/1_base/por_modulo/` (00 a 06) en orden.
 Una opcion o la otra, no las dos.
 
-Para revisar que quedo bien: 29 tablas y 203 procedimientos en el schema `sigmeta`.
+Para revisar que quedo bien: 29 tablas y 233 procedimientos en el schema `sigmeta` (203 de los archivos 01 a 06 y 30 del 07).
 
 Los archivos `sql/5_pruebas/sql_prueba_*.sql` son consultas para probar a mano los procedimientos de cada integrante.
 

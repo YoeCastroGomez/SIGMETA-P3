@@ -131,7 +131,7 @@ public class CompraBOImpl implements CompraBO {
                 throw new IllegalArgumentException("No existe la compra con ID " + idCompra);
             }
             if (compra.isAnulado()) {
-                throw new IllegalArgumentException("La compra ya esta anulada");
+                throw new IllegalArgumentException("La compra ya está anulada");
             }
             if (compra.getEstado() != EstadoCompra.REGISTRADA) {
                 throw new IllegalStateException("No se puede anular una compra con recepciones registradas");
@@ -216,14 +216,14 @@ public class CompraBOImpl implements CompraBO {
         Validador.obligatorio(compra, "compra");
         Validador.obligatorio(compra.getProveedor(), "proveedor");
         Validador.obligatorio(compra.getUsuarioRegistro(), "usuario de registro");
-        Validador.obligatorio(compra.getFechaEmision(), "fecha de emision");
+        Validador.obligatorio(compra.getFechaEmision(), "fecha de emisión");
         Validador.obligatorio(compra.getEstado(), "estado");
 
         if (compra.getProveedor().getId() <= 0 || compra.getUsuarioRegistro().getId() <= 0) {
-            throw new IllegalArgumentException("El proveedor y el usuario deben tener un ID valido");
+            throw new IllegalArgumentException("El proveedor y el usuario deben tener un ID válido");
         }
 
-        compra.setNumero(Validador.textoObligatorio(compra.getNumero(), "numero", 50));
+        compra.setNumero(Validador.textoObligatorio(compra.getNumero(), "número", 50));
         compra.setObservaciones(Validador.textoOpcional(compra.getObservaciones(), "observaciones", 255));
 
     }
@@ -238,10 +238,10 @@ public class CompraBOImpl implements CompraBO {
             Validador.obligatorio(detalle.getProducto(), "producto");
             Validador.obligatorio(detalle.getUnidadCompra(), "unidad de compra");
             if (detalle.getNumeroLinea() <= 0 || !lineas.add(detalle.getNumeroLinea())) {
-                throw new IllegalArgumentException("Los numeros de linea deben ser positivos y unicos");
+                throw new IllegalArgumentException("Los números de línea deben ser positivos y únicos");
             }
             if (detalle.getProducto().getId() <= 0) {
-                throw new IllegalArgumentException("El producto debe tener un ID valido");
+                throw new IllegalArgumentException("El producto debe tener un ID válido");
             }
             CalculoCompra.linea(detalle);
             if (!Double.isFinite(detalle.getCantidad())
@@ -254,7 +254,7 @@ public class CompraBOImpl implements CompraBO {
                     || detalle.getDescuento() < 0
                     || detalle.getImporte() < 0
                     || detalle.getFactorConversion() <= 0) {
-                throw new IllegalArgumentException("Las cantidades e importes del detalle deben ser validos");
+                throw new IllegalArgumentException("Las cantidades e importes del detalle deben ser válidos");
             }
         }
     }
@@ -269,7 +269,7 @@ public class CompraBOImpl implements CompraBO {
     private void verificarProveedorActivo(int idProveedor) throws SQLException {
         Proveedor proveedor = proveedorDAO.load(idProveedor);
         if (proveedor == null || !proveedor.isEstado()) {
-            throw new IllegalArgumentException("El proveedor " + idProveedor + " no existe o esta desactivado");
+            throw new IllegalArgumentException("El proveedor " + idProveedor + " no existe o está desactivado");
         }
     }
 }

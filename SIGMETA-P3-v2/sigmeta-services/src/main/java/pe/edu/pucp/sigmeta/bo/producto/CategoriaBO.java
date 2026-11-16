@@ -11,6 +11,8 @@ public interface CategoriaBO {
     Categoria registrar(Categoria categoria, int idResponsable) throws SQLException;
     Categoria modificar(Categoria categoria, int idResponsable) throws SQLException;
     void desactivar(int idCategoria, int idResponsable) throws SQLException;
+    // vuelve a activar una categoria desactivada
+    Categoria activar(int idCategoria, int idResponsable) throws SQLException;
     Categoria obtener(int idCategoria) throws SQLException;
     List<Categoria> listarTodos() throws SQLException;
     List<Categoria> buscarPorNombre(String nombre) throws SQLException;

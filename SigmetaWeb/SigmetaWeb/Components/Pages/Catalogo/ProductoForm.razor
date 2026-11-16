@@ -60,10 +60,10 @@ else
                     </Campo>
                 </div>
                 <div class="col-md-8">
-                    @* El BO guarda el nombre en MAYUSCULAS y sin tildes ("Martíllo" -> "MARTILLO") y no deja repetirlo *@
+                    @* El BO guarda el nombre como se escribe y lo compara sin mayúsculas ni tildes ("Martíllo" = "MARTILLO") para no repetirlo *@
                     <Campo Etiqueta="Nombre" Id="nombre" Obligatorio="true" Error="@(Error("nombre"))"
-                           Ayuda="Se guarda en mayúsculas y sin tildes. No puede repetirse.">
-                        <InputText id="nombre" class="@(ClaseCuadro("nombre"))" maxlength="150" style="text-transform: uppercase"
+                           Ayuda="Se guarda como lo escribes. No puede repetirse (no se distinguen mayúsculas ni tildes).">
+                        <InputText id="nombre" class="@(ClaseCuadro("nombre"))" maxlength="150"
                                    @bind-Value="producto.Nombre" @oninput="@(e => Escribiendo("nombre", e))" />
                     </Campo>
                 </div>
@@ -82,8 +82,8 @@ else
                     </Campo>
                 </div>
                 <div class="col-12">
-                    <Campo Etiqueta="Descripción" Id="descripcion" Ayuda="Se guarda en mayúsculas y sin tildes.">
-                        <InputText id="descripcion" class="form-control" maxlength="255" style="text-transform: uppercase"
+                    <Campo Etiqueta="Descripción" Id="descripcion">
+                        <InputText id="descripcion" class="form-control" maxlength="255"
                                    @bind-Value="producto.Descripcion" />
                     </Campo>
                 </div>
@@ -460,7 +460,8 @@ else
                 await Api.Put<Producto>($"productos/{Id}", producto);     // PUT /api/productos/{Id}
             }
             // vuelve a la lista y allí sale el aviso verde (Productos.razor lee "guardado")
-            Nav.NavigateTo(EsNuevo ? "/productos?guardado=nuevo" : "/productos?guardado=editado");
+            Nav.NavigateTo(AvisoGuardado.Ruta("/productos", EsNuevo ? AvisoGuardado.Nuevo : AvisoGuardado.Editado,
+                $"{producto.CodigoInterno?.Trim().ToUpperInvariant()} · {producto.Nombre?.Trim()}"));
         }
         catch (ErrorApi e)
         {
@@ -470,10 +471,10 @@ else
             producto.FechaModificacion = fechaAnterior;
             await SubirAlAviso();   // el aviso rojo está arriba y el botón Guardar abajo: se sube para verlo
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // cualquier otro error (por ejemplo al leer la respuesta del Java) también sale en el aviso rojo
-            error = "Error inesperado: " + e.Message;
+            error = "No se pudo guardar el producto. Inténtalo otra vez; si el problema continúa, avisa al Administrador.";
             producto.UsuarioModificacion = usuarioAnterior;
             producto.FechaModificacion = fechaAnterior;
             await SubirAlAviso();

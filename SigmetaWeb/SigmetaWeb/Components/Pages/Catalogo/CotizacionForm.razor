@@ -322,15 +322,18 @@ else
                 cotizacion.Lineas[i].NumeroLinea = i + 1;
             }
 
+            CotizacionDatos? guardada;
             if (EsNuevo)
             {
-                await Api.Post<CotizacionDatos>("cotizaciones", cotizacion);          // POST /api/cotizaciones
+                guardada = await Api.Post<CotizacionDatos>("cotizaciones", cotizacion);          // POST /api/cotizaciones
             }
             else
             {
-                await Api.Put<CotizacionDatos>($"cotizaciones/{Id}", cotizacion);    // PUT /api/cotizaciones/{Id}
+                guardada = await Api.Put<CotizacionDatos>($"cotizaciones/{Id}", cotizacion);    // PUT /api/cotizaciones/{Id}
             }
-            Nav.NavigateTo("/cotizaciones");
+            // vuelve a la lista y allí sale el aviso verde (Cotizaciones.razor lee "guardado")
+            Nav.NavigateTo(AvisoGuardado.Ruta("/cotizaciones", EsNuevo ? AvisoGuardado.Nuevo : AvisoGuardado.Editado,
+                guardada?.Numero ?? cotizacion.Numero));
         }
         catch (ErrorApi e)
         {

@@ -93,25 +93,25 @@ CREATE TABLE solicitud_autorizacion (
 -- ==================== DATOS DE PRUEBA ====================
 
 INSERT INTO rol (id, tipo, descripcion, estado) VALUES
-                                                        (1,'VENDEDOR','Atencion al cliente y ciclo comercial',TRUE),
+                                                        (1,'VENDEDOR','Atención al cliente y ciclo comercial',TRUE),
                                                         (2,'CAJERO','Cobros y manejo de efectivo',TRUE),
-                                                        (3,'ALMACENERO','Recepcion y despacho de mercaderia',TRUE),
-                                                        (4,'ADMINISTRADOR','Supervision y configuracion',TRUE);
+                                                        (3,'ALMACENERO','Recepción y despacho de mercadería',TRUE),
+                                                        (4,'ADMINISTRADOR','Supervisión y configuración',TRUE);
 
 -- clave de los cuatro usuarios de prueba: Meta2026 (hash PBKDF2 calculado con GeneradorHash)
 INSERT INTO usuario (id, nombre_usuario, clave_hash, salt, nombres, apellidos, correo, id_rol, estado, fecha_registro) VALUES
-                                                                                                                                   (1,'lrojas','Sh48oxgKIzNpDZFD8/N/PEeKhBntqwA8+h6iaL5x6WA=','0ZsfOSD7UGxhUcnElYBdjw==','Lucia','Rojas Vega','lrojas@grupometa.pe',1,TRUE,'2026-08-20 08:00:00'),
-                                                                                                                                   (2,'mchavez','HDUs4Ia/J9L7K+l+3Xd+oSOT6Dv4pEb1OOqeENM+fQc=','9S2DxpJl7/3Oov6cVTIpXQ==','Marco','Chavez Rios','mchavez@grupometa.pe',2,TRUE,'2026-08-20 08:00:00'),
-                                                                                                                                   (3,'jtorres','c9dTxegxi8GD1qVtae2lG6zYGnQdYbLoP3WAfbdPlWM=','5vSceFA3XFoLfkXgZFegrw==','Jorge','Torres Pena','jtorres@grupometa.pe',3,TRUE,'2026-08-20 08:00:00'),
+                                                                                                                                   (1,'lrojas','Sh48oxgKIzNpDZFD8/N/PEeKhBntqwA8+h6iaL5x6WA=','0ZsfOSD7UGxhUcnElYBdjw==','Lucía','Rojas Vega','lrojas@grupometa.pe',1,TRUE,'2026-08-20 08:00:00'),
+                                                                                                                                   (2,'mchavez','HDUs4Ia/J9L7K+l+3Xd+oSOT6Dv4pEb1OOqeENM+fQc=','9S2DxpJl7/3Oov6cVTIpXQ==','Marco','Chávez Ríos','mchavez@grupometa.pe',2,TRUE,'2026-08-20 08:00:00'),
+                                                                                                                                   (3,'jtorres','c9dTxegxi8GD1qVtae2lG6zYGnQdYbLoP3WAfbdPlWM=','5vSceFA3XFoLfkXgZFegrw==','Jorge','Torres Peña','jtorres@grupometa.pe',3,TRUE,'2026-08-20 08:00:00'),
                                                                                                                                    (4,'aquispe','RH+0jKCJjWeeBCgf8BFWq242DF8ZlsCOlHHiMv2wGpQ=','cm6Y45eMpIRuCjLNnqvykQ==','Ana','Quispe Mendoza','aquispe@grupometa.pe',4,TRUE,'2026-08-20 08:00:00');
 
 INSERT INTO cliente (id, tipo_persona, razon_social, nombres, apellidos, direccion, telefono, correo, estado, tipo_documento, numero_documento, contacto_nombre, condicion_pago, plazo_credito_dias, limite_credito, calificacion_crediticia) VALUES
-                                                                                                                                                                                                                        (1,'NATURAL',NULL,'Pedro Alberto','Ramos Diaz','Av. Los Angeles 240, Lurigancho-Chosica','987654321','pramos@gmail.com',TRUE,'DNI','45781290','Pedro Ramos','CONTADO',0,0.00,'SIN_EVALUAR'),
+                                                                                                                                                                                                                        (1,'NATURAL',NULL,'Pedro Alberto','Ramos Díaz','Av. Los Ángeles 240, Lurigancho-Chosica','987654321','pramos@gmail.com',TRUE,'DNI','45781290','Pedro Ramos','CONTADO',0,0.00,'SIN_EVALUAR'),
                                                                                                                                                                                                                         (2,'JURIDICA','Constructora Andina del Sur S.A.C.',NULL,NULL,'Jr. Huaraz 1180, Cercado de Lima','014785522','compras@andinadelsur.com.pe',TRUE,'RUC','20548963217','Rosa Linares','CREDITO',30,25000.00,'A');
 
 INSERT INTO proveedor (id, razon_social, direccion, telefono, correo, estado, ruc, rubro, contacto_nombre, plazo_entrega_dias, condicion_pago) VALUES
-                                                                                                                                                             (1,'Importaciones Electricas Delta S.A.C.','Av. Argentina 3450, Callao','014520011','ventas@delta.com.pe',TRUE,'20431298765','Material electrico industrial','Cesar Bravo',5,'CREDITO'),
-                                                                                                                                                             (2,'Ferreteria Industrial Huachipa E.I.R.L.','Carretera Central km 9, Lurigancho-Chosica','013710044','contacto@fihuachipa.pe',TRUE,'20512346789','Fijaciones y abrasivos','Nelly Fuentes',2,'CONTADO');
+                                                                                                                                                             (1,'Importaciones Eléctricas Delta S.A.C.','Av. Argentina 3450, Callao','014520011','ventas@delta.com.pe',TRUE,'20431298765','Material eléctrico industrial','César Bravo',5,'CREDITO'),
+                                                                                                                                                             (2,'Ferretería Industrial Huachipa E.I.R.L.','Carretera Central km 9, Lurigancho-Chosica','013710044','contacto@fihuachipa.pe',TRUE,'20512346789','Fijaciones y abrasivos','Nelly Fuentes',2,'CONTADO');
 
 INSERT INTO solicitud_autorizacion (id, id_solicitante, id_administrador, operacion_restringida, motivo, fecha_solicitud, estado, fecha_resolucion, vigencia_minutos, fecha_vencimiento) VALUES
     (1,1,4,'DESCUENTO_ESPECIAL','Descuento de S/ 50.00 en alicates para Constructora Andina del Sur','2026-09-01 14:40:00','APROBADA','2026-09-01 14:45:00',60,'2026-09-01 15:45:00'),
@@ -206,18 +206,18 @@ CREATE TABLE detalle_cotizacion (
 
 -- 3 Categorías
 INSERT INTO categoria (nombre, descripcion, estado) VALUES
-('HERRAMIENTAS MANUALES', 'Martillos, alicates, destornilladores', TRUE),
-('MATERIALES ELECTRICOS', 'Cables, enchufes industriales', TRUE),
-('CONSTRUCCION', 'Cemento, fierro, agregados', TRUE);
+('Herramientas manuales', 'Martillos, alicates, destornilladores', TRUE),
+('Materiales eléctricos', 'Cables, enchufes industriales', TRUE),
+('Construcción', 'Cemento, fierro, agregados', TRUE);
 
 -- 6 Productos (con sus tres códigos, precio, costo, stock y stock mínimo)
 INSERT INTO producto (codigo_interno, codigo_fabricante, codigo_proveedor, nombre, id_categoria, unidad_compra, unidad_venta, factor_conversion, precio_venta, costo_unitario, stock_actual, stock_minimo, estado, precio_referencial) VALUES
-('INT-001', 'FAB-101', 'PROV-11', 'MARTILLO DE ACERO', 1, 'UNIDAD', 'UNIDAD', 1.000, 45.00, 25.00, 100.000, 10.000, TRUE, 48.00),
-('INT-002', 'FAB-102', 'PROV-22', 'ALICATE DE PRESION', 1, 'UNIDAD', 'UNIDAD', 1.000, 35.00, 18.00, 50.000, 5.000, TRUE, 38.00),
-('INT-003', 'FAB-103', 'PROV-33', 'CABLE MELLIZO 2X14', 2, 'METRO', 'METRO', 1.000, 2.50, 1.20, 500.000, 100.000, TRUE, 2.80),
-('INT-004', 'FAB-104', 'PROV-44', 'ENCHUFE MENNEKES', 2, 'UNIDAD', 'UNIDAD', 1.000, 85.00, 50.00, 30.000, 5.000, TRUE, 90.00),
-('INT-005', 'FAB-105', 'PROV-55', 'BOLSA CEMENTO SOL', 3, 'UNIDAD', 'UNIDAD', 1.000, 28.50, 24.00, 200.000, 50.000, TRUE, 30.00),
-('INT-006', 'FAB-106', 'PROV-66', 'FIERRO CORRUGADO', 3, 'UNIDAD', 'UNIDAD', 1.000, 32.00, 26.00, 150.000, 30.000, TRUE, 34.00);
+('INT-001', 'FAB-101', 'PROV-11', 'Martillo de acero', 1, 'UNIDAD', 'UNIDAD', 1.000, 45.00, 25.00, 100.000, 10.000, TRUE, 48.00),
+('INT-002', 'FAB-102', 'PROV-22', 'Alicate de presión', 1, 'UNIDAD', 'UNIDAD', 1.000, 35.00, 18.00, 50.000, 5.000, TRUE, 38.00),
+('INT-003', 'FAB-103', 'PROV-33', 'Cable mellizo 2x14', 2, 'METRO', 'METRO', 1.000, 2.50, 1.20, 500.000, 100.000, TRUE, 2.80),
+('INT-004', 'FAB-104', 'PROV-44', 'Enchufe Mennekes', 2, 'UNIDAD', 'UNIDAD', 1.000, 85.00, 50.00, 30.000, 5.000, TRUE, 90.00),
+('INT-005', 'FAB-105', 'PROV-55', 'Bolsa cemento Sol', 3, 'UNIDAD', 'UNIDAD', 1.000, 28.50, 24.00, 200.000, 50.000, TRUE, 30.00),
+('INT-006', 'FAB-106', 'PROV-66', 'Fierro corrugado', 3, 'UNIDAD', 'UNIDAD', 1.000, 32.00, 26.00, 150.000, 30.000, TRUE, 34.00);
 
 -- 1 Cotización
 INSERT INTO cotizacion (numero, fecha_emision, sub_total, igv, total, fecha_registro, id_usuario_registro, anulado, id_cliente, estado) VALUES

@@ -1,24 +1,84 @@
 @page "/mi-clave"
-@inject NavigationManager Nav
+@inject ApiJava Api
 
 <PageTitle>Cambiar mi clave · SIGMETA</PageTitle>
 
-@* RF002 · Cambiar mi clave. Solo visual (Lab 9). *@
-<Encabezado Rf="RF002" Titulo="Cambiar mi clave" />
+@* RF002 · PUT /api/usuarios/mi-clave {"claveActual", "claveNueva"}. Cada usuario cambia solo su propia clave:
+   el Java toma el usuario de la sesión, no de esta pantalla. *@
+<Encabezado Rf="RF002" Titulo="Cambiar mi clave" Subtitulo="Tu clave es personal: no la compartas." />
+
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+@if (!string.IsNullOrEmpty(exito))
+{
+    <div class="alert alert-success">@exito</div>
+}
 
 <div class="card card-body mb-3" style="max-width: 520px;">
-    <Campo Etiqueta="Clave actual" Id="actual" Obligatorio="true">
-        <input id="actual" type="password" class="form-control" autocomplete="current-password" />
+    <Campo Etiqueta="Clave actual" Id="actual" Obligatorio="true" Error="@E("actual")">
+        <input id="actual" type="password" class="form-control @Invalido("actual")" maxlength="64" autocomplete="current-password"
+               @bind="claveActual" @bind:event="oninput" />
     </Campo>
-    <Campo Etiqueta="Clave nueva" Id="nueva" Obligatorio="true" Ayuda="Mínimo 8 caracteres, con al menos una letra y un número. Distinta de la actual.">
-        <input id="nueva" type="password" class="form-control" autocomplete="new-password" />
+    <Campo Etiqueta="Clave nueva" Id="nueva" Obligatorio="true" Error="@E("nueva")"
+           Ayuda="Mínimo 8 caracteres, con al menos una letra y un número. Distinta de la actual.">
+        <input id="nueva" type="password" class="form-control @Invalido("nueva")" maxlength="64" autocomplete="new-password"
+               @bind="claveNueva" @bind:event="oninput" />
+    </Campo>
+    <Campo Etiqueta="Repite la clave nueva" Id="repetida" Obligatorio="true" Error="@E("repetida")">
+        <input id="repetida" type="password" class="form-control @Invalido("repetida")" maxlength="64" autocomplete="new-password"
+               @bind="claveRepetida" @bind:event="oninput" />
     </Campo>
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
         <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-        <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary" href="/">Cancelar</a>
-            <button class="btn btn-primary" @onclick="@(() => Nav.NavigateTo("/"))">Cambiar clave</button>
-        </div>
+        <button class="btn btn-primary" disabled="@guardando" @onclick="Guardar">Cambiar clave</button>
     </div>
 </div>
+
+@code {
+    private string claveActual = "";
+    private string claveNueva = "";
+    private string claveRepetida = "";
+    private bool intento;
+    private bool guardando;
+    private string? error;
+    private string? exito;
+
+    // Mismas reglas que UsuarioBOImpl.cambiarClave
+    private Dictionary<string, string> Errores()
+    {
+        var e = new Dictionary<string, string>();
+        if (string.IsNullOrEmpty(claveActual)) e["actual"] = "Escribe tu clave actual.";
+        if (string.IsNullOrEmpty(claveNueva)) e["nueva"] = "Escribe la clave nueva.";
+        else if (claveNueva.Length < 8) e["nueva"] = "La clave debe tener al menos 8 caracteres.";
+        else if (!claveNueva.Any(char.IsLetter) || !claveNueva.Any(char.IsDigit)) e["nueva"] = "La clave debe incluir al menos una letra y un número.";
+        else if (claveNueva == claveActual) e["nueva"] = "La clave nueva debe ser distinta de la actual.";
+        if (claveRepetida != claveNueva) e["repetida"] = "No coincide con la clave nueva.";
+        return e;
+    }
+
+    private string? E(string campo) => intento && Errores().TryGetValue(campo, out var m) ? m : null;
+    private string Invalido(string campo) => E(campo) is null ? "" : "is-invalid";
+
+    private async Task Guardar()
+    {
+        intento = true;
+        error = exito = null;
+        if (Errores().Count > 0) return;
+        guardando = true;
+        try
+        {
+            await Api.Put<object>("usuarios/mi-clave", new { claveActual, claveNueva });
+            exito = "Se cambió tu clave. Úsala la próxima vez que inicies sesión.";
+            claveActual = claveNueva = claveRepetida = "";
+            intento = false;
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "La clave actual es incorrecta"
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+}

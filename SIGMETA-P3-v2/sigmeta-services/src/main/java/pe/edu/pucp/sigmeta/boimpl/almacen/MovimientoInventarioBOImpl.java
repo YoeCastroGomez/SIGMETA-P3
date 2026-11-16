@@ -41,7 +41,7 @@ import java.util.Comparator;
 public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
 
     private static final double EPSILON = 0.000001;
-    public static final String OPERACION_AJUSTE_INVENTARIO = "AJUSTE_INVENTARIO";
+    public static final String OPERACION_AJUSTE_INVENTARIO = SolicitudAutorizacionBOImpl.OPERACION_AJUSTE_INVENTARIO;
     private final MovimientoInventarioDAO movimientoDAO;
     private final StockInventarioDAO stockDAO;
     private final UsuarioBO usuarioBO;
@@ -73,7 +73,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
         validarId(idMovimientoSalida);
         validarId(idDespacho);
         validarId(idAlmacenero);
-        String motivoValidado = Validador.textoObligatorio(motivo, "motivo de reversion", 255);
+        String motivoValidado = Validador.textoObligatorio(motivo, "motivo de reversión", 255);
         usuarioBO.verificarRol(idAlmacenero, TipoRol.ALMACENERO, TipoRol.ADMINISTRADOR);
 
         MovimientoInventario original = movimientoDAO.bloquearMovimiento(idMovimientoSalida);
@@ -85,14 +85,14 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
             throw new IllegalStateException("Esta salida de despacho ya fue revertida");
         }
         if (!Double.isFinite(original.getCantidad()) || original.getCantidad() <= 0) {
-            throw new IllegalStateException("La cantidad historica del movimiento no es valida");
+            throw new IllegalStateException("La cantidad histórica del movimiento no es válida");
         }
 
         int idProducto = original.getProducto().getId();
         double stockActual = stockDAO.obtenerStockParaActualizar(idProducto);
         double nuevoStock = stockActual + original.getCantidad();
         if (!Double.isFinite(nuevoStock)) {
-            throw new IllegalStateException("El stock resultante no es valido");
+            throw new IllegalStateException("El stock resultante no es válido");
         }
 
         MovimientoInventario reversion = new MovimientoInventario();
@@ -117,12 +117,15 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
                                                  String motivo) throws SQLException {
         validarId(idMovimientoAjuste);
         validarId(idAlmacenero);
-        String razon = Validador.textoObligatorio(motivo, "motivo de reversion", 255);
+        String razon = Validador.textoObligatorio(motivo, "motivo de reversión", 255);
         usuarioBO.verificarRol(idAlmacenero, TipoRol.ALMACENERO);
-        if (!autorizacionBO.tieneAutorizacionVigente(idAlmacenero, OPERACION_AJUSTE_INVENTARIO)) {
-            throw new IllegalStateException("La reversion del ajuste requiere autorizacion vigente");
-        }
         return Transaccion.ejecutar(() -> {
+            // RF014: la autorizacion es de un solo uso; se consume al final de esta misma transaccion
+            pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion autorizacion =
+                    autorizacionBO.obtenerAutorizacionVigente(idAlmacenero, OPERACION_AJUSTE_INVENTARIO);
+            if (autorizacion == null) {
+                throw new IllegalStateException("La reversión del ajuste necesita una autorización vigente del Administrador");
+            }
             MovimientoInventario original = movimientoDAO.bloquearMovimiento(idMovimientoAjuste);
             if (original == null || (original.getTipo() != TipoMovimientoInventario.AJUSTE_INGRESO
                     && original.getTipo() != TipoMovimientoInventario.AJUSTE_SALIDA)) {
@@ -133,7 +136,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
             }
             double cantidad = original.getCantidad();
             if (!Double.isFinite(cantidad) || cantidad <= 0) {
-                throw new IllegalStateException("Cantidad historica invalida");
+                throw new IllegalStateException("Cantidad histórica inválida");
             }
             boolean ingresoOriginal = original.getTipo() == TipoMovimientoInventario.AJUSTE_INGRESO;
             int idProducto = original.getProducto().getId();
@@ -149,6 +152,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
             reversion.setStockResultante(nuevoStock);
             stockDAO.actualizarStock(idProducto, nuevoStock);
             movimientoDAO.registrarCompensacion(reversion);
+            autorizacionBO.consumir(autorizacion.getId());
             return reversion;
         });
     }
@@ -158,15 +162,15 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
                                                                String motivo) throws SQLException {
         validarId(idRecepcion);
         validarId(idAlmacenero);
-        String razon = Validador.textoObligatorio(motivo, "motivo de reversion", 255);
+        String razon = Validador.textoObligatorio(motivo, "motivo de reversión", 255);
         usuarioBO.verificarRol(idAlmacenero, TipoRol.ALMACENERO);
         return Transaccion.ejecutar(() -> {
             RecepcionCompra recepcion = recepcionDAO.load(idRecepcion);
-            if (recepcion == null) throw new IllegalArgumentException("No existe la recepcion");
+            if (recepcion == null) throw new IllegalArgumentException("No existe la recepción");
             int idCompra = recepcion.getCompra().getId();
             compraDAO.bloquearCompra(idCompra);
             recepcion = recepcionDAO.load(idRecepcion);
-            if (recepcion.isAnulada()) throw new IllegalStateException("La recepcion ya fue anulada");
+            if (recepcion.isAnulada()) throw new IllegalStateException("La recepción ya fue anulada");
             Compra compra = compraDAO.load(idCompra);
             if (compra.isAnulado()) throw new IllegalStateException("No se revierte una compra anulada");
 
@@ -176,7 +180,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
                 if (m.getTipo() == TipoMovimientoInventario.INGRESO_COMPRA) originales.add(m);
             }
             if (detalles.isEmpty() || originales.isEmpty()) {
-                throw new IllegalStateException("La recepcion no tiene detalles o ingresos originales");
+                throw new IllegalStateException("La recepción no tiene detalles o ingresos originales");
             }
             Map<Integer, Double> cantidadesEsperadas = new HashMap<>();
             List<DetalleCompra> lineasCompra = detalleCompraDAO.listAll();
@@ -195,7 +199,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
             Map<Integer, Double> cantidadesRegistradas = new HashMap<>();
             for (MovimientoInventario m : originales) {
                 if (movimientoDAO.existeReversion(m.getId())) {
-                    throw new IllegalStateException("La recepcion tiene ingresos ya revertidos");
+                    throw new IllegalStateException("La recepción tiene ingresos ya revertidos");
                 }
                 cantidadesRegistradas.merge(m.getProducto().getId(), m.getCantidad(), Double::sum);
             }
@@ -204,7 +208,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
             }
             for (Map.Entry<Integer, Double> item : cantidadesEsperadas.entrySet()) {
                 if (Math.abs(item.getValue() - cantidadesRegistradas.getOrDefault(item.getKey(), -1.0)) > 0.0001) {
-                    throw new IllegalStateException("El inventario no coincide con los detalles historicos");
+                    throw new IllegalStateException("El inventario no coincide con los detalles históricos");
                 }
             }
 
@@ -217,7 +221,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
                 double stock = stockDAO.obtenerStockParaActualizar(idProducto);
                 double nuevoStock = stock - m.getCantidad();
                 if (!Double.isFinite(nuevoStock) || nuevoStock < -EPSILON) {
-                    throw new IllegalStateException("Stock insuficiente para revertir la recepcion");
+                    throw new IllegalStateException("Stock insuficiente para revertir la recepción");
                 }
                 if (nuevoStock < 0) nuevoStock = 0;
                 MovimientoInventario inverso = nuevaCompensacion(m, idAlmacenero, razon);
@@ -264,15 +268,17 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
         validarId(idProducto);
         validarId(idUsuario);
         if (!Double.isFinite(cantidadContada) || cantidadContada < 0) {
-            throw new IllegalArgumentException("La cantidad contada debe ser valida y no negativa");
+            throw new IllegalArgumentException("La cantidad contada debe ser válida y no negativa");
         }
         String motivoValidado = Validador.textoObligatorio(motivo, "motivo", 255);
         usuarioBO.verificarRol(idUsuario, TipoRol.ALMACENERO);
-        if (!autorizacionBO.tieneAutorizacionVigente(idUsuario, OPERACION_AJUSTE_INVENTARIO)) {
-            throw new IllegalStateException("El ajuste requiere autorizacion vigente del Administrador");
-        }
-
         return Transaccion.ejecutar(() -> {
+            // RF014: la autorizacion es de un solo uso; se consume al final de esta misma transaccion
+            pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion autorizacion =
+                    autorizacionBO.obtenerAutorizacionVigente(idUsuario, OPERACION_AJUSTE_INVENTARIO);
+            if (autorizacion == null) {
+                throw new IllegalStateException("El ajuste necesita una autorización vigente del Administrador");
+            }
             double stockActual = stockDAO.obtenerStockParaActualizar(idProducto);
 
             double diferencia = cantidadContada - stockActual;
@@ -297,6 +303,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
 
             stockDAO.actualizarStock(idProducto, cantidadContada);
             movimientoDAO.save(movimiento);
+            autorizacionBO.consumir(autorizacion.getId());
             return movimiento;
         });
     }

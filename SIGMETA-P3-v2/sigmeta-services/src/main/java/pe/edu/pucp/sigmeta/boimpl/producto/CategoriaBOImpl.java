@@ -47,10 +47,9 @@ public class CategoriaBOImpl implements CategoriaBO {
         verificarPermiso(idResponsable);
         validarDatos(categoria);
         return Transaccion.ejecutar(() -> {
+            // RF006: una categoria desactivada tambien se puede corregir (nombre y descripcion);
+            // su estado no cambia aqui, solo con desactivar / activar
             Categoria actual = obtenerExistente(categoria.getId());
-            if (!actual.isEstado()) {
-                throw new IllegalStateException("No se puede modificar una categoria desactivada");
-            }
             validarNombreUnico(categoria);
             categoriaDAO.update(categoria);
             categoria.setEstado(actual.isEstado());
@@ -65,17 +64,34 @@ public class CategoriaBOImpl implements CategoriaBO {
         Transaccion.ejecutar(() -> {
             Categoria categoria = obtenerExistente(idCategoria);
             if (!categoria.isEstado()) {
-                throw new IllegalStateException("La categoria " + categoria.getNombre() + " ya esta desactivada");
+                throw new IllegalStateException("La categoría " + categoria.getNombre() + " ya está desactivada");
             }
             // RF006: no puede desactivarse una categoria con productos activos asociados
             boolean tieneProductosActivos = productoDAO.listarTodos().stream()
                     .anyMatch(p -> p.getCategoria().getId() == idCategoria);
             if (tieneProductosActivos) {
-                throw new IllegalStateException("La categoria tiene productos activos; reasignelos o desactivelos primero");
+                throw new IllegalStateException("La categoría tiene productos activos; reasígnelos o desactívelos primero");
             }
             categoriaDAO.remove(categoria);
             categoria.setEstado(false);
             return null;
+        });
+    }
+
+    // RF006: vuelve a activar una categoria desactivada (baja logica reversible). Solo el Administrador.
+    @Override
+    public Categoria activar(int idCategoria, int idResponsable) throws SQLException {
+        verificarPermiso(idResponsable);
+        return Transaccion.ejecutar(() -> {
+            Categoria categoria = obtenerExistente(idCategoria);
+            if (categoria.isEstado()) {
+                throw new IllegalStateException("La categoría " + categoria.getNombre() + " ya está activa");
+            }
+            // el nombre pudo haberse registrado de nuevo mientras estaba desactivada
+            validarNombreUnico(categoria);
+            new pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl().ejecutar("sp_categoria_activar", idCategoria);
+            categoria.setEstado(true);
+            return categoria;
         });
     }
 
@@ -96,15 +112,15 @@ public class CategoriaBOImpl implements CategoriaBO {
     }
 
     // RF006: busqueda por coincidencia parcial entre las categorias activas y desactivadas.
-    // Se compara con el nombre normalizado: "construcción", "CONSTRUCCION" y "Construccion" encuentran lo mismo.
+    // Se compara con la clave del nombre: "construcción", "CONSTRUCCION" y "Construccion" encuentran lo mismo.
     @Override
     public List<Categoria> buscarPorNombre(String nombre) throws SQLException {
-        String texto = normalizarNombre(Validador.textoObligatorio(nombre, "nombre", 100));
+        String texto = TextoNormalizado.clave(Validador.textoObligatorio(nombre, "nombre", 100));
         return Transaccion.ejecutar(() -> {
             List<Categoria> categorias = new ArrayList<>(categoriaDAO.listarPorEstado(true));
             categorias.addAll(categoriaDAO.listarPorEstado(false));
             return categorias.stream()
-                    .filter(c -> normalizarNombre(c.getNombre()).contains(texto))
+                    .filter(c -> TextoNormalizado.clave(c.getNombre()).contains(texto))
                     .toList();
         });
     }
@@ -122,7 +138,7 @@ public class CategoriaBOImpl implements CategoriaBO {
     @Override
     public List<Categoria> buscar(String nombre, Boolean estado) throws SQLException {
         String texto = nombre == null || nombre.isBlank() ? null
-                : normalizarNombre(Validador.textoOpcional(nombre, "nombre", 100));
+                : TextoNormalizado.clave(Validador.textoOpcional(nombre, "nombre", 100));
         return Transaccion.ejecutar(() -> {
             List<Categoria> categorias = new ArrayList<>();
             if (estado == null || estado) {
@@ -132,7 +148,7 @@ public class CategoriaBOImpl implements CategoriaBO {
                 categorias.addAll(categoriaDAO.listarPorEstado(false));
             }
             return categorias.stream()
-                    .filter(c -> texto == null || normalizarNombre(c.getNombre()).contains(texto))
+                    .filter(c -> texto == null || TextoNormalizado.clave(c.getNombre()).contains(texto))
                     .toList();
         });
     }
@@ -145,34 +161,34 @@ public class CategoriaBOImpl implements CategoriaBO {
     private Categoria obtenerExistente(int idCategoria) throws SQLException {
         Categoria categoria = categoriaDAO.load(idCategoria);
         if (categoria == null) {
-            throw new IllegalArgumentException("No existe la categoria con id " + idCategoria);
+            throw new IllegalArgumentException("No existe la categoría con id " + idCategoria);
         }
         return categoria;
     }
 
-    // Preprocesado del nombre (MAYUSCULAS, sin tildes, un solo espacio): ver TextoNormalizado
+    // El nombre se guarda como lo escribe el usuario (trim, NFC, un solo espacio): ver TextoNormalizado
     static String normalizarNombre(String nombre) {
         return TextoNormalizado.nombre(nombre);
     }
 
     private void validarDatos(Categoria categoria) {
-        Validador.obligatorio(categoria, "categoria");
+        Validador.obligatorio(categoria, "categoría");
         categoria.setNombre(normalizarNombre(Validador.textoObligatorio(categoria.getNombre(), "nombre", 100)));
-        // la descripcion tambien se guarda en MAYUSCULAS y sin tildes
+        // la descripción también se guarda como la escribe el usuario
         categoria.setDescripcion(TextoNormalizado.opcional(
-                Validador.textoOpcional(categoria.getDescripcion(), "descripcion", 255)));
+                Validador.textoOpcional(categoria.getDescripcion(), "descripción", 255)));
     }
 
     // la tabla no tiene UNIQUE en nombre; se controla entre las categorias activas y las desactivadas.
-    // Se comparan los nombres normalizados (tambien los que ya estaban en la base escritos de otra forma):
+    // Se comparan las claves de los nombres (también los que ya estaban en la base escritos de otra forma):
     // "Construccion", "CONSTRUCCIÓN" y " construcción " son la misma categoria
     private void validarNombreUnico(Categoria categoria) throws SQLException {
         List<Categoria> todas = new ArrayList<>(categoriaDAO.listarPorEstado(true));
         todas.addAll(categoriaDAO.listarPorEstado(false));
-        String nuevo = normalizarNombre(categoria.getNombre());
+        String nuevo = TextoNormalizado.clave(categoria.getNombre());
         for (Categoria otra : todas) {
-            if (normalizarNombre(otra.getNombre()).equals(nuevo) && otra.getId() != categoria.getId()) {
-                throw new IllegalArgumentException("Ya existe la categoria " + categoria.getNombre());
+            if (TextoNormalizado.clave(otra.getNombre()).equals(nuevo) && otra.getId() != categoria.getId()) {
+                throw new IllegalArgumentException("Ya existe la categoría " + categoria.getNombre());
             }
         }
     }

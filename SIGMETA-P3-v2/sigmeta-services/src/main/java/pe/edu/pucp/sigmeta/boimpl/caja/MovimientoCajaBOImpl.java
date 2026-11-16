@@ -41,7 +41,7 @@ public class MovimientoCajaBOImpl implements MovimientoCajaBO {
         Usuario responsable = usuarioBO.verificarRol(idResponsable, TipoRol.CAJERO);
         validarDatos(movimiento);
         if (movimiento.getTipo() == TipoMovimientoCaja.COBRO_CREDITO) {
-            throw new IllegalArgumentException("Los cobros de credito se registran desde el cobro de la cuenta por cobrar (RF009)");
+            throw new IllegalArgumentException("Los cobros de crédito se registran desde el cobro de la cuenta por cobrar (RF009)");
         }
         return Transaccion.ejecutar(() -> {
             Caja caja = obtenerCajaAbiertaDelCajero(movimiento.getCaja().getId(), idResponsable);
@@ -96,7 +96,7 @@ public class MovimientoCajaBOImpl implements MovimientoCajaBO {
         Transaccion.ejecutar(() -> {
             MovimientoCaja actual = obtenerExistente(movimiento.getId());
             if (actual.getTipo() == TipoMovimientoCaja.COBRO_CREDITO) {
-                throw new IllegalStateException("El ingreso de un cobro de credito se retira anulando el cobro");
+                throw new IllegalStateException("El ingreso de un cobro de crédito se retira anulando el cobro");
             }
             if (!esManual(actual)) {
                 throw new IllegalStateException("Solo se eliminan ingresos y egresos manuales; los cobros se anulan desde su origen");
@@ -154,10 +154,10 @@ public class MovimientoCajaBOImpl implements MovimientoCajaBO {
             throw new IllegalArgumentException("No existe la caja con id " + idCaja);
         }
         if (!caja.isAbierta()) {
-            throw new IllegalStateException("La caja " + idCaja + " ya esta cerrada");
+            throw new IllegalStateException("La caja " + idCaja + " ya está cerrada");
         }
         if (caja.getUsuarioApertura() == null || caja.getUsuarioApertura().getId() != idCajero) {
-            throw new IllegalStateException("Solo el cajero que abrio la caja puede registrar sus movimientos");
+            throw new IllegalStateException("Solo el cajero que abrió la caja puede registrar sus movimientos");
         }
         return caja;
     }
@@ -189,11 +189,11 @@ public class MovimientoCajaBOImpl implements MovimientoCajaBO {
             throw new IllegalArgumentException("No existe la venta con id " + idVenta);
         }
         if (venta.isAnulado()) {
-            throw new IllegalStateException("La venta " + venta.getNumero() + " esta anulada; no se puede cobrar");
+            throw new IllegalStateException("La venta " + venta.getNumero() + " está anulada; no se puede cobrar");
         }
         if (venta.getCondicionPago() != CondicionPago.CONTADO) {
             throw new IllegalStateException("La venta " + venta.getNumero()
-                    + " es al credito; se cobra desde su cuenta por cobrar (RF009)");
+                    + " es al crédito; se cobra desde su cuenta por cobrar (RF009)");
         }
         if (!new CompensacionCaja().buscar(CompensacionCaja.DOCUMENTO_VENTA, idVenta).isEmpty()) {
             throw new IllegalStateException("La venta " + venta.getNumero() + " ya tiene su cobro al contado registrado");

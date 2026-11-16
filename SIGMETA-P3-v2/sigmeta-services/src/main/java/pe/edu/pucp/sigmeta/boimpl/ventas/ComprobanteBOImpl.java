@@ -55,7 +55,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
 
     private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
     // RF013/RF014: operacion restringida que el Administrador autoriza para emitir una nota de credito
-    public static final String OPERACION_NOTA_CREDITO = "EMITIR_NOTA_CREDITO";
+    public static final String OPERACION_NOTA_CREDITO = SolicitudAutorizacionBOImpl.OPERACION_NOTA_CREDITO;
 
     private final ComprobanteDAO comprobanteDAO;
     private final DetalleNotaCreditoDAO detalleNotaCreditoDAO;
@@ -89,7 +89,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
         usuarioBO.verificarRol(idResponsable, TipoRol.VENDEDOR, TipoRol.CAJERO);
         Validador.obligatorio(tipo, "tipo de comprobante");
         if (tipo != TipoComprobante.FACTURA && tipo != TipoComprobante.BOLETA) {
-            throw new IllegalArgumentException("La emision directa solo admite FACTURA o BOLETA");
+            throw new IllegalArgumentException("La emisión directa solo admite FACTURA o BOLETA");
         }
 
         return Transaccion.ejecutar(() -> {
@@ -147,20 +147,20 @@ public class ComprobanteBOImpl implements ComprobanteBO {
     public Comprobante registrarNotaCredito(Comprobante notaCredito, int idResponsable) throws SQLException {
         Usuario responsable = usuarioBO.verificarRol(idResponsable, TipoRol.CAJERO);
 
-        Validador.obligatorio(notaCredito, "nota de credito");
+        Validador.obligatorio(notaCredito, "nota de crédito");
         Validador.obligatorio(notaCredito.getComprobanteRelacionado(), "comprobante origen");
-        String motivoValidado = Validador.textoObligatorio(notaCredito.getMotivo(), "motivo de nota de credito", 200);
+        String motivoValidado = Validador.textoObligatorio(notaCredito.getMotivo(), "motivo de nota de crédito", 200);
         notaCredito.setMotivo(motivoValidado);
 
         List<DetalleNotaCredito> detalles = notaCredito.getDetalles();
         if (detalles == null || detalles.isEmpty()) {
-            throw new IllegalArgumentException("La nota de credito debe tener al menos una linea de detalle");
+            throw new IllegalArgumentException("La nota de crédito debe tener al menos una línea de detalle");
         }
 
         return Transaccion.ejecutar(() -> {
             SolicitudAutorizacion autorizacion = autorizacionBO.obtenerAutorizacionVigente(idResponsable, OPERACION_NOTA_CREDITO);
             if (autorizacion == null) {
-                throw new IllegalStateException("Para emitir la nota de credito se necesita una autorizacion vigente del Administrador");
+                throw new IllegalStateException("Para emitir la nota de crédito se necesita una autorización vigente del Administrador");
             }
             Usuario admin = autorizacion.getAdministrador();
 
@@ -170,7 +170,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
                 throw new IllegalArgumentException("No existe el comprobante origen con id " + idOrigen);
             }
             if (origen.getTipo() != TipoComprobante.FACTURA && origen.getTipo() != TipoComprobante.BOLETA) {
-                throw new IllegalArgumentException("La nota de credito solo puede emitirse sobre una FACTURA o BOLETA");
+                throw new IllegalArgumentException("La nota de crédito solo puede emitirse sobre una FACTURA o BOLETA");
             }
             if (origen.getEstado() != EstadoComprobante.EMITIDO && origen.getEstado() != EstadoComprobante.ACEPTADO) {
                 throw new IllegalStateException("El comprobante origen debe estar en estado EMITIDO o ACEPTADO");
@@ -178,7 +178,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
 
             Venta venta = ventaDAO.load(origen.getVenta().getId());
             if (venta == null || venta.isAnulado()) {
-                throw new IllegalStateException("La venta asociada al comprobante origen no existe o esta anulada");
+                throw new IllegalStateException("La venta asociada al comprobante origen no existe o está anulada");
             }
 
             // RF013: cada linea de la nota apunta a la linea de venta concreta que se devuelve
@@ -202,14 +202,14 @@ public class ComprobanteBOImpl implements ComprobanteBO {
             BigDecimal subTotalNC = BigDecimal.ZERO;
 
             for (DetalleNotaCredito d : detalles) {
-                Validador.obligatorio(d.getDetalleVenta(), "linea de venta");
+                Validador.obligatorio(d.getDetalleVenta(), "línea de venta");
                 int idLinea = d.getDetalleVenta().getId();
                 if (!lineasEnNC.add(idLinea)) {
-                    throw new IllegalArgumentException("No se puede repetir la misma linea de venta en la nota de credito");
+                    throw new IllegalArgumentException("No se puede repetir la misma línea de venta en la nota de crédito");
                 }
                 DetalleVenta lineaVenta = mapaDetallesVenta.get(idLinea);
                 if (lineaVenta == null) {
-                    throw new IllegalArgumentException("La linea " + idLinea + " no pertenece a la venta origen");
+                    throw new IllegalArgumentException("La línea " + idLinea + " no pertenece a la venta origen");
                 }
                 if (!Double.isFinite(d.getCantidad()) || d.getCantidad() <= 0) {
                     throw new IllegalArgumentException("La cantidad devuelta debe ser mayor a 0");
@@ -220,7 +220,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
                 double yaAcreditado = yaAcreditadoPorLinea.getOrDefault(idLinea, 0.0);
                 double entregado = lineaVenta.getCantidadDespachada();
                 if (yaAcreditado + d.getCantidad() > entregado + 0.0001) {
-                    throw new IllegalArgumentException("Solo se puede devolver lo entregado al cliente en la linea "
+                    throw new IllegalArgumentException("Solo se puede devolver lo entregado al cliente en la línea "
                             + lineaVenta.getNumeroLinea() + " (Entregado: " + entregado + ", Ya acreditado: "
                             + yaAcreditado + ", Devuelto: " + d.getCantidad() + ")");
                 }
@@ -244,7 +244,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
             BigDecimal totalNC = subTotalNC.add(igvNC);
 
             if (totalNC.doubleValue() > origen.getTotal() + 0.01) {
-                throw new IllegalArgumentException("El monto total de la nota de credito no puede superar el total del comprobante origen");
+                throw new IllegalArgumentException("El monto total de la nota de crédito no puede superar el total del comprobante origen");
             }
 
             String serie = (origen.getTipo() == TipoComprobante.FACTURA) ? "FC01" : "BC01";
@@ -285,20 +285,37 @@ public class ComprobanteBOImpl implements ComprobanteBO {
                 mov.setStockResultante(nuevoStock);
                 mov.setComprobante(notaCredito);
                 mov.setUsuarioRegistro(responsable);
-                mov.setMotivo("Devolucion por NC " + serie + "-" + correlativo + ": " + motivoValidado);
+                mov.setMotivo("Devolución por NC " + serie + "-" + correlativo + ": " + motivoValidado);
                 movimientoDAO.save(mov);
             }
 
             // Efecto 1: Reversion de saldo de cuenta por cobrar si es a credito (RF013, RF010)
             if (venta.getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CREDITO) {
-                comprobanteDAO.revertirSaldoCuentaPorCobrar(venta.getId(), notaCredito.getTotal());
+                // La nota rebaja primero la deuda que queda. Lo que exceda el saldo es dinero que el cliente
+                // ya pago: se le devuelve en efectivo por la caja abierta del cajero (igual que al contado).
+                pe.edu.pucp.sigmeta.model.cobranza.CuentaPorCobrar cuenta =
+                        new pe.edu.pucp.sigmeta.daoimpl.cobranza.CuentaPorCobrarDAOImpl().obtenerPorVenta(venta.getId());
+                BigDecimal totalNota = BigDecimal.valueOf(notaCredito.getTotal()).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal saldo = cuenta == null ? BigDecimal.ZERO
+                        : BigDecimal.valueOf(Math.max(cuenta.getSaldoPendiente(), 0)).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal aLaDeuda = totalNota.min(saldo);
+                BigDecimal aDevolver = totalNota.subtract(aLaDeuda);
+                if (aLaDeuda.signum() > 0) {
+                    comprobanteDAO.revertirSaldoCuentaPorCobrar(venta.getId(), aLaDeuda.doubleValue());
+                }
+                if (aDevolver.signum() > 0) {
+                    compensacionCaja.egresoEnCajaAbierta(responsable.getId(),
+                            pe.edu.pucp.sigmeta.model.enums.MedioPago.EFECTIVO, aDevolver.doubleValue(),
+                            "Devolución por NC " + serie + "-" + correlativo + " (venta al crédito ya pagada)",
+                            CompensacionCaja.DOCUMENTO_NOTA_CREDITO, notaCredito.getId(), responsable);
+                }
             } else {
                 // Efecto 3 (RF010): venta al contado ya cobrada -> la devolucion sale como egreso de la caja
                 // del cajero, asi la nota de credito no queda contada como cobro valido en el cierre
                 List<MovimientoCaja> cobros = compensacionCaja.buscar(CompensacionCaja.DOCUMENTO_VENTA, venta.getId());
                 if (!cobros.isEmpty()) {
                     compensacionCaja.egresoEnCajaAbierta(responsable.getId(), cobros.get(0).getMedioPago(),
-                            notaCredito.getTotal(), "Devolucion por NC " + serie + "-" + correlativo,
+                            notaCredito.getTotal(), "Devolución por NC " + serie + "-" + correlativo,
                             CompensacionCaja.DOCUMENTO_NOTA_CREDITO, notaCredito.getId(), responsable);
                 }
             }
@@ -313,7 +330,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
     @Override
     public Comprobante modificarNotaCredito(Comprobante nc, int idResponsable) throws SQLException {
         usuarioBO.verificarRol(idResponsable, TipoRol.CAJERO, TipoRol.ADMINISTRADOR);
-        Validador.obligatorio(nc, "nota de credito");
+        Validador.obligatorio(nc, "nota de crédito");
         String motivoValidado = Validador.textoObligatorio(nc.getMotivo(), "motivo", 200);
 
         return Transaccion.ejecutar(() -> {
@@ -322,14 +339,14 @@ public class ComprobanteBOImpl implements ComprobanteBO {
                 throw new IllegalArgumentException("No existe el comprobante con id " + nc.getId());
             }
             if (actual.getTipo() != TipoComprobante.NOTA_CREDITO) {
-                throw new IllegalArgumentException("El comprobante no es una nota de credito");
+                throw new IllegalArgumentException("El comprobante no es una nota de crédito");
             }
             if (actual.getEstado() == EstadoComprobante.ANULADO) {
-                throw new IllegalStateException("No se puede modificar una nota de credito anulada");
+                throw new IllegalStateException("No se puede modificar una nota de crédito anulada");
             }
 
             actual.setMotivo(motivoValidado);
-            actual.setMedioEnvio(Validador.textoOpcional(nc.getMedioEnvio(), "medio de envio", 30));
+            actual.setMedioEnvio(Validador.textoOpcional(nc.getMedioEnvio(), "medio de envío", 30));
             actual.setFechaEnvio(nc.getFechaEnvio());
 
             comprobanteDAO.update(actual);
@@ -340,7 +357,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
     @Override
     public void anular(int idComprobante, String motivo, int idResponsable) throws SQLException {
         Usuario responsable = usuarioBO.verificarRol(idResponsable, TipoRol.ADMINISTRADOR, TipoRol.CAJERO);
-        Validador.textoObligatorio(motivo, "motivo de anulacion", 200);
+        Validador.textoObligatorio(motivo, "motivo de anulación", 200);
 
         Transaccion.ejecutar(() -> {
             Comprobante comprobante = comprobanteDAO.load(idComprobante);
@@ -358,7 +375,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
                     int idProd = d.getDetalleVenta().getProducto().getId();
                     double stockActual = stockDAO.obtenerStockParaActualizar(idProd);
                     if (stockActual < d.getCantidad()) {
-                        throw new IllegalStateException("Stock insuficiente para revertir la nota de credito en el producto " + idProd);
+                        throw new IllegalStateException("Stock insuficiente para revertir la nota de crédito en el producto " + idProd);
                     }
                     double nuevoStock = stockActual - d.getCantidad();
                     stockDAO.actualizarStock(idProd, nuevoStock);
@@ -371,25 +388,35 @@ public class ComprobanteBOImpl implements ComprobanteBO {
                     mov.setCantidad(d.getCantidad());
                     mov.setStockResultante(nuevoStock);
                     mov.setUsuarioRegistro(responsable);
-                    mov.setMotivo("Reversion de nota de credito " + comprobante.getSerie() + "-" + comprobante.getNumero());
+                    mov.setMotivo("Reversión de nota de crédito " + comprobante.getSerie() + "-" + comprobante.getNumero());
                     movimientoDAO.save(mov);
                 }
 
                 // Revertir el efecto en la cuenta por cobrar: la deuda vuelve a su monto anterior (RF013)
                 Venta venta = ventaDAO.load(comprobante.getVenta().getId());
                 if (venta != null && venta.getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CREDITO) {
-                    comprobanteDAO.restaurarSaldoCuentaPorCobrar(venta.getId(), comprobante.getTotal());
+                    // la deuda vuelve solo por la parte que la nota rebajo; lo que se devolvio en efectivo
+                    // se revierte abajo, con su ingreso compensatorio en la caja
+                    BigDecimal devueltoEnCaja = BigDecimal.ZERO;
+                    for (MovimientoCaja devolucion : compensacionCaja.buscar(CompensacionCaja.DOCUMENTO_NOTA_CREDITO, idComprobante)) {
+                        devueltoEnCaja = devueltoEnCaja.add(BigDecimal.valueOf(devolucion.getMonto()));
+                    }
+                    BigDecimal aLaDeuda = BigDecimal.valueOf(comprobante.getTotal()).subtract(devueltoEnCaja)
+                            .setScale(2, RoundingMode.HALF_UP);
+                    if (aLaDeuda.signum() > 0) {
+                        comprobanteDAO.restaurarSaldoCuentaPorCobrar(venta.getId(), aLaDeuda.doubleValue());
+                    }
                 }
                 // Revertir la devolucion de dinero en caja de una venta al contado (RF010)
                 for (MovimientoCaja devolucion : compensacionCaja.buscar(CompensacionCaja.DOCUMENTO_NOTA_CREDITO, idComprobante)) {
-                    compensacionCaja.compensar(devolucion, "Anulacion de la NC " + comprobante.getSerie() + "-" + comprobante.getNumero(),
+                    compensacionCaja.compensar(devolucion, "Anulación de la NC " + comprobante.getSerie() + "-" + comprobante.getNumero(),
                             CompensacionCaja.DOCUMENTO_ANULACION_NOTA_CREDITO, idComprobante, responsable);
                 }
             } else {
                 // Validar que no tenga notas de credito activas
                 List<Comprobante> ncs = comprobanteDAO.listarNotasCreditoPorComprobante(idComprobante);
                 if (!ncs.isEmpty()) {
-                    throw new IllegalStateException("No se puede anular un comprobante que tiene notas de credito activas");
+                    throw new IllegalStateException("No se puede anular un comprobante que tiene notas de crédito activas");
                 }
             }
 
@@ -424,9 +451,9 @@ public class ComprobanteBOImpl implements ComprobanteBO {
     @Override
     public Comprobante registrarEnvio(int idComprobante, String medioEnvio, int idResponsable) throws SQLException {
         usuarioBO.verificarRol(idResponsable, TipoRol.VENDEDOR, TipoRol.CAJERO);
-        String medio = Validador.textoObligatorio(medioEnvio, "medio de envio", 30).trim().toUpperCase();
+        String medio = Validador.textoObligatorio(medioEnvio, "medio de envío", 30).trim().toUpperCase();
         if (!medio.equals("CORREO") && !medio.equals("MENSAJERIA") && !medio.equals("IMPRESO")) {
-            throw new IllegalArgumentException("Medio de envio no valido (solo se permite CORREO, MENSAJERIA o IMPRESO): " + medioEnvio);
+            throw new IllegalArgumentException("Medio de envío no válido (solo se permite CORREO, MENSAJERIA o IMPRESO): " + medioEnvio);
         }
 
         return Transaccion.ejecutar(() -> {
@@ -435,10 +462,10 @@ public class ComprobanteBOImpl implements ComprobanteBO {
                 throw new IllegalArgumentException("No existe el comprobante con id " + idComprobante);
             }
             if (comprobante.getTipo() != TipoComprobante.FACTURA && comprobante.getTipo() != TipoComprobante.BOLETA) {
-                throw new IllegalArgumentException("Solo se puede registrar envio de FACTURA o BOLETA");
+                throw new IllegalArgumentException("Solo se puede registrar envío de FACTURA o BOLETA");
             }
             if (comprobante.getEstado() == EstadoComprobante.ANULADO) {
-                throw new IllegalStateException("No se puede registrar el envio de un comprobante anulado");
+                throw new IllegalStateException("No se puede registrar el envío de un comprobante anulado");
             }
 
             LocalDateTime ahora = LocalDateTime.now();

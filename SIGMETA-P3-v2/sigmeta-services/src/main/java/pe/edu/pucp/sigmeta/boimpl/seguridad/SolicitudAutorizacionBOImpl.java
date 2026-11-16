@@ -19,6 +19,42 @@ import java.util.List;
 
 public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
 
+    // RF014: operaciones restringidas del sistema. Cada una la pide un solo rol y, una vez aprobada,
+    // sirve para UNA operacion: el BO que la usa la consume (queda VENCIDA) en su misma transaccion.
+    public static final String OPERACION_DESCUENTO_ESPECIAL = "DESCUENTO_ESPECIAL";   // Vendedor: vender bajo el costo
+    public static final String OPERACION_NOTA_CREDITO = "EMITIR_NOTA_CREDITO";         // Cajero: nota de credito
+    public static final String OPERACION_AJUSTE_INVENTARIO = "AJUSTE_INVENTARIO";      // Almacenero: ajuste por conteo
+
+    private static final java.util.Map<String, TipoRol> ROL_POR_OPERACION = new java.util.LinkedHashMap<>();
+    private static final java.util.Map<String, String> DESCRIPCION_POR_OPERACION = new java.util.LinkedHashMap<>();
+    static {
+        ROL_POR_OPERACION.put(OPERACION_DESCUENTO_ESPECIAL, TipoRol.VENDEDOR);
+        ROL_POR_OPERACION.put(OPERACION_NOTA_CREDITO, TipoRol.CAJERO);
+        ROL_POR_OPERACION.put(OPERACION_AJUSTE_INVENTARIO, TipoRol.ALMACENERO);
+        DESCRIPCION_POR_OPERACION.put(OPERACION_DESCUENTO_ESPECIAL,
+                "Registrar una venta con una línea por debajo del costo del producto");
+        DESCRIPCION_POR_OPERACION.put(OPERACION_NOTA_CREDITO,
+                "Emitir una nota de crédito por devolución de mercadería");
+        DESCRIPCION_POR_OPERACION.put(OPERACION_AJUSTE_INVENTARIO,
+                "Registrar o revertir un ajuste de inventario por conteo físico");
+    }
+
+    // operaciones que puede pedir un rol: codigo -> descripcion
+    public static java.util.Map<String, String> operacionesDe(TipoRol rol) {
+        java.util.Map<String, String> resultado = new java.util.LinkedHashMap<>();
+        for (java.util.Map.Entry<String, TipoRol> e : ROL_POR_OPERACION.entrySet()) {
+            if (rol == null || e.getValue() == rol) {
+                resultado.put(e.getKey(), DESCRIPCION_POR_OPERACION.get(e.getKey()));
+            }
+        }
+        return resultado;
+    }
+
+    public static String descripcionDe(String operacion) {
+        String descripcion = DESCRIPCION_POR_OPERACION.get(operacion);
+        return descripcion != null ? descripcion : operacion;
+    }
+
     private final SolicitudAutorizacionDAO solicitudDAO;
     private final UsuarioBO usuarioBO;
 
@@ -30,23 +66,34 @@ public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
     // RF014
     @Override
     public SolicitudAutorizacion solicitar(int idSolicitante, String operacionRestringida, String motivo) throws SQLException {
+        // RF001: se solicita siempre a nombre propio (el usuario de la sesion)
+        pe.edu.pucp.sigmeta.seguridad.SesionServicio.verificarResponsable(idSolicitante);
         return Transaccion.ejecutar(() -> {
             Usuario solicitante = usuarioBO.obtener(idSolicitante);
             if(solicitante == null || !solicitante.isEstado()){
-                throw new IllegalArgumentException("El solicitante no existe o esta desactivado");
+                throw new IllegalArgumentException("El solicitante no existe o está desactivado");
             }
             // RF014: solicitan el Vendedor, el Cajero y el Almacenero
             if(solicitante.getRol().getTipo() == TipoRol.ADMINISTRADOR){
-                throw new IllegalStateException("El Administrador no necesita solicitar autorizacion");
+                throw new IllegalStateException("El Administrador no necesita solicitar autorización");
             }
-            String operacion = Validador.textoObligatorio(operacionRestringida, "operacion restringida", 60);
+            String operacion = Validador.textoObligatorio(operacionRestringida, "operación restringida", 60)
+                    .toUpperCase(java.util.Locale.ROOT);
+            TipoRol rolDeLaOperacion = ROL_POR_OPERACION.get(operacion);
+            if (rolDeLaOperacion == null) {
+                throw new IllegalArgumentException("La operación restringida no existe. Elija una de la lista");
+            }
+            if (rolDeLaOperacion != solicitante.getRol().getTipo()) {
+                throw new IllegalStateException("El rol " + solicitante.getRol().getTipo()
+                        + " no realiza la operación " + operacion + "; no necesita esa autorización");
+            }
             String motivoValidado = Validador.textoObligatorio(motivo, "motivo", 200);
 
             boolean yaHayPendiente = solicitudDAO.listarPorSolicitante(idSolicitante).stream()
                     .anyMatch(s -> s.getEstado() == EstadoAutorizacion.PENDIENTE
                             && s.getOperacionRestringida().equals(operacion));
             if(yaHayPendiente){
-                throw new IllegalStateException("Ya existe una solicitud pendiente para esta operacion");
+                throw new IllegalStateException("Ya existe una solicitud pendiente para esta operación");
             }
 
             SolicitudAutorizacion solicitud = new SolicitudAutorizacion();
@@ -148,7 +195,7 @@ public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
     @Override
     public boolean tieneAutorizacionVigente(int idUsuario, String operacionRestringida) throws SQLException {
         return Transaccion.ejecutar(() -> {
-            String operacion = Validador.textoObligatorio(operacionRestringida, "operacion restringida", 60);
+            String operacion = Validador.textoObligatorio(operacionRestringida, "operación restringida", 60);
             return solicitudDAO.buscarVigente(idUsuario, operacion) != null;
         });
     }
@@ -158,7 +205,7 @@ public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
     @Override
     public SolicitudAutorizacion obtenerAutorizacionVigente(int idUsuario, String operacionRestringida) throws SQLException {
         return Transaccion.ejecutar(() -> {
-            String operacion = Validador.textoObligatorio(operacionRestringida, "operacion restringida", 60);
+            String operacion = Validador.textoObligatorio(operacionRestringida, "operación restringida", 60);
             SolicitudAutorizacion vigente = solicitudDAO.buscarVigente(idUsuario, operacion);
             if(vigente == null || vigente.getAdministrador() == null){
                 return null;
@@ -182,7 +229,7 @@ public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
         Transaccion.ejecutar(() -> {
             SolicitudAutorizacion solicitud = obtenerExistente(idSolicitud);
             if(solicitud.getEstado() != EstadoAutorizacion.APROBADA){
-                throw new IllegalStateException("Solo se puede consumir una autorizacion aprobada (estado: " + solicitud.getEstado() + ")");
+                throw new IllegalStateException("Solo se puede consumir una autorización aprobada (estado: " + solicitud.getEstado() + ")");
             }
             solicitudDAO.remove(solicitud);
             return null;

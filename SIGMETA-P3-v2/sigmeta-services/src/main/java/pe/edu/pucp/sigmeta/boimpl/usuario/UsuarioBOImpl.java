@@ -93,6 +93,8 @@ public class UsuarioBOImpl implements UsuarioBO {
     // RF002, RNF001
     @Override
     public void cambiarClave(int idUsuario, String claveActual, String claveNueva) throws SQLException {
+        // RF001: cada usuario cambia solo su propia clave (el usuario de la sesion)
+        pe.edu.pucp.sigmeta.seguridad.SesionServicio.verificarResponsable(idUsuario);
         Transaccion.ejecutar(() -> {
             Usuario usuario = obtenerExistente(idUsuario);
             if(claveActual == null || !GeneradorHash.verificar(claveActual, usuario.getSalt(), usuario.getClaveHash())){
@@ -161,7 +163,7 @@ public class UsuarioBOImpl implements UsuarioBO {
         return Transaccion.ejecutar(() -> {
             Usuario usuario = usuarioDAO.load(idUsuario);
             if(usuario == null || !usuario.isEstado() || !usuario.getRol().isEstado()){
-                throw new IllegalStateException("La operacion requiere un usuario activo");
+                throw new IllegalStateException("La operación requiere un usuario activo");
             }
             for(TipoRol rol : rolesPermitidos){
                 if(usuario.getRol().getTipo() == rol){
@@ -169,7 +171,7 @@ public class UsuarioBOImpl implements UsuarioBO {
                 }
             }
             throw new IllegalStateException("El rol " + usuario.getRol().getTipo()
-                    + " no tiene permiso para realizar esta operacion");
+                    + " no tiene permiso para realizar esta operación");
         });
     }
 
@@ -200,7 +202,7 @@ public class UsuarioBOImpl implements UsuarioBO {
         Validador.obligatorio(usuario, "usuario");
         String nombreUsuario = Validador.textoObligatorio(usuario.getNombreUsuario(), "nombre de usuario", 50);
         if(!nombreUsuario.matches("^[A-Za-z0-9._-]+$")){
-            throw new IllegalArgumentException("El nombre de usuario solo puede contener letras, digitos, '.', '_' y '-'");
+            throw new IllegalArgumentException("El nombre de usuario solo puede contener letras, dígitos, '.', '_' y '-'");
         }
         usuario.setNombreUsuario(nombreUsuario);
         usuario.setNombres(Validador.textoObligatorio(usuario.getNombres(), "nombres", 100));
@@ -211,7 +213,7 @@ public class UsuarioBOImpl implements UsuarioBO {
         Validador.obligatorio(usuario.getRol(), "rol");
         Rol rol = rolDAO.load(usuario.getRol().getId());
         if(rol == null || !rol.isEstado()){
-            throw new IllegalArgumentException("El rol seleccionado no existe o esta desactivado");
+            throw new IllegalArgumentException("El rol seleccionado no existe o está desactivado");
         }
         usuario.setRol(rol);
     }
@@ -219,7 +221,7 @@ public class UsuarioBOImpl implements UsuarioBO {
     private void validarNombreUsuarioUnico(Usuario usuario) throws SQLException {
         Usuario existente = usuarioDAO.buscarPorNombreUsuario(usuario.getNombreUsuario());
         if(existente != null && existente.getId() != usuario.getId()){
-            throw new IllegalArgumentException("El nombre de usuario ya esta registrado");
+            throw new IllegalArgumentException("El nombre de usuario ya está registrado");
         }
     }
 
@@ -229,7 +231,7 @@ public class UsuarioBOImpl implements UsuarioBO {
             throw new IllegalArgumentException("La clave debe tener al menos " + LONGITUD_MINIMA_CLAVE + " caracteres");
         }
         if(!clave.matches(".*[A-Za-z].*") || !clave.matches(".*\\d.*")){
-            throw new IllegalArgumentException("La clave debe incluir al menos una letra y un numero");
+            throw new IllegalArgumentException("La clave debe incluir al menos una letra y un número");
         }
     }
 
@@ -242,7 +244,7 @@ public class UsuarioBOImpl implements UsuarioBO {
                 .filter(u -> u.getRol().getTipo() == TipoRol.ADMINISTRADOR)
                 .count();
         if(administradoresActivos <= 1){
-            throw new IllegalStateException("No se puede quitar al unico Administrador activo del sistema");
+            throw new IllegalStateException("No se puede quitar al único Administrador activo del sistema");
         }
     }
 }

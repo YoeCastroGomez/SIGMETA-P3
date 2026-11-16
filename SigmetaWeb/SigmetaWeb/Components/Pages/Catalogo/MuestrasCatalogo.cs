@@ -1,6 +1,6 @@
 ﻿namespace SigmetaWeb.Components.Pages.Catalogo;
 
-// Datos de ejemplo fijos (Lab 9: sin BD ni servicios). Se reemplazan al integrar con Java.
+// Quedo del Lab 9. Las pantallas ya leen del Java; de aqui solo se usan Texto() y Unidades (unidades de medida).
 // Los nombres de los campos son los mismos que en las clases Proveedor, Categoria, Producto y Cotizacion del Java.
 
 // RF004 · Proveedor (los datos de contacto vienen de DatosContacto).

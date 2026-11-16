@@ -29,7 +29,7 @@ public abstract class VentanillaBase {
     protected Response ejecutar(String ticket, Response.Status estadoOk, SesionServicio.Accion<?> accion) {
         SesionServicio sesion = Sesiones.buscar(ticket);
         if (sesion == null) {
-            return error(Response.Status.UNAUTHORIZED, "Su sesion no existe o ya vencio. Vuelva a iniciar sesion");
+            return error(Response.Status.UNAUTHORIZED, "Su sesión no existe o ya venció. Vuelva a iniciar sesión");
         }
         try {
             boolean soloConsulta = pedido != null && HttpMethod.GET.equals(pedido.getMethod());

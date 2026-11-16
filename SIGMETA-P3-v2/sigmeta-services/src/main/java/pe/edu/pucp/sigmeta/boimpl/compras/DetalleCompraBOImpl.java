@@ -84,7 +84,7 @@ public class DetalleCompraBOImpl implements DetalleCompraBO {
             long numeroDetalles = detalleCompraDAO.listAll().stream()
                     .filter(linea -> linea.getCompra().getId() == compra.getId()).count();
             if (numeroDetalles <= 1) {
-                throw new IllegalArgumentException("No se puede eliminar el ultimo detalle de la compra");
+                throw new IllegalArgumentException("No se puede eliminar el último detalle de la compra");
             }
             detalleCompraDAO.remove(detalle);
             recalcularTotales(compra);
@@ -145,7 +145,7 @@ public class DetalleCompraBOImpl implements DetalleCompraBO {
             if (otro.getCompra().getId() == detalle.getCompra().getId()
                     && otro.getNumeroLinea() == detalle.getNumeroLinea()
                     && otro.getId() != idExcluido) {
-                throw new IllegalArgumentException("Ya existe ese numero de linea en la compra");
+                throw new IllegalArgumentException("Ya existe ese número de línea en la compra");
             }
         }
     }
@@ -158,7 +158,7 @@ public class DetalleCompraBOImpl implements DetalleCompraBO {
 
         if (detalle.getCompra().getId() <= 0 || detalle.getProducto().getId() <= 0
                 || detalle.getNumeroLinea() <= 0) {
-            throw new IllegalArgumentException("Los identificadores y el numero de linea deben ser positivos");
+            throw new IllegalArgumentException("Los identificadores y el número de línea deben ser positivos");
         }
         CalculoCompra.linea(detalle);
         if (!Double.isFinite(detalle.getCantidad())
@@ -174,7 +174,7 @@ public class DetalleCompraBOImpl implements DetalleCompraBO {
                 || detalle.getFactorConversion() <= 0
                 || detalle.getCantidadRecibida() < 0
                 || detalle.getCantidadRecibida() > detalle.getCantidad()) {
-            throw new IllegalArgumentException("Las cantidades e importes del detalle deben ser validos");
+            throw new IllegalArgumentException("Las cantidades e importes del detalle deben ser válidos");
         }
     }
 

@@ -4,6 +4,7 @@ import pe.edu.pucp.sigmeta.boimpl.Transaccion;
 import pe.edu.pucp.sigmeta.bo.socio.ProveedorBO;
 import pe.edu.pucp.sigmeta.bo.usuario.UsuarioBO;
 import pe.edu.pucp.sigmeta.boimpl.Validador;
+import pe.edu.pucp.sigmeta.boimpl.producto.TextoNormalizado;
 import pe.edu.pucp.sigmeta.boimpl.usuario.UsuarioBOImpl;
 import pe.edu.pucp.sigmeta.dao.socio.ProveedorDAO;
 import pe.edu.pucp.sigmeta.daoimpl.socio.ProveedorDAOImpl;
@@ -89,7 +90,7 @@ public class ProveedorBOImpl implements ProveedorBO {
     public List<Proveedor> buscarPorRazonSocial(String razonSocial) throws SQLException {
         return Transaccion.ejecutar(() -> {
             return proveedorDAO.buscarPorRazonSocial(
-                    Validador.textoObligatorio(razonSocial, "razon social", 150));
+                    Validador.textoObligatorio(razonSocial, "razón social", 150));
         });
     }
 
@@ -112,14 +113,15 @@ public class ProveedorBOImpl implements ProveedorBO {
     private void validarDatos(Proveedor proveedor) {
         Validador.obligatorio(proveedor, "proveedor");
         proveedor.setRuc(Validador.ruc(proveedor.getRuc()));
-        proveedor.setRazonSocial(Validador.textoObligatorio(proveedor.getRazonSocial(), "razon social", 150));
+        proveedor.setRazonSocial(TextoNormalizado.nombre(
+                Validador.textoObligatorio(proveedor.getRazonSocial(), "razón social", 150)));
         Validador.obligatorio(proveedor.getContacto(), "datos de contacto");
-        proveedor.getContacto().setDireccion(Validador.textoOpcional(proveedor.getContacto().getDireccion(), "direccion", 200));
+        proveedor.getContacto().setDireccion(Validador.textoOpcional(proveedor.getContacto().getDireccion(), "dirección", 200));
         proveedor.getContacto().setTelefono(Validador.telefono(proveedor.getContacto().getTelefono()));
         proveedor.getContacto().setCorreo(Validador.correo(proveedor.getContacto().getCorreo()));
         proveedor.setRubro(Validador.textoOpcional(proveedor.getRubro(), "rubro", 100));
         proveedor.getContacto().setNombreContacto(Validador.textoOpcional(proveedor.getContacto().getNombreContacto(), "contacto", 100));
-        Validador.obligatorio(proveedor.getCondicionPago(), "condicion de pago");
+        Validador.obligatorio(proveedor.getCondicionPago(), "condición de pago");
         if(proveedor.getPlazoEntregaDias() < 0){
             throw new IllegalArgumentException("El plazo de entrega no puede ser negativo");
         }
@@ -127,9 +129,11 @@ public class ProveedorBOImpl implements ProveedorBO {
 
     // la razon social es UNIQUE en la tabla; aqui se da un mensaje claro antes de llegar a la BD
     private void validarRazonSocialUnica(Proveedor proveedor) throws SQLException {
+        // se compara por clave: "Ferretería Perú" y "FERRETERIA PERU" son el mismo proveedor
+        String nueva = TextoNormalizado.clave(proveedor.getRazonSocial());
         for (Proveedor otro : proveedorDAO.buscarPorRazonSocial(proveedor.getRazonSocial())) {
-            if (otro.getId() != proveedor.getId() && proveedor.getRazonSocial().equalsIgnoreCase(otro.getRazonSocial())) {
-                throw new IllegalArgumentException("Ya existe un proveedor con la razon social " + proveedor.getRazonSocial());
+            if (otro.getId() != proveedor.getId() && nueva.equals(TextoNormalizado.clave(otro.getRazonSocial()))) {
+                throw new IllegalArgumentException("Ya existe un proveedor con la razón social " + proveedor.getRazonSocial());
             }
         }
     }

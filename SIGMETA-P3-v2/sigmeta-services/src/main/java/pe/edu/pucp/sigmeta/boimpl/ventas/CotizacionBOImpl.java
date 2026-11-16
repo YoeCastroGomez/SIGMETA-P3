@@ -85,7 +85,7 @@ public class CotizacionBOImpl implements CotizacionBO {
         return Transaccion.ejecutar(() -> {
             Cotizacion actual = obtenerExistente(cotizacion.getId());
             if (actual.isAnulado() || actual.getEstado() != EstadoCotizacion.REGISTRADA) {
-                throw new IllegalStateException("Solo se puede modificar una cotizacion en estado REGISTRADA");
+                throw new IllegalStateException("Solo se puede modificar una cotización en estado REGISTRADA");
             }
             // RF007: si se cambia la fecha de emision, no a una fecha pasada (la ya registrada se puede conservar);
             // y la cotizacion que se modifica tiene que seguir vigente
@@ -114,14 +114,14 @@ public class CotizacionBOImpl implements CotizacionBO {
     public void anular(int idCotizacion, String motivo, int idResponsable) throws SQLException {
         // el Administrador tambien gestiona anulaciones (perfil del actor)
         usuarioBO.verificarRol(idResponsable, TipoRol.VENDEDOR, TipoRol.ADMINISTRADOR);
-        String motivoAnulacion = Validador.textoObligatorio(motivo, "motivo de anulacion", 255);
+        String motivoAnulacion = Validador.textoObligatorio(motivo, "motivo de anulación", 255);
         Transaccion.ejecutar(() -> {
             Cotizacion cotizacion = obtenerExistente(idCotizacion);
             if (cotizacion.isAnulado()) {
-                throw new IllegalStateException("La cotizacion ya esta anulada");
+                throw new IllegalStateException("La cotización ya está anulada");
             }
             if (cotizacion.getEstado() == EstadoCotizacion.ACEPTADA) {
-                throw new IllegalStateException("No se puede anular una cotizacion aceptada");
+                throw new IllegalStateException("No se puede anular una cotización aceptada");
             }
             cotizacion.setMotivoAnulacion(motivoAnulacion);
             cotizacionDAO.remove(cotizacion);
@@ -217,11 +217,11 @@ public class CotizacionBOImpl implements CotizacionBO {
         return Transaccion.ejecutar(() -> {
             Cotizacion cotizacion = obtenerExistente(idCotizacion);
             if (cotizacion.isAnulado() || cotizacion.getEstado() != estadoRequerido) {
-                throw new IllegalStateException("La cotizacion debe estar " + estadoRequerido
+                throw new IllegalStateException("La cotización debe estar " + estadoRequerido
                         + " para pasar a " + estadoNuevo + " (estado actual: " + cotizacion.getEstado() + ")");
             }
             if (estadoNuevo == EstadoCotizacion.ACEPTADA && cotizacion.getFechaVigencia().isBefore(LocalDate.now())) {
-                throw new IllegalStateException("La cotizacion vencio el " + cotizacion.getFechaVigencia());
+                throw new IllegalStateException("La cotización venció el " + cotizacion.getFechaVigencia());
             }
             cotizacion.setEstado(estadoNuevo);
             cotizacionDAO.update(cotizacion);
@@ -237,7 +237,7 @@ public class CotizacionBOImpl implements CotizacionBO {
     private Cotizacion obtenerExistente(int idCotizacion) throws SQLException {
         Cotizacion cotizacion = cotizacionDAO.load(idCotizacion);
         if (cotizacion == null) {
-            throw new IllegalArgumentException("No existe la cotizacion con id " + idCotizacion);
+            throw new IllegalArgumentException("No existe la cotización con id " + idCotizacion);
         }
         return cotizacion;
     }
@@ -246,7 +246,7 @@ public class CotizacionBOImpl implements CotizacionBO {
     private void verificarClienteActivo(int idCliente) throws SQLException {
         Cliente cliente = clienteDAO.load(idCliente);
         if (cliente == null || !cliente.isEstado()) {
-            throw new IllegalArgumentException("El cliente " + idCliente + " no existe o esta desactivado");
+            throw new IllegalArgumentException("El cliente " + idCliente + " no existe o está desactivado");
         }
     }
 
@@ -256,7 +256,18 @@ public class CotizacionBOImpl implements CotizacionBO {
             Producto producto = productoDAO.load(detalle.getProducto().getId());
             if (producto == null || !producto.isEstado()) {
                 throw new IllegalArgumentException("El producto " + detalle.getProducto().getId()
-                        + " no existe o esta desactivado");
+                        + " no existe o está desactivado");
+            }
+            // RF005: no se cotiza por debajo del costo (precio efectivo = precio unitario menos el descuento
+            // repartido por unidad). Una venta bajo el costo solo sale con autorizacion (ver VentaBOImpl)
+            if (detalle.getCantidad() > 0) {
+                double efectivo = (detalle.getCantidad() * detalle.getPrecioUnitario() - detalle.getDescuento())
+                        / detalle.getCantidad();
+                if (efectivo + 0.00005 < producto.getCostoUnitario()) {
+                    throw new IllegalArgumentException(String.format(java.util.Locale.ROOT,
+                            "La línea %d (%s) queda en S/ %.2f por unidad, por debajo de su costo (S/ %.2f). Reduzca el descuento",
+                            detalle.getNumeroLinea(), producto.getNombre(), efectivo, producto.getCostoUnitario()));
+                }
             }
         }
     }
@@ -300,8 +311,8 @@ public class CotizacionBOImpl implements CotizacionBO {
             BigDecimal importe = bruto.subtract(BigDecimal.valueOf(detalle.getDescuento()))
                     .setScale(2, RoundingMode.HALF_UP);
             if (importe.signum() < 0) {
-                throw new IllegalArgumentException("El descuento de la linea " + detalle.getNumeroLinea()
-                        + " supera el importe de la linea");
+                throw new IllegalArgumentException("El descuento de la línea " + detalle.getNumeroLinea()
+                        + " supera el importe de la línea");
             }
             detalle.setImporte(importe.doubleValue());
             subTotal = subTotal.add(importe);
@@ -313,34 +324,34 @@ public class CotizacionBOImpl implements CotizacionBO {
     }
 
     private void validarCabecera(Cotizacion cotizacion) {
-        Validador.obligatorio(cotizacion, "cotizacion");
+        Validador.obligatorio(cotizacion, "cotización");
         Validador.obligatorio(cotizacion.getCliente(), "cliente");
-        Validador.obligatorio(cotizacion.getFechaEmision(), "fecha de emision");
+        Validador.obligatorio(cotizacion.getFechaEmision(), "fecha de emisión");
         Validador.obligatorio(cotizacion.getFechaVigencia(), "fecha de vigencia");
         // RF007: los importes de la cotizacion se expresan en soles
-        cotizacion.setNumero(Validador.textoObligatorio(cotizacion.getNumero(), "numero", 20));
+        cotizacion.setNumero(Validador.textoObligatorio(cotizacion.getNumero(), "número", 20));
         cotizacion.setObservaciones(Validador.textoOpcional(cotizacion.getObservaciones(), "observaciones", 255));
         if (cotizacion.getFechaVigencia().isBefore(cotizacion.getFechaEmision())) {
-            throw new IllegalArgumentException("La fecha de vigencia no puede ser anterior a la fecha de emision");
+            throw new IllegalArgumentException("La fecha de vigencia no puede ser anterior a la fecha de emisión");
         }
     }
 
     private void validarEmisionNoPasada(LocalDate fechaEmision) {
         if (fechaEmision.isBefore(LocalDate.now())) {
-            throw new IllegalArgumentException("La fecha de emision no puede ser anterior a hoy");
+            throw new IllegalArgumentException("La fecha de emisión no puede ser anterior a hoy");
         }
     }
 
     private void validarDetalles(List<DetalleCotizacion> detalles) {
         if (detalles == null || detalles.isEmpty()) {
-            throw new IllegalArgumentException("La cotizacion debe tener al menos un detalle");
+            throw new IllegalArgumentException("La cotización debe tener al menos un detalle");
         }
         Set<Integer> lineas = new HashSet<>();
         for (DetalleCotizacion detalle : detalles) {
-            Validador.obligatorio(detalle, "detalle de cotizacion");
+            Validador.obligatorio(detalle, "detalle de cotización");
             Validador.obligatorio(detalle.getProducto(), "producto");
             if (detalle.getNumeroLinea() <= 0 || !lineas.add(detalle.getNumeroLinea())) {
-                throw new IllegalArgumentException("Los numeros de linea deben ser positivos y unicos");
+                throw new IllegalArgumentException("Los números de línea deben ser positivos y únicos");
             }
             if (!Double.isFinite(detalle.getCantidad())
                     || !Double.isFinite(detalle.getPrecioUnitario())
@@ -348,7 +359,7 @@ public class CotizacionBOImpl implements CotizacionBO {
                     || detalle.getCantidad() <= 0
                     || detalle.getPrecioUnitario() <= 0
                     || detalle.getDescuento() < 0) {
-                throw new IllegalArgumentException("La linea " + detalle.getNumeroLinea()
+                throw new IllegalArgumentException("La línea " + detalle.getNumeroLinea()
                         + " debe tener cantidad y precio mayores a 0 y descuento no negativo");
             }
         }

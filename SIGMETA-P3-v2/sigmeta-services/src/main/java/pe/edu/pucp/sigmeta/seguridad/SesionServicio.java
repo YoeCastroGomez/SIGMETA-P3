@@ -10,9 +10,9 @@ import pe.edu.pucp.sigmeta.model.usuario.Usuario;
  */
 public final class SesionServicio {
     private final int idUsuario;
-    // RF001: la sesion vence tras 30 minutos SIN USO; cada pedido la renueva
+    // RF001, RNF001: la sesión vence tras 20 minutos SIN USO; cada pedido la renueva
     // (mientras el usuario siga trabajando no se cierra)
-    public static final long INACTIVIDAD_MAXIMA_MS = 30L * 60 * 1000;
+    public static final long INACTIVIDAD_MAXIMA_MS = 20L * 60 * 1000;
     private volatile long expira;
     private volatile boolean cerrada;
     private static final ThreadLocal<Integer> ACTUAL = new ThreadLocal<>();
@@ -43,13 +43,13 @@ public final class SesionServicio {
     }
     private <T> T ejecutar(Accion<T> accion, boolean soloLectura) throws SQLException {
         if (cerrada) {
-            throw new SecurityException("Su sesion fue cerrada. Vuelva a iniciar sesion");
+            throw new SecurityException("Su sesión fue cerrada. Vuelva a iniciar sesión");
         }
         if (System.currentTimeMillis() >= expira) {
-            throw new SecurityException("Su sesion vencio tras 30 minutos sin uso. Vuelva a iniciar sesion");
+            throw new SecurityException("Su sesión venció tras 20 minutos sin uso. Vuelva a iniciar sesión");
         }
         renovar();
-        if (ACTUAL.get() != null) throw new SecurityException("No se permite sustituir una sesion activa");
+        if (ACTUAL.get() != null) throw new SecurityException("No se permite sustituir una sesión activa");
         ACTUAL.set(idUsuario);
         try {
             Transaccion.Operacion<T> operacion = () -> {
@@ -72,7 +72,7 @@ public final class SesionServicio {
     public static void verificarResponsable(int id) {
         Integer autenticado = ACTUAL.get();
         if (autenticado != null && autenticado != id) {
-            throw new SecurityException("El responsable no coincide con la sesion autenticada");
+            throw new SecurityException("El responsable no coincide con la sesión autenticada");
         }
     }
 }

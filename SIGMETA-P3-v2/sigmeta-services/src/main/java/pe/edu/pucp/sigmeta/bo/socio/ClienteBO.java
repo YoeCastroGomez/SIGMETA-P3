@@ -25,7 +25,7 @@ public interface ClienteBO {
                                 String calificacionCrediticia, int idAdministrador) throws SQLException;
     Cliente retirarLineaCredito(int idCliente, int idAdministrador) throws SQLException;
     default Cliente asignarLineaCredito(int idCliente, double limite, int dias, String calificacion, int administrador) throws SQLException {
-        if (!Double.isFinite(limite)) throw new IllegalArgumentException("Limite invalido");
+        if (!Double.isFinite(limite)) throw new IllegalArgumentException("Límite inválido");
         return asignarLineaCredito(idCliente, java.math.BigDecimal.valueOf(limite), dias, calificacion, administrador);
     }
 

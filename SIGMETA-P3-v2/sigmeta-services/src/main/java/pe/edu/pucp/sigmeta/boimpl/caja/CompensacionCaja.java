@@ -44,7 +44,7 @@ public class CompensacionCaja {
         Caja caja = cajaDAO.load(original.getCaja().getId());
         if (caja == null || !caja.isAbierta()) {
             throw new IllegalStateException("La caja " + original.getCaja().getId()
-                    + " ya esta cerrada; el Administrador debe reabrirla para revertir el movimiento");
+                    + " ya está cerrada; el Administrador debe reabrirla para revertir el movimiento");
         }
         TipoMovimientoCaja contrario = original.getTipo() == TipoMovimientoCaja.EGRESO_MANUAL
                 ? TipoMovimientoCaja.INGRESO_MANUAL : TipoMovimientoCaja.EGRESO_MANUAL;
@@ -57,7 +57,7 @@ public class CompensacionCaja {
                                               String documentoOrigen, int idDocumentoOrigen, Usuario responsable) throws SQLException {
         Caja caja = cajaDAO.obtenerCajaAbiertaPorUsuario(idCajero);
         if (caja == null) {
-            throw new IllegalStateException("El cajero debe tener su caja abierta para registrar la devolucion de dinero (RF010)");
+            throw new IllegalStateException("El cajero debe tener su caja abierta para registrar la devolución de dinero (RF010)");
         }
         return registrar(caja, TipoMovimientoCaja.EGRESO_MANUAL, medioPago, monto, concepto,
                 documentoOrigen, idDocumentoOrigen, responsable);
@@ -65,6 +65,16 @@ public class CompensacionCaja {
 
     private MovimientoCaja registrar(Caja caja, TipoMovimientoCaja tipo, MedioPago medioPago, double monto, String concepto,
                                      String documentoOrigen, int idDocumentoOrigen, Usuario responsable) throws SQLException {
+        // RF010: un egreso en efectivo no puede dejar la caja con efectivo negativo
+        if (tipo == TipoMovimientoCaja.EGRESO_MANUAL && medioPago == MedioPago.EFECTIVO) {
+            Double neto = movimientoCajaDAO.obtenerTotalesPorMedioPago(caja.getId()).get(MedioPago.EFECTIVO);
+            double disponible = caja.getMontoInicial() + (neto != null ? neto : 0);
+            if (monto > disponible + 0.005) {
+                throw new IllegalStateException(String.format(java.util.Locale.ROOT,
+                        "La caja %d no tiene efectivo suficiente para devolver S/ %.2f (disponible: S/ %.2f). "
+                        + "Registre antes un ingreso de efectivo o use otra caja", caja.getId(), monto, disponible));
+            }
+        }
         MovimientoCaja movimiento = new MovimientoCaja();
         movimiento.setCaja(caja);
         movimiento.setTipo(tipo);

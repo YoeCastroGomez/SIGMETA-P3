@@ -2,7 +2,21 @@
 .idea/
 *.iml
 
-# Archivos sueltos de la carpeta principal: entregables en PDF, copias en ZIP y el GlassFish local (no van al repo)
-/*.pdf
-/*.zip
+# Entregables, copias y comprimidos: no van al repo, estén donde estén
+*.pdf
+*.zip
+*.rar
+*.7z
+*.docx
+*.pptx
+*.xlsx
+
+# GlassFish local
 /glassfish8/
+
+# Notas internas de trabajo (no son parte del proyecto). Los README sí van.
+/Reforma_total.md
+/docs/HALLAZGOS.md
+/docs/LOGICA_NEGOCIO.md
+/docs/PLAN_IMPLEMENTACION.md
+/docs/PENDIENTES_REPARTO.md

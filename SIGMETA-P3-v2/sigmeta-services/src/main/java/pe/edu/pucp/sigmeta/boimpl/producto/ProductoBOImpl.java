@@ -68,7 +68,7 @@ public class ProductoBOImpl implements ProductoBO {
                 throw new IllegalStateException("No se puede modificar un producto desactivado");
             }
             if (producto.getUnidadVenta() != actual.getUnidadVenta()) {
-                throw new IllegalArgumentException("La unidad base de inventario no puede cambiar; registre otra presentacion/producto");
+                throw new IllegalArgumentException("La unidad base de inventario no puede cambiar; registre otra presentación/producto");
             }
             verificarCategoriaActiva(producto.getCategoria().getId());
             validarCodigosUnicos(producto);
@@ -93,7 +93,7 @@ public class ProductoBOImpl implements ProductoBO {
         Transaccion.ejecutar(() -> {
             Producto producto = obtenerExistente(idProducto);
             if (!producto.isEstado()) {
-                throw new IllegalStateException("El producto " + producto.getCodigoInterno() + " ya esta desactivado");
+                throw new IllegalStateException("El producto " + producto.getCodigoInterno() + " ya está desactivado");
             }
             productoDAO.remove(producto);
             producto.setEstado(false);
@@ -121,7 +121,7 @@ public class ProductoBOImpl implements ProductoBO {
     @Override
     public Producto buscarPorCodigo(String codigo) throws SQLException {
         // se preprocesa igual que al guardar: " int-001 " encuentra "INT-001"
-        String buscado = TextoNormalizado.codigo(Validador.textoObligatorio(codigo, "codigo", 50));
+        String buscado = TextoNormalizado.codigo(Validador.textoObligatorio(codigo, "código", 50));
         // Primero el codigo interno, luego el del fabricante y al final el del proveedor. Los codigos ya no
         // se repiten entre productos (validarCodigosUnicos); el orden solo importa para datos antiguos.
         return Transaccion.ejecutar(() -> {
@@ -137,10 +137,10 @@ public class ProductoBOImpl implements ProductoBO {
     // ("martíllo" encuentra "MARTILLO DE ACERO")
     @Override
     public List<Producto> buscarPorNombre(String nombre) throws SQLException {
-        String texto = TextoNormalizado.nombre(Validador.textoObligatorio(nombre, "nombre", 150));
+        String texto = TextoNormalizado.clave(Validador.textoObligatorio(nombre, "nombre", 150));
         return Transaccion.ejecutar(() -> {
             return productoDAO.listarTodos().stream()
-                    .filter(p -> TextoNormalizado.nombre(p.getNombre()).contains(texto))
+                    .filter(p -> TextoNormalizado.clave(p.getNombre()).contains(texto))
                     .toList();
         });
     }
@@ -165,11 +165,11 @@ public class ProductoBOImpl implements ProductoBO {
 
     // RF005: busqueda de la pantalla Productos con los filtros combinados (nombre + categoria + estado).
     // Cada filtro es opcional: null no filtra. Ej.: "martillo" + HERRAMIENTAS + inactivos.
-    // El nombre se compara normalizado, sin importar mayusculas ni tildes.
+    // El nombre se compara por su clave, sin importar mayúsculas ni tildes.
     @Override
     public List<Producto> buscar(String nombre, Integer idCategoria, Boolean estado) throws SQLException {
         String texto = nombre == null || nombre.isBlank() ? null
-                : TextoNormalizado.nombre(Validador.textoOpcional(nombre, "nombre", 150));
+                : TextoNormalizado.clave(Validador.textoOpcional(nombre, "nombre", 150));
         return Transaccion.ejecutar(() -> {
             List<Producto> productos = new ArrayList<>();
             if (estado == null || estado) {
@@ -180,7 +180,7 @@ public class ProductoBOImpl implements ProductoBO {
             }
             return productos.stream()
                     .filter(p -> idCategoria == null || p.getCategoria().getId() == idCategoria)
-                    .filter(p -> texto == null || TextoNormalizado.nombre(p.getNombre()).contains(texto))
+                    .filter(p -> texto == null || TextoNormalizado.clave(p.getNombre()).contains(texto))
                     .toList();
         });
     }
@@ -211,32 +211,32 @@ public class ProductoBOImpl implements ProductoBO {
     private void verificarCategoriaActiva(int idCategoria) throws SQLException {
         Categoria categoria = categoriaDAO.load(idCategoria);
         if (categoria == null || !categoria.isEstado()) {
-            throw new IllegalArgumentException("La categoria " + idCategoria + " no existe o esta desactivada");
+            throw new IllegalArgumentException("La categoría " + idCategoria + " no existe o está desactivada");
         }
     }
 
     private void validarDatos(Producto producto) {
         Validador.obligatorio(producto, "producto");
-        Validador.obligatorio(producto.getCategoria(), "categoria");
+        Validador.obligatorio(producto.getCategoria(), "categoría");
         Validador.obligatorio(producto.getUnidadCompra(), "unidad de compra");
         Validador.obligatorio(producto.getUnidadVenta(), "unidad de venta");
-        // Preprocesado de los textos (TextoNormalizado): todo en MAYUSCULAS.
-        //   codigos: sin espacios (" int-001 " -> "INT-001")
-        //   nombre y descripcion: sin tildes y con un solo espacio ("Martíllo" -> "MARTILLO")
+        // Preprocesado de los textos (TextoNormalizado):
+        //   códigos: en MAYÚSCULAS y sin espacios (" int-001 " -> "INT-001")
+        //   nombre y descripción: como los escribe el usuario, con un solo espacio (" Martillo  de acero " -> "Martillo de acero")
         //   imagen: tal cual, porque es el nombre de un archivo
         producto.setCodigoInterno(TextoNormalizado.codigo(
-                Validador.textoObligatorio(producto.getCodigoInterno(), "codigo interno", 50)));
+                Validador.textoObligatorio(producto.getCodigoInterno(), "código interno", 50)));
         producto.setCodigoFabricante(TextoNormalizado.codigo(
-                Validador.textoOpcional(producto.getCodigoFabricante(), "codigo de fabricante", 50)));
+                Validador.textoOpcional(producto.getCodigoFabricante(), "código de fabricante", 50)));
         producto.setCodigoProveedor(TextoNormalizado.codigo(
-                Validador.textoOpcional(producto.getCodigoProveedor(), "codigo de proveedor", 50)));
+                Validador.textoOpcional(producto.getCodigoProveedor(), "código de proveedor", 50)));
         producto.setNombre(TextoNormalizado.nombre(Validador.textoObligatorio(producto.getNombre(), "nombre", 150)));
         producto.setDescripcion(TextoNormalizado.opcional(
-                Validador.textoOpcional(producto.getDescripcion(), "descripcion", 255)));
+                Validador.textoOpcional(producto.getDescripcion(), "descripción", 255)));
         producto.setImagen(Validador.textoOpcional(producto.getImagen(), "imagen", 255));
 
         if (!Double.isFinite(producto.getFactorConversion()) || producto.getFactorConversion() <= 0) {
-            throw new IllegalArgumentException("El factor de conversion debe ser mayor a 0");
+            throw new IllegalArgumentException("El factor de conversión debe ser mayor a 0");
         }
         // si se compra y se vende en la misma unidad no hay conversion
         if (producto.getUnidadCompra() == producto.getUnidadVenta() && producto.getFactorConversion() != 1) {
@@ -249,7 +249,7 @@ public class ProductoBOImpl implements ProductoBO {
             throw new IllegalArgumentException("El costo unitario no puede ser negativo");
         }
         if (!Double.isFinite(producto.getStockMinimo()) || producto.getStockMinimo() < 0) {
-            throw new IllegalArgumentException("El stock minimo no puede ser negativo");
+            throw new IllegalArgumentException("El stock mínimo no puede ser negativo");
         }
         // el precio referencial es obligatorio (en Java es double: si no se manda llega 0)
         if (!Double.isFinite(producto.getPrecioReferencial()) || producto.getPrecioReferencial() <= 0) {
@@ -267,26 +267,26 @@ public class ProductoBOImpl implements ProductoBO {
         validarDecimales(producto.getPrecioVenta(), 2, "El precio de venta");
         validarDecimales(producto.getCostoUnitario(), 2, "El costo unitario");
         validarDecimales(producto.getPrecioReferencial(), 2, "El precio referencial");
-        validarDecimales(producto.getFactorConversion(), 3, "El factor de conversion");
-        validarDecimales(producto.getStockMinimo(), 3, "El stock minimo");
+        validarDecimales(producto.getFactorConversion(), 3, "El factor de conversión");
+        validarDecimales(producto.getStockMinimo(), 3, "El stock mínimo");
 
         // Si la unidad de venta no se parte (UNIDAD, CAJA, JUEGO), el factor y el stock minimo van enteros:
         // una caja de 12 unidades tiene factor 12, no 12.5
         if (UNIDADES_ENTERAS.contains(producto.getUnidadVenta())) {
             if (!esEntero(producto.getFactorConversion())) {
                 throw new IllegalArgumentException("La unidad de venta " + producto.getUnidadVenta()
-                        + " no se parte: el factor de conversion debe ser un numero entero");
+                        + " no se parte: el factor de conversión debe ser un número entero");
             }
             if (!esEntero(producto.getStockMinimo())) {
                 throw new IllegalArgumentException("La unidad de venta " + producto.getUnidadVenta()
-                        + " no se parte: el stock minimo debe ser un numero entero");
+                        + " no se parte: el stock mínimo debe ser un número entero");
             }
         }
     }
 
     private static void validarDecimales(double valor, int maximo, String campo) {
         if (BigDecimal.valueOf(valor).stripTrailingZeros().scale() > maximo) {
-            throw new IllegalArgumentException(campo + " admite como maximo " + maximo + " decimales");
+            throw new IllegalArgumentException(campo + " admite como máximo " + maximo + " decimales");
         }
     }
 
@@ -305,7 +305,7 @@ public class ProductoBOImpl implements ProductoBO {
         for (Producto otro : productoDAO.listarPorEstado(false)) {
             if (otro.getId() != producto.getId()
                     && producto.getCodigoInterno().equalsIgnoreCase(otro.getCodigoInterno())) {
-                throw new IllegalArgumentException("Ya existe un producto desactivado con el codigo "
+                throw new IllegalArgumentException("Ya existe un producto desactivado con el código "
                         + producto.getCodigoInterno());
             }
         }
@@ -317,7 +317,7 @@ public class ProductoBOImpl implements ProductoBO {
             for (String suyo : codigos(otro)) {
                 for (String propio : propios) {
                     if (propio.equalsIgnoreCase(suyo)) {
-                        throw new IllegalArgumentException("Ya existe un producto con el codigo " + propio
+                        throw new IllegalArgumentException("Ya existe un producto con el código " + propio
                                 + ": lo usa " + otro.getCodigoInterno() + " - " + otro.getNombre());
                     }
                 }
@@ -337,16 +337,16 @@ public class ProductoBOImpl implements ProductoBO {
         return codigos;
     }
 
-    // el nombre tampoco se repite, tambien frente a los productos desactivados. Se comparan los nombres
-    // normalizados: "Martillo", "MARTILLO" y "Martíllo" son el mismo producto
+    // el nombre tampoco se repite, también frente a los productos desactivados. Se comparan las claves de los
+    // nombres: "Martillo", "MARTILLO" y "Martíllo" son el mismo producto
     private void validarNombreUnico(Producto producto) throws SQLException {
         List<Producto> productos = new ArrayList<>(productoDAO.listarPorEstado(true));
         productos.addAll(productoDAO.listarPorEstado(false));
-        String nuevo = TextoNormalizado.nombre(producto.getNombre());
+        String nuevo = TextoNormalizado.clave(producto.getNombre());
         for (Producto otro : productos) {
-            if (TextoNormalizado.nombre(otro.getNombre()).equals(nuevo) && otro.getId() != producto.getId()) {
+            if (TextoNormalizado.clave(otro.getNombre()).equals(nuevo) && otro.getId() != producto.getId()) {
                 throw new IllegalArgumentException("Ya existe un producto con el nombre " + producto.getNombre()
-                        + " (codigo " + otro.getCodigoInterno() + ")");
+                        + " (código " + otro.getCodigoInterno() + ")");
             }
         }
     }

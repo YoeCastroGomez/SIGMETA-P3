@@ -2,7 +2,7 @@
 @inject NavigationManager Nav
 
 @*
-    RF001 · Menú por rol, solo visual (Lab 9).
+    RF001 · Menú por rol. Solo decide qué enlaces se ven: cada permiso lo verifica el BO en el Java.
     Cuatro menús FIJOS, uno por rol, armados con los actores de cada RF del catálogo.
     El rol llega del login (demostración). Aquí no se valida nada.
     Para agregar una pantalla: se agrega su enlace en el menú de CADA rol que la usa.
@@ -89,6 +89,9 @@
             new("Compras a proveedores", "/compras"),          // RF011
             new("Kardex", "/almacen/kardex"),                  // RF012 (consulta)
             new("Stock mínimo", "/almacen/stock-minimo"),      // RF012 (consulta)
+            new("Movimientos de almacén", "/almacen/movimientos"), // RF012 (consulta y corregir motivo)
+            new("Recepciones de compras", "/recepciones"),     // RF012 (consulta)
+            new("Despachos", "/despachos"),                    // RF012 (consulta y anular)
         }),
         new("Catálogo", new Enlace[] {
             new("Productos", "/productos"),                    // RF005

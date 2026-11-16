@@ -267,8 +267,8 @@ else if (orden is not null)
         guardando = true;
         try
         {
-            await Api.Post<OrdenDatos>("ordenes", new OrdenDatos { IdCotizacion = idCotizacion, NumeroOrdenCliente = numeroOrdenCliente });
-            Nav.NavigateTo("/ordenes");
+            var nueva = await Api.Post<OrdenDatos>("ordenes", new OrdenDatos { IdCotizacion = idCotizacion, NumeroOrdenCliente = numeroOrdenCliente });
+            Nav.NavigateTo(AvisoGuardado.Ruta("/ordenes", AvisoGuardado.Nuevo, nueva?.Numero));
         }
         catch (ErrorApi e)
         {
@@ -288,7 +288,7 @@ else if (orden is not null)
         try
         {
             await Api.Put<OrdenDatos>($"ordenes/{Id}", orden);
-            Nav.NavigateTo("/ordenes");
+            Nav.NavigateTo(AvisoGuardado.Ruta("/ordenes", AvisoGuardado.Editado, orden?.Numero));
         }
         catch (ErrorApi e)
         {

@@ -1,55 +1,122 @@
 @page "/autorizaciones/nueva"
+@inject ApiJava Api
 @inject NavigationManager Nav
 
 <PageTitle>Nueva solicitud · SIGMETA</PageTitle>
 
-@* RF014 · Nueva solicitud. Solo visual (Lab 9): Enviar no registra, solo vuelve a la lista. *@
-<Encabezado Rf="RF014" Titulo="Nueva solicitud de autorización">
-    <a class="btn btn-outline-secondary" href="/autorizaciones/mias">Volver a mis solicitudes</a>
+@* RF014 · POST /api/solicitudes {"operacion": "...", "motivo": "..."}. El solicitante es el usuario de la sesión.
+   Las operaciones que se pueden pedir dependen del rol: GET /api/solicitudes/operaciones. *@
+<Encabezado Rf="RF014" Titulo="Nueva solicitud de autorización"
+            Subtitulo="Pide al Administrador permiso para una operación restringida.">
+    <a class="btn btn-outline-secondary" href="@VolverA">Volver</a>
 </Encabezado>
 
-<div class="card card-body mb-3" style="max-width: 720px;">
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <div class="small text-muted text-uppercase">Solicitante</div>
-            <div class="fw-semibold">@MuestrasSeguridad.UsuarioPorRol.GetValueOrDefault(Rol, "—") (@Rol)</div>
-        </div>
-        <div class="col-md-6 mb-3">
-            <div class="small text-muted text-uppercase">Fecha y hora</div>
-            <div class="fw-semibold">Se registra al enviar</div>
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+
+@if (operaciones is null)
+{
+    <p class="text-muted">Cargando...</p>
+}
+else if (operaciones.Count == 0)
+{
+    <div class="alert alert-info" style="max-width: 720px;">Tu rol no tiene operaciones restringidas que solicitar.</div>
+}
+else
+{
+    <div class="card card-body mb-3" style="max-width: 720px;">
+        <Campo Etiqueta="Operación restringida" Id="operacion" Obligatorio="true" Error="@ErrorOperacion"
+               Ayuda="No puedes tener dos solicitudes pendientes de la misma operación.">
+            <select id="operacion" class="form-select @(ErrorOperacion is null ? "" : "is-invalid")" @bind="operacion">
+                @if (operaciones.Count > 1)
+                {
+                    <option value="">Elige una operación</option>
+                }
+                @foreach (var o in operaciones)
+                {
+                    <option value="@o.Codigo">@TextosSeguridad.Texto(o.Codigo)</option>
+                }
+            </select>
+        </Campo>
+        @if (Elegida is not null)
+        {
+            <div class="alert alert-light border small">@Elegida.Descripcion.</div>
+        }
+
+        <Campo Etiqueta="Motivo" Id="motivo" Obligatorio="true" Error="@ErrorMotivo"
+               Ayuda="@($"Explica para qué la necesitas (documento, producto, cliente). {motivo.Length} de 200 caracteres.")">
+            <textarea id="motivo" class="form-control @(ErrorMotivo is null ? "" : "is-invalid")" rows="4" maxlength="200"
+                      @bind="motivo" @bind:event="oninput"></textarea>
+        </Campo>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" href="@VolverA">Cancelar</a>
+                <button class="btn btn-primary" disabled="@guardando" @onclick="Enviar">Enviar solicitud</button>
+            </div>
         </div>
     </div>
-
-    <Campo Etiqueta="Operación restringida" Id="operacion" Obligatorio="true"
-           Ayuda="Máximo 60 caracteres. No puedes tener dos solicitudes pendientes de la misma operación.">
-        <input id="operacion" class="form-control" maxlength="60" list="operaciones" value="@Operacion" />
-        <datalist id="operaciones">
-            @foreach (var o in MuestrasSeguridad.OperacionesSugeridas.GetValueOrDefault(Rol, Array.Empty<string>()))
-            {
-                <option value="@o"></option>
-            }
-        </datalist>
-    </Campo>
-
-    <Campo Etiqueta="Motivo" Id="motivo" Obligatorio="true" Ayuda="Máximo 200 caracteres.">
-        <textarea id="motivo" class="form-control" rows="4" maxlength="200"></textarea>
-    </Campo>
-
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
-        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-        <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary" href="/autorizaciones/mias">Cancelar</a>
-            <button class="btn btn-primary" @onclick="Volver">Enviar solicitud</button>
-        </div>
-    </div>
-</div>
+}
 
 @code {
-    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "Vendedor";
+    // Llega elegida desde otra pantalla, por ejemplo la nota de crédito: ?operacion=EMITIR_NOTA_CREDITO
+    [SupplyParameterFromQuery(Name = "operacion")] public string? OperacionInicial { get; set; }
+    // a dónde volver si se vino desde otra pantalla (por ejemplo /notas-credito/nueva)
+    [SupplyParameterFromQuery(Name = "volver")] public string? Volver { get; set; }
 
-    // Llega elegida desde otra pantalla, p. ej. la nota de crédito: ?operacion=EMITIR_NOTA_CREDITO
-    [SupplyParameterFromQuery(Name = "operacion")] public string? Operacion { get; set; }
+    private List<OperacionDatos>? operaciones;
+    private string operacion = "";
+    private string motivo = "";
+    private bool intento;
+    private bool guardando;
+    private string? error;
 
-    // Lab 9: no se registra nada, solo se navega.
-    private void Volver() => Nav.NavigateTo("/autorizaciones/mias");
+    private string VolverA => !string.IsNullOrWhiteSpace(Volver) && Volver.StartsWith('/') ? Volver : "/autorizaciones/mias";
+    private OperacionDatos? Elegida => operaciones?.FirstOrDefault(o => o.Codigo == operacion);
+
+    // mismas reglas que el BO
+    private string? ErrorOperacion => intento && string.IsNullOrWhiteSpace(operacion) ? "Elige la operación que necesitas." : null;
+    private string? ErrorMotivo => intento && string.IsNullOrWhiteSpace(motivo) ? "El motivo es obligatorio." : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            operaciones = await Api.Get<List<OperacionDatos>>("solicitudes/operaciones") ?? new();
+            if (operaciones.Any(o => o.Codigo == OperacionInicial))
+            {
+                operacion = OperacionInicial!;
+            }
+            else if (operaciones.Count == 1)
+            {
+                operacion = operaciones[0].Codigo;
+            }
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+            operaciones = new();
+        }
+    }
+
+    private async Task Enviar()
+    {
+        intento = true;
+        error = null;
+        if (ErrorOperacion is not null || ErrorMotivo is not null) return;
+        guardando = true;
+        try
+        {
+            await Api.Post<SolicitudDatos>("solicitudes", new { operacion, motivo = motivo.Trim() });
+            Nav.NavigateTo(AvisoGuardado.Ruta("/autorizaciones/mias", AvisoGuardado.Nuevo, operacion));
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "Ya existe una solicitud pendiente para esta operación"
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
 }

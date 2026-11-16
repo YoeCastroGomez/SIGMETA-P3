@@ -1,111 +1,219 @@
 @page "/usuarios/nuevo"
 @page "/usuarios/editar/{Id:int}"
+@inject ApiJava Api
 @inject NavigationManager Nav
 
-<PageTitle>@Titulo · SIGMETA</PageTitle>
+<PageTitle>@(EsNuevo ? "Nuevo usuario" : "Editar usuario") · SIGMETA</PageTitle>
 
-@* RF002 · Formulario de usuario. Solo visual (Lab 9): Guardar no registra, solo vuelve a la lista. *@
-<Encabezado Rf="RF002" Titulo="@Titulo">
+@* RF002 · POST /api/usuarios · PUT /api/usuarios/{id} · POST /api/usuarios/{id}/restablecer-clave.
+   Solo el Administrador. La clave no se edita junto con los datos: se restablece aparte. *@
+<Encabezado Rf="RF002" Titulo="@(EsNuevo ? "Nuevo usuario" : "Editar usuario")"
+            Subtitulo="@(EsNuevo ? "El usuario podrá cambiar su clave después de iniciar sesión." : null)">
     <a class="btn btn-outline-secondary" href="/usuarios">Volver a la lista</a>
 </Encabezado>
 
-<div class="card card-body mb-3">
-    <div class="row">
-        <div class="col-md-6">
-            <Campo Etiqueta="Nombre de usuario" Id="nombreUsuario" Obligatorio="true" Ayuda="Único. Letras, números, punto, guion y guion bajo.">
-                <input id="nombreUsuario" class="form-control" maxlength="50" value="@ejemplo?.NombreUsuario" />
+<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+
+@if (usuario is null)
+{
+    @if (error is null)
+    {
+        <p class="text-muted">Cargando usuario...</p>
+    }
+}
+else
+{
+    <div class="card card-body mb-3" style="max-width: 820px;">
+        <h2 class="h6 fw-semibold mb-3">Datos del usuario</h2>
+        <div class="row">
+            <Campo Etiqueta="Nombre de usuario" Id="nombreUsuario" Obligatorio="true" Error="@E("nombreUsuario")" Clase="col-md-6 mb-3"
+                   Ayuda="Con él inicia sesión. Letras, dígitos, punto, guion y guion bajo.">
+                <input id="nombreUsuario" class="form-control @Invalido("nombreUsuario")" maxlength="50" autocomplete="off"
+                       @bind="usuario.NombreUsuario" @bind:event="oninput" />
             </Campo>
-        </div>
-        <div class="col-md-6">
-            <Campo Etiqueta="Rol" Id="rol" Obligatorio="true" Ayuda="Un único rol por usuario.">
-                <select id="rol" class="form-select">
-                    <option value="">Seleccione…</option>
-                    @foreach (var r in MuestrasSeguridad.Roles)
+            <Campo Etiqueta="Rol" Id="rol" Obligatorio="true" Error="@E("rol")" Clase="col-md-6 mb-3" Ayuda="Un solo rol por usuario.">
+                <select id="rol" class="form-select @Invalido("rol")" @bind="usuario.IdRol">
+                    <option value="0">Elige un rol</option>
+                    @foreach (var r in roles.Where(r => r.Estado || r.Id == usuario.IdRol))
                     {
-                        <option value="@r" selected="@(ejemplo?.Rol == r)">@MuestrasSeguridad.Texto(r)</option>
+                        <option value="@r.Id">@TextosSeguridad.Texto(r.Tipo)</option>
                     }
                 </select>
             </Campo>
-        </div>
-        <div class="col-md-6">
-            <Campo Etiqueta="Nombres" Id="nombres" Obligatorio="true">
-                <input id="nombres" class="form-control" maxlength="100" value="@ejemplo?.Nombres" />
+            <Campo Etiqueta="Nombres" Id="nombres" Obligatorio="true" Error="@E("nombres")" Clase="col-md-6 mb-3">
+                <input id="nombres" class="form-control @Invalido("nombres")" maxlength="100" @bind="usuario.Nombres" @bind:event="oninput" />
             </Campo>
-        </div>
-        <div class="col-md-6">
-            <Campo Etiqueta="Apellidos" Id="apellidos" Obligatorio="true">
-                <input id="apellidos" class="form-control" maxlength="100" value="@ejemplo?.Apellidos" />
+            <Campo Etiqueta="Apellidos" Id="apellidos" Obligatorio="true" Error="@E("apellidos")" Clase="col-md-6 mb-3">
+                <input id="apellidos" class="form-control @Invalido("apellidos")" maxlength="100" @bind="usuario.Apellidos" @bind:event="oninput" />
             </Campo>
-        </div>
-        <div class="col-md-6">
-            <Campo Etiqueta="Correo" Id="correo">
-                <input id="correo" type="email" class="form-control" maxlength="120" value="@ejemplo?.Correo" />
+            <Campo Etiqueta="Correo" Id="correo" Error="@E("correo")" Clase="col-md-6 mb-3">
+                <input id="correo" type="email" class="form-control @Invalido("correo")" maxlength="120" @bind="usuario.Correo" @bind:event="oninput" />
             </Campo>
+            @if (EsNuevo)
+            {
+                <Campo Etiqueta="Clave inicial" Id="clave" Obligatorio="true" Error="@E("clave")" Clase="col-md-6 mb-3"
+                       Ayuda="Mínimo 8 caracteres, con al menos una letra y un número.">
+                    <input id="clave" type="password" class="form-control @Invalido("clave")" maxlength="64" autocomplete="new-password"
+                           @bind="usuario.Clave" @bind:event="oninput" />
+                </Campo>
+            }
+            else
+            {
+                <Campo Etiqueta="Estado" Id="estado" Clase="col-md-6 mb-3" Ayuda="Un usuario inactivo no puede iniciar sesión.">
+                    <select id="estado" class="form-select" @bind="EstadoTexto">
+                        <option value="true">Activo</option>
+                        <option value="false">Inactivo</option>
+                    </select>
+                </Campo>
+                <div class="col-md-6 mb-3">
+                    <div class="small text-muted text-uppercase">Fecha de registro</div>
+                    <div class="fw-semibold">@Formato.FechaHora(usuario.FechaRegistro)</div>
+                </div>
+            }
         </div>
 
-        @if (EsNuevo)
-        {
-            <div class="col-md-6">
-                <Campo Etiqueta="Clave" Id="clave" Obligatorio="true" Ayuda="Mínimo 8 caracteres, con al menos una letra y un número.">
-                    <input id="clave" type="password" class="form-control" autocomplete="new-password" />
-                </Campo>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
+            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" href="/usuarios">Cancelar</a>
+                <button class="btn btn-primary" disabled="@guardando" @onclick="Guardar">@(EsNuevo ? "Registrar usuario" : "Guardar cambios")</button>
             </div>
-        }
-        else
-        {
-            <div class="col-md-3">
-                <Campo Etiqueta="Estado" Id="estado">
-                    <div class="form-check form-switch mt-1">
-                        <input id="estado" class="form-check-input" type="checkbox" checked="@ejemplo?.Estado" />
-                        <label class="form-check-label" for="estado">Activo</label>
-                    </div>
+        </div>
+    </div>
+
+    @if (!EsNuevo)
+    {
+        <div class="card card-body mb-3" style="max-width: 820px;">
+            <h2 class="h6 fw-semibold mb-1">Restablecer clave</h2>
+            <p class="small text-muted">Para un usuario que olvidó su clave. Se le asigna una nueva y la anterior deja de servir.</p>
+            <div class="row align-items-start">
+                <Campo Etiqueta="Clave nueva" Id="claveNueva" Error="@errorClaveNueva" Clase="col-md-6 mb-3"
+                       Ayuda="Mínimo 8 caracteres, con al menos una letra y un número.">
+                    <input id="claveNueva" type="password" class="form-control @(errorClaveNueva is null ? "" : "is-invalid")" maxlength="64"
+                           autocomplete="new-password" @bind="claveNueva" @bind:event="oninput" />
                 </Campo>
-            </div>
-            <div class="col-md-3">
-                <div class="mb-3">
-                    <div class="small text-muted text-uppercase">Fecha de registro</div>
-                    <div class="fw-semibold">@ejemplo?.FechaRegistro</div>
+                <div class="col-md-6 mb-3" style="padding-top: 1.85rem;">
+                    <button class="btn btn-outline-primary" disabled="@guardando" @onclick="RestablecerClave">Restablecer clave</button>
                 </div>
             </div>
-        }
-    </div>
-
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
-        <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-        <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary" href="/usuarios">Cancelar</a>
-            <button class="btn btn-primary" @onclick="Volver">Guardar</button>
         </div>
-    </div>
-</div>
-
-@if (!EsNuevo)
-{
-    @* Bloque aparte para restablecer la clave (solo visual). *@
-    <div class="card card-body mb-3">
-        <h2 class="h6 fw-semibold mb-3">Restablecer clave</h2>
-        <p class="text-muted small">Para el usuario que olvidó su clave.</p>
-        <div class="row g-3 align-items-end">
-            <Campo Etiqueta="Clave nueva" Id="claveNueva" Obligatorio="true" Clase="col-md-6">
-                <input id="claveNueva" type="password" class="form-control" autocomplete="new-password" />
-            </Campo>
-            <div class="col-md-3">
-                <button class="btn btn-dark w-100" @onclick="Volver">Restablecer</button>
-            </div>
-        </div>
-        <div class="form-text">Mínimo 8 caracteres, con al menos una letra y un número.</div>
-    </div>
+    }
 }
 
 @code {
     [Parameter] public int? Id { get; set; }
-
     private bool EsNuevo => Id is null;
-    private string Titulo => EsNuevo ? "Nuevo usuario" : "Editar usuario";
 
-    // Al editar se muestra un usuario de ejemplo fijo (Lab 9: sin consultas).
-    private UsuarioFila? ejemplo => EsNuevo ? null : MuestrasSeguridad.Usuarios[1];
+    // el <select> trabaja con texto; el dato es un booleano
+    private string EstadoTexto
+    {
+        get => usuario is { Estado: true } ? "true" : "false";
+        set { if (usuario is not null) usuario.Estado = value == "true"; }
+    }
 
-    // Lab 9: no se registra nada, solo se navega.
-    private void Volver() => Nav.NavigateTo("/usuarios");
+    private UsuarioDatos? usuario;
+    private List<RolDatos> roles = new();
+    private string claveNueva = "";
+    private string? errorClaveNueva;
+    private bool intento;
+    private bool guardando;
+    private string? error;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            roles = await Api.Get<List<RolDatos>>("usuarios/roles") ?? new();
+            usuario = EsNuevo ? new UsuarioDatos() : await Api.Get<UsuarioDatos>($"usuarios/{Id}");
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+    }
+
+    // Mismas reglas que valida UsuarioBOImpl (RNF004: el error se muestra junto al campo)
+    private Dictionary<string, string> Errores()
+    {
+        var e = new Dictionary<string, string>();
+        if (usuario is null) return e;
+        if (string.IsNullOrWhiteSpace(usuario.NombreUsuario)) e["nombreUsuario"] = "El nombre de usuario es obligatorio.";
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(usuario.NombreUsuario.Trim(), "^[A-Za-z0-9._-]+$"))
+            e["nombreUsuario"] = "Solo letras, dígitos, punto, guion y guion bajo.";
+        if (usuario.IdRol <= 0) e["rol"] = "Elige el rol del usuario.";
+        if (string.IsNullOrWhiteSpace(usuario.Nombres)) e["nombres"] = "Los nombres son obligatorios.";
+        if (string.IsNullOrWhiteSpace(usuario.Apellidos)) e["apellidos"] = "Los apellidos son obligatorios.";
+        if (!string.IsNullOrWhiteSpace(usuario.Correo)
+            && !System.Text.RegularExpressions.Regex.IsMatch(usuario.Correo.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            e["correo"] = "El correo no tiene un formato válido.";
+        if (EsNuevo)
+        {
+            var problema = ProblemaClave(usuario.Clave);
+            if (problema is not null) e["clave"] = problema;
+        }
+        return e;
+    }
+
+    private static string? ProblemaClave(string? clave) =>
+        string.IsNullOrEmpty(clave) ? "La clave es obligatoria."
+        : clave.Length < 8 ? "La clave debe tener al menos 8 caracteres."
+        : !clave.Any(char.IsLetter) || !clave.Any(char.IsDigit) ? "La clave debe incluir al menos una letra y un número."
+        : null;
+
+    private string? E(string campo) => intento && Errores().TryGetValue(campo, out var m) ? m : null;
+    private string Invalido(string campo) => E(campo) is null ? "" : "is-invalid";
+
+    private async Task Guardar()
+    {
+        if (usuario is null) return;
+        intento = true;
+        error = null;
+        if (Errores().Count > 0)
+        {
+            error = "Revise los campos marcados en rojo.";
+            return;
+        }
+        guardando = true;
+        try
+        {
+            if (EsNuevo)
+            {
+                await Api.Post<UsuarioDatos>("usuarios", usuario);
+            }
+            else
+            {
+                await Api.Put<UsuarioDatos>($"usuarios/{Id}", usuario);
+            }
+            Nav.NavigateTo(AvisoGuardado.Ruta("/usuarios", EsNuevo ? AvisoGuardado.Nuevo : AvisoGuardado.Editado, usuario.NombreUsuario));
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "El nombre de usuario ya está registrado"
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private async Task RestablecerClave()
+    {
+        error = null;
+        errorClaveNueva = ProblemaClave(claveNueva);
+        if (errorClaveNueva is not null || usuario is null) return;
+        guardando = true;
+        try
+        {
+            await Api.Post<object>($"usuarios/{Id}/restablecer-clave", new { claveNueva });
+            Nav.NavigateTo(AvisoGuardado.Ruta("/usuarios", "clave", usuario.NombreUsuario));
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
 }

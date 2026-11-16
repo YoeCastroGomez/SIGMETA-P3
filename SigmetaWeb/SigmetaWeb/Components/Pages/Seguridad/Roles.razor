@@ -1,39 +1,98 @@
 @page "/roles"
+@inject ApiJava Api
 
 <PageTitle>Roles · SIGMETA</PageTitle>
 
-@* RF002 · Lista de roles (solo consulta). Solo visual (Lab 9). *@
-<Encabezado Rf="RF002" Titulo="Roles" Subtitulo="Los cuatro roles del sistema. Se asignan al registrar o editar un usuario." />
+@* RF002 · Los cuatro roles fijos del sistema y cuántos usuarios tiene cada uno. GET /api/usuarios/roles. *@
+<Encabezado Rf="RF002" Titulo="Roles"
+            Subtitulo="Los roles son fijos: definen qué menú ve cada usuario y qué operaciones le permite el sistema.">
+    <a class="btn btn-outline-secondary" href="/usuarios">Ver usuarios</a>
+</Encabezado>
 
-<div class="card mb-3">
-    <div class="table-responsive">
-        <table class="table align-middle mb-0">
-            <thead class="table-light">
-                <tr><th>Rol</th><th>Descripción</th><th>Estado</th></tr>
-            </thead>
-            <tbody>
-                @foreach (var r in Paginar(MuestrasSeguridad.RolesDetalle, paginaActual, tamanoPagina))
-                {
-                    <tr>
-                        <td><strong>@MuestrasSeguridad.Texto(r.Tipo)</strong></td>
-                        <td>@r.Descripcion</td>
-                        <td><Estado Texto="@(r.Estado ? "Activo" : "Inactivo")" /></td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+<AvisoError Mensaje="@error" />
+
+@if (roles is null)
+{
+    @if (error is null)
+    {
+        <p class="text-muted">Cargando roles...</p>
+    }
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var r in roles)
+        {
+            <div class="col-md-6">
+                <div class="card card-body h-100">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <h2 class="h6 fw-bold mb-0">@TextosSeguridad.Texto(r.Tipo)</h2>
+                        <Estado Texto="@(r.Estado ? "Activo" : "Inactivo")" />
+                    </div>
+                    <p class="text-muted small mb-3">@(string.IsNullOrWhiteSpace(r.Descripcion) ? "Sin descripción." : r.Descripcion)</p>
+                    <ul class="small mb-3 ps-3">
+                        @foreach (var p in Permisos(r.Tipo))
+                        {
+                            <li>@p</li>
+                        }
+                    </ul>
+                    <div class="mt-auto small text-muted border-top pt-2">
+                        <strong>@r.UsuariosActivos</strong> @(r.UsuariosActivos == 1 ? "usuario activo" : "usuarios activos")
+                        @if (r.Usuarios > r.UsuariosActivos)
+                        {
+                            <span> · @(r.Usuarios - r.UsuariosActivos) inactivos</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
     </div>
-        <Paginacion TotalRegistros="@(MuestrasSeguridad.RolesDetalle.Count())" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
-</div>
+}
 
 @code {
-    private int paginaActual = 1;
-    private int tamanoPagina = 10;
-    private IEnumerable<T> Paginar<T>(IEnumerable<T> registros, int pagina, int tamano)
+    private List<RolDatos>? roles;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
     {
-        if (tamano == 0) return registros;
-        int total = registros.Count();
-        int segura = Math.Clamp(pagina, 1, Math.Max(1, (total + tamano - 1) / tamano));
-        return registros.Skip((segura - 1) * tamano).Take(tamano);
+        try
+        {
+            roles = await Api.Get<List<RolDatos>>("usuarios/roles") ?? new();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
     }
+
+    // Resumen de lo que el sistema le permite a cada rol (lo verifica el BO en cada operación)
+    private static string[] Permisos(string tipo) => tipo switch
+    {
+        "ADMINISTRADOR" => new[]
+        {
+            "Usuarios, roles, productos, categorías y proveedores",
+            "Compras a proveedores y líneas de crédito de clientes",
+            "Aprueba las solicitudes de autorización",
+            "Reabre y corrige cajas; consulta los reportes"
+        },
+        "VENDEDOR" => new[]
+        {
+            "Clientes, cotizaciones y órdenes de clientes",
+            "Ventas y emisión de comprobantes",
+            "Con autorización: descuento especial bajo el costo"
+        },
+        "CAJERO" => new[]
+        {
+            "Abre y cierra su caja; registra ingresos y egresos",
+            "Cobros al contado y de cuentas por cobrar",
+            "Con autorización: notas de crédito"
+        },
+        "ALMACENERO" => new[]
+        {
+            "Recepción de compras y despacho de ventas",
+            "Kardex y stock mínimo",
+            "Con autorización: ajuste de inventario por conteo"
+        },
+        _ => Array.Empty<string>()
+    };
 }
