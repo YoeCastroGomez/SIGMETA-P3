@@ -70,6 +70,25 @@ public class ComprobanteRS extends VentanillaBase {
     }
 
     @GET
+    @Path("siguiente-numero")
+    public Response siguienteNumero(@HeaderParam("ticket") String ticket, @QueryParam("serie") String serie) {
+        return ejecutar(ticket, id -> {
+            permitirConsulta(id);
+            if (!"F001".equals(serie) && !"B001".equals(serie)) {
+                throw new IllegalArgumentException("Serie de comprobante inválida");
+            }
+            long mayor = 0;
+            for (Comprobante c : comprobanteBO.listarTodos()) {
+                if (!serie.equals(c.getSerie()) || c.getNumero() == null || !c.getNumero().matches("[0-9]+")) {
+                    continue;
+                }
+                mayor = Math.max(mayor, Long.parseLong(c.getNumero()));
+            }
+            return java.util.Map.of("numero", String.format(java.util.Locale.ROOT, "%08d", mayor + 1));
+        });
+    }
+
+    @GET
     @Path("{id}")
     public Response obtener(@HeaderParam("ticket") String ticket, @PathParam("id") int idComprobante) {
         Response respuesta = ejecutar(ticket, id -> {
