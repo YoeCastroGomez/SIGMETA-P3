@@ -11,7 +11,10 @@
    que compensa el cobro (CompensacionCaja), por eso se restan aparte. *@
 <Encabezado Rf="RF010" Titulo="Cierre de caja"
             Subtitulo="Solo el cajero que abrió la caja puede cerrarla.">
-    <a class="btn btn-outline-secondary" href="/caja">Volver a la caja</a>
+    @if (cierre is not null || caja is null)
+    {
+        <a class="btn btn-outline-secondary" href="/caja">Volver a la caja</a>
+    }
     <a class="btn btn-outline-secondary" href="/caja/movimientos">Movimientos</a>
     <a class="btn btn-outline-secondary" href="/caja/cierres">Historial de cierres</a>
 </Encabezado>
