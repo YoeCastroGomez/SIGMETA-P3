@@ -28,6 +28,12 @@ else
         <div class="card card-body mb-3">
             <div class="row">
                 <div class="col-sm-6 col-md-4 mb-2">
+                    <Campo Etiqueta="Número de guía">
+                        <input class="form-control sigmeta-correlativo" value="@guiaPropuesta" disabled />
+                    </Campo>
+                </div>
+                <div class="col-12"></div>
+                <div class="col-sm-6 col-md-4 mb-2">
                     <div class="small text-muted text-uppercase">Cliente</div>
                     <div class="fw-semibold">@venta.Cliente</div>
                     <div class="small text-muted">@venta.NumeroDocumento</div>
@@ -140,6 +146,12 @@ else
     private string? transportista;
     private bool guardando;
     private string? error;
+    private string guiaPropuesta = "";
+
+    private sealed class GuiaPropuesta
+    {
+        public string Guia { get; set; } = "";
+    }
 
     private bool HayAlgo => lineas?.Any(l => l.Despachar > 0) == true;
     private string? ErrorFecha => fecha.Date > DateTime.Today ? "La fecha no puede ser futura." : null;
@@ -158,6 +170,8 @@ else
     {
         try
         {
+            var propuesta = await Api.Get<GuiaPropuesta>("almacen/despachos/siguiente-guia");
+            guiaPropuesta = propuesta?.Guia ?? "";
             var ventas = await Api.Get<List<VentaPorDespachar>>("almacen/ventas-por-despachar") ?? new();
             venta = ventas.FirstOrDefault(v => v.Id == Id);
             lineas = await Api.Get<List<LineaVentaDespacho>>($"almacen/ventas/{Id}/lineas") ?? new();
