@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 public interface VentaBO {
+    String proponerNumero(int idResponsable) throws SQLException;
     Venta registrar(Venta venta, int idResponsable) throws SQLException;
     Venta modificar(Venta venta, int idResponsable) throws SQLException;
     void anular(int idVenta, String motivo, int idResponsable) throws SQLException;
