@@ -79,6 +79,15 @@ public class CotizacionRS extends VentanillaBase {
     }
 
     @GET
+    @Path("siguiente-numero")
+    public Response siguienteNumero(@HeaderParam("ticket") String ticket,
+                                    @QueryParam("fechaEmision") String fechaEmision) {
+        return ejecutar(ticket, id -> java.util.Map.of(
+                "numero", cotizacionBO.proponerNumero(
+                        Utilidades.leerFecha(fechaEmision, "fecha de emisión"), id)));
+    }
+
+    @GET
     @Path("{id}")
     public Response obtener(@HeaderParam("ticket") String ticket, @PathParam("id") int idCotizacion) {
         Response respuesta = ejecutar(ticket, id -> {
