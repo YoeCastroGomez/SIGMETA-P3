@@ -9,6 +9,7 @@ import java.util.List;
 // RF007: la cotizacion se gestiona junto con sus detalles
 public interface CotizacionBO {
     // idResponsable: usuario en sesion; debe ser Vendedor (anular tambien el Administrador)
+    String proponerNumero(java.time.LocalDate fechaEmision, int idResponsable) throws SQLException;
     Cotizacion registrar(Cotizacion cotizacion, int idResponsable) throws SQLException;
     // reemplaza la cabecera y todas las lineas; solo en estado REGISTRADA
     Cotizacion modificar(Cotizacion cotizacion, int idResponsable) throws SQLException;
