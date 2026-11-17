@@ -1,4 +1,6 @@
 ﻿@page "/recepciones"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Almacenero,Administrador")]
 @inject ApiJava Api
 @using SigmetaWeb.Components.Pages.Almacen
 

@@ -1,4 +1,6 @@
 @page "/cobros"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Cajero,Administrador")]
 @inject ApiJava Api
 
 <PageTitle>Cobros · SIGMETA</PageTitle>

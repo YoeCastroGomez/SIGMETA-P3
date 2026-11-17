@@ -1,4 +1,6 @@
 @page "/caja/cierre"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Cajero")]
 @inject ApiJava Api
 
 <PageTitle>Cierre de caja · SIGMETA</PageTitle>

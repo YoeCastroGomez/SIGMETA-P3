@@ -1,4 +1,6 @@
 @page "/caja/movimientos"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Cajero")]
 @inject ApiJava Api
 
 <PageTitle>Movimientos de caja · SIGMETA</PageTitle>

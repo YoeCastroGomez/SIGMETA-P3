@@ -46,13 +46,28 @@ public class ClienteRS extends VentanillaBase {
                            @QueryParam("documento") String documento,
                            @QueryParam("razonSocial") String razonSocial) {
         // documento, razon social y estado: por separado o combinados (ClienteBO.buscar)
-        return ejecutar(ticket, id -> clienteBO.buscar(documento, razonSocial, estado));
+        return ejecutar(ticket, id -> {
+            permitirConsultaClientes(id);
+            return clienteBO.buscar(documento, razonSocial, estado);
+        });
+    }
+
+    // RF001: consultan clientes el Vendedor (RF003), el Cajero (filtro de ventas y comprobantes)
+    // y el Administrador. El Almacenero no.
+    private void permitirConsultaClientes(int idUsuario) throws java.sql.SQLException {
+        new pe.edu.pucp.sigmeta.boimpl.usuario.UsuarioBOImpl().verificarRol(idUsuario,
+                pe.edu.pucp.sigmeta.model.enums.TipoRol.VENDEDOR,
+                pe.edu.pucp.sigmeta.model.enums.TipoRol.CAJERO,
+                pe.edu.pucp.sigmeta.model.enums.TipoRol.ADMINISTRADOR);
     }
 
     @GET
     @Path("{id}")
     public Response obtener(@HeaderParam("ticket") String ticket, @PathParam("id") int idCliente) {
-        Response respuesta = ejecutar(ticket, id -> clienteBO.obtener(idCliente));
+        Response respuesta = ejecutar(ticket, id -> {
+            permitirConsultaClientes(id);
+            return clienteBO.obtener(idCliente);
+        });
         if (respuesta.getStatus() == Response.Status.NO_CONTENT.getStatusCode()) {
             return error(Response.Status.NOT_FOUND, "No existe el cliente con id " + idCliente);
         }

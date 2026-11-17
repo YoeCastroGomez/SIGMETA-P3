@@ -1,5 +1,7 @@
 @page "/cobranzas/{Id:int}/cobro"
 @page "/cobranzas/{Id:int}/cobros/{IdCobro:int}"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Cajero")]
 @inject ApiJava Api
 @inject NavigationManager Nav
 

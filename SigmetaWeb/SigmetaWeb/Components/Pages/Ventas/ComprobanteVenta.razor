@@ -1,4 +1,6 @@
 @page "/ventas/{Id:int}/comprobante"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Vendedor,Cajero,Administrador")]
 @inject ApiJava Api
 @inject IJSRuntime JS
 

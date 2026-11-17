@@ -1,4 +1,6 @@
 @page "/cotizaciones"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Vendedor,Administrador")]
 @using SigmetaWeb.Components.Pages.Ventas
 @using SigmetaWeb.Components.Pages.Clientes
 @inject ApiJava Api

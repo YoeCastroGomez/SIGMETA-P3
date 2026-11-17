@@ -1,4 +1,6 @@
 @page "/ventas/{Id:int}/cobro"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Cajero")]
 @using SigmetaWeb.Components.Pages.Caja
 @inject ApiJava Api
 @inject NavigationManager Nav

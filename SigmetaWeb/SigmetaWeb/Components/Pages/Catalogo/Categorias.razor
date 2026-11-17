@@ -1,4 +1,6 @@
 @page "/categorias"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Administrador")]
 @inject ApiJava Api
 @inject IJSRuntime JS
 

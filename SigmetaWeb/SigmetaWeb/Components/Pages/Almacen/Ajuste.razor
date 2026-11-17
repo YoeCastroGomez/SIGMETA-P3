@@ -1,4 +1,6 @@
 ﻿@page "/almacen/ajuste"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Almacenero")]
 @inject ApiJava Api
 @inject NavigationManager Nav
 @using SigmetaWeb.Components.Pages.Seguridad

@@ -1,4 +1,6 @@
 @page "/autorizaciones/mias"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Vendedor,Cajero,Almacenero")]
 @inject ApiJava Api
 
 <PageTitle>Mis solicitudes · SIGMETA</PageTitle>

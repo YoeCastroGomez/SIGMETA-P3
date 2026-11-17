@@ -4,7 +4,19 @@
             @* RF001: si no hay sesión, cualquier página manda al login *@
             <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
                 <NotAuthorized>
-                    <RedirectToLogin />
+                    @if (context.User.Identity?.IsAuthenticated == true)
+                    {
+                        @* RF001: tiene sesión, pero su rol no puede abrir esta pantalla *@
+                        <div class="alert alert-warning mt-4">
+                            <strong>No tienes permiso para abrir esta pantalla.</strong>
+                            Tu rol no incluye esta opción. Usa el menú para ir a las opciones de tu rol.
+                            <div class="mt-2"><a class="btn btn-sm btn-outline-secondary" href="/">Ir al inicio</a></div>
+                        </div>
+                    }
+                    else
+                    {
+                        <RedirectToLogin />
+                    }
                 </NotAuthorized>
             </AuthorizeRouteView>
             <FocusOnNavigate RouteData="routeData" Selector="h1" />

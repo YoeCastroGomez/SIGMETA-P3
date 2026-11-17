@@ -1,4 +1,6 @@
 @page "/ventas"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Vendedor,Cajero,Administrador")]
 @using SigmetaWeb.Components.Pages.Clientes
 @inject ApiJava Api
 @inject NavigationManager Nav

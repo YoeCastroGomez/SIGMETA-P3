@@ -1,5 +1,7 @@
 @page "/ordenes/nueva"
 @page "/ordenes/editar/{Id:int}"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Vendedor,Administrador")]
 @inject ApiJava Api
 @inject NavigationManager Nav
 

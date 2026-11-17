@@ -1,4 +1,6 @@
 @page "/clientes"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Vendedor,Administrador")]
 @inject ApiJava Api
 
 <PageTitle>Clientes · SIGMETA</PageTitle>

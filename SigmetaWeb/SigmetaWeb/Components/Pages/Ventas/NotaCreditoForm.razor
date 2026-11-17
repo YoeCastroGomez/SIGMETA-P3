@@ -1,4 +1,6 @@
 @page "/notas-credito/nueva"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Cajero,Administrador")]
 @inject ApiJava Api
 @inject NavigationManager Nav
 @using SigmetaWeb.Components.Pages.Almacen

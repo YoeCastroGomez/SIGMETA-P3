@@ -1,4 +1,6 @@
 @page "/compras/detalle/{Id:int}"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Administrador")]
 @using SigmetaWeb.Components.Pages.Compras
 @using SigmetaWeb.Components.Pages.Catalogo
 @inject ApiJava Api

@@ -1,4 +1,6 @@
 @page "/reportes"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Administrador")]
 @inject ApiJava Api
 @using SigmetaWeb.Components.Pages.Almacen
 

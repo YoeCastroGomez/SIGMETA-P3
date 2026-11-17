@@ -1,5 +1,7 @@
 @page "/proveedores/nuevo"
 @page "/proveedores/editar/{Id:int}"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Administrador")]
 @inject ApiJava Api
 @inject NavigationManager Nav
 @using SigmetaWeb.Components.Pages.Catalogo

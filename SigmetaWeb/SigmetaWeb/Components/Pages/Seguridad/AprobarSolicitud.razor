@@ -1,4 +1,6 @@
 @page "/autorizaciones/aprobar/{Id:int}"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Administrador")]
 @inject ApiJava Api
 @inject NavigationManager Nav
 

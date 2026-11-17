@@ -1,4 +1,6 @@
 ﻿@page "/almacen/movimientos"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Almacenero,Administrador")]
 @inject ApiJava Api
 
 <PageTitle>Movimientos de almacén · SIGMETA</PageTitle>
