@@ -9,7 +9,7 @@
    GET /api/almacen/ventas/{id}/lineas · POST /api/almacen/despachos. La serie y el número de guía los pone el Java. *@
 <Encabezado Rf="RF012" Titulo="@($"Despachar venta {venta?.Numero}")"
             Subtitulo="Escribe lo que sale ahora de cada línea. Lo que quede pendiente se despacha en otra guía.">
-    <a class="btn btn-outline-secondary" href="/despachos">Volver</a>
+
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
