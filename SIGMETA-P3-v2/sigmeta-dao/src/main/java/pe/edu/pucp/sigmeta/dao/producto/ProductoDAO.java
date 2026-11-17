@@ -8,5 +8,6 @@ import java.util.List;
 
 public interface ProductoDAO extends BaseDAO<Producto, Integer> {
     List<Producto> listarTodos() throws SQLException;
+    List<String> listarCodigosInternos() throws SQLException;
     List<Producto> listarPorEstado(boolean estado) throws SQLException;
 }
