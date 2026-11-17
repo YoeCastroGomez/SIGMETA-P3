@@ -43,10 +43,8 @@ else
             <h2 class="h6 fw-semibold mb-3">Identificación</h2>
             <div class="row">
                 <div class="col-md-4">
-                    <Campo Etiqueta="Código interno" Id="codInterno" Obligatorio="true" Error="@(Error("codInterno"))"
-                           Ayuda="Único. Se guarda en mayúsculas y sin espacios.">
-                        <InputText id="codInterno" class="@(ClaseCuadro("codInterno"))" maxlength="50" style="text-transform: uppercase"
-                                   @bind-Value="producto.CodigoInterno" @oninput="@(e => Escribiendo("codInterno", e))" />
+                    <Campo Etiqueta="Código interno" Id="codInterno">
+                        <input id="codInterno" class="form-control sigmeta-correlativo" value="@producto.CodigoInterno" disabled />
                     </Campo>
                 </div>
                 <div class="col-md-4">
@@ -239,6 +237,11 @@ else
     private bool EsNuevo => Id is null;
     private string Titulo => EsNuevo ? "Nuevo producto" : "Editar producto";
 
+    private sealed class CodigoPropuesto
+    {
+        public string Codigo { get; set; } = "";
+    }
+
     private string AyudaFactor => MismaUnidad
         ? "Las dos unidades son iguales: el factor es 1 y no se puede cambiar."
         : "Unidades de venta en una unidad de compra (caja de 12 → 12). Entero si se vende por unidad, caja o juego.";
@@ -305,10 +308,6 @@ else
         if (producto is null)
         {
             return e;
-        }
-        if (string.IsNullOrWhiteSpace(Texto("codInterno", producto.CodigoInterno)))
-        {
-            e["codInterno"] = "El código interno es obligatorio.";
         }
         if (string.IsNullOrWhiteSpace(Texto("nombre", producto.Nombre)))
         {
@@ -419,6 +418,11 @@ else
             producto = EsNuevo
                 ? new Producto()
                 : await Api.Get<Producto>($"productos/{Id}");
+            if (EsNuevo && producto is not null)
+            {
+                var propuesto = await Api.Get<CodigoPropuesto>("productos/siguiente-codigo");
+                producto.CodigoInterno = propuesto?.Codigo ?? "";
+            }
             AjustarFactor();   // si las unidades son iguales, el factor se muestra fijo en 1                                       // GET /api/productos/{Id}
         }
         catch (ErrorApi e)
@@ -453,7 +457,8 @@ else
         {
             if (EsNuevo)
             {
-                await Api.Post<Producto>("productos", producto);          // POST /api/productos
+                var registrado = await Api.Post<Producto>("productos", producto);          // POST /api/productos
+                if (registrado is not null) producto.CodigoInterno = registrado.CodigoInterno;
             }
             else
             {
