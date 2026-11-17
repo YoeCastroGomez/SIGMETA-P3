@@ -40,4 +40,36 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <build>
+        <plugins>
+            <!-- RF015: compila las plantillas JasperReports (.jrxml -> .jasper) en el build, despues de compilar
+                 las clases. Se ejecuta en una JVM aparte para que el compilador vea las librerias de JasperReports.
+                 Los .jasper quedan en target/classes/reports y viajan dentro del .war. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>compilar-plantillas-jasper</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${java.home}/bin/java</executable>
+                            <arguments>
+                                <argument>-classpath</argument>
+                                <classpath/>
+                                <argument>pe.edu.pucp.sigmeta.boimpl.reporte.CompilarPlantillas</argument>
+                                <argument>${project.basedir}/src/main/resources/reports</argument>
+                                <argument>${project.build.outputDirectory}/reports</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

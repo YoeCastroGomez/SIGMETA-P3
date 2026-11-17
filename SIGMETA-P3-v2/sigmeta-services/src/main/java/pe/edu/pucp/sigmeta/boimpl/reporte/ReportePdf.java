@@ -25,6 +25,7 @@ import net.sf.jasperreports.engine.JasperFillManager;
 import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperReport;
 import net.sf.jasperreports.engine.data.JRMapCollectionDataSource;
+import net.sf.jasperreports.engine.util.JRLoader;
 import net.sf.jasperreports.export.SimpleExporterInput;
 import net.sf.jasperreports.export.SimpleOutputStreamExporterOutput;
 import net.sf.jasperreports.pdf.JRPdfExporter;
@@ -35,7 +36,7 @@ import net.sf.jasperreports.pdf.SimplePdfExporterConfiguration;
  *
  * Ciclo de JasperReports:
  *   1. Diseno:      plantillas .jrxml en src/main/resources/reports (una principal por reporte y un subreporte por tabla).
- *   2. Compilacion: JasperCompileManager, UNA sola vez por plantilla; el JasperReport compilado queda en cache.
+ *   2. Compilacion: en el BUILD (CompilarPlantillas genera los .jasper); aqui se cargan con JRLoader y quedan en cache.
  *   3. Llenado:     JasperFillManager con parametros (membrete e indicadores) y un JRMapCollectionDataSource por tabla.
  *   4. Exportacion: JRPdfExporter a un byte[] con los metadatos del PDF (titulo, autor, asunto).
  *
@@ -168,16 +169,28 @@ public final class ReportePdf {
 
     // ------------------------------------------------------------------ JasperReports
 
-    /** Compila la plantilla la primera vez y la reutiliza en los pedidos siguientes. */
+    /**
+     * Carga la plantilla ya compilada (.jasper, generada en el build por CompilarPlantillas) y la guarda en cache.
+     * Si el .jasper no existe (por ejemplo al probar desde el IDE sin pasar por Maven) compila el .jrxml; eso
+     * funciona fuera del servidor, pero dentro de GlassFish solo se usan los .jasper.
+     */
     private static JasperReport plantilla(String nombre) {
         return COMPILADAS.computeIfAbsent(nombre, n -> {
+            try (InputStream jasper = ReportePdf.class.getResourceAsStream("/reports/" + n + ".jasper")) {
+                if (jasper != null) {
+                    return (JasperReport) JRLoader.loadObject(jasper);
+                }
+            } catch (JRException | IOException e) {
+                throw new RuntimeException("No se pudo cargar la plantilla " + n + ".jasper: " + e.getMessage(), e);
+            }
             try (InputStream jrxml = ReportePdf.class.getResourceAsStream("/reports/" + n + ".jrxml")) {
                 if (jrxml == null) {
-                    throw new IllegalStateException("No se encontró la plantilla /reports/" + n + ".jrxml");
+                    throw new IllegalStateException("No se encontró la plantilla /reports/" + n);
                 }
                 return JasperCompileManager.compileReport(jrxml);
             } catch (JRException | IOException e) {
-                throw new RuntimeException("No se pudo compilar la plantilla " + n + ": " + e.getMessage(), e);
+                throw new RuntimeException("Falta la plantilla compilada " + n + ".jasper. Ejecute 'mvn clean install' "
+                        + "con GlassFish detenido y vuelva a desplegar. Detalle: " + e.getMessage(), e);
             }
         });
     }
