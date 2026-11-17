@@ -1047,3 +1047,20 @@ html[data-bs-theme="dark"] .form-switch .form-check-input {
 html[data-bs-theme="dark"] .form-switch .form-check-input:checked {
     background-position: right center;
 }
+
+/* Formato uniforme para datos antiguos y nuevos. */
+.sigmeta-main .table tbody td:not([colspan]) {
+    text-transform: uppercase;
+}
+
+.sigmeta-main .table tbody td :is(.btn, button, input, select, textarea) {
+    text-transform: none;
+}
+
+.sigmeta-main :is(
+    input#razonSocial, input#nombre, input#rubro, input#direccion,
+    input#contacto, input#nombres, input#apellidos, input#descripcion,
+    input#numeroCompra, input#proveedorCompra, textarea#observacionesCompra
+) {
+    text-transform: uppercase;
+}
