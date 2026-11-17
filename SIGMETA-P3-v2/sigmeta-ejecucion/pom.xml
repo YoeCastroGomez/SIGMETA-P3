@@ -32,5 +32,23 @@
             <artifactId>sigmeta-services</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
+        <!-- H14: pruebas JUnit 5 (solo para mvn test; no entra al WAR) -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- version que ejecuta JUnit 5. Las pruebas de integracion se saltan salvo con -Dsigmeta.integracion=true -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+        </plugins>
+    </build>
 </project>

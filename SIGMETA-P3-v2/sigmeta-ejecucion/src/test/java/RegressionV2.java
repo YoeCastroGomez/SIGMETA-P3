@@ -46,7 +46,7 @@ public class RegressionV2 extends Regression {
         check(clientes.obtener(c.getId()).getLimiteCredito().compareTo(new BigDecimal("1234.56"))==0,"limite decimal conserva centavos");
         rechaza(()->clientes.asignarLineaCredito(c.getId(),100,30,"EXCELENTE",4),"calificacion fuera de escala rechazada");
         check(clientes.obtener(c.getId()).getCalificacion()==CalificacionCrediticia.B,"calificacion valida permanece tras rechazo");
-        Venta plazo=venta(c,1,10,true);plazo.setPlazoCreditoDias(31);
+        Venta plazo=venta(c,1,costo(),true);plazo.setPlazoCreditoDias(31);
         rechaza(()->ventas.registrar(plazo,1),"plazo superior al autorizado rechazado");
         plazo.setPlazoCreditoDias(30);ventas.registrar(plazo,1);
         clientes.asignarLineaCredito(c.getId(),new BigDecimal("1234.56"),10,"B",4);
@@ -77,7 +77,7 @@ public class RegressionV2 extends Regression {
         check(new ProductoBOImpl().obtener(producto.getId()).getUnidadInventario()==producto.getUnidadVenta(),"unidad de inventario conservada");
 
         CuentaPorCobrarBOImpl cuentas=new CuentaPorCobrarBOImpl();
-        Venta contado=ventas.registrar(venta(c,1,10,false),1);
+        Venta contado=ventas.registrar(venta(c,1,costo(),false),1);
         rechaza(()->cuentas.insertar(solicitud(contado,c),4),"no crear deuda para venta al contado");
         Cliente otro=cliente("10987654323",TipoPersona.NATURAL);
         rechaza(()->cuentas.insertar(solicitud(plazo,otro),4),"no asociar deuda a otro cliente");
@@ -98,10 +98,13 @@ public class RegressionV2 extends Regression {
         ventas.anular(sinCuenta.getId(),"Prueba v2",1);
         check(cuentas.obtenerPorVenta(sinCuenta.getId())==null&&ventas.obtener(sinCuenta.getId()).isAnulado(),"anular venta retira cuenta sin cobros atomicamente");
 
-        Venta vencida=venta(c,1,20,true);vencida.setFechaEmision(LocalDate.now().minusDays(40));
+        // RF008: una venta ya no se registra con mas de 7 dias de atraso; la deuda vencida se simula
+        // moviendo el vencimiento de su cuenta (fixture por DAO, como el resto de esta prueba)
+        Venta vencida=venta(c,1,costo(),true);
         ventas.registrar(vencida,1);CuentaPorCobrar cx=cuenta(vencida);
         // Estado almacenado intencionalmente atrasado: las consultas deben derivarlo.
-        Transaccion.ejecutar(()->{cx.setEstado(EstadoCuentaPorCobrar.PENDIENTE);new CuentaPorCobrarDAOImpl().update(cx);return null;});
+        Transaccion.ejecutar(()->{cx.setFechaVencimiento(LocalDate.now().minusDays(10));
+            cx.setEstado(EstadoCuentaPorCobrar.PENDIENTE);new CuentaPorCobrarDAOImpl().update(cx);return null;});
         check(cuentas.obtenerPorId(cx.getId()).getEstado()==EstadoCuentaPorCobrar.VENCIDA,"obtener deriva vencimiento actual");
         check(cuentas.listarPorEstado(EstadoCuentaPorCobrar.VENCIDA).stream().anyMatch(x->x.getId()==cx.getId())&&cuentas.listarVencidas().stream().anyMatch(x->x.getId()==cx.getId()),"consultas por estado y vencimiento coinciden");
         check(cuentas.listarPorEstado(EstadoCuentaPorCobrar.PENDIENTE).stream().noneMatch(x->x.getId()==cx.getId()),"cuenta vencida no aparece pendiente por estado obsoleto");
@@ -112,11 +115,13 @@ public class RegressionV2 extends Regression {
         check(!ventas.obtener(vencida.getId()).isAnulado()&&igual(cuentas.obtenerPorId(cx.getId()).getMontoPagado(),1),"rollback conserva venta y deuda si anulacion falla");
 
         Cliente limite=cliente("10987654324",TipoPersona.NATURAL);clientes.asignarLineaCredito(limite.getId(),100,10,"A",4);
-        Venta deudaVieja=venta(limite,1,60,true);deudaVieja.setFechaEmision(LocalDate.now().minusDays(30));ventas.registrar(deudaVieja,1);
+        Venta deudaVieja=venta(limite,1,60,true);ventas.registrar(deudaVieja,1);
+        CuentaPorCobrar vieja=cuenta(deudaVieja);
+        Transaccion.ejecutar(()->{vieja.setFechaVencimiento(LocalDate.now().minusDays(5));new CuentaPorCobrarDAOImpl().update(vieja);return null;});
         rechaza(()->ventas.registrar(venta(limite,1,60,true),1),"deuda vencida tambien consume limite de credito");
         CuentaPorCobrar refinanciada=cuenta(plazo);LocalDate nuevoVencimiento=LocalDate.now().plusDays(60);
         refinanciada.setFechaVencimiento(nuevoVencimiento);cuentas.modificar(refinanciada,4);
-        Venta editar=ventas.obtener(plazo.getId());editar.getDetalles().get(0).setPrecioUnitario(15);ventas.modificar(editar,1);
+        Venta editar=ventas.obtener(plazo.getId());editar.getDetalles().get(0).setPrecioUnitario(costo()+5);ventas.modificar(editar,1);
         check(cuenta(plazo).getFechaVencimiento().equals(nuevoVencimiento),"editar venta no borra refinanciacion");
         editar.setFechaEmision(LocalDate.now().minusDays(1));rechaza(()->ventas.modificar(editar,1),"fecha de venta al credito no desincroniza CxC");
         check(ventas.listarPorCliente(limite.getId()).size()==1,"ventas del cliente se consultan bajo demanda");

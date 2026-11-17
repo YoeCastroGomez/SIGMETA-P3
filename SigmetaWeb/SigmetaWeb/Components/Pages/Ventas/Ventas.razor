@@ -135,9 +135,10 @@ else
                                         @* RF008: solo se modifica una venta REGISTRADA sin comprobante ni despacho *@
                                         <a class="btn btn-sm btn-outline-secondary" href="@($"/ventas/editar/{v.Id}")">Editar</a>
                                     }
-                                    @if (v.Estado == "REGISTRADA" && v.Comprobante is null)
+                                    @if (Rol == "Vendedor" && v.Estado == "REGISTRADA" && v.Comprobante is null)
                                     {
-                                        @* RF008: solo se anula una venta sin comprobante vigente ni despachos *@
+                                        @* RF008: la anula el Vendedor (VentaBOImpl.anular), sin comprobante vigente ni despachos.
+                                           Si ya tiene comprobante, primero se anula desde "Comprobante" *@
                                         <button class="btn btn-sm btn-outline-danger" @onclick="() => AbrirAnulacion(v)">Anular</button>
                                     }
                                 </div>

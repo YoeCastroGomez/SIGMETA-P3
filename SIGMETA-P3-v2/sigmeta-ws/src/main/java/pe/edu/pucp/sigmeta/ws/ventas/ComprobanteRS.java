@@ -33,10 +33,13 @@ import pe.edu.pucp.sigmeta.ws.caja.Utilidades;
 //   GET    /api/comprobantes?venta=2      boletas y facturas de una venta (vigentes y anuladas)
 //   GET    /api/comprobantes/5            un comprobante con el cliente y las lineas de su venta
 //   POST   /api/comprobantes              emitir: {"idVenta": 2, "tipo": "BOLETA"} (la serie y el numero los pone el BO)
-//   POST   /api/comprobantes/5/envio      registrar el envio: {"medioEnvio": "CORREO"} (el BO guarda la fecha)
+//   POST   /api/comprobantes/5/envio      registrar el envio: {"medioEnvio": "CORREO" | "MENSAJERIA" | "IMPRESO"}
+//                                         (el BO guarda la fecha; IMPRESO lo manda el boton Imprimir de Blazor)
+//   POST   /api/comprobantes/5/anular     anular la factura o boleta: {"motivo": "..."} (solo sin despachos vigentes;
+//                                         despues la venta se puede corregir, volver a facturar o anular)
 //
 // Las reglas (factura solo con RUC, un solo comprobante vigente por venta, venta anulada...) son del BO.
-// Las notas de credito (RF013) no se presentan en este laboratorio.
+// Las notas de credito (RF013) estan en NotaCreditoRS.
 @Path("comprobantes")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -122,6 +125,21 @@ public class ComprobanteRS extends VentanillaBase {
         return ejecutar(ticket, id -> {
             comprobanteBO.registrarEnvio(idComprobante, medio, id);
             return completo(comprobanteBO.obtener(idComprobante));
+        });
+    }
+
+    // RF008: anular la factura o boleta (Vendedor, Cajero o Administrador; las reglas son del BO)
+    @POST
+    @Path("{id}/anular")
+    public Response anular(@HeaderParam("ticket") String ticket, @PathParam("id") int idComprobante, AnulacionDatos datos) {
+        String motivo = datos == null ? null : datos.motivo;
+        return ejecutar(ticket, id -> {
+            Comprobante c = comprobanteBO.obtener(idComprobante);
+            if (c != null && c.getTipo() == TipoComprobante.NOTA_CREDITO) {
+                throw new IllegalArgumentException("Las notas de crédito se anulan desde /api/notas-credito");
+            }
+            comprobanteBO.anular(idComprobante, motivo, id);
+            return null; // 204 sin cuerpo
         });
     }
 

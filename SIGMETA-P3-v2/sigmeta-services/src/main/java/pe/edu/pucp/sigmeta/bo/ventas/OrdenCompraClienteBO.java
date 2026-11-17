@@ -11,4 +11,6 @@ public interface OrdenCompraClienteBO {
     void anular(int idOrden, String motivo, int idResponsable) throws SQLException;
     OrdenCompraCliente obtener(int id) throws SQLException;
     List<OrdenCompraCliente> listarTodos() throws SQLException;
+    // H09: numero que tendra la proxima orden (OCC-AAAA-NNNN), sin reservarlo
+    String proponerNumero(int idResponsable) throws SQLException;
 }

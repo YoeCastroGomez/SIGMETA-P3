@@ -175,6 +175,34 @@ public class OrdenCompraClienteDAOImpl implements OrdenCompraClienteDAO {
         }
     }
 
+    // H09: mismo generador que las ventas (sp_correlativo_siguiente bloquea la fila del tipo y anio con FOR UPDATE),
+    // asi dos vendedores a la vez nunca reciben el mismo numero. Debe llamarse dentro de la transaccion que guarda la orden.
+    @Override
+    public long siguienteCorrelativo(int anio) throws SQLException {
+        String sql = "{CALL sp_correlativo_siguiente(?,?,?)}";
+        Connection conn = transactionContext.getConnection();
+        try (CallableStatement cs = conn.prepareCall(sql)) {
+            cs.setString(1, "OCC");
+            cs.setInt(2, anio);
+            cs.registerOutParameter(3, Types.BIGINT);
+            cs.execute();
+            return cs.getLong(3);
+        }
+    }
+
+    @Override
+    public long proximoCorrelativo(int anio) throws SQLException {
+        String sql = "{CALL sp_correlativo_proximo(?,?)}";
+        Connection conn = transactionContext.getConnection();
+        try (CallableStatement cs = conn.prepareCall(sql)) {
+            cs.setString(1, "OCC");
+            cs.setInt(2, anio);
+            try (ResultSet rs = cs.executeQuery()) {
+                return rs.next() ? rs.getLong("numero") : 1L;
+            }
+        }
+    }
+
     @Override
     public OrdenCompraCliente buscarPorCotizacion(int idCotizacion) throws SQLException {
         String sql = "{CALL sp_orden_compra_cliente_buscar_por_cotizacion(?)}";

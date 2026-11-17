@@ -191,6 +191,15 @@ public class CotizacionBOImpl implements CotizacionBO {
         });
     }
 
+    // RF007: busqueda combinada (cliente y/o estado); null en un filtro = no se filtra por el
+    @Override
+    public List<Cotizacion> buscar(Integer idCliente, EstadoCotizacion estado) throws SQLException {
+        return Transaccion.ejecutar(() -> cotizacionDAO.listarTodos().stream()
+                .filter(c -> idCliente == null || c.getCliente().getId() == idCliente)
+                .filter(c -> estado == null || c.getEstado() == estado)
+                .toList());
+    }
+
     // RF007
     @Override
     public List<Cotizacion> listarPorEstado(EstadoCotizacion estado) throws SQLException {
@@ -223,20 +232,9 @@ public class CotizacionBOImpl implements CotizacionBO {
     // RF007
     @Override
     public int marcarVencidas() throws SQLException {
-        LocalDate hoy = LocalDate.now();
-        return Transaccion.ejecutar(() -> {
-            int vencidas = 0;
-            for (Cotizacion cotizacion : cotizacionDAO.listarTodos()) {
-                boolean pendiente = cotizacion.getEstado() == EstadoCotizacion.REGISTRADA
-                        || cotizacion.getEstado() == EstadoCotizacion.ENVIADA;
-                if (pendiente && cotizacion.getFechaVigencia() != null && cotizacion.getFechaVigencia().isBefore(hoy)) {
-                    cotizacion.setEstado(EstadoCotizacion.VENCIDA);
-                    cotizacionDAO.update(cotizacion);
-                    vencidas++;
-                }
-            }
-            return vencidas;
-        });
+        // un solo UPDATE en la base (sp_cotizacion_marcar_vencidas): solo cambia el estado de las que vencieron,
+        // sin reescribir la fila completa, asi no pisa a otro usuario que este editando o enviando una cotizacion
+        return Transaccion.ejecutar(cotizacionDAO::marcarVencidas);
     }
 
     private Cotizacion cambiarEstado(int idCotizacion, int idResponsable,

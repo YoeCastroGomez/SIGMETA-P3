@@ -55,6 +55,8 @@ public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
         return descripcion != null ? descripcion : operacion;
     }
 
+    public static final int VIGENCIA_MAXIMA_MINUTOS = 1440;
+
     private final SolicitudAutorizacionDAO solicitudDAO;
     private final UsuarioBO usuarioBO;
 
@@ -113,6 +115,10 @@ public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
         return Transaccion.ejecutar(() -> {
             if(vigenciaMinutos <= 0){
                 throw new IllegalArgumentException("La vigencia debe ser mayor a 0 minutos");
+            }
+            // RF014: el permiso es temporal; como maximo un dia (misma regla que la pantalla AprobarSolicitud)
+            if(vigenciaMinutos > VIGENCIA_MAXIMA_MINUTOS){
+                throw new IllegalArgumentException("La vigencia no puede pasar de " + VIGENCIA_MAXIMA_MINUTOS + " minutos (un día)");
             }
             Usuario administrador = usuarioBO.obtenerAdministradorActivo(idAdministrador);
             SolicitudAutorizacion solicitud = obtenerPendiente(idSolicitud);

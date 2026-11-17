@@ -10,4 +10,6 @@ import java.util.List;
 public interface CotizacionDAO extends BaseDAO<Cotizacion, Integer> {
     List<Cotizacion> listarTodos() throws SQLException;
     List<String> listarNumeros() throws SQLException;
+    // RF007: pasa a VENCIDA las registradas o enviadas con vigencia pasada (un solo UPDATE); devuelve cuantas
+    int marcarVencidas() throws SQLException;
 }

@@ -10,6 +10,7 @@ import pe.edu.pucp.sigmeta.boimpl.seguridad.SolicitudAutorizacionBOImpl;
 import pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion;
 import pe.edu.pucp.sigmeta.boimpl.Validador;
 import pe.edu.pucp.sigmeta.boimpl.usuario.UsuarioBOImpl;
+import pe.edu.pucp.sigmeta.dao.almacen.DespachoDAO;
 import pe.edu.pucp.sigmeta.dao.almacen.MovimientoInventarioDAO;
 import pe.edu.pucp.sigmeta.dao.almacen.StockInventarioDAO;
 import pe.edu.pucp.sigmeta.dao.socio.ClienteDAO;
@@ -18,6 +19,7 @@ import pe.edu.pucp.sigmeta.dao.ventas.ComprobanteDAO;
 import pe.edu.pucp.sigmeta.dao.ventas.DetalleNotaCreditoDAO;
 import pe.edu.pucp.sigmeta.dao.ventas.DetalleVentaDAO;
 import pe.edu.pucp.sigmeta.dao.ventas.VentaDAO;
+import pe.edu.pucp.sigmeta.daoimpl.almacen.DespachoDAOImpl;
 import pe.edu.pucp.sigmeta.daoimpl.almacen.MovimientoInventarioDAOImpl;
 import pe.edu.pucp.sigmeta.daoimpl.almacen.StockInventarioDAOImpl;
 import pe.edu.pucp.sigmeta.daoimpl.socio.ClienteDAOImpl;
@@ -43,6 +45,7 @@ import pe.edu.pucp.sigmeta.model.ventas.Venta;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -54,6 +57,17 @@ import java.util.Set;
 public class ComprobanteBOImpl implements ComprobanteBO {
 
     private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
+
+    // RF013: tipo de la nota de credito segun el catalogo 09 de SUNAT. En SIGMETA toda nota es por devolucion de
+    // mercaderia, asi que el tipo se deduce (no lo elige el usuario y no puede quedar mal):
+    //   06 DEVOLUCION_TOTAL     la nota acredita el total del comprobante de origen
+    //   07 DEVOLUCION_POR_ITEM  la nota devuelve solo parte de los productos o de las cantidades
+    public static final String NOTA_DEVOLUCION_TOTAL = "DEVOLUCION_TOTAL";
+    public static final String NOTA_DEVOLUCION_POR_ITEM = "DEVOLUCION_POR_ITEM";
+
+    public static String tipoNotaCredito(double totalNota, double totalOrigen) {
+        return Math.abs(totalNota - totalOrigen) <= 0.01 ? NOTA_DEVOLUCION_TOTAL : NOTA_DEVOLUCION_POR_ITEM;
+    }
     // RF013/RF014: operacion restringida que el Administrador autoriza para emitir una nota de credito
     public static final String OPERACION_NOTA_CREDITO = SolicitudAutorizacionBOImpl.OPERACION_NOTA_CREDITO;
 
@@ -68,6 +82,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
     private final UsuarioBO usuarioBO;
     private final CompensacionCaja compensacionCaja;
     private final SolicitudAutorizacionBO autorizacionBO;
+    private final DespachoDAO despachoDAO;
 
     public ComprobanteBOImpl() {
         this.comprobanteDAO = new ComprobanteDAOImpl();
@@ -81,6 +96,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
         this.usuarioBO = new UsuarioBOImpl();
         this.compensacionCaja = new CompensacionCaja();
         this.autorizacionBO = new SolicitudAutorizacionBOImpl();
+        this.despachoDAO = new DespachoDAOImpl();
     }
 
     // RF008: Emision de factura o boleta
@@ -135,7 +151,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
             comprobante.setComprobanteRelacionado(null);
             comprobante.setFechaRegistro(LocalDateTime.now());
 
-            comprobanteDAO.save(comprobante);
+            guardarConNumeroUnico(comprobante);
             return comprobante;
         });
     }
@@ -263,7 +279,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
             notaCredito.setAdministradorAutoriza(admin);
             notaCredito.setFechaRegistro(LocalDateTime.now());
 
-            comprobanteDAO.save(notaCredito);
+            guardarConNumeroUnico(notaCredito);
 
             // Guardar detalles de nota de credito
             for (DetalleNotaCredito d : detalles) {
@@ -327,6 +343,9 @@ public class ComprobanteBOImpl implements ComprobanteBO {
         });
     }
 
+    // RF013: modificar una nota de credito no anulada. Solo cambian los datos descriptivos (motivo y, si se manda,
+    // el envio). El detalle y los montos no se editan: ya movieron stock, deuda y caja; para corregirlos se anula
+    // la nota (revierte todo) y se emite otra con una nueva autorizacion.
     @Override
     public Comprobante modificarNotaCredito(Comprobante nc, int idResponsable) throws SQLException {
         usuarioBO.verificarRol(idResponsable, TipoRol.CAJERO, TipoRol.ADMINISTRADOR);
@@ -346,17 +365,38 @@ public class ComprobanteBOImpl implements ComprobanteBO {
             }
 
             actual.setMotivo(motivoValidado);
-            actual.setMedioEnvio(Validador.textoOpcional(nc.getMedioEnvio(), "medio de envío", 30));
-            actual.setFechaEnvio(nc.getFechaEnvio());
+            // el envio solo cambia si se manda; si no, se conserva el que ya tenia la nota
+            String medio = Validador.textoOpcional(nc.getMedioEnvio(), "medio de envío", 30);
+            if (medio != null) {
+                actual.setMedioEnvio(medio);
+                actual.setFechaEnvio(nc.getFechaEnvio() != null ? nc.getFechaEnvio() : LocalDateTime.now());
+            }
 
             comprobanteDAO.update(actual);
             return actual;
         });
     }
 
+    // H09: la tabla tiene UNIQUE(serie, numero). Si otra emision tomo el mismo numero, la base rechaza el
+    // registro; se informa con un mensaje de negocio (409) en vez del error tecnico de MySQL.
+    private void guardarConNumeroUnico(Comprobante c) throws SQLException {
+        try {
+            comprobanteDAO.save(c);
+        } catch (SQLIntegrityConstraintViolationException e) {
+            if (e.getMessage() != null && e.getMessage().contains("uk_comprobante_serie_numero")) {
+                throw new IllegalStateException("El número " + c.getSerie() + "-" + c.getNumero()
+                        + " ya fue usado por otro comprobante. Vuelva a intentarlo para recibir el siguiente número");
+            }
+            throw e;
+        }
+    }
+
+    // RF008: anula una factura o boleta (Vendedor, Cajero o Administrador) para que la venta pueda corregirse o
+    // anularse. Solo si la mercaderia NO se entrego: con despachos vigentes la devolucion se hace con nota de credito.
+    // RF013: anula una nota de credito (Cajero o Administrador) revirtiendo stock, deuda y caja.
     @Override
     public void anular(int idComprobante, String motivo, int idResponsable) throws SQLException {
-        Usuario responsable = usuarioBO.verificarRol(idResponsable, TipoRol.ADMINISTRADOR, TipoRol.CAJERO);
+        Usuario responsable = usuarioBO.verificarRol(idResponsable, TipoRol.ADMINISTRADOR, TipoRol.CAJERO, TipoRol.VENDEDOR);
         Validador.textoObligatorio(motivo, "motivo de anulación", 200);
 
         Transaccion.ejecutar(() -> {
@@ -369,6 +409,9 @@ public class ComprobanteBOImpl implements ComprobanteBO {
             }
 
             if (comprobante.getTipo() == TipoComprobante.NOTA_CREDITO) {
+                if (responsable.getRol().getTipo() == TipoRol.VENDEDOR) {
+                    throw new IllegalStateException("El rol VENDEDOR no anula notas de crédito; lo hace el Cajero o el Administrador");
+                }
                 // Revertir efectos de inventario
                 List<DetalleNotaCredito> detalles = detalleNotaCreditoDAO.listarPorComprobante(idComprobante);
                 for (DetalleNotaCredito d : detalles) {
@@ -418,6 +461,12 @@ public class ComprobanteBOImpl implements ComprobanteBO {
                 if (!ncs.isEmpty()) {
                     throw new IllegalStateException("No se puede anular un comprobante que tiene notas de crédito activas");
                 }
+                // RF008/RF012: si la mercaderia ya salio del almacen, el comprobante no se anula: se emite nota de credito
+                if (comprobante.getVenta() != null && despachoDAO.listarPorVenta(comprobante.getVenta().getId())
+                        .stream().anyMatch(d -> !d.isAnulado())) {
+                    throw new IllegalStateException("La venta ya tiene mercadería despachada: para devolverla emita una nota de crédito. "
+                            + "Si el despacho fue un error, anúlelo primero en almacén");
+                }
             }
 
             comprobanteDAO.actualizarEstado(idComprobante, EstadoComprobante.ANULADO);
@@ -466,6 +515,19 @@ public class ComprobanteBOImpl implements ComprobanteBO {
             }
             if (comprobante.getEstado() == EstadoComprobante.ANULADO) {
                 throw new IllegalStateException("No se puede registrar el envío de un comprobante anulado");
+            }
+            // RF008: el correo y la mensajeria van a los datos de contacto registrados del cliente
+            if (!medio.equals("IMPRESO")) {
+                Venta venta = ventaDAO.load(comprobante.getVenta().getId());
+                Cliente cliente = venta == null ? null : clienteDAO.load(venta.getCliente().getId());
+                pe.edu.pucp.sigmeta.model.comun.DatosContacto contacto = cliente == null ? null : cliente.getContacto();
+                String dato = contacto == null ? null
+                        : medio.equals("CORREO") ? contacto.getCorreo() : contacto.getTelefono();
+                if (dato == null || dato.isBlank()) {
+                    throw new IllegalArgumentException(medio.equals("CORREO")
+                            ? "El cliente no tiene correo registrado: regístrelo en su ficha o use otro medio de envío"
+                            : "El cliente no tiene teléfono de contacto registrado: regístrelo en su ficha o use otro medio de envío");
+                }
             }
 
             LocalDateTime ahora = LocalDateTime.now();

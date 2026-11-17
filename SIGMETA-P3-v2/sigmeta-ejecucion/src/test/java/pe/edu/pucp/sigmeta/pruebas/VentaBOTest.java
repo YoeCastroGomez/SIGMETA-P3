@@ -1,0 +1,201 @@
+package pe.edu.pucp.sigmeta.pruebas;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pe.edu.pucp.sigmeta.pruebas.Datos.*;
+
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import pe.edu.pucp.sigmeta.boimpl.seguridad.SolicitudAutorizacionBOImpl;
+import pe.edu.pucp.sigmeta.model.enums.EstadoAutorizacion;
+import pe.edu.pucp.sigmeta.model.producto.Producto;
+import pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion;
+import pe.edu.pucp.sigmeta.model.socio.Cliente;
+import pe.edu.pucp.sigmeta.model.ventas.Venta;
+
+/**
+ * H14 - RF008: reglas del registro de ventas (VentaBOImpl).
+ *   H01  se vende contra el stock DISPONIBLE (fisico - comprometido en ventas sin despachar)
+ *   H03  ninguna linea por debajo del costo promedio sin autorizacion DESCUENTO_ESPECIAL (un solo uso)
+ *   RF009 la venta al credito exige linea de credito y no puede superar el limite del cliente
+ *
+ * Integracion contra una base LOCAL de pruebas:
+ *   mvn test -pl sigmeta-ejecucion -am -Dsigmeta.integracion=true -Dsurefire.failIfNoSpecifiedTests=false
+ */
+@EnabledIfSystemProperty(named = "sigmeta.integracion", matches = "true")
+@DisplayName("Ventas: stock disponible, piso de costo y limite de credito")
+class VentaBOTest {
+
+    private static final String DESCUENTO = SolicitudAutorizacionBOImpl.OPERACION_DESCUENTO_ESPECIAL;
+
+    /** ventas registradas por cada prueba: se anulan al final para liberar el stock comprometido */
+    private final List<Venta> creadas = new ArrayList<>();
+
+    @BeforeAll
+    static void soloBaseLocal() {
+        exigirBaseLocal();
+    }
+
+    @AfterEach
+    void limpiar() throws Exception {
+        for (Venta v : creadas) {
+            anularSiSePuede(v);
+        }
+        sinAutorizaciones(VENDEDOR, DESCUENTO);
+    }
+
+    private Venta registrar(Venta v) throws Exception {
+        Venta guardada = ventas.registrar(v, VENDEDOR);
+        creadas.add(guardada);
+        return guardada;
+    }
+
+    // ------------------------------------------------------------------ H01 stock disponible
+
+    @Test
+    @DisplayName("H01: rechaza vender mas de lo disponible")
+    void rechazaVenderMasDeLoDisponible() throws Exception {
+        Producto p = productoConDisponible(5);
+        Cliente cliente = empresaNueva();
+        double disponible = disponible(p.getId());
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> registrar(venta(cliente, p, disponible + 1, p.getPrecioVenta(), false)));
+        assertTrue(e.getMessage().startsWith("Stock insuficiente"), e.getMessage());
+    }
+
+    @Test
+    @DisplayName("H01: lo vendido y no despachado compromete el stock de las ventas siguientes")
+    void loVendidoSinDespacharComprometeElStock() throws Exception {
+        Producto p = productoConDisponible(5);
+        Cliente cliente = empresaNueva();
+        double fisico = stockFisico(p.getId());
+        double disponible = disponible(p.getId());
+        double primera = Math.floor(disponible) - 2;          // deja al menos 2 unidades libres
+        double restante = disponible - primera;
+
+        registrar(venta(cliente, p, primera, p.getPrecioVenta(), false));
+        assertEquals(fisico, stockFisico(p.getId()), 0.001, "vender sin despachar no saca mercaderia del almacen");
+        assertEquals(restante, disponible(p.getId()), 0.001, "lo vendido sin despachar queda comprometido");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> registrar(venta(cliente, p, restante + 1, p.getPrecioVenta(), false)),
+                "la segunda venta no puede prometer unidades ya vendidas");
+        Venta ultima = registrar(venta(cliente, p, restante, p.getPrecioVenta(), false));
+        assertTrue(ultima.getId() > 0, "vender exactamente lo que queda disponible si se permite");
+    }
+
+    // ------------------------------------------------------------------ H03 piso de costo promedio
+
+    @Test
+    @DisplayName("H03: rechaza un precio por debajo del costo sin autorizacion")
+    void rechazaPrecioBajoCostoSinAutorizacion() throws Exception {
+        sinAutorizaciones(VENDEDOR, DESCUENTO);
+        Producto p = productoConDisponible(1);
+        Cliente cliente = empresaNueva();
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> registrar(venta(cliente, p, 1, p.getCostoUnitario() - 1, false)));
+        assertTrue(e.getMessage().contains("por debajo de su costo"), e.getMessage());
+    }
+
+    @Test
+    @DisplayName("H03: el descuento tampoco puede dejar el precio efectivo bajo el costo")
+    void rechazaDescuentoQueDejaElPrecioBajoCosto() throws Exception {
+        sinAutorizaciones(VENDEDOR, DESCUENTO);
+        Producto p = productoConDisponible(1);
+        Cliente cliente = empresaNueva();
+        Venta v = venta(cliente, p, 1, p.getPrecioVenta(), false);
+        // precio de lista correcto, pero el descuento deja la unidad en (costo - 0.50)
+        v.getDetalles().get(0).setDescuento(round2(p.getPrecioVenta() - p.getCostoUnitario() + 0.50));
+
+        assertThrows(IllegalStateException.class, () -> registrar(v));
+    }
+
+    @Test
+    @DisplayName("H03: vender exactamente al costo se permite")
+    void venderAlCostoSePermite() throws Exception {
+        sinAutorizaciones(VENDEDOR, DESCUENTO);
+        Producto p = productoConDisponible(1);
+        Venta v = registrar(venta(empresaNueva(), p, 1, p.getCostoUnitario(), false));
+        assertTrue(v.getId() > 0);
+    }
+
+    @Test
+    @DisplayName("H03/RF014: la autorizacion DESCUENTO_ESPECIAL permite una sola venta bajo el costo")
+    void autorizacionDeDescuentoEsDeUnSoloUso() throws Exception {
+        Producto p = productoConDisponible(2);
+        Cliente cliente = empresaNueva();
+        SolicitudAutorizacion autorizacion = autorizar(VENDEDOR, DESCUENTO);
+
+        Venta conPermiso = registrar(venta(cliente, p, 1, p.getCostoUnitario() - 1, false));
+        assertTrue(conPermiso.getId() > 0, "con la autorizacion vigente se registra");
+        assertEquals(EstadoAutorizacion.VENCIDA, autorizaciones.obtener(autorizacion.getId()).getEstado(),
+                "la autorizacion queda consumida");
+
+        assertThrows(IllegalStateException.class,
+                () -> registrar(venta(cliente, p, 1, p.getCostoUnitario() - 1, false)),
+                "la misma autorizacion no sirve para otra venta");
+    }
+
+    // ------------------------------------------------------------------ RF008 fecha de emision
+
+    @Test
+    @DisplayName("RF008: la fecha de la venta no puede ser futura ni de hace mas de 7 dias")
+    void fechaDeEmisionDentroDelRango() throws Exception {
+        Producto p = productoConDisponible(3);
+        Cliente cliente = empresaNueva();
+
+        Venta futura = venta(cliente, p, 1, p.getPrecioVenta(), false);
+        futura.setFechaEmision(java.time.LocalDate.now().plusDays(1));
+        assertThrows(IllegalArgumentException.class, () -> registrar(futura), "fecha futura");
+
+        Venta antigua = venta(cliente, p, 1, p.getPrecioVenta(), false);
+        antigua.setFechaEmision(java.time.LocalDate.now().minusDays(8));
+        assertThrows(IllegalArgumentException.class, () -> registrar(antigua), "mas de 7 dias de atraso");
+
+        Venta conAtraso = venta(cliente, p, 1, p.getPrecioVenta(), false);
+        conAtraso.setFechaEmision(java.time.LocalDate.now().minusDays(7));
+        assertTrue(registrar(conAtraso).getId() > 0, "7 dias de atraso todavia se aceptan");
+    }
+
+    // ------------------------------------------------------------------ RF009 credito
+
+    @Test
+    @DisplayName("RF009: un cliente sin linea de credito no compra al credito")
+    void clienteSinLineaNoCompraAlCredito() throws Exception {
+        Producto p = productoConDisponible(1);
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> registrar(venta(empresaNueva(), p, 1, p.getPrecioVenta(), true)));
+        assertTrue(e.getMessage().contains("línea de crédito"), e.getMessage());
+    }
+
+    @Test
+    @DisplayName("RF009: la deuda pendiente mas la nueva venta no superan el limite")
+    void creditoNoSuperaElLimite() throws Exception {
+        Producto p = productoConDisponible(12);
+        double precio = p.getPrecioVenta();
+        double diezUnidades = round2(precio * 10 * 1.18);
+        Cliente cliente = empresaConCredito(diezUnidades + 1);   // alcanza para 10 unidades con IGV
+
+        Venta seis = registrar(venta(cliente, p, 6, precio, true));
+        assertEquals(seis.getTotal(), saldoCuenta(seis.getId()), CENTAVO, "la venta al credito genera su cuenta por cobrar");
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> registrar(venta(cliente, p, 5, precio, true)), "6 + 5 unidades superan el limite");
+        assertTrue(e.getMessage().contains("límite de crédito"), e.getMessage());
+
+        Venta cuatro = registrar(venta(cliente, p, 4, precio, true));
+        assertTrue(cuatro.getId() > 0, "6 + 4 unidades caben en el limite");
+    }
+
+    private static double round2(double valor) {
+        return Math.round(valor * 100.0) / 100.0;
+    }
+}

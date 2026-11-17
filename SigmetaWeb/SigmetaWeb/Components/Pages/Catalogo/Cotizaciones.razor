@@ -7,14 +7,18 @@
 <PageTitle>Cotizaciones · SIGMETA</PageTitle>
 
 @* RF007 · Lista de cotizaciones. Datos reales del Java:
-   - GET  /api/cotizaciones (?cliente=ID o ?estado=ESTADO)    listarTodos / listarPorCliente / listarPorEstado
+   - GET  /api/cotizaciones (?cliente=ID y/o ?estado=ESTADO)  listarTodos / buscar(cliente, estado) del BO
+   - Vendedor: registra, modifica, envía, acepta, rechaza y anula. Administrador: consulta y anula (RF007).
    - POST /api/cotizaciones/{id}/enviar | aceptar | rechazar  ciclo REGISTRADA -> ENVIADA -> ACEPTADA o RECHAZADA
    - POST /api/cotizaciones/{id}/anular {"motivo": ...}       anulacion logica con motivo
    Los botones de cada fila siguen el ciclo de CotizacionBOImpl; si algo no corresponde, el BO responde con su mensaje
    (por ejemplo "La cotizacion vencio el ..." o "No se puede anular una cotizacion aceptada"). *@
 <Encabezado Rf="RF007" Titulo="Cotizaciones"
             Subtitulo="Solo una cotización registrada se modifica. Una cotización aceptada puede pasar a orden de compra del cliente.">
-    <a class="btn btn-primary" href="/cotizaciones/nueva">Nueva cotización</a>
+    @if (EsVendedor)
+    {
+        <a class="btn btn-primary" href="/cotizaciones/nueva">Nueva cotización</a>
+    }
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
@@ -106,22 +110,22 @@ else
                             <td><Estado Texto="@TextosVentas.Texto(c.Estado)" /></td>
                             <td class="text-end">
                                 <div class="d-inline-flex gap-1 text-nowrap">
-                                    @if (c.Estado == "REGISTRADA")
+                                    @if (EsVendedor && c.Estado == "REGISTRADA")
                                     {
                                         <a class="btn btn-sm btn-outline-secondary" href="@($"/cotizaciones/editar/{c.Id}")">Editar</a>
                                         <button class="btn btn-sm btn-primary" disabled="@trabajando" @onclick="() => Enviar(c)">Enviar</button>
                                     }
-                                    @if (c.Estado == "ENVIADA")
+                                    @if (EsVendedor && c.Estado == "ENVIADA")
                                     {
                                         <button class="btn btn-sm btn-primary" disabled="@trabajando" @onclick="() => Aceptar(c)">Aceptar</button>
                                         <button class="btn btn-sm btn-outline-danger" disabled="@trabajando" @onclick="() => Rechazar(c)">Rechazar</button>
                                     }
-                                    @if (c.Estado == "ACEPTADA")
+                                    @if (EsVendedor && c.Estado == "ACEPTADA")
                                     {
                                         @* RF007: la orden de compra del cliente sale de una cotización aceptada *@
                                         <a class="btn btn-sm btn-outline-primary" href="@($"/ordenes/nueva?cotizacion={c.Id}")">Generar orden</a>
                                     }
-                                    @if (c.Estado is "REGISTRADA" or "ENVIADA" or "RECHAZADA" or "VENCIDA")
+                                    @if ((EsVendedor || Rol == "Administrador") && c.Estado is "REGISTRADA" or "ENVIADA" or "RECHAZADA" or "VENCIDA")
                                     {
                                         <button class="btn btn-sm btn-outline-danger" @onclick="() => AbrirAnulacion(c)">Anular</button>
                                     }
@@ -138,6 +142,9 @@ else
 }
 
 @code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
+    private bool EsVendedor => Rol == "Vendedor";
+
     private List<CotizacionDatos>? cotizaciones;
     private List<Cliente> clientes = new();
     private int filtroCliente;
@@ -200,15 +207,11 @@ else
 
     private async Task Cargar()
     {
-        var ruta = "cotizaciones";
-        if (filtroCliente > 0)
-        {
-            ruta = $"cotizaciones?cliente={filtroCliente}";             // listarPorCliente
-        }
-        else if (filtroEstado != "")
-        {
-            ruta = $"cotizaciones?estado={filtroEstado}";               // listarPorEstado
-        }
+        // RF007: los dos filtros se combinan (el filtro lo hace CotizacionBO.buscar en el Java)
+        var parametros = new List<string>();
+        if (filtroCliente > 0) parametros.Add($"cliente={filtroCliente}");
+        if (filtroEstado != "") parametros.Add($"estado={filtroEstado}");
+        var ruta = parametros.Count == 0 ? "cotizaciones" : "cotizaciones?" + string.Join("&", parametros);
         try
         {
             cotizaciones = await Api.Get<List<CotizacionDatos>>(ruta) ?? new();

@@ -2329,6 +2329,8 @@ INSERT INTO cierre_caja (id, id_caja, fecha_cierre, monto_calculado, monto_decla
 
 -- 11. CORRELATIVO DE VENTAS (la proxima venta sera VTA-2026-0126)
 INSERT INTO correlativo_documento (tipo, anio, ultimo) VALUES ('VTA', 2026, 125);
+-- H09: correlativo de ordenes de compra de clientes (la proxima sera OCC-2026-0016)
+INSERT INTO correlativo_documento (tipo, anio, ultimo) VALUES ('OCC', 2026, 15);
 
 -- control de concurrencia: debe existir su unica fila
 INSERT IGNORE INTO transaccion_control (id) VALUES (1);

@@ -60,15 +60,10 @@ public class CotizacionRS extends VentanillaBase {
             permitirConsulta(id);
             // RF007: las cotizaciones con vigencia pasada se muestran como VENCIDA
             cotizacionBO.marcarVencidas();
-            List<Cotizacion> cotizaciones;
-            if (idCliente != null) {
-                cotizaciones = cotizacionBO.listarPorCliente(idCliente);
-            } else if (estado != null && !estado.isBlank()) {
-                cotizaciones = cotizacionBO.listarPorEstado(
-                        Utilidades.leerEnum(EstadoCotizacion.class, estado, "estado de la cotizacion"));
-            } else {
-                cotizaciones = cotizacionBO.listarTodos();
-            }
+            // RF007: cliente y estado se pueden combinar; el filtro lo hace el BO
+            EstadoCotizacion filtroEstado = estado == null || estado.isBlank() ? null
+                    : Utilidades.leerEnum(EstadoCotizacion.class, estado, "estado de la cotizacion");
+            List<Cotizacion> cotizaciones = cotizacionBO.buscar(idCliente, filtroEstado);
             Nombres nombres = new Nombres();
             List<CotizacionDatos> lista = new ArrayList<>();
             for (Cotizacion c : cotizaciones) {

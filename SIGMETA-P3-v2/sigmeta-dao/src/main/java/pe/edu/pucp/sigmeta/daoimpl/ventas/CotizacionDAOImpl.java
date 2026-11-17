@@ -140,6 +140,17 @@ public class CotizacionDAOImpl implements CotizacionDAO {
     }
 
     @Override
+    public int marcarVencidas() throws SQLException {
+        String sql = "{CALL sp_cotizacion_marcar_vencidas(?)}";
+        Connection conn = transactionContext.getConnection();
+        try (CallableStatement cs = conn.prepareCall(sql)) {
+            cs.registerOutParameter(1, Types.INTEGER);
+            cs.execute();
+            return cs.getInt(1);
+        }
+    }
+
+    @Override
     public void remove(Cotizacion cotizacion) throws SQLException {
         // En tu SP, eliminar usa el id y el motivo. Asumimos motivo genérico si usamos la firma del BaseDAO.
         String sql = "{CALL sp_cotizacion_eliminar(?, ?)}";
