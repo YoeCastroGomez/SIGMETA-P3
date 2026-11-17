@@ -34,6 +34,11 @@ else if (EsNuevo)
         {
             <div class="row">
                 <div class="col-md-6">
+                    <Campo Etiqueta="Número interno de orden">
+                        <input class="form-control sigmeta-correlativo" value="@siguienteNumeroOrden" disabled />
+                    </Campo>
+                </div>
+                <div class="col-md-6">
                     @* Estándar RNF004: el error sale en rojo debajo del cuadro; los del BO, en el aviso rojo de arriba *@
                     <Campo Etiqueta="Cotización aceptada" Id="cotizacion" Obligatorio="true" Error="@(v.Error("cotizacion", Errores()))"
                            Ayuda="Solo se listan cotizaciones en estado Aceptada que aún no tienen orden.">
@@ -106,6 +111,12 @@ else if (orden is not null)
     <div class="card card-body mb-3">
         <h2 class="h6 fw-semibold mb-3">Orden @orden.Numero</h2>
         <div class="row">
+            <div class="col-md-6">
+                <Campo Etiqueta="Número interno de orden">
+                    <input class="form-control sigmeta-correlativo" value="@orden.Numero" disabled />
+                </Campo>
+            </div>
+            <div class="col-12"></div>
             <div class="col-sm-6 col-md-3 mb-3">
                 <div class="small text-muted text-uppercase">Cotización</div>
                 <div class="fw-semibold">@orden.NumeroCotizacion</div>
@@ -183,6 +194,7 @@ else if (orden is not null)
     private int idCotizacion;
     private CotizacionDatos? cotizacion;
     private string? numeroOrdenCliente;
+    private string siguienteNumeroOrden = "";
 
     private OrdenDatos? orden;
 
@@ -199,6 +211,7 @@ else if (orden is not null)
                 // cotizaciones aceptadas que aún no tienen una orden vigente (una cotización tiene una sola orden activa)
                 var aceptadas = await Api.Get<List<CotizacionDatos>>("cotizaciones?estado=ACEPTADA") ?? new();
                 var ordenes = await Api.Get<List<OrdenDatos>>("ordenes") ?? new();
+                siguienteNumeroOrden = $"OCC-{DateTime.Today.Year}-{ordenes.Count + 1:0000}";
                 var conOrden = ordenes.Where(o => o.Estado != "ANULADA").Select(o => o.IdCotizacion).ToHashSet();
                 cotizacionesLibres = aceptadas.Where(c => !conOrden.Contains(c.Id)).ToList();
 
