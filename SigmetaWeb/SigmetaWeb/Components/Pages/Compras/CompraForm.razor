@@ -22,9 +22,8 @@ else
         <div class="row g-3">
             @* Estándar RNF004: cada error sale en rojo debajo de su cuadro mientras se escribe (ValidacionEnVivo);
                los del BO (proveedor desactivado...) en el aviso rojo de arriba. *@
-            <Campo Etiqueta="Número de orden" Id="numeroCompra" Clase="col-md-4" Obligatorio="true" Error="@(v.Error("numero", Errores()))">
-                <input id="numeroCompra" class="@(v.Clase("numero", Errores()))" maxlength="50"
-                       @bind="numero" @bind:event="oninput" @bind:after="@(() => v.Tocado("numero"))" />
+            <Campo Etiqueta="Número de orden" Id="numeroCompra" Clase="col-md-4" Ayuda="@(EsNuevo ? "El número correlativo se genera al guardar." : "El número de orden no se puede modificar.")">
+                <input id="numeroCompra" class="form-control" value="@(EsNuevo ? "Se asignará al guardar" : numero)" readonly />
             </Campo>
             <Campo Etiqueta="Proveedor" Id="proveedorCompra" Clase="col-md-8" Obligatorio="true" Error="@(v.Error("proveedor", Errores()))">
                 <select id="proveedorCompra" class="@(v.Clase("proveedor", Errores(), "form-select"))"
@@ -289,10 +288,6 @@ else
     private Dictionary<string, string> Errores()
     {
         var e = new Dictionary<string, string>();
-        if (string.IsNullOrWhiteSpace(numero))
-        {
-            e["numero"] = "El número de orden es obligatorio.";
-        }
         if (proveedorId <= 0)
         {
             e["proveedor"] = "Seleccione el proveedor.";
@@ -373,12 +368,12 @@ else
                     FactorConversion = l.FactorConversion
                 }).ToList()
             };
-            if (EsNuevo)
-                await Api.Post<CompraRest>("compras", pedido);
-            else
-                await Api.Put<CompraRest>($"compras/{Id}", pedido);
-            // vuelve a la lista y allí sale el aviso verde (Compras.razor lee "guardado")
-            Nav.NavigateTo(AvisoGuardado.Ruta("/compras", EsNuevo ? AvisoGuardado.Nuevo : AvisoGuardado.Editado, pedido.Numero));
+            var guardada = EsNuevo
+                ? await Api.Post<CompraRest>("compras", pedido)
+                : await Api.Put<CompraRest>($"compras/{Id}", pedido);
+            Nav.NavigateTo(AvisoGuardado.Ruta("/compras",
+                EsNuevo ? AvisoGuardado.Nuevo : AvisoGuardado.Editado,
+                guardada?.Numero ?? numero));
         }
         catch (ErrorApi e) { error = e.Message; }
         finally { guardando = false; }
