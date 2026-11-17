@@ -29,6 +29,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -50,6 +51,31 @@ public class CotizacionBOImpl implements CotizacionBO {
         this.usuarioBO = new UsuarioBOImpl();
     }
 
+    @Override
+    public String proponerNumero(LocalDate fechaEmision, int idResponsable) throws SQLException {
+        Validador.obligatorio(fechaEmision, "fecha de emisión");
+        verificarPermiso(idResponsable);
+        return Transaccion.consultar(() -> siguienteNumero(fechaEmision));
+    }
+
+    private String siguienteNumero(LocalDate fechaEmision) throws SQLException {
+        String prefijo = "COT-" + fechaEmision.getYear() + "-";
+        long mayor = 0;
+        for (String codigo : cotizacionDAO.listarNumeros()) {
+            if (codigo == null || !codigo.regionMatches(true, 0, prefijo, 0, prefijo.length())) continue;
+            String sufijo = codigo.substring(prefijo.length());
+            if (sufijo.matches("[0-9]+")) {
+                try {
+                    mayor = Math.max(mayor, Long.parseLong(sufijo));
+                } catch (NumberFormatException e) {
+                    throw new IllegalStateException("Correlativo de cotizaciones fuera de rango");
+                }
+            }
+        }
+        if (mayor == Long.MAX_VALUE) throw new IllegalStateException("No hay más correlativos disponibles");
+        return prefijo + String.format(Locale.ROOT, "%04d", mayor + 1);
+    }
+
     // RF007, RNF001 (usuario y fecha de registro), RNF002 (cabecera y detalle en una transaccion)
     @Override
     public Cotizacion registrar(Cotizacion cotizacion, int idResponsable) throws SQLException {
@@ -68,6 +94,7 @@ public class CotizacionBOImpl implements CotizacionBO {
         cotizacion.setFechaRegistro(LocalDateTime.now());
         return Transaccion.ejecutar(() -> {
             verificarProductosActivos(cotizacion.getDetalles());
+            cotizacion.setNumero(siguienteNumero(cotizacion.getFechaEmision()));
             calcularTotales(cotizacion);
             cotizacionDAO.save(cotizacion);
             guardarDetalles(cotizacion);
@@ -97,6 +124,7 @@ public class CotizacionBOImpl implements CotizacionBO {
             }
             verificarProductosActivos(cotizacion.getDetalles());
             // los datos de auditoria y el estado no se cambian desde la edicion
+            cotizacion.setNumero(actual.getNumero());
             cotizacion.setEstado(actual.getEstado());
             cotizacion.setAnulado(false);
             cotizacion.setUsuarioRegistro(actual.getUsuarioRegistro());
@@ -329,7 +357,9 @@ public class CotizacionBOImpl implements CotizacionBO {
         Validador.obligatorio(cotizacion.getFechaEmision(), "fecha de emisión");
         Validador.obligatorio(cotizacion.getFechaVigencia(), "fecha de vigencia");
         // RF007: los importes de la cotizacion se expresan en soles
-        cotizacion.setNumero(Validador.textoObligatorio(cotizacion.getNumero(), "número", 20));
+        if (cotizacion.getNumero() != null && !cotizacion.getNumero().isBlank()) {
+            cotizacion.setNumero(Validador.textoObligatorio(cotizacion.getNumero(), "número", 20));
+        }
         cotizacion.setObservaciones(Validador.textoOpcional(cotizacion.getObservaciones(), "observaciones", 255));
         if (cotizacion.getFechaVigencia().isBefore(cotizacion.getFechaEmision())) {
             throw new IllegalArgumentException("La fecha de vigencia no puede ser anterior a la fecha de emisión");
