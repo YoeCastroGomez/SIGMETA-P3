@@ -8,6 +8,7 @@ import pe.edu.pucp.sigmeta.bo.compras.CompraBO;
 import pe.edu.pucp.sigmeta.bo.usuario.UsuarioBO;
 import pe.edu.pucp.sigmeta.boimpl.usuario.UsuarioBOImpl;
 import pe.edu.pucp.sigmeta.boimpl.Validador;
+import pe.edu.pucp.sigmeta.boimpl.producto.TextoNormalizado;
 import pe.edu.pucp.sigmeta.dao.compras.CompraDAO;
 import pe.edu.pucp.sigmeta.dao.compras.DetalleCompraDAO;
 import pe.edu.pucp.sigmeta.daoimpl.compras.CompraDAOImpl;
@@ -223,8 +224,10 @@ public class CompraBOImpl implements CompraBO {
             throw new IllegalArgumentException("El proveedor y el usuario deben tener un ID válido");
         }
 
-        compra.setNumero(Validador.textoObligatorio(compra.getNumero(), "número", 50));
-        compra.setObservaciones(Validador.textoOpcional(compra.getObservaciones(), "observaciones", 255));
+        compra.setNumero(TextoNormalizado.nombre(
+                Validador.textoObligatorio(compra.getNumero(), "número", 50)));
+        compra.setObservaciones(TextoNormalizado.opcional(
+                Validador.textoOpcional(compra.getObservaciones(), "observaciones", 255)));
 
     }
 
