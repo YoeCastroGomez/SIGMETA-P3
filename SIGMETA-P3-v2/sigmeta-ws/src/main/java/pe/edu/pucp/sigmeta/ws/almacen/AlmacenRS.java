@@ -121,9 +121,15 @@ public class AlmacenRS extends VentanillaBase {
             Usuario usuario = new Usuario();
             usuario.setId(id); // el usuario de la sesion
             recepcion.setUsuarioRegistro(usuario);
+            if (datos.lineas == null || datos.lineas.isEmpty()) {
+                throw new IllegalArgumentException("Indique al menos una linea para recibir");
+            }
             List<DetalleRecepcionCompra> detalles = new ArrayList<>();
             for (LineaAlmacen l : datos.lineas) {
-                if (l == null || l.cantidad <= 0) {
+                if (l == null || !Double.isFinite(l.cantidad) || l.cantidad < 0) {
+                    throw new IllegalArgumentException("Las cantidades de recepcion deben ser finitas y no negativas");
+                }
+                if (l.cantidad == 0) {
                     continue; // una linea en 0 significa "no llego nada de este producto"
                 }
                 DetalleRecepcionCompra d = new DetalleRecepcionCompra();
