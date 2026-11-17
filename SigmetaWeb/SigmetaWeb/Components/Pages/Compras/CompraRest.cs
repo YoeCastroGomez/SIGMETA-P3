@@ -22,6 +22,11 @@ public class CompraRest
     public List<DetalleCompraRest> Detalles { get; set; } = new();
 }
 
+public class CorrelativoCompraRest
+{
+    public string Numero { get; set; } = "";
+}
+
 public class DetalleCompraRest
 {
     public int Id { get; set; }
