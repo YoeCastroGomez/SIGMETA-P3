@@ -12,6 +12,8 @@ public interface ProductoBO {
     Producto registrar(Producto producto, int idResponsable) throws SQLException;
     Producto modificar(Producto producto, int idResponsable) throws SQLException;
     void desactivar(int idProducto, int idResponsable) throws SQLException;
+    // vuelve a activar un producto desactivado (solo el Administrador)
+    Producto activar(int idProducto, int idResponsable) throws SQLException;
 
     // consultas abiertas a todos los roles
     Producto obtener(int idProducto) throws SQLException;

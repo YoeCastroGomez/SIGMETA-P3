@@ -50,6 +50,20 @@ BEGIN
     UPDATE categoria SET estado = TRUE WHERE id = p_id_categoria;
 END$$
 
+-- RF005: vuelve a activar un producto desactivado (baja logica reversible)
+DROP PROCEDURE IF EXISTS sp_producto_activar$$
+CREATE PROCEDURE sp_producto_activar(IN p_id_producto INT)
+BEGIN
+    UPDATE producto SET estado = TRUE WHERE id = p_id_producto;
+END$$
+
+-- RF003: vuelve a activar un cliente desactivado (baja logica reversible)
+DROP PROCEDURE IF EXISTS sp_cliente_activar$$
+CREATE PROCEDURE sp_cliente_activar(IN p_id_cliente INT)
+BEGIN
+    UPDATE cliente SET estado = TRUE WHERE id = p_id_cliente;
+END$$
+
 -- -------------------------------------------------------------------------
 -- B. LISTADOS DE ALMACEN (RF012)
 -- -------------------------------------------------------------------------

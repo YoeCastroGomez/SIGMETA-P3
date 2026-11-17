@@ -69,6 +69,25 @@ public class ClienteBOImpl implements ClienteBO {
         });
     }
 
+    // RF003: vuelve a activar un cliente desactivado (baja logica reversible).
+    // Lo hacen los mismos que lo pueden desactivar: Vendedor o Administrador.
+    @Override
+    public Cliente activar(int idCliente, int idResponsable) throws SQLException {
+        return Transaccion.ejecutar(() -> {
+            verificarPermiso(idResponsable);
+            Cliente cliente = obtenerExistente(idCliente);
+            if (cliente.isEstado()) {
+                throw new IllegalStateException("El cliente con documento " + cliente.getNumeroDocumento() + " ya está activo");
+            }
+            // su documento o su razon social pudieron registrarse en otro cliente mientras estaba desactivado
+            validarDocumentoUnico(cliente);
+            validarRazonSocialUnica(cliente);
+            new pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl().ejecutar("sp_cliente_activar", idCliente);
+            cliente.setEstado(true);
+            return cliente;
+        });
+    }
+
     // RF003
     @Override
     public Cliente obtener(int idCliente) throws SQLException {

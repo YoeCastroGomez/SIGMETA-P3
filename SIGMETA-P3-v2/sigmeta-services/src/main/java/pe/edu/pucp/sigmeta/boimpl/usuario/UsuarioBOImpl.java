@@ -125,6 +125,11 @@ public class UsuarioBOImpl implements UsuarioBO {
     public void desactivar(int idUsuario, int idAdministrador) throws SQLException {
         Transaccion.ejecutar(() -> {
             obtenerAdministradorActivo(idAdministrador);
+            // RF002: un Administrador no se desactiva a si mismo (se quedaria fuera del sistema a mitad
+            // de su sesion). Si hay que darlo de baja, lo hace otro Administrador.
+            if (idUsuario == idAdministrador) {
+                throw new IllegalStateException("No puedes desactivar tu propio usuario; pídeselo a otro Administrador");
+            }
             Usuario usuario = obtenerExistente(idUsuario);
             validarQueQuedeOtroAdministrador(usuario);
             usuarioDAO.remove(usuario);

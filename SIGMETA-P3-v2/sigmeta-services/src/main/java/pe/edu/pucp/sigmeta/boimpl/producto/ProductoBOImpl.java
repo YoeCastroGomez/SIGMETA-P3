@@ -126,6 +126,26 @@ public class ProductoBOImpl implements ProductoBO {
         });
     }
 
+    // RF005: vuelve a activar un producto desactivado (baja logica reversible). Solo el Administrador.
+    @Override
+    public Producto activar(int idProducto, int idResponsable) throws SQLException {
+        verificarPermiso(idResponsable);
+        return Transaccion.ejecutar(() -> {
+            Producto producto = obtenerExistente(idProducto);
+            if (producto.isEstado()) {
+                throw new IllegalStateException("El producto " + producto.getCodigoInterno() + " ya está activo");
+            }
+            // un producto activo no puede quedar en una categoria desactivada
+            verificarCategoriaActiva(producto.getCategoria().getId());
+            // sus codigos o su nombre pudieron registrarse en otro producto mientras estaba desactivado
+            validarCodigosUnicos(producto);
+            validarNombreUnico(producto);
+            new pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl().ejecutar("sp_producto_activar", idProducto);
+            producto.setEstado(true);
+            return producto;
+        });
+    }
+
     // RF005
     @Override
     public Producto obtener(int idProducto) throws SQLException {

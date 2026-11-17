@@ -58,7 +58,7 @@
             @* novalidate: sin globos del navegador (estándar RNF004). Si falta un dato, el botón no envía: marca el
                error en rojo debajo del cuadro. Con los dos datos, el formulario se envía a /auth/login. *@
             <form method="post" action="/auth/login" class="login-campos" novalidate
-                  onsubmit="if (!this.usuario.value.trim() || !this.clave.value) { event.preventDefault(); }">
+                  onsubmit="if (!this.usuario.value.trim() || !this.clave.value) { event.preventDefault(); return; } if (this.dataset.enviando) { event.preventDefault(); return; } this.dataset.enviando = '1';">
                 <div>
                     <label class="form-label fw-semibold" for="usuario">Usuario <span class="login-requerido">*</span></label>
                     <input id="usuario" name="usuario" class="@(v.Clase("usuario", Errores(), "form-control login-input"))"

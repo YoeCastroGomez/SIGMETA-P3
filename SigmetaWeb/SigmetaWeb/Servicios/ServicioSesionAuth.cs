@@ -24,7 +24,24 @@ public class ServicioSesionAuth : IServicioSesionAuth
 
     public async Task IniciarSesionAsync(HttpContext context)
     {
-        var formulario = await context.Request.ReadFormAsync();
+        if (!context.Request.HasFormContentType)
+        {
+            VolverAlLogin(context, "Ingresa tu usuario y contraseña.");
+            return;
+        }
+
+        IFormCollection formulario;
+        try
+        {
+            formulario = await context.Request.ReadFormAsync(context.RequestAborted);
+        }
+        catch (Exception e) when (e is BadHttpRequestException or IOException or OperationCanceledException)
+        {
+            // El navegador cortó el envío a la mitad (doble clic, recarga o cambio de página).
+            // Ya no hay nadie esperando la respuesta: no se hace nada.
+            return;
+        }
+
         var credenciales = new Credenciales
         {
             NombreUsuario = formulario["usuario"].ToString(),

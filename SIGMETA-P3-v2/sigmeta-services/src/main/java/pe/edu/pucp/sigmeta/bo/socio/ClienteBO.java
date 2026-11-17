@@ -11,6 +11,8 @@ public interface ClienteBO {
     Cliente registrar(Cliente cliente, int idResponsable) throws SQLException;
     Cliente modificar(Cliente cliente, int idResponsable) throws SQLException;
     void desactivar(int idCliente, int idResponsable) throws SQLException;
+    // vuelve a activar un cliente desactivado (Vendedor o Administrador)
+    Cliente activar(int idCliente, int idResponsable) throws SQLException;
     Cliente obtener(int idCliente) throws SQLException;
     List<Cliente> listarTodos() throws SQLException;
     Cliente buscarPorDocumento(String numeroDocumento) throws SQLException;

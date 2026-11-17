@@ -83,7 +83,8 @@ else
                             <td class="text-end">
                                 <div class="d-inline-flex gap-1 text-nowrap">
                                     <a class="btn btn-sm btn-outline-secondary" href="@($"/usuarios/editar/{u.Id}")">Editar</a>
-                                    @if (u.Estado)
+                                    @* RF002: nadie se desactiva a sí mismo; lo hace otro Administrador (el BO también lo rechaza) *@
+                                    @if (u.Estado && !EsYoMismo(u))
                                     {
                                         <button class="btn btn-sm btn-outline-danger" @onclick="() => { error = exito = null; porDesactivar = u; }">Desactivar</button>
                                     }
@@ -101,6 +102,21 @@ else
 @code {
     private List<UsuarioDatos>? usuarios;
     private UsuarioDatos? porDesactivar;
+
+    // usuario en sesión (sale de la cookie del login), para no ofrecerle desactivarse a sí mismo
+    [CascadingParameter] private Task<AuthenticationState>? EstadoSesion { get; set; }
+    private string? miUsuario;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (miUsuario is null && EstadoSesion is not null)
+        {
+            miUsuario = (await EstadoSesion).User.Identity?.Name;
+        }
+    }
+
+    private bool EsYoMismo(UsuarioDatos u) =>
+        miUsuario is not null && string.Equals(u.NombreUsuario, miUsuario, StringComparison.OrdinalIgnoreCase);
     private string filtroTexto = "";
     private string filtroRol = "";
     private string filtroEstado = "";

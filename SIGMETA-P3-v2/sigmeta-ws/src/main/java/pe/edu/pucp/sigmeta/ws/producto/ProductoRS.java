@@ -44,6 +44,7 @@ import java.util.Map;
 //   POST   /api/productos                    registrar (solo Administrador)
 //   PUT    /api/productos/7                  modificar, incluido el precio (solo Administrador)
 //   DELETE /api/productos/7                  desactivar (solo Administrador, baja logica)
+//   POST   /api/productos/7/activar          volver a activar (solo Administrador)
 //
 // Las consultas las hacen los 4 roles y ven el precio y el stock.
 // Registrar, modificar y desactivar los valida el BO (rol, codigo repetido, categoria desactivada,
@@ -142,6 +143,13 @@ public class ProductoRS extends VentanillaBase {
             productoBO.desactivar(idProducto, id);
             return null; // 204 sin cuerpo
         });
+    }
+
+    // POST /api/productos/7/activar: vuelve a activar un producto desactivado (solo el Administrador)
+    @POST
+    @Path("{id}/activar")
+    public Response activar(@HeaderParam("ticket") String ticket, @PathParam("id") int idProducto) {
+        return ejecutar(ticket, id -> productoBO.activar(idProducto, id));
     }
 
     // Buscador de productos (RF005, lector de codigo de barras): el lector escribe el codigo y presiona

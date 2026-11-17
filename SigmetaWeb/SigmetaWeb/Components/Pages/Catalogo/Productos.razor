@@ -134,13 +134,17 @@ else
                             @if (EsAdministrador)
                             {
                                 <td class="text-end">
-                                    @* RF005: un producto desactivado ya no se modifica ni se desactiva otra vez. *@
+                                    @* RF005: un producto desactivado no se modifica; primero se vuelve a activar. *@
                                     @if (p.Activo)
                                     {
                                         <div class="d-inline-flex gap-1 text-nowrap">
                                             <a class="btn btn-sm btn-outline-secondary" href="@($"/productos/editar/{p.Id}")">Editar</a>
                                             <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirDesactivar(p)">Desactivar</button>
                                         </div>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-success" @onclick="() => Activar(p)">Activar</button>
                                     }
                                 </td>
                             }
@@ -301,6 +305,28 @@ else
             error = "No se pudo completar la operación. Inténtalo otra vez; si el problema continúa, avisa al Administrador.";
         }
         await SubirAlAviso();   // el botón Desactivar está en la tabla y el aviso arriba
+    }
+
+    // POST /api/productos/{id}/activar: vuelve a activar un producto desactivado.
+    // El BO lo rechaza si su categoría está desactivada o si su código o nombre ya los usa otro producto.
+    private async Task Activar(Producto p)
+    {
+        error = exito = null;
+        try
+        {
+            await Api.Post<Producto>($"productos/{p.Id}/activar", null);
+            await Cargar(ultimaRuta, descripcion);
+            exito = $"Se activó el producto {p.CodigoInterno} · {p.Nombre}.";
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        catch (Exception)
+        {
+            error = "No se pudo completar la operación. Inténtalo otra vez; si el problema continúa, avisa al Administrador.";
+        }
+        await SubirAlAviso();
     }
 
     private async Task SubirAlAviso()

@@ -101,6 +101,10 @@ else
                                         </AuthorizeView>
                                         <button class="btn btn-sm btn-outline-danger" @onclick="() => porDesactivar = c">Desactivar</button>
                                     }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-success" @onclick="() => Activar(c)">Activar</button>
+                                    }
                                 </div>
                             </td>
                         </tr>
@@ -213,6 +217,28 @@ else
         catch (ErrorApi e)
         {
             error = e.Message;
+        }
+    }
+
+    // POST /api/clientes/{id}/activar: vuelve a activar un cliente desactivado.
+    // El BO lo rechaza si su documento o su razón social ya los usa otro cliente.
+    private async Task Activar(Cliente c)
+    {
+        error = null;
+        exito = null;
+        try
+        {
+            await Api.Post<Cliente>($"clientes/{c.Id}/activar", null);
+            await Buscar();
+            exito = $"Se activó el cliente {c.NombreMostrado.TrimEnd('.')}.";
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        catch (Exception)
+        {
+            error = "No se pudo completar la operación. Inténtalo otra vez; si el problema continúa, avisa al Administrador.";
         }
     }
 }

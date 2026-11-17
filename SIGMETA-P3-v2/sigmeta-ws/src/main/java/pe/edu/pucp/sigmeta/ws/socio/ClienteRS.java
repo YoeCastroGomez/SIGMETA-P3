@@ -83,6 +83,13 @@ public class ClienteRS extends VentanillaBase {
         });
     }
 
+    // POST /api/clientes/7/activar: vuelve a activar un cliente desactivado (Vendedor o Administrador)
+    @POST
+    @Path("{id}/activar")
+    public Response activar(@HeaderParam("ticket") String ticket, @PathParam("id") int idCliente) {
+        return ejecutar(ticket, id -> clienteBO.activar(idCliente, id));
+    }
+
     @PUT
     @Path("{id}/linea-credito")
     public Response asignarLineaCredito(@HeaderParam("ticket") String ticket, @PathParam("id") int idCliente,
