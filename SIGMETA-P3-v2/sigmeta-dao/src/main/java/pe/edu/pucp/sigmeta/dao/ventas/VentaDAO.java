@@ -15,6 +15,7 @@ public interface VentaDAO extends BaseDAO<Venta, Integer> {
     java.math.BigDecimal obtenerSaldoPendienteCliente(int idCliente) throws SQLException;
     void generarCuentaPorCobrar(int idVenta, int idCliente, LocalDate fechaEmision, LocalDate fechaVencimiento, double montoOriginal) throws SQLException;
     long siguienteCorrelativo(int anio) throws SQLException;
+    long proximoCorrelativo(int anio) throws SQLException;
     double cantidadComprometida(int idLineaOrden, int idVentaExcluir) throws SQLException;
     List<Venta> listarPorCliente(int idCliente) throws SQLException;
 
