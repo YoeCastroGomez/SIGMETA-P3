@@ -13,7 +13,7 @@
    Las reglas (cuenta ya pagada, cobro mayor al saldo, caja no abierta, fecha futura) y sus mensajes son del BO. *@
 <Encabezado Rf="RF009" Titulo="@(Editando ? "Modificar cobro" : "Registrar cobro")"
             Subtitulo="@(Editando ? "Se corrigen la fecha y la referencia del cobro." : "El cobro entra a la caja abierta del cajero.")">
-    <a class="btn btn-outline-secondary" href="@($"/cobranzas/{Id}")">Volver a la cuenta</a>
+
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
