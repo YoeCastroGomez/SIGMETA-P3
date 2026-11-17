@@ -9,7 +9,10 @@
    El estado de atención lo actualiza el BO solo, con los despachos de las ventas de la orden (cantidad entregada). *@
 <Encabezado Rf="RF007" Titulo="Órdenes de compra de clientes"
             Subtitulo="Cada orden se genera desde una cotización aceptada y toma su detalle sin volver a digitarlo.">
-    <a class="btn btn-primary" href="/ordenes/nueva">Nueva orden</a>
+    @if (EsVendedor)
+    {
+        <a class="btn btn-primary" href="/ordenes/nueva">Nueva orden</a>
+    }
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
@@ -76,14 +79,15 @@ else
                             <td class="text-end">
                                 <div class="d-inline-flex gap-1 text-nowrap">
                                     <a class="btn btn-sm btn-outline-secondary" href="@($"/ordenes/editar/{o.Id}")">
-                                        @(o.Estado == "PENDIENTE" ? "Editar" : "Ver")
+                                        @(EsVendedor && o.Estado == "PENDIENTE" ? "Editar" : "Ver")
                                     </a>
-                                    @if (o.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL")
+                                    @if (EsVendedor && o.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL")
                                     {
                                         @* RF008: la venta se registra a partir de una orden pendiente o atendida parcialmente *@
                                         <a class="btn btn-sm btn-outline-primary" href="@($"/ventas/nueva?orden={o.Id}")">Registrar venta</a>
                                     }
-                                        @if (o.Estado == "PENDIENTE")
+                                    @* RF007: anulan el Vendedor y el Administrador (OrdenCompraClienteBOImpl.anular) *@
+                                    @if ((EsVendedor || Rol == "Administrador") && o.Estado == "PENDIENTE")
                                     {
                                         <button class="btn btn-sm btn-outline-danger" @onclick="() => AbrirAnulacion(o)">Anular</button>
                                     }
@@ -100,6 +104,9 @@ else
 }
 
 @code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
+    private bool EsVendedor => Rol == "Vendedor";
+
     private List<OrdenDatos>? ordenes;
     private string? error;
     private string? exito;

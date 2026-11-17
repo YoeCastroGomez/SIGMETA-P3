@@ -19,6 +19,8 @@ public interface CotizacionBO {
     List<Cotizacion> listarTodos() throws SQLException;
     List<Cotizacion> listarPorCliente(int idCliente) throws SQLException;
     List<Cotizacion> listarPorEstado(EstadoCotizacion estado) throws SQLException;
+    // filtros combinables: cliente y/o estado (null = sin ese filtro)
+    List<Cotizacion> buscar(Integer idCliente, EstadoCotizacion estado) throws SQLException;
 
     // ciclo de vida: REGISTRADA -> ENVIADA -> ACEPTADA | RECHAZADA
     Cotizacion enviar(int idCotizacion, int idResponsable) throws SQLException;

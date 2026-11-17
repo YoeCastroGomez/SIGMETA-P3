@@ -4,6 +4,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -27,11 +28,13 @@ import pe.edu.pucp.sigmeta.ws.caja.Utilidades;
 // RF013: servicio REST de notas de credito (las emite el Cajero con autorizacion; las consulta el Administrador).
 //
 //   GET  /api/notas-credito?desde=&hasta=&texto=     buscar por fechas y por cliente, documento o comprobante
+//                                                    (cada fila trae "tipoNota": DEVOLUCION_TOTAL o DEVOLUCION_POR_ITEM)
 //   GET  /api/notas-credito/9/lineas                 lineas de una nota
 //   GET  /api/notas-credito/comprobantes             facturas y boletas vigentes con mercaderia entregada
 //   GET  /api/notas-credito/comprobantes/12/lineas   lineas del comprobante: vendido, entregado, ya acreditado y devolvible
 //   POST /api/notas-credito                          {"idComprobanteOrigen": 12, "motivo": "...",
 //                                                     "lineas": [{"idLinea": 40, "cantidad": 2}]}
+//   PUT  /api/notas-credito/9                        {"motivo": "..."}  modificar el motivo (nota no anulada)
 //   POST /api/notas-credito/9/anular                 {"motivo": "..."}
 //
 // La autorizacion no se manda: el BO busca la solicitud EMITIR_NOTA_CREDITO aprobada y vigente del cajero de la
@@ -47,8 +50,25 @@ public class NotaCreditoRS extends VentanillaBase {
     @GET
     public Response buscar(@HeaderParam("ticket") String ticket, @QueryParam("desde") String desde,
                            @QueryParam("hasta") String hasta, @QueryParam("texto") String texto) {
-        return ejecutar(ticket, id -> consultaBO.notasCredito(Utilidades.leerFecha(desde, "fecha de inicio"),
-                Utilidades.leerFecha(hasta, "fecha de fin"), texto, id));
+        return ejecutar(ticket, id -> {
+            List<Map<String, Object>> filas = consultaBO.notasCredito(Utilidades.leerFecha(desde, "fecha de inicio"),
+                    Utilidades.leerFecha(hasta, "fecha de fin"), texto, id);
+            // RF013: tipo de nota (catalogo 09 SUNAT), comparando con el total del comprobante de origen
+            Map<Integer, Double> totalesOrigen = new java.util.HashMap<>();
+            for (Map<String, Object> fila : filas) {
+                if (!(fila.get("idOrigen") instanceof Number idOrigen) || !(fila.get("total") instanceof Number total)) {
+                    continue;
+                }
+                Double totalOrigen = totalesOrigen.get(idOrigen.intValue());
+                if (totalOrigen == null) {
+                    Comprobante origen = comprobanteBO.obtener(idOrigen.intValue());
+                    totalOrigen = origen == null ? 0.0 : origen.getTotal();
+                    totalesOrigen.put(idOrigen.intValue(), totalOrigen);
+                }
+                fila.put("tipoNota", ComprobanteBOImpl.tipoNotaCredito(total.doubleValue(), totalOrigen));
+            }
+            return filas;
+        });
     }
 
     @GET
@@ -100,6 +120,25 @@ public class NotaCreditoRS extends VentanillaBase {
             respuesta.put("id", guardada.getId());
             respuesta.put("nota", guardada.getSerie() + "-" + guardada.getNumero());
             respuesta.put("total", guardada.getTotal());
+            return respuesta;
+        });
+    }
+
+    // RF013: modificar la nota de credito (Cajero o Administrador). Solo se edita el motivo: el detalle y los
+    // montos ya movieron stock, deuda y caja; si estan mal, se anula la nota y se emite otra.
+    @PUT
+    @Path("{id}")
+    public Response modificar(@HeaderParam("ticket") String ticket, @PathParam("id") int idNota, AnulacionDatos datos) {
+        String motivo = datos == null ? null : datos.motivo;
+        return ejecutar(ticket, id -> {
+            Comprobante cambios = new Comprobante();
+            cambios.setId(idNota);
+            cambios.setMotivo(motivo);
+            Comprobante guardada = comprobanteBO.modificarNotaCredito(cambios, id);
+            Map<String, Object> respuesta = new LinkedHashMap<>();
+            respuesta.put("id", guardada.getId());
+            respuesta.put("nota", guardada.getSerie() + "-" + guardada.getNumero());
+            respuesta.put("motivo", guardada.getMotivo());
             return respuesta;
         });
     }

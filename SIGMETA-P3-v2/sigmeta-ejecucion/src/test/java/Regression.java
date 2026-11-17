@@ -44,6 +44,8 @@ public class Regression {
         else c.setRazonSocial("Empresa prueba " + documento);
         return clientes.registrar(c,4);
     }
+    // H03: ninguna linea se vende bajo el costo sin autorizacion; las pruebas venden al costo del producto
+    static double costo() { return producto.getCostoUnitario(); }
     static Venta venta(Cliente c, double cantidad, double precio, boolean credito) {
         Venta v = new Venta(); v.setCliente(c); v.setFechaEmision(LocalDate.now());
         v.setCondicionPago(credito ? CondicionPago.CREDITO : CondicionPago.CONTADO);
@@ -108,16 +110,16 @@ public class Regression {
         });
         Venta ajena = venta(juridica,1,1,false);ajena.setOrdenCompraCliente(oc);
         rechaza(() -> ventas.registrar(ajena,1),"orden de otro cliente rechazada");
-        Venta ocho = venta(natural,8,1,false);ocho.setOrdenCompraCliente(oc);ventas.registrar(ocho,1);
+        Venta ocho = venta(natural,8,costo(),false);ocho.setOrdenCompraCliente(oc);ventas.registrar(ocho,1);
         Venta exceso = venta(natural,3,1,false);exceso.setOrdenCompraCliente(oc);
         rechaza(() -> ventas.registrar(exceso,1),"acumulado 8+3 supera orden de 10");
         Venta modificada = ventas.obtener(ocho.getId());modificada.setCliente(juridica);
         rechaza(() -> ventas.modificar(modificada,1),"modificar cliente conserva correspondencia con orden");
         modificada.setCliente(natural);modificada.getDetalles().get(0).setCantidad(6);ventas.modificar(modificada,1);
-        Venta cuatro = venta(natural,4,1,false);cuatro.setOrdenCompraCliente(oc);ventas.registrar(cuatro,1);
+        Venta cuatro = venta(natural,4,costo(),false);cuatro.setOrdenCompraCliente(oc);ventas.registrar(cuatro,1);
         check(cuatro.getId()>0,"modificar excluye su propia cantidad del acumulado");
         Set<String> numeros = ConcurrentHashMap.newKeySet();
-        check(concurrentes(8, () -> numeros.add(ventas.registrar(venta(natural,1,1,false),1).getNumero()))==8 && numeros.size()==8,"ocho correlativos concurrentes unicos");
+        check(concurrentes(8, () -> numeros.add(ventas.registrar(venta(natural,1,costo(),false),1).getNumero()))==8 && numeros.size()==8,"ocho correlativos concurrentes unicos");
         SesionServicio sesion = SesionServicio.iniciar("lrojas","Meta2026");
         rechaza(() -> sesion.ejecutar(id -> new UsuarioBOImpl().verificarRol(4,TipoRol.ADMINISTRADOR)),"sesion impide suplantar ID de administrador");
         check(sesion.ejecutar(id -> new UsuarioBOImpl().verificarRol(id,TipoRol.VENDEDOR)).getId()==1,"sesion deriva responsable autenticado");

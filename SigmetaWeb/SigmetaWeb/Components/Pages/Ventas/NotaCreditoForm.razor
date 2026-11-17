@@ -129,6 +129,11 @@ else
                         <tr><td colspan="6" class="text-end">Subtotal</td><td class="text-end">@SubTotal.ToString("N2")</td></tr>
                         <tr><td colspan="6" class="text-end">IGV (18 %)</td><td class="text-end">@Igv.ToString("N2")</td></tr>
                         <tr><td colspan="6" class="text-end fw-bold">Total de la nota</td><td class="text-end fw-bold">@Formato.Soles(Total)</td></tr>
+                        @if (Total > 0)
+                        {
+                            @* RF013: tipo de nota (catálogo 09 SUNAT), mismo criterio que ComprobanteBOImpl.tipoNotaCredito *@
+                            <tr><td colspan="6" class="text-end text-muted">Tipo de nota</td><td class="text-end text-muted">@NotaCreditoDatos.TextoTipo(TipoNota)</td></tr>
+                        }
                     </tfoot>
                 </table>
             </div>
@@ -178,6 +183,7 @@ else
     private double SubTotal => Math.Round(lineas.Where(l => l.Devolver > 0).Sum(l => l.ImporteDevolucion), 2);
     private double Igv => Math.Round(SubTotal * TasaIgv, 2, MidpointRounding.AwayFromZero);
     private double Total => Math.Round(SubTotal + Igv, 2);
+    private string TipoNota => Origen is not null && Math.Abs(Total - Origen.Total) <= 0.01 ? "DEVOLUCION_TOTAL" : "DEVOLUCION_POR_ITEM";
 
     // misma regla que el BO: solo lo entregado y todavía no devuelto
     private static string? Problema(LineaDevolvible l) =>

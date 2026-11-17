@@ -45,6 +45,8 @@ En MySQL 8, quitar antes `ONLY_FULL_GROUP_BY` del `sql_mode` (ver el `README.md`
 | `05_migracion_nombres_catalogo.sql` | Junta las categorías repetidas y deja los códigos en MAYÚSCULAS (también pasaba los nombres a MAYÚSCULAS sin tildes; eso lo corrige la 06) |
 | `06_migracion_textos_legibles.sql` | Nombres y descripciones de categorías y productos en mayúscula normal y con tildes ("Látex y esmaltes"); tildes de proveedores, clientes y usuarios de los datos demo. Va **después** de la 05 |
 
+Nota H09: `04_SP_sebastian.sql` termina con un bloque que agrega, si todavía no están, `UNIQUE(serie, numero)` en comprobantes, `UNIQUE(numero)` en órdenes de compra de clientes y el correlativo `OCC`. No hace falta una migración aparte: basta con recargar los procedimientos como siempre.
+
 ### Caso 3: limpiar y cargar datos de demostración
 `4_datos_demo/datos_demo.sql` **borra todos los datos** (no las tablas ni los procedimientos) y carga datos coherentes del 2026-08-03 al 2026-11-10: compras, ventas, caja, cobranza y kardex que cuadran entre sí.
 La clave de todos los usuarios es `Meta2026`.

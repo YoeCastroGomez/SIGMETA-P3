@@ -114,6 +114,7 @@ else
             <div class="col-md-4">
                 <Campo Etiqueta="Fecha de emisión" Id="fecha" Obligatorio="true" Error="@(v.Error("fecha", Errores()))">
                     <input id="fecha" type="date" class="@(v.Clase("fecha", Errores()))"
+                           min="@(EsNuevo ? FechaMinima.ToString("yyyy-MM-dd") : null)" max="@(EsNuevo ? Hoy.ToString("yyyy-MM-dd") : null)"
                            @bind="venta.FechaEmision" @bind:format="yyyy-MM-dd" @bind:after="@(() => v.Tocado("fecha"))" disabled="@(!Editable)" />
                 </Campo>
             </div>
@@ -295,6 +296,9 @@ else
     }
 
     private bool EsNuevo => Id is null;
+    // RF008: rango de la fecha de una venta nueva (VentaBOImpl.DIAS_ATRASO_MAXIMO = 7)
+    private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.Today);
+    private static DateOnly FechaMinima => Hoy.AddDays(-7);
     private string Titulo => EsNuevo ? "Nueva venta" : "Editar venta";
     private bool Editable => EsNuevo || (venta?.Estado == "REGISTRADA" && venta.Comprobante is null);
     private string AyudaCondicion => EsNuevo ? "Crédito solo para clientes con línea de crédito autorizada." : "No se cambia al modificar.";
@@ -459,6 +463,11 @@ else
         if (venta.FechaEmision is null)
         {
             e["fecha"] = "La fecha de emisión es obligatoria.";
+        }
+        else if (EsNuevo && (venta.FechaEmision > Hoy || venta.FechaEmision < FechaMinima))
+        {
+            // misma regla que VentaBOImpl: ni futura ni con más de 7 días de atraso
+            e["fecha"] = $"La fecha debe estar entre {FechaMinima:yyyy-MM-dd} y hoy.";
         }
         if (venta.CondicionPago == "CREDITO" && venta.PlazoCreditoDias < 0)
         {

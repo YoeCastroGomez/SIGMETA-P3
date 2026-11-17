@@ -83,9 +83,12 @@ public class OrdenCompraClienteBOImpl implements OrdenCompraClienteBO {
             oc.setNumeroOrdenCliente(Validador.textoOpcional(numeroOrdenCliente, "número de orden del cliente", 30));
             oc.setEstado(EstadoOrdenCompraCliente.PENDIENTE);
 
-            int totalExistentes = ordenCompraClienteDAO.listarTodos().size();
-            oc.setNumero("OCC-" + LocalDate.now().getYear() + "-" + String.format("%04d", totalExistentes + 1));
-            oc.setFechaEmision(LocalDate.now());
+            // H09: el numero sale del correlativo atomico del anio (antes se contaban las ordenes existentes y dos
+            // registros simultaneos podian repetir numero). La tabla tiene UNIQUE(numero) como respaldo.
+            LocalDate hoy = LocalDate.now();
+            long correlativo = ordenCompraClienteDAO.siguienteCorrelativo(hoy.getYear());
+            oc.setNumero("OCC-" + hoy.getYear() + "-" + String.format("%04d", correlativo));
+            oc.setFechaEmision(hoy);
             oc.setSubTotal(cotizacion.getSubTotal());
             oc.setIgv(cotizacion.getIgv());
             oc.setTotal(cotizacion.getTotal());
@@ -182,6 +185,17 @@ public class OrdenCompraClienteBOImpl implements OrdenCompraClienteBO {
                 oc.setDetalles(detalles);
             }
             return oc;
+        });
+    }
+
+    // H09: el formulario muestra el numero que probablemente tendra la orden. El definitivo lo reserva
+    // generarDesdeCotizacion al guardar (si otro vendedor guarda antes, recibe el siguiente).
+    @Override
+    public String proponerNumero(int idResponsable) throws SQLException {
+        usuarioBO.verificarRol(idResponsable, TipoRol.VENDEDOR, TipoRol.ADMINISTRADOR);
+        return Transaccion.consultar(() -> {
+            int anio = LocalDate.now().getYear();
+            return "OCC-" + anio + "-" + String.format("%04d", ordenCompraClienteDAO.proximoCorrelativo(anio));
         });
     }
 

@@ -993,4 +993,86 @@ BEGIN
     ORDER BY d.id;
 END$$
 
+
+-- ============================================================
+-- 9. CORRELATIVOS (H09)
+-- ============================================================
+
+-- Numero que recibiria el proximo documento de un tipo y anio, SIN reservarlo (solo para mostrarlo en el
+-- formulario). El numero real lo reserva sp_correlativo_siguiente al guardar (06_SP_integridad.sql).
+DROP PROCEDURE IF EXISTS sp_correlativo_proximo$$
+CREATE PROCEDURE sp_correlativo_proximo(
+    IN p_tipo VARCHAR(20),
+    IN p_anio INT
+)
+BEGIN
+    SELECT COALESCE((SELECT ultimo FROM correlativo_documento
+                     WHERE tipo = p_tipo AND anio = p_anio), 0) + 1 AS numero;
+END$$
+
+-- RF007: pasa a VENCIDA las cotizaciones registradas o enviadas cuya vigencia ya paso. Un solo UPDATE
+-- (atomico): solo cambia el estado, asi no pisa una cotizacion que otro usuario este editando a la vez.
+DROP PROCEDURE IF EXISTS sp_cotizacion_marcar_vencidas$$
+CREATE PROCEDURE sp_cotizacion_marcar_vencidas(OUT p_cantidad INT)
+BEGIN
+    UPDATE cotizacion
+    SET estado = 'VENCIDA'
+    WHERE anulado = FALSE
+      AND estado IN ('REGISTRADA', 'ENVIADA')
+      AND fecha_vigencia < CURDATE();
+    SET p_cantidad = ROW_COUNT();
+END$$
+
 DELIMITER ;
+
+
+-- ============================================================
+-- 10. NUMERACION UNICA (H09) - ajuste de tablas para bases que ya existen
+-- ============================================================
+-- Se ejecuta cada vez que se recarga este archivo y no hace nada si ya se aplico:
+--   - comprobante: UNIQUE(serie, numero)
+--   - orden_compra_cliente: UNIQUE(numero)
+--   - correlativo_documento: fila 'OCC' por anio con el mayor numero ya usado (nunca retrocede).
+--     Desde ahora el numero de la orden lo reserva sp_correlativo_siguiente('OCC', anio), como en ventas.
+-- Si hay numeros repetidos no agrega la restriccion: muestra cuales son (corregirlos y recargar el archivo).
+-- Una base nueva ya trae todo esto desde 1_base/sigmeta.sql.
+
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS tmp_unicidad_h09$$
+CREATE PROCEDURE tmp_unicidad_h09()
+BEGIN
+    IF EXISTS (SELECT 1 FROM comprobante GROUP BY serie, numero HAVING COUNT(*) > 1) THEN
+        SELECT 'comprobante: hay serie y numero repetidos, no se agrego UNIQUE' AS aviso, serie, numero, COUNT(*) AS veces
+        FROM comprobante GROUP BY serie, numero HAVING COUNT(*) > 1;
+    ELSEIF NOT EXISTS (SELECT 1 FROM information_schema.TABLE_CONSTRAINTS
+                       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'comprobante'
+                         AND CONSTRAINT_NAME = 'uk_comprobante_serie_numero') THEN
+        ALTER TABLE comprobante ADD CONSTRAINT uk_comprobante_serie_numero UNIQUE (serie, numero);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM orden_compra_cliente GROUP BY numero HAVING COUNT(*) > 1) THEN
+        SELECT 'orden_compra_cliente: hay numeros repetidos, no se agrego UNIQUE' AS aviso, numero, COUNT(*) AS veces
+        FROM orden_compra_cliente GROUP BY numero HAVING COUNT(*) > 1;
+    ELSEIF NOT EXISTS (SELECT 1 FROM information_schema.TABLE_CONSTRAINTS
+                       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orden_compra_cliente'
+                         AND CONSTRAINT_NAME = 'uk_orden_compra_cliente_numero') THEN
+        ALTER TABLE orden_compra_cliente ADD CONSTRAINT uk_orden_compra_cliente_numero UNIQUE (numero);
+    END IF;
+END$$
+
+DELIMITER ;
+
+CALL tmp_unicidad_h09();
+DROP PROCEDURE IF EXISTS tmp_unicidad_h09;
+
+INSERT INTO correlativo_documento (tipo, anio, ultimo)
+SELECT * FROM (
+    SELECT 'OCC' AS tipo,
+           CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(numero, '-', 2), '-', -1) AS UNSIGNED) AS anio,
+           MAX(CAST(SUBSTRING_INDEX(numero, '-', -1) AS UNSIGNED)) AS ultimo
+    FROM orden_compra_cliente
+    WHERE numero REGEXP '^OCC-[0-9]{4}-[0-9]+$'
+    GROUP BY anio
+) AS existentes
+ON DUPLICATE KEY UPDATE ultimo = GREATEST(correlativo_documento.ultimo, existentes.ultimo);

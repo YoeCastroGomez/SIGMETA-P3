@@ -146,7 +146,8 @@ public class AnulacionDatos
 
 public static class TextosVentas
 {
-    public static readonly string[] EstadosCotizacion = { "REGISTRADA", "ENVIADA", "ACEPTADA", "RECHAZADA", "VENCIDA" };
+    // RF007: los seis estados del catálogo (filtro de la lista de cotizaciones)
+    public static readonly string[] EstadosCotizacion = { "REGISTRADA", "ENVIADA", "ACEPTADA", "RECHAZADA", "VENCIDA", "ANULADA" };
 
     // Texto en espanol para los valores que vienen del Java
     public static string Texto(string? valor) => valor switch

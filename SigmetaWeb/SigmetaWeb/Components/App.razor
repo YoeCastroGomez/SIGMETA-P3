@@ -22,7 +22,18 @@
 <body>
     <Routes @rendermode="InteractiveServer" />
     <ReconnectModal />
-    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="@Assets["_framework/blazor.web.js"]" autostart="false"></script>
+    <script>
+        // RF008: mientras el diálogo de impresión está abierto la página no puede responder al servidor.
+        // Se espera hasta 5 minutos antes de dar la conexión por perdida (igual que ClientTimeoutInterval en Program.cs).
+        Blazor.start({
+            circuit: {
+                configureSignalR: function (builder) {
+                    builder.withServerTimeout(300000).withKeepAliveInterval(15000);
+                }
+            }
+        });
+    </script>
 </body>
 
 </html>

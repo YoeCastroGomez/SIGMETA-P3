@@ -33,6 +33,7 @@ import pe.edu.pucp.sigmeta.ws.caja.Utilidades;
 // RF007: servicio REST de ordenes de compra de clientes (Vendedor; anular tambien el Administrador).
 //
 //   GET    /api/ordenes               listar todas, con su estado de atencion
+//   GET    /api/ordenes/siguiente-numero   numero que tendra la proxima orden (H09; no lo reserva)
 //   GET    /api/ordenes/4             una orden con sus lineas (cantidad pedida y atendida)
 //   POST   /api/ordenes               generar desde una cotizacion ACEPTADA: {"idCotizacion": 2, "numeroOrdenCliente": "..."}
 //   PUT    /api/ordenes/4             modificar numero del cliente y observaciones (solo PENDIENTE)
@@ -63,6 +64,12 @@ public class OrdenRS extends VentanillaBase {
             }
             return lista;
         });
+    }
+
+    @GET
+    @Path("siguiente-numero")
+    public Response siguienteNumero(@HeaderParam("ticket") String ticket) {
+        return ejecutar(ticket, id -> Map.of("numero", ordenBO.proponerNumero(id)));
     }
 
     @GET

@@ -101,7 +101,7 @@ else if (EsNuevo)
 }
 else if (orden is not null)
 {
-    @if (!EditablePendiente)
+    @if (orden.Estado != "PENDIENTE")
     {
         <div class="alert alert-secondary">
             Esta orden está <strong>@TextosVentas.Texto(orden.Estado)</strong>: solo se modifica una orden pendiente.
@@ -188,13 +188,16 @@ else if (orden is not null)
 
     private bool EsNuevo => Id is null;
     private string Titulo => EsNuevo ? "Nueva orden de compra de cliente" : "Orden de compra de cliente";
-    private bool EditablePendiente => orden?.Estado == "PENDIENTE";
+    // RF007: solo el Vendedor modifica la orden (el Administrador la ve y puede anularla desde la lista)
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
+    private bool EditablePendiente => orden?.Estado == "PENDIENTE" && Rol == "Vendedor";
 
     private List<CotizacionDatos> cotizacionesLibres = new();
     private int idCotizacion;
     private CotizacionDatos? cotizacion;
     private string? numeroOrdenCliente;
     private string siguienteNumeroOrden = "";
+    private sealed class NumeroPropuesto { public string Numero { get; set; } = ""; }
 
     private OrdenDatos? orden;
 
@@ -211,7 +214,9 @@ else if (orden is not null)
                 // cotizaciones aceptadas que aún no tienen una orden vigente (una cotización tiene una sola orden activa)
                 var aceptadas = await Api.Get<List<CotizacionDatos>>("cotizaciones?estado=ACEPTADA") ?? new();
                 var ordenes = await Api.Get<List<OrdenDatos>>("ordenes") ?? new();
-                siguienteNumeroOrden = $"OCC-{DateTime.Today.Year}-{ordenes.Count + 1:0000}";
+                // H09: el número sale del correlativo del Java (GET /api/ordenes/siguiente-numero), no de contar órdenes
+                var propuesto = await Api.Get<NumeroPropuesto>("ordenes/siguiente-numero");
+                siguienteNumeroOrden = propuesto?.Numero ?? "";
                 var conOrden = ordenes.Where(o => o.Estado != "ANULADA").Select(o => o.IdCotizacion).ToHashSet();
                 cotizacionesLibres = aceptadas.Where(c => !conOrden.Contains(c.Id)).ToList();
 

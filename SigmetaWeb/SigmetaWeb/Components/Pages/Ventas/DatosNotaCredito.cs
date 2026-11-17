@@ -20,6 +20,15 @@ public class NotaCreditoDatos
     public string Cliente { get; set; } = "";
     public string? NumeroDocumento { get; set; }
     public string? Autorizo { get; set; }
+    public string? TipoNota { get; set; }   // DEVOLUCION_TOTAL o DEVOLUCION_POR_ITEM (lo deduce el Java)
+
+    // RF013: tipo de nota segun el catalogo 09 de SUNAT
+    public static string TextoTipo(string? tipo) => tipo switch
+    {
+        "DEVOLUCION_TOTAL" => "06 · Devolución total",
+        "DEVOLUCION_POR_ITEM" => "07 · Devolución por ítem",
+        _ => "—"
+    };
 }
 
 // GET /api/notas-credito/{id}/lineas

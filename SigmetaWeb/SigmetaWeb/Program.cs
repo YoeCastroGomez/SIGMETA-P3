@@ -7,7 +7,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents()
+    // RF008: window.print() congela el JavaScript de la pagina mientras el dialogo de impresion (o "Guardar como
+    // PDF") esta abierto. Con el limite por defecto (30 s sin noticias del navegador) el servidor cerraba la
+    // conexion y la pagina se recargaba. Se da 5 minutos (va junto con withServerTimeout en App.razor).
+    .AddHubOptions(opciones => opciones.ClientTimeoutInterval = TimeSpan.FromMinutes(5));
 
 // Conexión con el Java (sigmeta-ws). La dirección está en appsettings.json -> ApiJava:BaseUrl
 builder.Services.AddHttpClient("ApiJava", cliente =>

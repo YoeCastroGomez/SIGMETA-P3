@@ -5,7 +5,8 @@
 <PageTitle>Notas de crédito · SIGMETA</PageTitle>
 
 @* RF013 · Notas de crédito por devolución. Las emite el Cajero con autorización; las consulta el Administrador.
-   GET /api/notas-credito?desde=&hasta=&texto= · GET /api/notas-credito/{id}/lineas · POST /api/notas-credito/{id}/anular *@
+   GET /api/notas-credito?desde=&hasta=&texto= · GET /api/notas-credito/{id}/lineas · POST /api/notas-credito/{id}/anular
+   PUT /api/notas-credito/{id} {"motivo"}: modificar el motivo (Cajero o Administrador; el BO valida el rol y que no esté anulada) *@
 <Encabezado Rf="RF013" Titulo="Notas de crédito"
             Subtitulo="Cada nota devuelve mercadería al stock y rebaja la deuda del cliente o le devuelve su dinero por caja.">
     @if (EsCajero)
@@ -26,6 +27,16 @@
         del stock, la deuda del cliente vuelve a subir y, si se devolvió dinero, se registra su ingreso en la misma caja.</p>
     <Campo Etiqueta="Motivo" Id="motivoAnu" Obligatorio="true" Error="@errorMotivo">
         <textarea id="motivoAnu" class="form-control" rows="2" maxlength="200" @bind="motivo" @bind:event="oninput"></textarea>
+    </Campo>
+</Confirmacion>
+
+@* RF013: modificar la nota. Solo el motivo: los productos y montos ya movieron stock, deuda y caja *@
+<Confirmacion Visible="@(porEditar is not null)" Titulo="Modificar nota de crédito" TextoConfirmar="Guardar cambios"
+              AlConfirmar="ConfirmarEditar" AlCancelar="() => porEditar = null">
+    <p class="mb-2">Se modifica el motivo de la nota <strong>@porEditar?.Nota</strong>. Los productos devueltos y los montos
+        no cambian: si están mal, anule la nota y emita una nueva con otra autorización.</p>
+    <Campo Etiqueta="Motivo" Id="motivoEdit" Obligatorio="true" Error="@errorMotivoEdit">
+        <textarea id="motivoEdit" class="form-control" rows="2" maxlength="200" @bind="motivoEdit" @bind:event="oninput"></textarea>
     </Campo>
 </Confirmacion>
 
@@ -75,7 +86,7 @@ else
                     @foreach (var n in Pagina)
                     {
                         <tr>
-                            <td><strong>@n.Nota</strong></td>
+                            <td><strong>@n.Nota</strong><div class="small text-muted">@NotaCreditoDatos.TextoTipo(n.TipoNota)</div></td>
                             <td class="text-nowrap">@Formato.Fecha(n.FechaEmision)</td>
                             <td>@n.Origen<div class="small text-muted">@Formato.Legible(n.TipoOrigen) · venta @n.Venta (@Formato.Legible(n.CondicionPago).ToLower())</div></td>
                             <td>@n.Cliente<div class="small text-muted">@n.NumeroDocumento</div></td>
@@ -88,6 +99,10 @@ else
                                     </button>
                                     @if (n.Estado != "ANULADO")
                                     {
+                                        @if (PuedeModificar)
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => PedirEditar(n)">Editar</button>
+                                        }
                                         <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirAnular(n)">Anular</button>
                                     }
                                 </div>
@@ -135,6 +150,8 @@ else
 @code {
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
     private bool EsCajero => Rol == "Cajero";
+    // RF013: modifican la nota el Cajero y el Administrador (igual que ComprobanteBOImpl.modificarNotaCredito)
+    private bool PuedeModificar => Rol == "Cajero" || Rol == "Administrador";
 
     [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
     [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
@@ -148,6 +165,9 @@ else
     private NotaCreditoDatos? porAnular;
     private string motivo = "";
     private string? errorMotivo;
+    private NotaCreditoDatos? porEditar;
+    private string motivoEdit = "";
+    private string? errorMotivoEdit;
     private bool cargando;
     private string? error;
     private string? exito;
@@ -216,6 +236,36 @@ else
         catch (ErrorApi e)
         {
             error = e.Message;
+        }
+    }
+
+    private void PedirEditar(NotaCreditoDatos n)
+    {
+        error = exito = errorMotivoEdit = null;
+        motivoEdit = n.Motivo ?? "";
+        porEditar = n;
+    }
+
+    // PUT /api/notas-credito/{id} {"motivo"}
+    private async Task ConfirmarEditar()
+    {
+        if (string.IsNullOrWhiteSpace(motivoEdit))
+        {
+            errorMotivoEdit = "El motivo es obligatorio.";
+            return;
+        }
+        var n = porEditar;
+        porEditar = null;
+        if (n is null) return;
+        try
+        {
+            await Api.Put<object>($"notas-credito/{n.Id}", new { motivo = motivoEdit.Trim() });
+            await Buscar();
+            exito = $"Se modificó el motivo de la nota de crédito {n.Nota}.";
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "No se puede modificar una nota de crédito anulada"
         }
     }
 

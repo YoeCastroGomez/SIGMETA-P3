@@ -47,6 +47,10 @@ import java.util.Set;
 public class VentaBOImpl implements VentaBO {
 
     private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
+    // RF008: una venta se registra con la fecha del dia o, como mucho, con algunos dias de atraso (venta tomada
+    // fuera del sistema). Nunca a futuro ni con mas atraso: la cuenta por cobrar naceria vencida y el comprobante,
+    // que se emite con la fecha de hoy, no coincidiria con la venta.
+    static final int DIAS_ATRASO_MAXIMO = 7;
 
     private final VentaDAO ventaDAO;
     private final DetalleVentaDAO detalleVentaDAO;
@@ -93,6 +97,7 @@ public class VentaBOImpl implements VentaBO {
     public Venta registrar(Venta venta, int idResponsable) throws SQLException {
         Usuario responsable = usuarioBO.verificarRol(idResponsable, TipoRol.VENDEDOR);
         validarCabecera(venta);
+        validarFechaEmision(venta.getFechaEmision());
         validarDetalles(venta.getDetalles());
         if (venta.getId() != 0) throw new IllegalArgumentException("Una venta nueva no debe tener ID");
 
@@ -188,12 +193,20 @@ public class VentaBOImpl implements VentaBO {
                 throw new IllegalStateException("Solo se puede modificar una venta en estado REGISTRADA");
             }
 
-            // Verificar que no tenga comprobantes ni despachos
-            if (!comprobanteDAO.listarPorVenta(venta.getId()).isEmpty()) {
-                throw new IllegalStateException("No se puede modificar una venta que ya tiene comprobantes generados");
+            // Verificar que no tenga comprobantes ni despachos VIGENTES: si se anulo la factura (por ejemplo para
+            // corregir un error) o el despacho, la venta vuelve a poder corregirse antes de facturarla de nuevo
+            if (comprobanteDAO.listarPorVenta(venta.getId()).stream()
+                    .anyMatch(c -> c.getEstado() != pe.edu.pucp.sigmeta.model.enums.EstadoComprobante.ANULADO)) {
+                throw new IllegalStateException("No se puede modificar una venta con comprobante vigente; anule primero el comprobante");
             }
-            if (!despachoDAO.listarPorVenta(venta.getId()).isEmpty()) {
+            if (despachoDAO.listarPorVenta(venta.getId()).stream().anyMatch(d -> !d.isAnulado())) {
                 throw new IllegalStateException("No se puede modificar una venta que ya tiene despachos registrados");
+            }
+            // RF010: una venta al contado ya cobrada en caja no cambia su total (el cobro quedaria descuadrado)
+            if (actual.getCondicionPago() == CondicionPago.CONTADO
+                    && consultaDAO.numero("sp_venta_contar_cobros_contado", venta.getId()).signum() > 0) {
+                throw new IllegalStateException("La venta ya se cobró en caja y no se puede modificar; "
+                        + "si hay un error, anule la venta (el cobro se devuelve en caja) y registre otra");
             }
 
             Cliente cliente = clienteDAO.load(venta.getCliente().getId());
@@ -206,6 +219,9 @@ public class VentaBOImpl implements VentaBO {
             venta.setPlazoCreditoDias(actual.getPlazoCreditoDias());
             if (actual.getCondicionPago() == CondicionPago.CREDITO && !venta.getFechaEmision().equals(actual.getFechaEmision())) {
                 throw new IllegalArgumentException("No se cambia la fecha de emisión de una venta al crédito; refinancie su cuenta");
+            }
+            if (!venta.getFechaEmision().equals(actual.getFechaEmision())) {
+                validarFechaEmision(venta.getFechaEmision());
             }
             venta.setOrdenCompraCliente(actual.getOrdenCompraCliente());
             if (venta.getOrdenCompraCliente() != null) {
@@ -309,6 +325,17 @@ public class VentaBOImpl implements VentaBO {
         Validador.obligatorio(venta.getFechaEmision(), "fecha de emisión");
         Validador.obligatorio(venta.getCondicionPago(), "condición de pago");
         venta.setObservaciones(Validador.textoOpcional(venta.getObservaciones(), "observaciones", 300));
+    }
+
+    private static void validarFechaEmision(LocalDate fecha) {
+        LocalDate hoy = LocalDate.now();
+        if (fecha.isAfter(hoy)) {
+            throw new IllegalArgumentException("La fecha de emisión no puede ser posterior a hoy (" + hoy + ")");
+        }
+        if (fecha.isBefore(hoy.minusDays(DIAS_ATRASO_MAXIMO))) {
+            throw new IllegalArgumentException("La fecha de emisión no puede tener más de " + DIAS_ATRASO_MAXIMO
+                    + " días de antigüedad (mínimo " + hoy.minusDays(DIAS_ATRASO_MAXIMO) + ")");
+        }
     }
 
     private void validarDetalles(List<DetalleVenta> detalles) {
@@ -434,7 +461,13 @@ public class VentaBOImpl implements VentaBO {
             }
         }
         for (DetalleVenta quitada : anteriores.values()) {
-            detalleVentaDAO.remove(quitada);
+            try {
+                detalleVentaDAO.remove(quitada);
+            } catch (java.sql.SQLIntegrityConstraintViolationException e) {
+                // la linea figura en un despacho o una nota de credito anulados (historial): no se borra
+                throw new IllegalStateException("La línea " + quitada.getNumeroLinea() + " tiene despachos o notas de crédito "
+                        + "anulados en su historial y no se puede quitar. Modifique su cantidad o anule la venta y registre otra");
+            }
         }
     }
 

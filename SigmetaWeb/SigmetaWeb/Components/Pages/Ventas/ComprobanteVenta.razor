@@ -1,5 +1,6 @@
 @page "/ventas/{Id:int}/comprobante"
 @inject ApiJava Api
+@inject IJSRuntime JS
 
 <PageTitle>Comprobante de la venta · SIGMETA</PageTitle>
 
@@ -8,7 +9,32 @@
    - GET  /api/comprobantes/{id}                 el comprobante con el cliente
    - POST /api/comprobantes {"idVenta", "tipo"}  emitir BOLETA o FACTURA (la serie y el número los pone el BO)
    - POST /api/comprobantes/{id}/envio {"medioEnvio"}  registrar el envío (CORREO, MENSAJERIA o IMPRESO; la fecha la pone el BO)
+   - POST /api/comprobantes/{id}/anular {"motivo"}  anular la factura o boleta si la mercadería no se entregó
+   - Botón Imprimir: registra el envío IMPRESO y abre la impresión del navegador con la vista .sigmeta-impresion
+     (formato imprimible del RF008; en pantalla está oculta y al imprimir es lo único que sale)
    Mensajes del BO: factura a un cliente sin RUC, venta que ya tiene comprobante, venta anulada... *@
+
+<style>
+    .sigmeta-impresion { display: none; }
+
+    @@media print {
+        @@page { size: A4; margin: 15mm; }
+        /* solo se imprime el comprobante: se oculta todo lo que no lo contiene (menú, barra, botones, tarjetas) */
+        body *:not(:has(.sigmeta-impresion)):not(.sigmeta-impresion):not(.sigmeta-impresion *) { display: none !important; }
+        /* los contenedores del comprobante pierden márgenes y posiciones del diseño de pantalla */
+        body, body *:has(.sigmeta-impresion) {
+            display: block !important; position: static !important; margin: 0 !important; padding: 0 !important;
+            border: 0 !important; box-shadow: none !important; background: #fff !important;
+            width: auto !important; max-width: none !important; min-height: 0 !important; overflow: visible !important;
+        }
+        .sigmeta-impresion { display: block !important; color: #000; font-size: 11pt; }
+        .sigmeta-impresion table { width: 100%; border-collapse: collapse; }
+        .sigmeta-impresion th, .sigmeta-impresion td { border: 1px solid #999; padding: 4px 6px; }
+        .sigmeta-impresion thead th { background: #eee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .sigmeta-impresion .imp-recuadro { border: 2px solid #000; padding: 8px 12px; text-align: center; }
+        .sigmeta-impresion .imp-totales td { border: 0; }
+    }
+</style>
 <Encabezado Rf="RF008" Titulo="Comprobante de la venta" Subtitulo="@Subtitulo">
     <a class="btn btn-outline-secondary" href="/ventas">Volver a la lista</a>
 </Encabezado>
@@ -18,6 +44,16 @@
 {
     <div class="alert alert-success">@exito</div>
 }
+
+@* RF008: anular la factura o boleta. Si la mercadería ya se despachó, el BO lo rechaza: se usa nota de crédito *@
+<Confirmacion Visible="@pidiendoAnulacion" Titulo="Anular comprobante" TextoConfirmar="Anular comprobante"
+              AlConfirmar="ConfirmarAnulacion" AlCancelar="() => pidiendoAnulacion = false">
+    <p class="mb-2">Se anula <strong>@comprobante?.Comprobante</strong>. Solo se puede si la mercadería todavía no salió del almacén;
+        si ya se entregó, la devolución se hace con una nota de crédito. Después podrá corregir la venta, volver a emitir o anularla.</p>
+    <Campo Etiqueta="Motivo" Id="motivoAnulacion" Obligatorio="true" Error="@errorMotivo">
+        <textarea id="motivoAnulacion" class="form-control" rows="2" maxlength="200" @bind="motivoAnulacion" @bind:event="oninput"></textarea>
+    </Campo>
+</Confirmacion>
 
 @if (cargando)
 {
@@ -107,7 +143,13 @@ else if (venta is not null)
         <div class="card card-body mb-3">
             <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
                 <h2 class="h6 fw-semibold mb-0">Comprobante emitido</h2>
-                <Estado Texto="@TextosVentas.Texto(comprobante.Estado)" />
+                <div class="d-flex align-items-center gap-2">
+                    <Estado Texto="@TextosVentas.Texto(comprobante.Estado)" />
+                    @if (comprobante.Estado != "ANULADO" && (Rol == "Vendedor" || Rol == "Cajero"))
+                    {
+                        <button class="btn btn-sm btn-outline-danger" disabled="@trabajando" @onclick="PedirAnulacion">Anular comprobante</button>
+                    }
+                </div>
             </div>
             <div class="row">
                 <div class="col-sm-6 col-md-3 mb-3">
@@ -175,9 +217,11 @@ else if (venta is not null)
                     <div class="col-md-6 mb-3 d-flex flex-wrap gap-2 justify-content-md-end">
                         @if (Rol == "Cajero")
                         {
-                            @* RF013: la nota de crédito la registra el Cajero sobre un comprobante emitido (no entra en este laboratorio) *@
+                            @* RF013: la nota de crédito la registra el Cajero (con autorización) sobre un comprobante emitido *@
                             <a class="btn btn-outline-secondary" href="/notas-credito/nueva">Nota de crédito</a>
                         }
+                        @* RF008: formato imprimible. Registra el envío IMPRESO y abre la impresión (Vendedor y Cajero) *@
+                        <button class="btn btn-outline-primary" disabled="@trabajando" @onclick="Imprimir">Imprimir</button>
                         <button class="btn btn-primary" disabled="@trabajando" @onclick="RegistrarEnvio">
                             @(trabajando ? "Registrando..." : "Registrar envío")
                         </button>
@@ -185,6 +229,87 @@ else if (venta is not null)
                 </div>
             </div>
         }
+    }
+
+    @if (comprobante is not null && comprobante.Estado != "ANULADO")
+    {
+        var lineasImpresas = comprobante.Lineas.Count > 0 ? comprobante.Lineas : venta.Lineas;
+        @* RF008 · Representación impresa del comprobante. Oculta en pantalla; es lo único que sale al imprimir *@
+        <div class="sigmeta-impresion">
+            <table class="mb-3" style="border: 0;">
+                <tr>
+                    <td style="border: 0; vertical-align: top;">
+                        <div style="font-size: 16pt; font-weight: 700;">GRUPO META</div>
+                        <div>Ferretería industrial · herramientas y suministros</div>
+                    </td>
+                    <td style="border: 0; width: 40%;">
+                        <div class="imp-recuadro">
+                            <div style="font-weight: 700;">@TituloImpreso</div>
+                            <div style="font-size: 14pt; font-weight: 700;">@comprobante.Comprobante</div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+            <table class="mb-3">
+                <tr>
+                    <td style="width: 22%;"><strong>Cliente</strong></td>
+                    <td>@comprobante.Cliente</td>
+                    <td style="width: 18%;"><strong>Fecha de emisión</strong></td>
+                    <td style="width: 15%;">@TextosVentas.Fecha(comprobante.FechaEmision)</td>
+                </tr>
+                <tr>
+                    <td><strong>@TextosVentas.Texto(comprobante.TipoDocumentoCliente)</strong></td>
+                    <td>@comprobante.DocumentoCliente</td>
+                    <td><strong>Condición de pago</strong></td>
+                    <td>@TextosVentas.Texto(comprobante.CondicionPago ?? venta.CondicionPago)</td>
+                </tr>
+                <tr>
+                    <td><strong>Dirección</strong></td>
+                    <td>@(comprobante.DireccionCliente ?? "—")</td>
+                    <td><strong>Venta</strong></td>
+                    <td>@(comprobante.NumeroVenta ?? venta.Numero)</td>
+                </tr>
+            </table>
+
+            <table class="mb-2">
+                <thead>
+                    <tr>
+                        <th style="width: 2.5rem;">#</th>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th style="text-align: right;">Cantidad</th>
+                        <th style="text-align: right;">P. unit. (S/)</th>
+                        <th style="text-align: right;">Dscto. (S/)</th>
+                        <th style="text-align: right;">Importe (S/)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var l in lineasImpresas)
+                    {
+                        <tr>
+                            <td>@l.NumeroLinea</td>
+                            <td>@l.CodigoProducto</td>
+                            <td>@l.Producto</td>
+                            <td style="text-align: right;">@l.Cantidad.ToString("0.###")</td>
+                            <td style="text-align: right;">@l.PrecioUnitario.ToString("N2")</td>
+                            <td style="text-align: right;">@l.Descuento.ToString("N2")</td>
+                            <td style="text-align: right;">@l.Importe.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <table class="imp-totales" style="width: 40%; margin-left: auto;">
+                <tr><td>Op. gravada</td><td style="text-align: right;">S/ @comprobante.SubTotal.ToString("N2")</td></tr>
+                <tr><td>IGV (18 %)</td><td style="text-align: right;">S/ @comprobante.Igv.ToString("N2")</td></tr>
+                <tr><td><strong>Importe total</strong></td><td style="text-align: right;"><strong>S/ @comprobante.Total.ToString("N2")</strong></td></tr>
+            </table>
+
+            <p style="margin-top: 24px; font-size: 9pt; text-align: center;">
+                Representación impresa del comprobante electrónico @comprobante.Comprobante · Generado por SIGMETA
+            </p>
+        </div>
     }
 
     <div class="card mb-3">
@@ -209,8 +334,13 @@ else if (venta is not null)
     private bool trabajando;
     private string? error;
     private string? exito;
+    private bool pidiendoAnulacion;
+    private string motivoAnulacion = "";
+    private string? errorMotivo;
 
     private string Subtitulo => venta is null ? "" : $"Venta {venta.Numero} · {venta.Cliente}";
+
+    private string TituloImpreso => comprobante?.Tipo == "FACTURA" ? "FACTURA ELECTRÓNICA" : "BOLETA DE VENTA ELECTRÓNICA";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -284,6 +414,81 @@ else if (venta is not null)
         finally
         {
             trabajando = false;
+        }
+    }
+
+    private void PedirAnulacion()
+    {
+        error = exito = errorMotivo = null;
+        motivoAnulacion = "";
+        pidiendoAnulacion = true;
+    }
+
+    // POST /api/comprobantes/{id}/anular {"motivo"}
+    private async Task ConfirmarAnulacion()
+    {
+        if (string.IsNullOrWhiteSpace(motivoAnulacion))
+        {
+            errorMotivo = "El motivo es obligatorio.";
+            return;
+        }
+        pidiendoAnulacion = false;
+        if (comprobante is null) return;
+        var anulado = comprobante.Comprobante;
+        trabajando = true;
+        try
+        {
+            await Api.Post<object>($"comprobantes/{comprobante.Id}/anular", new AnulacionDatos { Motivo = motivoAnulacion.Trim() });
+            await Cargar();
+            exito = $"Se anuló el comprobante {anulado}. Puede emitir uno nuevo o, desde la lista de ventas, corregir o anular la venta.";
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "La venta ya tiene mercadería despachada: para devolverla emita una nota de crédito..."
+        }
+        finally
+        {
+            trabajando = false;
+        }
+    }
+
+    // RF008: formato imprimible. Primero registra el envío IMPRESO (si el BO lo rechaza, no se imprime)
+    // y luego abre el diálogo de impresión del navegador, que solo muestra la vista .sigmeta-impresion
+    private async Task Imprimir()
+    {
+        if (comprobante is null) return;
+        error = null;
+        exito = null;
+        trabajando = true;
+        try
+        {
+            await Api.Post<ComprobanteDatos>($"comprobantes/{comprobante.Id}/envio",
+                new ComprobanteDatos { MedioEnvio = "IMPRESO" });
+            await Cargar();
+            exito = "Se registró el envío en formato imprimible.";
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "No se puede registrar el envío de un comprobante anulado"
+            return;
+        }
+        finally
+        {
+            trabajando = false;
+        }
+
+        StateHasChanged();
+        try
+        {
+            await JS.InvokeVoidAsync("print");
+        }
+        catch (TaskCanceledException)
+        {
+            // el diálogo de impresión quedó abierto más que el tiempo de espera de Blazor: no es un error
+        }
+        catch (JSDisconnectedException)
+        {
+            // el navegador se desconectó mientras imprimía: el envío IMPRESO ya quedó registrado
         }
     }
 
