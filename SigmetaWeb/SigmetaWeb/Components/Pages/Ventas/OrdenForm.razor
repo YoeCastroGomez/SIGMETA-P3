@@ -85,7 +85,6 @@ else if (EsNuevo)
                     <div class="card mb-3">
                         <div class="card-body pb-0">
                             <h2 class="h6 fw-semibold mb-1"><span class="seccion">2</span> Detalle</h2>
-                            <p class="small text-muted">Se copia de la cotización @cotizacion.Numero: no hay que volver a digitarlo.</p>
                         </div>
                         <TablaDetalle Lineas="@cotizacion.Lineas" SubTotal="@cotizacion.SubTotal" Igv="@cotizacion.Igv" Total="@cotizacion.Total" />
                     </div>
@@ -101,8 +100,7 @@ else if (EsNuevo)
                     <BotonCondicionado Texto="Generar orden" TextoOcupado="Generando..." Bloque="true" Clase="btn-primary w-100"
                                        Ocupado="@guardando" AlHacerClic="Generar"
                                        Motivo="@(idCotizacion <= 0 ? "Elija la cotización aceptada." : null)" />
-                    <a class="btn btn-link w-100 mt-1" href="@VolverA">Cancelar</a>
-                    <div class="small text-muted">Después podrá registrar la venta de esta orden.</div>
+                    <a class="btn btn-outline-secondary w-100 mt-1" href="@VolverA">Cancelar</a>
                 </div>
             </div>
         </div>
@@ -164,7 +162,6 @@ else if (orden is not null)
             <div class="card mb-3">
                 <div class="card-body pb-0">
                     <h2 class="h6 fw-semibold mb-1">Detalle</h2>
-                    <p class="small text-muted">Copiado de la cotización. «Atendida» es lo ya entregado al cliente con los despachos.</p>
                 </div>
                 <TablaDetalle Lineas="@orden.Lineas" SubTotal="@orden.SubTotal" Igv="@orden.Igv" Total="@orden.Total" MostrarAtendida="true" />
             </div>
@@ -188,7 +185,7 @@ else if (orden is not null)
                         <BotonCondicionado Texto="Guardar cambios" TextoOcupado="Guardando..." Bloque="true" Clase="btn-outline-primary w-100"
                                            Ocupado="@guardando" AlHacerClic="GuardarCambios" />
                     }
-                    <a class="btn btn-link" href="@VolverA">Volver a órdenes</a>
+                    <a class="btn btn-outline-secondary" href="@VolverA">Volver a órdenes</a>
                 </div>
             </div>
         </div>
@@ -206,7 +203,7 @@ else if (orden is not null)
 
     private bool EsNuevo => Id is null;
     private string Titulo => EsNuevo ? "Nueva orden de compra del cliente" : $"Orden {orden?.Numero}";
-    private string? Subtitulo => EsNuevo ? "Se genera desde una cotización aceptada y toma su detalle." : orden?.Cliente;
+    private string? Subtitulo => EsNuevo ? null : orden?.Cliente;
     private string VolverA => Volver.A(VolverQ, "/ordenes");
     private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.Today);
     // RF007: solo el Vendedor modifica la orden (el Administrador la ve y puede anularla desde la lista)
@@ -262,7 +259,7 @@ else if (orden is not null)
                     exito = $"Se generó la orden {orden.Numero}.";
                     if (Rol == "Vendedor")
                     {
-                        exitoDetalle = "Siguiente: registrar la venta con los productos de la orden.";
+                        exitoDetalle = null;
                         exitoAccion = "Registrar venta";
                         exitoRuta = $"/ventas/nueva?orden={orden.Id}";
                     }

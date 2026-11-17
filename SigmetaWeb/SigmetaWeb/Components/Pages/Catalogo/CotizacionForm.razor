@@ -19,7 +19,7 @@
 <Encabezado Rf="RF007" Titulo="@Titulo" Subtitulo="@Subtitulo">
     @if (cotizacion is not null && !Editable)
     {
-    <a class="btn btn-outline-secondary" href="@VolverA">← Volver a cotizaciones</a>
+    <a class="btn btn-outline-secondary" href="@VolverA">Volver a cotizaciones</a>
     }
 </Encabezado>
 
@@ -171,7 +171,7 @@ else
                                             <ErrorCampo Mensaje="@(v.Error(n + "descuento", Errores(), n + "cantidad", n + "precio"))" />
                                         </td>
                                         <td class="text-end fw-semibold">@l.ImporteCalculado.ToString("N2")</td>
-                                        <td class="text-end"><button type="button" class="btn btn-sm btn-link link-danger" aria-label="@($"Quitar {l.Producto}")" @onclick="() => Quitar(l)">Quitar</button></td>
+                                        <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" aria-label="@($"Quitar {l.Producto}")" @onclick="() => Quitar(l)">Quitar</button></td>
                                     }
                                     else
                                     {
@@ -222,8 +222,7 @@ else
                     <BotonCondicionado Texto="@(EsNuevo ? "Registrar cotización" : "Guardar cambios")" TextoOcupado="Guardando..." Bloque="true"
                                        Clase="btn-primary w-100" Ocupado="@guardando" AlHacerClic="Guardar"
                                        Motivo="@(Pendientes.All(p => p.Listo) ? null : "Complete lo marcado con • para guardar.")" />
-                    <a class="btn btn-link w-100 mt-1" href="@VolverA">Cancelar</a>
-                    <div class="small text-muted">Después de guardar, envíela al cliente desde la lista.</div>
+                    <a class="btn btn-outline-secondary w-100 mt-1" href="@VolverA">Cancelar</a>
                 }
                 else if (EsVendedor && cotizacion.Estado == "ACEPTADA" && !cotizacion.Anulado)
                 {
@@ -262,7 +261,7 @@ else
 
     private bool EsNuevo => Id is null;
     private string Titulo => EsNuevo ? "Nueva cotización" : Editable ? $"Editar cotización {cotizacion?.Numero}" : $"Cotización {cotizacion?.Numero}";
-    private string? Subtitulo => EsNuevo ? "Complete las dos secciones; a la derecha ve lo que falta." : cotizacion?.Cliente;
+    private string? Subtitulo => EsNuevo ? null : cotizacion?.Cliente;
     private string VolverA => Volver.A(VolverQ, "/cotizaciones");
     // RF007: solo el Vendedor modifica, y solo una cotización REGISTRADA (el Administrador la consulta)
     private bool Editable => EsVendedor && (EsNuevo || (cotizacion?.Estado == "REGISTRADA" && !cotizacion.Anulado));

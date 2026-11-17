@@ -21,7 +21,7 @@
    - POST /api/cotizaciones/{id}/anular {"motivo": ...}          anulación lógica con motivo (Vendedor o Administrador)
    - GET  /api/ordenes                                           (Vendedor) qué cotizaciones aceptadas ya tienen orden *@
 <Encabezado Rf="RF007" Titulo="Cotizaciones"
-            Subtitulo="Ciclo: registrar → enviar al cliente → registrar su respuesta → generar la orden del cliente.">
+            Subtitulo="Cotizaciones emitidas a los clientes. Importes en soles.">
     @if (EsVendedor)
     {
         <a class="btn btn-primary" href="@($"/cotizaciones/nueva?volver={Volver.Parametro(RutaActual)}")">+ Nueva cotización</a>
@@ -48,34 +48,32 @@
 </Confirmacion>
 
 <div class="card card-body mb-3">
-    <div class="row g-2 align-items-end sigmeta-filtros">
-        <div class="col-md-6 col-lg-5">
-            <label class="form-label fw-semibold small" for="buscarCot">Buscar</label>
-            <input id="buscarCot" type="search" class="form-control" maxlength="80" autocomplete="off"
-                   placeholder="Número, cliente o documento"
-                   @bind="busqueda" @bind:event="oninput" @bind:after="AlBuscar" />
-        </div>
-        <div class="col-md-6 col-lg-4">
-            <label class="form-label fw-semibold small" for="fCliente">Cliente</label>
-            <select id="fCliente" class="form-select" value="@filtroCliente" @onchange="CambiarCliente">
-                <option value="0">Todos los clientes</option>
+    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
+        <Campo Etiqueta="Número o documento" Id="fTexto" Clase="col-sm-6 col-md-3">
+            <input id="fTexto" class="form-control" maxlength="80" @bind="textoElegido" />
+        </Campo>
+        <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
+            <select id="fCliente" class="form-select" @bind="clienteElegido">
+                <option value="0">Todos</option>
                 @foreach (var c in clientes)
                 {
                     <option value="@c.Id">@c.NombreMostrado · @c.NumeroDocumento</option>
                 }
             </select>
+        </Campo>
+        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-3">
+            <select id="fEstado" class="form-select" @bind="estadoElegido">
+                @foreach (var o in Chips)
+                {
+                    <option value="@o.Valor">@o.Texto</option>
+                }
+            </select>
+        </Campo>
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-dark">Buscar</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
         </div>
-        <div class="col-lg-3 text-lg-end">
-            @if (HayFiltros)
-            {
-                <button type="button" class="btn btn-link px-0" @onclick="Limpiar">Quitar filtros</button>
-            }
-        </div>
-    </div>
-    <div class="mt-3">
-        <ChipsFiltro Opciones="@Chips" Seleccionado="@filtroEstado" SeleccionadoChanged="CambiarEstado" />
-    </div>
-    <div class="form-text">El cliente y el estado se combinan: por ejemplo, las cotizaciones enviadas de un cliente.</div>
+    </form>
 </div>
 
 @if (cotizaciones is null)
@@ -147,7 +145,7 @@ else
                                     @if (EsVendedor && c.Estado == "REGISTRADA")
                                     {
                                         <button type="button" class="btn btn-sm btn-primary" disabled="@trabajando" @onclick="() => Enviar(c)">Enviar</button>
-                                        <a class="btn btn-sm btn-link px-2" href="@RutaCotizacion(c)">Editar</a>
+                                        <a class="btn btn-sm btn-outline-secondary" href="@RutaCotizacion(c)">Editar</a>
                                     }
                                     else if (EsVendedor && c.Estado == "ENVIADA")
                                     {
@@ -165,7 +163,7 @@ else
                                     }
                                     @if ((EsVendedor || Rol == "Administrador") && c.Estado is "REGISTRADA" or "ENVIADA" or "RECHAZADA" or "VENCIDA")
                                     {
-                                        <button type="button" class="btn btn-sm btn-link link-danger px-2" @onclick="() => AbrirAnulacion(c)">Anular</button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => AbrirAnulacion(c)">Anular</button>
                                     }
                                 </div>
                             </td>
@@ -278,7 +276,7 @@ else
             exito = AvisoGuardado.Texto(Guardado, "la cotización", Referencia);
             if (exito is not null && Guardado is AvisoGuardado.Nuevo or AvisoGuardado.Editado)
             {
-                exitoDetalle = "Siguiente: enviarla al cliente (botón «Enviar» de la fila).";
+                exitoDetalle = null;
             }
         }
         if (urlPropia is not null && Nav.Uri == urlPropia)
@@ -288,6 +286,7 @@ else
         filtroCliente = ClienteQ ?? 0;
         filtroEstado = EstadoQ ?? "";
         busqueda = BusquedaQ ?? "";
+        CopiarFiltrosAlFormulario();
         paginaActual = Math.Max(1, PaginaQ ?? 1);
         await Cargar();
     }
@@ -339,25 +338,25 @@ else
         Nav.NavigateTo(uri, replace: true);
     }
 
-    private async Task CambiarCliente(ChangeEventArgs e)
+    // Filtros estándar: lo elegido en el formulario se aplica al pulsar Buscar (igual que en el resto de la aplicación)
+    private string textoElegido = "";
+    private int clienteElegido;
+    private string estadoElegido = "";
+
+    private void CopiarFiltrosAlFormulario()
     {
-        filtroCliente = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
-        paginaActual = 1;
-        await Cargar();
-        SincronizarUrl();
+        textoElegido = busqueda;
+        clienteElegido = filtroCliente;
+        estadoElegido = filtroEstado;
     }
 
-    private async Task CambiarEstado(string estado)
+    private async Task Buscar()
     {
-        filtroEstado = estado;
+        busqueda = textoElegido.Trim();
+        filtroCliente = clienteElegido;
+        filtroEstado = estadoElegido;
         paginaActual = 1;
         await Cargar();
-        SincronizarUrl();
-    }
-
-    private void AlBuscar()
-    {
-        paginaActual = 1;
         SincronizarUrl();
     }
 
@@ -372,6 +371,7 @@ else
         filtroCliente = 0;
         filtroEstado = "";
         busqueda = "";
+        CopiarFiltrosAlFormulario();
         paginaActual = 1;
         await Cargar();
         SincronizarUrl();
@@ -385,10 +385,10 @@ else
     // ---------------- Ciclo de la cotización ----------------
 
     private Task Enviar(CotizacionDatos c) => Accion(c, "enviar", $"La cotización {c.Numero} quedó enviada.",
-        "Siguiente: cuando el cliente responda, regístrelo con «Aceptó» o «Rechazó».");
+        null);
 
     private Task Aceptar(CotizacionDatos c) => Accion(c, "aceptar", $"La cotización {c.Numero} quedó aceptada.",
-        "Siguiente: generar la orden de compra del cliente con el número de su documento.",
+        null,
         "Generar orden", $"/ordenes/nueva?cotizacion={c.Id}");
 
     private async Task ConfirmarRechazo()
@@ -440,7 +440,7 @@ else
         {
             await Api.Post<object>($"cotizaciones/{anulando.Id}/anular", new AnulacionDatos { Motivo = motivo });
             exito = $"Se anuló la cotización {anulando.Numero}.";
-            exitoDetalle = "Puede verla con su motivo en el filtro «Anuladas».";
+            exitoDetalle = null;
             anulando = null;
             await Cargar(forzar: true);
         }

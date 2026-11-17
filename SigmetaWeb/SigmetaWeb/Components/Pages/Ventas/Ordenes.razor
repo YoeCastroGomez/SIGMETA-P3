@@ -14,7 +14,7 @@
    - POST /api/ordenes/{id}/anular {"motivo"} anular (solo PENDIENTE y sin ventas vigentes)
    El estado de atención lo actualiza el BO solo, con los despachos de las ventas de la orden (cantidad entregada). *@
 <Encabezado Rf="RF007" Titulo="Órdenes de compra de clientes"
-            Subtitulo="Cada orden sale de una cotización aceptada; se atiende con ventas y se completa con los despachos.">
+            Subtitulo="Órdenes de compra recibidas de los clientes.">
     @if (EsVendedor)
     {
         <a class="btn btn-primary" href="/ordenes/nueva">+ Nueva orden</a>
@@ -35,23 +35,23 @@
 </ModalMotivo>
 
 <div class="card card-body mb-3">
-    <div class="row g-2 align-items-end sigmeta-filtros">
-        <div class="col-md-8 col-lg-6">
-            <label class="form-label fw-semibold small" for="buscarOrden">Buscar</label>
-            <input id="buscarOrden" type="search" class="form-control" maxlength="80" autocomplete="off"
-                   placeholder="Número, orden del cliente, cliente o cotización"
-                   @bind="busqueda" @bind:event="oninput" @bind:after="AlBuscar" />
+    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
+        <Campo Etiqueta="Número, cliente o cotización" Id="fTexto" Clase="col-sm-6 col-md">
+            <input id="fTexto" class="form-control" maxlength="80" @bind="textoElegido" />
+        </Campo>
+        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-3">
+            <select id="fEstado" class="form-select" @bind="estadoElegido">
+                @foreach (var o in Chips)
+                {
+                    <option value="@o.Valor">@o.Texto</option>
+                }
+            </select>
+        </Campo>
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-dark">Buscar</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
         </div>
-        <div class="col-md-4 col-lg-6 text-md-end">
-            @if (HayFiltros)
-            {
-                <button type="button" class="btn btn-link px-0" @onclick="Limpiar">Quitar filtros</button>
-            }
-        </div>
-    </div>
-    <div class="mt-3">
-        <ChipsFiltro Opciones="@Chips" Seleccionado="@filtroEstado" SeleccionadoChanged="CambiarEstado" Etiqueta="Filtrar por estado de atención" />
-    </div>
+    </form>
 </div>
 
 @if (ordenes is null)
@@ -132,12 +132,12 @@ else
                                     }
                                     @if (EsVendedor && o.Estado == "PENDIENTE")
                                     {
-                                        <a class="btn btn-sm btn-link px-2" href="@RutaOrden(o)">Editar</a>
+                                        <a class="btn btn-sm btn-outline-secondary" href="@RutaOrden(o)">Editar</a>
                                     }
                                     @* RF007: anulan el Vendedor y el Administrador (OrdenCompraClienteBOImpl.anular) *@
                                     @if ((EsVendedor || Rol == "Administrador") && o.Estado == "PENDIENTE")
                                     {
-                                        <button type="button" class="btn btn-sm btn-link link-danger px-2" @onclick="() => AbrirAnulacion(o)">Anular</button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => AbrirAnulacion(o)">Anular</button>
                                     }
                                 </div>
                             </td>
@@ -227,6 +227,8 @@ else
         }
         filtroEstado = EstadoQ ?? "";
         busqueda = BusquedaQ ?? "";
+        textoElegido = busqueda;
+        estadoElegido = filtroEstado;
         paginaActual = Math.Max(1, PaginaQ ?? 1);
         if (ordenes is null) await Cargar();
     }
@@ -259,15 +261,14 @@ else
         Nav.NavigateTo(uri, replace: true);
     }
 
-    private void CambiarEstado(string estado)
-    {
-        filtroEstado = estado;
-        paginaActual = 1;
-        SincronizarUrl();
-    }
+    // Filtros estándar: lo elegido en el formulario se aplica al pulsar Buscar (igual que en el resto de la aplicación)
+    private string textoElegido = "";
+    private string estadoElegido = "";
 
-    private void AlBuscar()
+    private void Buscar()
     {
+        busqueda = textoElegido.Trim();
+        filtroEstado = estadoElegido;
         paginaActual = 1;
         SincronizarUrl();
     }
@@ -280,8 +281,8 @@ else
 
     private void Limpiar()
     {
-        filtroEstado = "";
-        busqueda = "";
+        filtroEstado = estadoElegido = "";
+        busqueda = textoElegido = "";
         paginaActual = 1;
         SincronizarUrl();
     }

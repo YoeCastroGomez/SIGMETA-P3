@@ -25,7 +25,7 @@
 <Encabezado Rf="RF008" Titulo="@Titulo" Subtitulo="@Subtitulo">
     @if (venta is not null && !Editable)
     {
-    <a class="btn btn-outline-secondary" href="@VolverA">← Volver</a>
+    <a class="btn btn-outline-secondary" href="@VolverA">Volver</a>
     }
 </Encabezado>
 
@@ -132,15 +132,8 @@ else
             <div class="card mb-3">
                 <div class="card-body pb-0">
                     <h2 class="h6 fw-semibold mb-1"><span class="seccion">2</span> Productos</h2>
-                    @if (desdeOrden)
+                    @if (!desdeOrden && Editable)
                     {
-                        <p class="small text-muted">
-                            Se propone lo que falta entregar de la orden. Puede reducir cantidades o quitar líneas: no se vende más de lo pedido.
-                        </p>
-                    }
-                    else if (Editable)
-                    {
-                        <p class="small text-muted mb-2">Escanee o escriba el código y presione Enter. El sistema valida el stock disponible al guardar.</p>
                         <BuscadorProducto Etiqueta="Agregar producto" Id="buscadorVenta" AlElegir="AgregarProducto" />
                     }
                 </div>
@@ -212,7 +205,7 @@ else
                                             <ErrorCampo Mensaje="@(v.Error(n + "descuento", Errores(), n + "cantidad", n + "precio"))" />
                                         </td>
                                         <td class="text-end fw-semibold">@l.ImporteCalculado.ToString("N2")</td>
-                                        <td class="text-end"><button type="button" class="btn btn-sm btn-link link-danger" aria-label="@($"Quitar {l.Producto}")" @onclick="() => Quitar(l)">Quitar</button></td>
+                                        <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" aria-label="@($"Quitar {l.Producto}")" @onclick="() => Quitar(l)">Quitar</button></td>
                                     }
                                     else
                                     {
@@ -273,7 +266,6 @@ else
                 {
                     <div class="alert alert-light border small mt-3 mb-0">
                         <strong>Línea de crédito del cliente:</strong> hasta S/ @cl.LimiteCredito.ToString("N2") y @cl.PlazoCreditoDias días.
-                        Al guardar se crea la cuenta por cobrar; el sistema verifica que su deuda pendiente más esta venta no pase el límite.
                     </div>
                 }
             </div>
@@ -302,7 +294,7 @@ else
                     <BotonCondicionado Texto="@(EsNuevo ? "Registrar venta" : "Guardar cambios")" TextoOcupado="Guardando..." Bloque="true"
                                        Clase="btn-primary w-100" Ocupado="@guardando" AlHacerClic="Guardar"
                                        Motivo="@(Pendientes.All(p => p.Listo) ? null : "Complete lo marcado con • para guardar.")" />
-                    <a class="btn btn-link w-100 mt-1" href="@VolverA">Cancelar</a>
+                    <a class="btn btn-outline-secondary w-100 mt-1" href="@VolverA">Cancelar</a>
                     @if (EsNuevo)
                     {
                         <div class="small text-muted mt-1">Después de registrar pasará a emitir el comprobante.</div>
@@ -345,7 +337,7 @@ else
     private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.Today);
     private static DateOnly FechaMinima => Hoy.AddDays(-7);
     private string Titulo => EsNuevo ? "Nueva venta" : Editable ? $"Editar venta {venta?.Numero}" : $"Venta {venta?.Numero}";
-    private string? Subtitulo => EsNuevo ? "Complete las tres secciones; a la derecha ve lo que falta." : venta?.Cliente;
+    private string? Subtitulo => EsNuevo ? null : venta?.Cliente;
     private string VolverA => Volver.A(VolverQ, "/ventas");
     // RF008: venta REGISTRADA, sin comprobante vigente, sin despacho y (al contado) sin cobro en caja; las reglas reales están en el BO
     private bool Editable => EsNuevo || (Rol == "Vendedor" && venta is not null && FlujoVentas.MotivoNoEditable(venta) is null);

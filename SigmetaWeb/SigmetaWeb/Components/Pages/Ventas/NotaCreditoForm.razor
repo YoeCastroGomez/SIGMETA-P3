@@ -17,7 +17,7 @@
    · GET /api/notas-credito/comprobantes/{id}/lineas · POST /api/notas-credito.
    Los importes de esta pantalla son una vista previa: el Java los vuelve a calcular. *@
 <Encabezado Rf="RF013" Titulo="Nueva nota de crédito"
-            Subtitulo="Devolución de mercadería ya entregada. Se devuelve el precio que realmente pagó el cliente.">
+            Subtitulo="Nota de crédito sobre una factura o boleta.">
 
 </Encabezado>
 
@@ -45,7 +45,7 @@ else
             <span>Su solicitud de autorización está <strong>pendiente</strong>. Cuando el Administrador la apruebe, pulse «Actualizar».</span>
             <div class="d-flex gap-2">
                 <button type="button" class="btn btn-sm btn-dark" disabled="@consultando" @onclick="ConsultarAutorizacion">@(consultando ? "Consultando..." : "Actualizar")</button>
-                <a class="btn btn-sm btn-outline-dark" href="/autorizaciones/mias">Mis solicitudes</a>
+                <a class="btn btn-sm btn-outline-secondary" href="/autorizaciones/mias">Mis solicitudes</a>
             </div>
         </div>
     }
@@ -114,7 +114,7 @@ else
                                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="DevolverTodo">Devolver todo lo entregado</button>
                                 @if (lineas.Any(l => l.Devolver > 0))
                                 {
-                                    <button type="button" class="btn btn-sm btn-link" @onclick="LimpiarCantidades">Poner en 0</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="LimpiarCantidades">Poner en 0</button>
                                 }
                             </div>
                         }
@@ -214,7 +214,7 @@ else
                 <BotonCondicionado Texto="Registrar nota de crédito" TextoOcupado="Registrando..." Bloque="true" Clase="btn-primary w-100"
                                    Ocupado="@guardando" AlHacerClic="Guardar"
                                    Motivo="@(Pendientes.All(p => p.Listo) ? null : "Complete lo marcado con • para registrar.")" />
-                <a class="btn btn-link w-100 mt-1" href="/notas-credito">Cancelar</a>
+                <a class="btn btn-outline-secondary w-100 mt-1" href="/notas-credito">Cancelar</a>
             </div>
         </div>
     </div>
