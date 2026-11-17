@@ -20,8 +20,6 @@ import pe.edu.pucp.sigmeta.model.socio.Proveedor;
 import pe.edu.pucp.sigmeta.ws.base.VentanillaBase;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 
 // RF004: gestion de proveedores. Solo el Administrador puede usar este servicio.
 //
@@ -49,37 +47,7 @@ public class ProveedorRS extends VentanillaBase {
                            @QueryParam("ruc") String ruc,
                            @QueryParam("razonSocial") String razonSocial,
                            @QueryParam("estado") Boolean estado) {
-        return ejecutar(ticket, id -> {
-            usuarioBO.obtenerAdministradorActivo(id);
-
-            List<Proveedor> resultado;
-            if (ruc != null && !ruc.isBlank()) {
-                Proveedor encontrado = proveedorBO.buscarPorRuc(ruc.trim());
-                resultado = new ArrayList<>();
-                if (encontrado != null) {
-                    resultado.add(encontrado);
-                }
-            } else if (razonSocial != null && !razonSocial.isBlank()) {
-                resultado = proveedorBO.buscarPorRazonSocial(razonSocial.trim());
-            } else if (estado != null) {
-                return proveedorBO.listarPorEstado(estado);
-            } else {
-                // listarTodos() solo trae activos; "Todos" debe incluir inactivos.
-                resultado = new ArrayList<>(proveedorBO.listarPorEstado(true));
-                resultado.addAll(proveedorBO.listarPorEstado(false));
-            }
-
-            // Permite combinar RUC, razon social y estado desde los filtros de Blazor.
-            if (ruc != null && !ruc.isBlank() && razonSocial != null && !razonSocial.isBlank()) {
-                String texto = razonSocial.trim().toLowerCase(Locale.ROOT);
-                resultado.removeIf(p -> p.getRazonSocial() == null
-                        || !p.getRazonSocial().toLowerCase(Locale.ROOT).contains(texto));
-            }
-            if (estado != null) {
-                resultado.removeIf(p -> p.isEstado() != estado);
-            }
-            return resultado;
-        });
+        return ejecutar(ticket, id -> proveedorBO.buscar(ruc, razonSocial, estado, id));
     }
 
     @GET
