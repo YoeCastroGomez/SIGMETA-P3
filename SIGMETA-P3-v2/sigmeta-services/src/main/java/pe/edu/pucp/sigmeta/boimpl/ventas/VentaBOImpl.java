@@ -79,6 +79,15 @@ public class VentaBOImpl implements VentaBO {
         this.compensacionCaja = new CompensacionCaja();
     }
 
+    @Override
+    public String proponerNumero(int idResponsable) throws SQLException {
+        usuarioBO.verificarRol(idResponsable, TipoRol.VENDEDOR, TipoRol.ADMINISTRADOR);
+        return Transaccion.consultar(() -> {
+            int anio = LocalDate.now().getYear();
+            return "VTA-" + anio + "-" + String.format("%04d", ventaDAO.proximoCorrelativo(anio));
+        });
+    }
+
     // RF008: Registro de venta (directa o desde orden de compra)
     @Override
     public Venta registrar(Venta venta, int idResponsable) throws SQLException {
