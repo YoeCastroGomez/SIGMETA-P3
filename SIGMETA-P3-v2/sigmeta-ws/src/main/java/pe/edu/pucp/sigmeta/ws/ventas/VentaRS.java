@@ -78,6 +78,12 @@ public class VentaRS extends VentanillaBase {
     }
 
     @GET
+    @Path("siguiente-numero")
+    public Response siguienteNumero(@HeaderParam("ticket") String ticket) {
+        return ejecutar(ticket, id -> Map.of("numero", ventaBO.proponerNumero(id)));
+    }
+
+    @GET
     @Path("{id}")
     public Response obtener(@HeaderParam("ticket") String ticket, @PathParam("id") int idVenta) {
         Response respuesta = ejecutar(ticket, id -> {
