@@ -12,7 +12,10 @@
    Editar: GET /api/ordenes/{Id} y PUT /api/ordenes/{Id} (número del cliente y observaciones, solo PENDIENTE).
    Desde la lista de cotizaciones se llega con ?cotizacion=ID (botón "Generar orden"). *@
 <Encabezado Rf="RF007" Titulo="@Titulo" Subtitulo="@Subtitulo">
-    <a class="btn btn-outline-secondary" href="@VolverA">← Volver a órdenes</a>
+    @if (!EsNuevo && !EditablePendiente)
+    {
+        <a class="btn btn-outline-secondary" href="@VolverA">← Volver a órdenes</a>
+    }
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
