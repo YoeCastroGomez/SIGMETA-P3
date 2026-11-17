@@ -15,7 +15,10 @@
    El subtotal, el IGV y el total los calcula el BO al guardar; aquí se muestran como referencia mientras se edita.
    Los mensajes del BO (cliente desactivado, precio bajo el costo, cotización sin líneas...) salen en el aviso rojo. *@
 <Encabezado Rf="RF007" Titulo="@Titulo" Subtitulo="@Subtitulo">
+    @if (cotizacion is not null && !Editable)
+    {
     <a class="btn btn-outline-secondary" href="@VolverA">← Volver a cotizaciones</a>
+    }
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
