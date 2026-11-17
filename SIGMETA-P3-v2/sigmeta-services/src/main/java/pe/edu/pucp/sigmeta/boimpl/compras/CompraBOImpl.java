@@ -22,6 +22,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Locale;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -52,6 +53,7 @@ public class CompraBOImpl implements CompraBO {
 
         return Transaccion.ejecutar(() -> {
             verificarProveedorActivo(compra.getProveedor().getId());
+            compra.setNumero(siguienteNumero(compra.getFechaEmision()));
             validarNumeroUnico(compra.getNumero(), 0);
             compraDAO.save(compra);
             for (DetalleCompra detalle : compra.getDetalles()) {
@@ -83,7 +85,7 @@ public class CompraBOImpl implements CompraBO {
             if (existente.getProveedor().getId() != compra.getProveedor().getId()) {
                 verificarProveedorActivo(compra.getProveedor().getId());
             }
-            validarNumeroUnico(compra.getNumero(), compra.getId());
+            compra.setNumero(existente.getNumero());
             // Si se envian detalles, reemplazamos las lineas de una compra aun no recibida.
             // Si no se envian, conservamos las lineas existentes (edicion solo de cabecera).
             List<DetalleCompra> anteriores = detalleCompraDAO.listarPorCompra(compra.getId());
@@ -198,10 +200,29 @@ public class CompraBOImpl implements CompraBO {
         });
     }
 
-    // RF011: el numero documental es ingresado por el Administrador, pero debe ser unico
-    // en el historial completo, incluso en compras anuladas. El ID interno es independiente.
-    // Se consulta bajo la misma transaccion de escritura que guarda o actualiza la compra,
-    // protegida por sp_transaccion_bloquear contra registros simultaneos del sistema.
+    private String siguienteNumero(LocalDate fechaEmision) throws SQLException {
+        String prefijo = "OC-" + fechaEmision.getYear() + "-";
+        long mayor = 0;
+        for (Compra anterior : compraDAO.listAll()) {
+            String numero = anterior.getNumero();
+            if (numero == null || !numero.regionMatches(true, 0, prefijo, 0, prefijo.length())) {
+                continue;
+            }
+            String correlativo = numero.substring(prefijo.length());
+            if (correlativo.matches("[0-9]+")) {
+                try {
+                    mayor = Math.max(mayor, Long.parseLong(correlativo));
+                } catch (NumberFormatException e) {
+                    throw new IllegalStateException("El correlativo de compras excede el límite permitido");
+                }
+            }
+        }
+        if (mayor == Long.MAX_VALUE) {
+            throw new IllegalStateException("No se pueden generar más correlativos para ese año");
+        }
+        return prefijo + String.format(Locale.ROOT, "%04d", mayor + 1);
+    }
+
     private void validarNumeroUnico(String numero, int idCompraActual) throws SQLException {
         boolean repetido = compraDAO.listAll().stream()
                 .anyMatch(c -> c.getId() != idCompraActual
@@ -224,8 +245,10 @@ public class CompraBOImpl implements CompraBO {
             throw new IllegalArgumentException("El proveedor y el usuario deben tener un ID válido");
         }
 
-        compra.setNumero(TextoNormalizado.nombre(
-                Validador.textoObligatorio(compra.getNumero(), "número", 50)));
+        if (compra.getNumero() != null && !compra.getNumero().isBlank()) {
+            compra.setNumero(TextoNormalizado.nombre(
+                    Validador.textoObligatorio(compra.getNumero(), "número", 50)));
+        }
         compra.setObservaciones(TextoNormalizado.opcional(
                 Validador.textoOpcional(compra.getObservaciones(), "observaciones", 255)));
 
