@@ -116,11 +116,14 @@ public class ProveedorBOImpl implements ProveedorBO {
         proveedor.setRazonSocial(TextoNormalizado.nombre(
                 Validador.textoObligatorio(proveedor.getRazonSocial(), "razón social", 150)));
         Validador.obligatorio(proveedor.getContacto(), "datos de contacto");
-        proveedor.getContacto().setDireccion(Validador.textoOpcional(proveedor.getContacto().getDireccion(), "dirección", 200));
+        proveedor.getContacto().setDireccion(TextoNormalizado.opcional(
+                Validador.textoOpcional(proveedor.getContacto().getDireccion(), "dirección", 200)));
         proveedor.getContacto().setTelefono(Validador.telefono(proveedor.getContacto().getTelefono()));
         proveedor.getContacto().setCorreo(Validador.correo(proveedor.getContacto().getCorreo()));
-        proveedor.setRubro(Validador.textoOpcional(proveedor.getRubro(), "rubro", 100));
-        proveedor.getContacto().setNombreContacto(Validador.textoOpcional(proveedor.getContacto().getNombreContacto(), "contacto", 100));
+        proveedor.setRubro(TextoNormalizado.opcional(
+                Validador.textoOpcional(proveedor.getRubro(), "rubro", 100)));
+        proveedor.getContacto().setNombreContacto(TextoNormalizado.opcional(
+                Validador.textoOpcional(proveedor.getContacto().getNombreContacto(), "contacto", 100)));
         Validador.obligatorio(proveedor.getCondicionPago(), "condición de pago");
         if(proveedor.getPlazoEntregaDias() < 0){
             throw new IllegalArgumentException("El plazo de entrega no puede ser negativo");
