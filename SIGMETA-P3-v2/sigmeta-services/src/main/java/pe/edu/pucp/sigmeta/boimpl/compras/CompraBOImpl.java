@@ -249,6 +249,11 @@ public class CompraBOImpl implements CompraBO {
         Validador.obligatorio(compra.getUsuarioRegistro(), "usuario de registro");
         Validador.obligatorio(compra.getFechaEmision(), "fecha de emisión");
         Validador.obligatorio(compra.getEstado(), "estado");
+        if (compra.getFechaRecepcionEstimada() != null
+                && compra.getFechaRecepcionEstimada().isBefore(compra.getFechaEmision())) {
+            throw new IllegalArgumentException(
+                    "La recepción estimada no puede ser anterior a la emisión");
+        }
 
         if (compra.getProveedor().getId() <= 0 || compra.getUsuarioRegistro().getId() <= 0) {
             throw new IllegalArgumentException("El proveedor y el usuario deben tener un ID válido");
