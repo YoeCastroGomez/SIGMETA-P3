@@ -21,7 +21,10 @@
    Stock disponible, línea de crédito, límite, plazo, correlativo, totales y la cuenta por cobrar los valida el BO;
    sus mensajes salen en el aviso rojo. *@
 <Encabezado Rf="RF008" Titulo="@Titulo" Subtitulo="@Subtitulo">
+    @if (venta is not null && !Editable)
+    {
     <a class="btn btn-outline-secondary" href="@VolverA">← Volver</a>
+    }
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
