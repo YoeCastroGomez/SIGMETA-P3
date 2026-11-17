@@ -1,0 +1,53 @@
+@* PATRÓN UX · Botón que se BLOQUEA cuando no se cumple una condición y dice POR QUÉ, en lugar de dejar
+   hacer clic para recibir un error del Java. La regla sigue validándose en el BO; esto solo la anticipa.
+   Uso:
+       <BotonCondicionado Texto="Anular comprobante" Clase="btn-outline-danger btn-sm"
+                          Motivo="@(despachada ? "Ya salió mercadería: use una nota de crédito." : null)"
+                          AlHacerClic="PedirAnulacion" />
+   Motivo = null  -> botón habilitado.   Motivo = texto -> deshabilitado y el texto se ve debajo (o como
+   ayuda al pasar el mouse si MostrarMotivo = false, útil dentro de tablas).
+   Con Ruta en vez de AlHacerClic se dibuja un enlace (cuando está habilitado). *@
+<span class="condicionado @(Bloque ? "d-flex" : "d-inline-flex") flex-column @ClaseContenedor" title="@Motivo">
+    @if (!string.IsNullOrEmpty(Ruta) && Motivo is null)
+    {
+        <a class="btn @Clase" href="@Ruta">@(ChildContent)@(Texto)</a>
+    }
+    else
+    {
+        <button type="button" class="btn @Clase" disabled="@(Motivo is not null || Ocupado)"
+                aria-describedby="@(Motivo is not null && MostrarMotivo ? idMotivo : null)" @onclick="Clic">
+            @(ChildContent)@(Ocupado && !string.IsNullOrEmpty(TextoOcupado) ? TextoOcupado : Texto)
+        </button>
+    }
+    @if (Motivo is not null && MostrarMotivo)
+    {
+        <span id="@idMotivo" class="motivo">
+            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M8 1a3 3 0 0 0-3 3v2H4a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1V4a3 3 0 0 0-3-3Zm-1.5 5V4a1.5 1.5 0 0 1 3 0v2h-3Z"/></svg>
+            @Motivo
+        </span>
+    }
+</span>
+
+@code {
+    [Parameter] public string Texto { get; set; } = "";
+    [Parameter] public string Clase { get; set; } = "btn-primary";
+    [Parameter] public string? Motivo { get; set; }
+    [Parameter] public bool MostrarMotivo { get; set; } = true;
+    [Parameter] public bool Ocupado { get; set; }
+    [Parameter] public string? TextoOcupado { get; set; }
+    [Parameter] public string? Ruta { get; set; }
+    [Parameter] public bool Bloque { get; set; }
+    [Parameter] public string? ClaseContenedor { get; set; }
+    [Parameter] public EventCallback AlHacerClic { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }   // por ejemplo un ícono antes del texto
+
+    private readonly string idMotivo = "motivo-" + Guid.NewGuid().ToString("N")[..8];
+
+    private async Task Clic()
+    {
+        if (Motivo is null && !Ocupado)
+        {
+            await AlHacerClic.InvokeAsync();
+        }
+    }
+}

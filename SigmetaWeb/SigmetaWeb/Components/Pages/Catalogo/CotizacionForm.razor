@@ -7,13 +7,15 @@
 
 <PageTitle>@Titulo · SIGMETA</PageTitle>
 
-@* RF007 · Formulario de cotización: cabecera y líneas (Vendedor).
-   Nueva: POST /api/cotizaciones. Editar: GET /api/cotizaciones/{Id} para cargarla y PUT /api/cotizaciones/{Id}.
+@* RF007 · Formulario de cotización (Vendedor) y su consulta (Administrador y cotizaciones cerradas).
+   PATRÓN UX de formularios (ver Shared/ComponentesFlujo.cs): recorrido del documento arriba, secciones numeradas,
+   resumen fijo con totales + lista de lo que falta + Guardar bloqueado hasta completar, y el siguiente paso.
+   Nueva: POST /api/cotizaciones. Editar: GET /api/cotizaciones/{Id} y PUT /api/cotizaciones/{Id} (solo REGISTRADA).
    Los productos se agregan con el BuscadorProducto de RF005 (código exacto, lector de barras o parte del nombre).
    El subtotal, el IGV y el total los calcula el BO al guardar; aquí se muestran como referencia mientras se edita.
-   Los mensajes del BO (cliente desactivado, vigencia anterior a la emisión, cotización sin líneas...) salen en el aviso rojo. *@
-<Encabezado Rf="RF007" Titulo="@Titulo">
-    <a class="btn btn-outline-secondary" href="/cotizaciones">Volver a la lista</a>
+   Los mensajes del BO (cliente desactivado, precio bajo el costo, cotización sin líneas...) salen en el aviso rojo. *@
+<Encabezado Rf="RF007" Titulo="@Titulo" Subtitulo="@Subtitulo">
+    <a class="btn btn-outline-secondary" href="@VolverA">← Volver a cotizaciones</a>
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
@@ -24,9 +26,13 @@
 }
 else
 {
+    @if (!EsNuevo)
+    {
+        <PasosDocumento Pasos="@FlujoVentas.PasosCotizacion(cotizacion, ordenGenerada)" Titulo="Recorrido de la cotización" />
+    }
     @if (cotizacion.Anulado)
     {
-        @* RF007: la anulación es lógica; se muestra quién y por qué ya no vale *@
+        @* RF007: la anulación es lógica; se muestra cuándo y por qué ya no vale *@
         <div class="alert alert-secondary">
             Cotización <strong>anulada</strong> el @TextosVentas.FechaHora(cotizacion.FechaAnulacion).
             <div class="small mt-1"><strong>Motivo:</strong> @cotizacion.MotivoAnulacion</div>
@@ -35,170 +41,198 @@ else
     else if (!Editable)
     {
         <div class="alert alert-secondary">
-            @if (!EsVendedor)
-            {
-                <span>Solo consulta: las cotizaciones las registra y modifica el Vendedor.</span>
-            }
-            else
-            {
-                <span>Esta cotización está <strong>@TextosVentas.Texto(cotizacion.Estado)</strong>: solo se modifica una cotización registrada.</span>
-            }
+            <strong>Solo consulta.</strong>
+            @(!EsVendedor ? "Las cotizaciones las registra y modifica el Vendedor." : $"Está {TextosVentas.Texto(cotizacion.Estado).ToLowerInvariant()}: solo se modifica una cotización registrada.")
         </div>
     }
 
-    <div class="card card-body mb-3">
-        <h2 class="h6 fw-semibold mb-3">Cabecera</h2>
-        <div class="row">
-                        <div class="col-md-4">
-                @* Estándar RNF004: cada error sale en rojo debajo de su cuadro mientras se escribe (ValidacionEnVivo);
-                   los del BO (cliente desactivado...) en el aviso rojo de arriba. *@
-                <Campo Etiqueta="Número" Id="numero">
-                    <input id="numero" class="form-control sigmeta-correlativo" value="@cotizacion.Numero" disabled />
-                </Campo>
-            </div>
-            <div class="col-md-4 mb-3">
-                @* Solo lectura: toda cotización nueva empieza REGISTRADA y solo cambia con los botones de la lista. *@
-                <div class="small text-muted text-uppercase">Estado</div>
-                <div class="fw-semibold mt-1"><Estado Texto="@TextosVentas.Texto(cotizacion.Estado ?? "REGISTRADA")" /></div>
-            </div>
-            @if (!EsNuevo)
-            {
-                <div class="col-md-4 mb-3">
-                    <div class="small text-muted text-uppercase">Registrada por</div>
-                    <div class="fw-semibold mt-1">@cotizacion.UsuarioRegistro <span class="small text-muted">@TextosVentas.FechaHora(cotizacion.FechaRegistro)</span></div>
+    <div class="row g-3">
+        <div class="col-lg-8">
+            @* -------- 1. Cliente y vigencia -------- *@
+            <div class="card card-body mb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-3">
+                    <h2 class="h6 fw-semibold mb-0"><span class="seccion">1</span> Cliente y vigencia</h2>
+                    <span class="small text-muted">
+                        @(EsNuevo ? "Se registrará como" : "Cotización") <strong class="text-body">@(string.IsNullOrEmpty(cotizacion.Numero) ? "…" : cotizacion.Numero)</strong>
+                    </span>
                 </div>
-            }
-            <div class="col-12"></div>
-            <div class="col-md-6">
-                <Campo Etiqueta="Cliente" Id="cliente" Obligatorio="true" Ayuda="Solo clientes activos." Error="@(v.Error("cliente", Errores()))">
-                    <select id="cliente" class="@(v.Clase("cliente", Errores(), "form-select"))"
-                            @bind="cotizacion.IdCliente" @bind:after="@(() => v.Tocado("cliente"))" disabled="@(!Editable)">
-                        <option value="0">Seleccione…</option>
-                        @foreach (var c in clientes)
-                        {
-                            <option value="@c.Id">@c.NombreMostrado · @Cliente.Texto(c.TipoDocumento) @c.NumeroDocumento</option>
-                        }
-                    </select>
-                </Campo>
+                <div class="row">
+                    <div class="col-md-12">
+                        <Campo Etiqueta="Cliente" Id="cliente" Obligatorio="true" Ayuda="Solo clientes activos." Error="@(v.Error("cliente", Errores()))">
+                            <select id="cliente" class="@(v.Clase("cliente", Errores(), "form-select"))"
+                                    @bind="cotizacion.IdCliente" @bind:after="@(() => v.Tocado("cliente"))" disabled="@(!Editable)">
+                                <option value="0">Seleccione…</option>
+                                @foreach (var c in clientes)
+                                {
+                                    <option value="@c.Id">@c.NombreMostrado · @Cliente.Texto(c.TipoDocumento) @c.NumeroDocumento</option>
+                                }
+                            </select>
+                        </Campo>
+                    </div>
+                    <div class="col-md-5">
+                        <Campo Etiqueta="Fecha de emisión" Id="fechaEmision" Obligatorio="true" Error="@(v.Error("fechaEmision", Errores()))">
+                            <input id="fechaEmision" type="date" class="@(v.Clase("fechaEmision", Errores()))"
+                                   min="@(EsNuevo ? Hoy.ToString("yyyy-MM-dd") : null)"
+                                   @bind="cotizacion.FechaEmision" @bind:format="yyyy-MM-dd" @bind:after="AlCambiarFecha" disabled="@(!Editable)" />
+                        </Campo>
+                    </div>
+                    <div class="col-md-7">
+                        <Campo Etiqueta="Vigente hasta" Id="fechaVigencia" Obligatorio="true"
+                               Ayuda="@AyudaVigencia" Error="@(v.Error("fechaVigencia", Errores(), "fechaEmision"))">
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <input id="fechaVigencia" type="date" class="@(v.Clase("fechaVigencia", Errores(), "form-control", "fechaEmision"))" style="max-width: 11rem;"
+                                       min="@(cotizacion.FechaEmision?.ToString("yyyy-MM-dd"))"
+                                       @bind="cotizacion.FechaVigencia" @bind:format="yyyy-MM-dd" @bind:after="@(() => v.Tocado("fechaVigencia"))" disabled="@(!Editable)" />
+                                @if (Editable)
+                                {
+                                    @foreach (var d in new[] { 7, 15, 30 })
+                                    {
+                                        <button type="button" class="btn btn-sm @(DiasDeVigencia == d ? "btn-dark" : "btn-outline-secondary")"
+                                                @onclick="() => FijarVigencia(d)">@d días</button>
+                                    }
+                                }
+                            </div>
+                        </Campo>
+                    </div>
+                    <div class="col-12">
+                        <Campo Etiqueta="Observaciones" Id="observaciones" Clase="mb-0">
+                            <input id="observaciones" class="form-control" maxlength="255" placeholder="Ejemplo: entrega en obra, precios sujetos a stock"
+                                   @bind="cotizacion.Observaciones" disabled="@(!Editable)" />
+                        </Campo>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-3">
-                <Campo Etiqueta="Fecha de emisión" Id="fechaEmision" Obligatorio="true" Error="@(v.Error("fechaEmision", Errores()))">
-                    <input id="fechaEmision" type="date" class="@(v.Clase("fechaEmision", Errores()))"
-                           @bind="cotizacion.FechaEmision" @bind:format="yyyy-MM-dd" @bind:after="AlCambiarFecha" disabled="@(!Editable)" />
-                </Campo>
-            </div>
-            <div class="col-md-3">
-                <Campo Etiqueta="Vigencia hasta" Id="fechaVigencia" Obligatorio="true" Ayuda="No antes de la emisión."
-                       Error="@(v.Error("fechaVigencia", Errores(), "fechaEmision"))">
-                    <input id="fechaVigencia" type="date" class="@(v.Clase("fechaVigencia", Errores(), "form-control", "fechaEmision"))"
-                           @bind="cotizacion.FechaVigencia" @bind:format="yyyy-MM-dd" @bind:after="@(() => v.Tocado("fechaVigencia"))" disabled="@(!Editable)" />
-                </Campo>
-            </div>
-            <div class="col-12">
-                <Campo Etiqueta="Observaciones" Id="observaciones">
-                    <input id="observaciones" class="form-control" maxlength="255"
-                           @bind="cotizacion.Observaciones" disabled="@(!Editable)" />
-                </Campo>
-            </div>
-        </div>
-    </div>
 
-    <div class="card mb-3">
-        <div class="card-body pb-0">
-            <h2 class="h6 fw-semibold mb-3">Líneas</h2>
-            @if (Editable)
-            {
-                @* RF005: buscador compartido de Claudia. Con código exacto (o lector) el producto se agrega solo. *@
-                <BuscadorProducto Etiqueta="Agregar producto" Id="buscadorCotizacion" AlElegir="AgregarProducto" />
-            }
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width: 3rem;">#</th>
-                        <th>Producto</th>
-                        <th style="width: 8rem;">Cantidad</th>
-                        <th style="width: 9rem;">Precio unit. (S/)</th>
-                        <th style="width: 9rem;">Descuento (S/)</th>
-                        <th class="text-end">Importe (S/)</th>
-                        @if (Editable) { <th></th> }
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (cotizacion.Lineas.Count == 0)
-                    {
-                        <tr><td colspan="7" class="text-center text-muted py-4">Agregue al menos un producto con el buscador.</td></tr>
-                    }
-                    @for (var i = 0; i < cotizacion.Lineas.Count; i++)
-                    {
-                        var l = cotizacion.Lineas[i];
-                        var n = v.Clave(l);
-                        <tr @key="l">
-                            <td>@(i + 1)</td>
-                            <td><span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto</td>
-                            @if (Editable)
-                            {
-                                <td>
-                                    <input type="number" step="0.001" class="@(v.Clase(n + "cantidad", Errores(), "form-control form-control-sm text-end"))" aria-label="Cantidad"
-                                           onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.Cantidad" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "cantidad"))" />
-                                    <ErrorCampo Mensaje="@(v.Error(n + "cantidad", Errores()))" />
-                                </td>
-                                <td>
-                                    <input type="number" step="0.01" class="@(v.Clase(n + "precio", Errores(), "form-control form-control-sm text-end"))" aria-label="Precio unitario"
-                                           onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.PrecioUnitario" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "precio"))" />
-                                    <ErrorCampo Mensaje="@(v.Error(n + "precio", Errores()))" />
-                                </td>
-                                <td>
-                                    <input type="number" step="0.01" class="@(v.Clase(n + "descuento", Errores(), "form-control form-control-sm text-end", n + "cantidad", n + "precio"))" aria-label="Descuento"
-                                           onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.Descuento" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "descuento"))" />
-                                    <ErrorCampo Mensaje="@(v.Error(n + "descuento", Errores(), n + "cantidad", n + "precio"))" />
-                                </td>
-                                <td class="text-end fw-semibold">@l.ImporteCalculado.ToString("N2")</td>
-                                <td class="text-end"><button class="btn btn-sm btn-outline-danger" @onclick="() => Quitar(l)">Quitar</button></td>
-                            }
-                            else
-                            {
-                                <td class="text-end">@l.Cantidad.ToString("0.###")</td>
-                                <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
-                                <td class="text-end">@l.Descuento.ToString("N2")</td>
-                                <td class="text-end fw-semibold">@l.Importe.ToString("N2")</td>
-                            }
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-        <div class="card-body">
-            @if (v.Error("lineas", Errores()) is { } errorLineas)
-            {
-                <div class="small text-danger mb-2">@errorLineas</div>
-            }
-            <div class="row justify-content-end">
-                <div class="col-sm-6 col-md-4">
-                    <div class="d-flex justify-content-between"><span class="text-muted">Subtotal</span><span>S/ @SubTotal.ToString("N2")</span></div>
-                    <div class="d-flex justify-content-between"><span class="text-muted">IGV (18%)</span><span>S/ @Igv.ToString("N2")</span></div>
-                    <div class="d-flex justify-content-between border-top mt-2 pt-2 fw-semibold"><span>Total</span><span>S/ @Total.ToString("N2")</span></div>
+            @* -------- 2. Productos -------- *@
+            <div class="card mb-3">
+                <div class="card-body pb-0">
+                    <h2 class="h6 fw-semibold mb-1"><span class="seccion">2</span> Productos</h2>
                     @if (Editable)
                     {
-                        <div class="form-text text-end">Referencial: el sistema calcula los importes al guardar.</div>
+                        <p class="small text-muted mb-2">Escanee o escriba el código y presione Enter. Si el producto ya está, se suma 1 a su cantidad.</p>
+                        @* RF005: buscador compartido de Claudia. Con código exacto (o lector) el producto se agrega solo. *@
+                        <BuscadorProducto Etiqueta="Agregar producto" Id="buscadorCotizacion" AlElegir="AgregarProducto" />
                     }
                 </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 3rem;">#</th>
+                                <th>Producto</th>
+                                <th style="width: 8rem;">Cantidad</th>
+                                <th style="width: 9rem;">Precio unit. (S/)</th>
+                                <th style="width: 9rem;">Descuento (S/)</th>
+                                <th class="text-end">Importe (S/)</th>
+                                @if (Editable) { <th></th> }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (cotizacion.Lineas.Count == 0)
+                            {
+                                <tr><td colspan="7" class="text-center text-muted py-4">Agregue al menos un producto con el buscador.</td></tr>
+                            }
+                            @for (var i = 0; i < cotizacion.Lineas.Count; i++)
+                            {
+                                var l = cotizacion.Lineas[i];
+                                var n = v.Clave(l);
+                                var hayStock = stock.TryGetValue(l.IdProducto, out var enAlmacen);
+                                <tr @key="l">
+                                    <td>@(i + 1)</td>
+                                    <td>
+                                        <span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto
+                                        @if (hayStock && Editable)
+                                        {
+                                            <div class="small @(l.Cantidad > enAlmacen ? "text-warning-emphasis fw-semibold" : "text-muted")">
+                                                En almacén: @enAlmacen.ToString("0.###")@(l.Cantidad > enAlmacen ? " · habrá que reponer para venderlo todo" : "")
+                                            </div>
+                                        }
+                                    </td>
+                                    @if (Editable)
+                                    {
+                                        <td>
+                                            <input type="number" step="0.001" class="@(v.Clase(n + "cantidad", Errores(), "form-control form-control-sm text-end"))" aria-label="Cantidad"
+                                                   onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.Cantidad" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "cantidad"))" />
+                                            <ErrorCampo Mensaje="@(v.Error(n + "cantidad", Errores()))" />
+                                        </td>
+                                        <td>
+                                            <input type="number" step="0.01" class="@(v.Clase(n + "precio", Errores(), "form-control form-control-sm text-end"))" aria-label="Precio unitario"
+                                                   onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.PrecioUnitario" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "precio"))" />
+                                            <ErrorCampo Mensaje="@(v.Error(n + "precio", Errores()))" />
+                                        </td>
+                                        <td>
+                                            <input type="number" step="0.01" class="@(v.Clase(n + "descuento", Errores(), "form-control form-control-sm text-end", n + "cantidad", n + "precio"))" aria-label="Descuento"
+                                                   onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.Descuento" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "descuento"))" />
+                                            <ErrorCampo Mensaje="@(v.Error(n + "descuento", Errores(), n + "cantidad", n + "precio"))" />
+                                        </td>
+                                        <td class="text-end fw-semibold">@l.ImporteCalculado.ToString("N2")</td>
+                                        <td class="text-end"><button type="button" class="btn btn-sm btn-link link-danger" aria-label="@($"Quitar {l.Producto}")" @onclick="() => Quitar(l)">Quitar</button></td>
+                                    }
+                                    else
+                                    {
+                                        <td class="text-end">@l.Cantidad.ToString("0.###")</td>
+                                        <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
+                                        <td class="text-end">@l.Descuento.ToString("N2")</td>
+                                        <td class="text-end fw-semibold">@l.Importe.ToString("N2")</td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (v.Error("lineas", Errores()) is { } errorLineas)
+                {
+                    <div class="card-body pt-2"><div class="small text-danger">@errorLineas</div></div>
+                }
             </div>
         </div>
-    </div>
 
-    @* Enviar, Aceptar, Rechazar y Anular están en la lista. *@
-    <div class="card card-body mb-3">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-            <div class="d-flex flex-wrap gap-2">
-                <a class="btn btn-outline-secondary" href="/cotizaciones">Cancelar</a>
+        @* -------- Resumen fijo -------- *@
+        <div class="col-lg-4">
+            <div class="card card-body resumen">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="small text-muted text-uppercase">Total</div>
+                    <Estado Texto="@TextosVentas.Texto(cotizacion.Anulado ? "ANULADA" : cotizacion.Estado ?? "REGISTRADA")" />
+                </div>
+                <div class="display-6 fw-bold">S/ @Total.ToString("N2")</div>
+                <div class="d-flex justify-content-between small text-muted mt-1"><span>Subtotal</span><span>S/ @SubTotal.ToString("N2")</span></div>
+                <div class="d-flex justify-content-between small text-muted"><span>IGV (18 %)</span><span>S/ @Igv.ToString("N2")</span></div>
+                @if (!EsNuevo)
+                {
+                    <div class="small text-muted mt-2">Registrada por @cotizacion.UsuarioRegistro · @TextosVentas.FechaHora(cotizacion.FechaRegistro)</div>
+                }
+
                 @if (Editable)
                 {
-                    <button class="btn btn-primary" disabled="@guardando" @onclick="Guardar">
-                        @(guardando ? "Guardando..." : "Guardar")
-                    </button>
+                    <div class="form-text">Referencial: el sistema recalcula los importes al guardar.</div>
+                    <ul class="lista-pendientes list-unstyled small my-3" aria-label="Lo que falta para guardar">
+                        @foreach (var item in Pendientes)
+                        {
+                            <li class="@(item.Listo ? "listo" : "falta")">
+                                <span class="marca" aria-hidden="true">@(item.Listo ? "✓" : "•")</span>
+                                <span>@item.Texto</span>
+                            </li>
+                        }
+                    </ul>
+                    <BotonCondicionado Texto="@(EsNuevo ? "Registrar cotización" : "Guardar cambios")" TextoOcupado="Guardando..." Bloque="true"
+                                       Clase="btn-primary w-100" Ocupado="@guardando" AlHacerClic="Guardar"
+                                       Motivo="@(Pendientes.All(p => p.Listo) ? null : "Complete lo marcado con • para guardar.")" />
+                    <a class="btn btn-link w-100 mt-1" href="@VolverA">Cancelar</a>
+                    <div class="small text-muted">Después de guardar, envíela al cliente desde la lista.</div>
+                }
+                else if (EsVendedor && cotizacion.Estado == "ACEPTADA" && !cotizacion.Anulado)
+                {
+                    <div class="mt-3">
+                        @if (ordenGenerada is not null)
+                        {
+                            <a class="btn btn-outline-secondary w-100" href="@($"/ordenes/editar/{ordenGenerada.Id}")">Ver la orden @ordenGenerada.Numero</a>
+                        }
+                        else
+                        {
+                            <a class="btn btn-primary w-100" href="@($"/ordenes/nueva?cotizacion={cotizacion.Id}")">Generar orden del cliente</a>
+                            <div class="small text-muted mt-1">Siguiente paso: registrar la orden de compra que envió el cliente.</div>
+                        }
+                    </div>
                 }
             </div>
         </div>
@@ -208,21 +242,45 @@ else
 @code {
     [Parameter] public int? Id { get; set; }
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
+    [SupplyParameterFromQuery(Name = "volver")] public string? VolverQ { get; set; }
     private bool EsVendedor => Rol == "Vendedor";
 
     private CotizacionDatos? cotizacion;
+    private OrdenDatos? ordenGenerada;
     private List<Cliente> clientes = new();
     private string? error;
     private bool guardando;
+    // stock en almacén de los productos agregados (solo informativo: cotizar no reserva stock)
+    private readonly Dictionary<int, decimal> stock = new();
+
+    private sealed record Pendiente(string Texto, bool Listo);
 
     private bool EsNuevo => Id is null;
-    private string Titulo => EsNuevo ? "Nueva cotización" : Editable ? "Editar cotización" : "Cotización";
+    private string Titulo => EsNuevo ? "Nueva cotización" : Editable ? $"Editar cotización {cotizacion?.Numero}" : $"Cotización {cotizacion?.Numero}";
+    private string? Subtitulo => EsNuevo ? "Complete las dos secciones; a la derecha ve lo que falta." : cotizacion?.Cliente;
+    private string VolverA => Volver.A(VolverQ, "/cotizaciones");
     // RF007: solo el Vendedor modifica, y solo una cotización REGISTRADA (el Administrador la consulta)
-    private bool Editable => EsVendedor && (EsNuevo || cotizacion?.Estado == "REGISTRADA");
+    private bool Editable => EsVendedor && (EsNuevo || (cotizacion?.Estado == "REGISTRADA" && !cotizacion.Anulado));
+    private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.Today);
+
+    private int? DiasDeVigencia => cotizacion?.FechaEmision is DateOnly e && cotizacion.FechaVigencia is DateOnly f
+        ? f.DayNumber - e.DayNumber : null;
+    private string AyudaVigencia => DiasDeVigencia is int d && d >= 0
+        ? $"{d} días desde la emisión. No antes de la emisión ni de hoy."
+        : "No antes de la emisión ni de hoy.";
 
     private sealed class NumeroPropuesto
     {
         public string Numero { get; set; } = "";
+    }
+
+    private void FijarVigencia(int dias)
+    {
+        if (cotizacion?.FechaEmision is DateOnly e)
+        {
+            cotizacion.FechaVigencia = e.AddDays(dias);
+            v.Tocado("fechaVigencia");
+        }
     }
 
     private async Task AlCambiarFecha()
@@ -248,6 +306,21 @@ else
     private decimal Igv => Editable ? TextosVentas.Igv(cotizacion!.Lineas) : cotizacion!.Igv;
     private decimal Total => Editable ? TextosVentas.Total(cotizacion!.Lineas) : cotizacion!.Total;
 
+    private List<Pendiente> Pendientes
+    {
+        get
+        {
+            var e = Errores();
+            return new List<Pendiente>
+            {
+                new("Cliente elegido", !e.ContainsKey("cliente")),
+                new("Fechas de emisión y vigencia válidas", !e.ContainsKey("fechaEmision") && !e.ContainsKey("fechaVigencia")),
+                new("Al menos un producto", !e.ContainsKey("lineas")),
+                new("Cantidades, precios y descuentos válidos", !e.Keys.Any(k => k.StartsWith('l') && k.Contains('.')))
+            };
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -255,8 +328,7 @@ else
             clientes = await Api.Get<List<Cliente>>("clientes?estado=true") ?? new();   // solo clientes activos
             if (EsNuevo)
             {
-                var hoy = DateOnly.FromDateTime(DateTime.Today);
-                cotizacion = new CotizacionDatos { FechaEmision = hoy, FechaVigencia = hoy.AddDays(15), Estado = "REGISTRADA" };
+                cotizacion = new CotizacionDatos { FechaEmision = Hoy, FechaVigencia = Hoy.AddDays(15), Estado = "REGISTRADA" };
                 await ObtenerCorrelativo();
             }
             else
@@ -268,6 +340,12 @@ else
                 {
                     clientes.Add(new Cliente { Id = cotizacion.IdCliente, TipoPersona = "JURIDICA", RazonSocial = cotizacion.Cliente, NumeroDocumento = cotizacion.DocumentoCliente ?? "" });
                 }
+                if (cotizacion?.Estado == "ACEPTADA")
+                {
+                    // para el recorrido: la orden vigente que salió de esta cotización
+                    var ordenes = await Api.Get<List<OrdenDatos>>("ordenes") ?? new();
+                    ordenGenerada = ordenes.FirstOrDefault(o => o.IdCotizacion == cotizacion.Id && o.Estado != "ANULADA" && !o.Anulado);
+                }
             }
         }
         catch (ErrorApi e)
@@ -276,10 +354,17 @@ else
         }
     }
 
-    // Lo llama el BuscadorProducto con el producto elegido: nueva línea con su precio de venta
+    // Lo llama el BuscadorProducto con el producto elegido: nueva línea con su precio de venta (o +1 si ya estaba)
     private void AgregarProducto(Producto p)
     {
-        cotizacion!.Lineas.Add(new LineaDatos
+        stock[p.Id] = p.StockActual;
+        var existente = cotizacion!.Lineas.FirstOrDefault(l => l.IdProducto == p.Id);
+        if (existente is not null)
+        {
+            existente.Cantidad += 1;
+            return;
+        }
+        cotizacion.Lineas.Add(new LineaDatos
         {
             IdProducto = p.Id,
             Producto = p.Nombre,
@@ -308,12 +393,11 @@ else
         {
             e["cliente"] = "Seleccione el cliente.";
         }
-        var hoy = DateOnly.FromDateTime(DateTime.Today);
         if (cotizacion.FechaEmision is null)
         {
             e["fechaEmision"] = "La fecha de emisión es obligatoria.";
         }
-        else if (cotizacion.FechaEmision < hoy && (EsNuevo || cotizacion.FechaEmision != emisionOriginal))
+        else if (cotizacion.FechaEmision < Hoy && (EsNuevo || cotizacion.FechaEmision != emisionOriginal))
         {
             // igual que el BO: no se emite con fecha pasada (al editar se puede conservar la ya registrada)
             e["fechaEmision"] = "La fecha de emisión no puede ser anterior a hoy.";
@@ -326,7 +410,7 @@ else
         {
             e["fechaVigencia"] = "La vigencia no puede ser anterior a la emisión.";
         }
-        else if (cotizacion.FechaVigencia < hoy)
+        else if (cotizacion.FechaVigencia < Hoy)
         {
             e["fechaVigencia"] = "La vigencia no puede ser anterior a hoy.";
         }
@@ -367,13 +451,13 @@ else
             {
                 guardada = await Api.Put<CotizacionDatos>($"cotizaciones/{Id}", cotizacion);    // PUT /api/cotizaciones/{Id}
             }
-            // vuelve a la lista y allí sale el aviso verde (Cotizaciones.razor lee "guardado")
-            Nav.NavigateTo(AvisoGuardado.Ruta("/cotizaciones", EsNuevo ? AvisoGuardado.Nuevo : AvisoGuardado.Editado,
+            // vuelve a la lista (con sus filtros) y allí sale el aviso verde con el siguiente paso
+            Nav.NavigateTo(Volver.ConAviso(VolverA, EsNuevo ? AvisoGuardado.Nuevo : AvisoGuardado.Editado,
                 guardada?.Numero ?? cotizacion.Numero));
         }
         catch (ErrorApi e)
         {
-            error = e.Message;   // mensaje del BO, por ejemplo "La fecha de vigencia no puede ser anterior a la fecha de emision"
+            error = e.Message;   // mensaje del BO, por ejemplo "La línea 1 (...) queda en S/ 8.00 por unidad, por debajo de su costo"
         }
         finally
         {

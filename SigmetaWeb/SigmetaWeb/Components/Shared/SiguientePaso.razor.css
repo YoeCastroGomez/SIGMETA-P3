@@ -1,0 +1,13 @@
+.siguiente { border-left: 4px solid var(--bs-success); }
+.icono {
+    flex: 0 0 1.4rem;
+    height: 1.4rem;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .8rem;
+    font-weight: 700;
+    background: var(--bs-success);
+    color: #fff;
+}

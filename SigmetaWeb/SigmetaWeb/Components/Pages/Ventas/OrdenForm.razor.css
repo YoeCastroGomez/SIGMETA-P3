@@ -1,0 +1,15 @@
+/* Mismo estilo que VentaForm y CotizacionForm (patrón de formularios) */
+.seccion {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-right: .35rem;
+    border-radius: 50%;
+    font-size: .78rem;
+    background: rgba(var(--bs-primary-rgb), .12);
+    color: var(--bs-primary);
+}
+
+.resumen { position: sticky; top: 1rem; }

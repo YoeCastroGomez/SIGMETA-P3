@@ -1,0 +1,63 @@
+/* Recorrido del documento. Usa las variables de Bootstrap: funciona igual en tema claro y oscuro. */
+.pasos ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.paso {
+    flex: 1 1 9.5rem;
+    display: flex;
+    gap: .55rem;
+    align-items: flex-start;
+    padding: .6rem .7rem;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-top: 3px solid var(--bs-border-color);
+    border-radius: .55rem;
+    min-width: 0;
+}
+
+.marca {
+    flex: 0 0 1.65rem;
+    height: 1.65rem;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .8rem;
+    font-weight: 700;
+    background: var(--bs-secondary-bg);
+    color: var(--bs-secondary-color);
+}
+
+.texto {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.25;
+}
+
+.titulo { font-weight: 600; font-size: .86rem; }
+.detalle { font-size: .78rem; color: var(--bs-secondary-color); overflow-wrap: anywhere; }
+a.detalle { color: var(--bs-link-color); }
+.quien { font-size: .74rem; font-weight: 600; margin-top: .2rem; color: var(--bs-secondary-color); }
+
+.hecho { border-top-color: var(--bs-success); }
+.hecho .marca { background: var(--bs-success); color: #fff; }
+
+.actual {
+    border-color: rgba(var(--bs-primary-rgb), .45);
+    border-top-color: var(--bs-primary);
+    box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb), .12);
+}
+.actual .marca { background: var(--bs-primary); color: #fff; }
+.actual .quien { color: var(--bs-primary); }
+
+.omitido { opacity: .55; border-style: dashed; border-top-style: solid; }
+
+.anulado { border-top-color: var(--bs-danger); }
+.anulado .marca { background: var(--bs-danger); color: #fff; }

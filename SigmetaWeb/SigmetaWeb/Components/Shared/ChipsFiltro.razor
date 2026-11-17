@@ -1,0 +1,33 @@
+@* PATRÓN UX · Filtros rápidos por estado con su cantidad ("Enviadas 4 · Aceptadas 2").
+   Un clic filtra; se ve de un vistazo cuánto hay de cada cosa y qué está seleccionado.
+   Uso:
+       <ChipsFiltro Opciones="@opciones" @bind-Seleccionado="situacion" @bind-Seleccionado:after="AlFiltrar" />
+       opciones = new() { new("", "Todas", 12), new("POR_COBRAR", "Por cobrar", 3, "ambar") };
+   El valor "" significa "Todos". *@
+<div class="chips" role="group" aria-label="@Etiqueta">
+    @foreach (var o in Opciones)
+    {
+        var activo = o.Valor == Seleccionado;
+        <button type="button" class="chip @o.Tono @(activo ? "activo" : "")" aria-pressed="@(activo ? "true" : "false")"
+                @onclick="() => Elegir(o.Valor)">
+            <span>@o.Texto</span>
+            @if (o.Cantidad is int cantidad)
+            {
+                <span class="cantidad">@cantidad</span>
+            }
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<OpcionChip> Opciones { get; set; } = Array.Empty<OpcionChip>();
+    [Parameter] public string Seleccionado { get; set; } = "";
+    [Parameter] public EventCallback<string> SeleccionadoChanged { get; set; }
+    [Parameter] public string Etiqueta { get; set; } = "Filtrar por estado";
+
+    private async Task Elegir(string valor)
+    {
+        // un segundo clic sobre el chip activo vuelve a "Todos"
+        await SeleccionadoChanged.InvokeAsync(valor == Seleccionado ? "" : valor);
+    }
+}

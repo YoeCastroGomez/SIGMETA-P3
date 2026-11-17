@@ -1,0 +1,30 @@
+@* PATRÓN UX · Lista sin resultados que dice por qué y ofrece la salida (crear uno o quitar los filtros),
+   en lugar de una tabla vacía.
+   Uso dentro de un <td colspan="..."> o en una tarjeta:
+       <ListaVacia Titulo="No hay cotizaciones enviadas" Detalle="Pruebe con otro estado o cliente."
+                   TextoAccion="Nueva cotización" Ruta="/cotizaciones/nueva" AlQuitarFiltros="Limpiar" /> *@
+<div class="text-center py-4 px-3">
+    <div class="fw-semibold">@Titulo</div>
+    @if (!string.IsNullOrWhiteSpace(Detalle))
+    {
+        <div class="small text-muted mt-1">@Detalle</div>
+    }
+    <div class="d-flex flex-wrap justify-content-center gap-2 mt-2">
+        @if (AlQuitarFiltros.HasDelegate)
+        {
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AlQuitarFiltros">Quitar filtros</button>
+        }
+        @if (!string.IsNullOrWhiteSpace(TextoAccion) && !string.IsNullOrWhiteSpace(Ruta))
+        {
+            <a class="btn btn-sm btn-primary" href="@Ruta">@TextoAccion</a>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Titulo { get; set; } = "No hay registros.";
+    [Parameter] public string? Detalle { get; set; }
+    [Parameter] public string? TextoAccion { get; set; }
+    [Parameter] public string? Ruta { get; set; }
+    [Parameter] public EventCallback AlQuitarFiltros { get; set; }
+}

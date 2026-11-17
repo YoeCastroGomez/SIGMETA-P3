@@ -4,15 +4,14 @@
 <PageTitle>Solicitudes de autorización · SIGMETA</PageTitle>
 
 @* RF014 · Solicitudes de todos los usuarios, vista del Administrador.
+   PATRÓN UX (ver Shared/ComponentesFlujo.cs): chips por estado con su cantidad; si hay pendientes la pantalla
+   abre en "Pendientes" y siempre van primero, porque son lo único que el Administrador tiene que hacer aquí.
    GET /api/solicitudes (?estado=PENDIENTE) · POST /api/solicitudes/{id}/anular para revocar una aprobada. *@
 <Encabezado Rf="RF014" Titulo="Solicitudes de autorización"
             Subtitulo="Operaciones restringidas que piden el Vendedor, el Cajero y el Almacenero. Cada autorización aprobada sirve para una sola operación." />
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<SiguientePaso Mensaje="@exito" Detalle="@exitoDetalle" AlCerrar="() => exito = null" />
 
 <Confirmacion Visible="@(porRevocar is not null)" Titulo="Revocar autorización" TextoConfirmar="Revocar"
               AlConfirmar="ConfirmarRevocar" AlCancelar="() => porRevocar = null">
@@ -44,21 +43,16 @@
 
 <div class="card card-body mb-3">
     <div class="row g-3 align-items-end sigmeta-filtros">
-        <Campo Etiqueta="Mostrar" Id="fMostrar" Clase="col-sm-6 col-md-3">
-            <select id="fMostrar" class="form-select" @bind="filtroEstado" @bind:after="AlFiltrar">
-                <option value="">Todas</option>
-                <option value="PENDIENTE">Pendientes</option>
-                <option value="APROBADA">Aprobadas vigentes</option>
-                <option value="RECHAZADA">Rechazadas</option>
-                <option value="VENCIDA">Vencidas o usadas</option>
-            </select>
-        </Campo>
-        <Campo Etiqueta="Solicitante u operación" Id="fTexto" Clase="col-sm-6 col-md">
-            <input id="fTexto" class="form-control" maxlength="60" @bind="filtroTexto" @bind:event="oninput" @bind:after="AlFiltrar" />
+        <Campo Etiqueta="Solicitante u operación" Id="fTexto" Clase="col-sm-8 col-md">
+            <input id="fTexto" type="search" class="form-control" maxlength="60" placeholder="Ejemplo: mchavez, nota de crédito"
+                   @bind="filtroTexto" @bind:event="oninput" @bind:after="AlFiltrar" />
         </Campo>
         <div class="col-auto">
-            <button class="btn btn-outline-secondary" @onclick="Cargar" disabled="@cargando">Actualizar</button>
+            <button class="btn btn-outline-secondary" @onclick="Cargar" disabled="@cargando">@(cargando ? "Actualizando..." : "Actualizar")</button>
         </div>
+    </div>
+    <div class="mt-3">
+        <ChipsFiltro Opciones="@Chips" Seleccionado="@filtroEstado" SeleccionadoChanged="CambiarEstado" />
     </div>
 </div>
 
@@ -84,7 +78,11 @@ else
                 <tbody>
                     @if (Filtradas.Count == 0)
                     {
-                        <tr><td colspan="6" class="text-center text-muted py-4">No hay solicitudes con ese filtro.</td></tr>
+                        <tr>
+                            <td colspan="6">
+                                <ListaVacia Titulo="@(filtroEstado == "PENDIENTE" ? "No hay solicitudes pendientes: nada por resolver." : "No hay solicitudes con ese filtro.")" />
+                            </td>
+                        </tr>
                     }
                     @foreach (var s in Pagina)
                     {
@@ -131,6 +129,7 @@ else
     private string filtroTexto = "";
     private string? error;
     private string? exito;
+    private string? exitoDetalle;
     private bool cargando;
     private SolicitudDatos? porRevocar;
     private int paginaActual = 1;
@@ -142,12 +141,38 @@ else
     private int Pendientes => solicitudes?.Count(s => s.Estado == "PENDIENTE") ?? 0;
     private int Vigentes => solicitudes?.Count(s => s.Vigente) ?? 0;
 
-    private List<SolicitudDatos> Filtradas => (solicitudes ?? new())
-        .Where(s => filtroEstado == "" || s.Estado == filtroEstado)
-        .Where(s => string.IsNullOrWhiteSpace(filtroTexto)
-                    || (s.Solicitante ?? "").Contains(filtroTexto.Trim(), StringComparison.OrdinalIgnoreCase)
-                    || TextosSeguridad.Texto(s.Operacion).Contains(filtroTexto.Trim(), StringComparison.OrdinalIgnoreCase))
+    private List<SolicitudDatos> PorTexto => (solicitudes ?? new())
+        .Where(s => Busqueda.Coincide(filtroTexto, s.Solicitante, s.NombreSolicitante, TextosSeguridad.Texto(s.Operacion)))
         .ToList();
+
+    // las pendientes primero (son lo que hay que resolver), luego las más recientes
+    private List<SolicitudDatos> Filtradas => PorTexto
+        .Where(s => filtroEstado == "" || s.Estado == filtroEstado)
+        .OrderByDescending(s => s.Estado == "PENDIENTE").ThenByDescending(s => s.FechaSolicitud)
+        .ToList();
+
+    private IReadOnlyList<OpcionChip> Chips
+    {
+        get
+        {
+            var base_ = PorTexto;
+            int Cuantas(string e) => base_.Count(s => s.Estado == e);
+            return new List<OpcionChip>
+            {
+                new("", "Todas", base_.Count),
+                new("PENDIENTE", "Pendientes", Cuantas("PENDIENTE"), "ambar"),
+                new("APROBADA", "Aprobadas", Cuantas("APROBADA"), "verde"),
+                new("RECHAZADA", "Rechazadas", Cuantas("RECHAZADA"), "rojo"),
+                new("VENCIDA", "Vencidas o usadas", Cuantas("VENCIDA"))
+            };
+        }
+    }
+
+    private void CambiarEstado(string estado)
+    {
+        filtroEstado = estado;
+        paginaActual = 1;
+    }
 
     private IEnumerable<SolicitudDatos> Pagina => tamanoPagina == 0 ? Filtradas
         : Filtradas.Skip((Math.Max(paginaActual, 1) - 1) * tamanoPagina).Take(tamanoPagina);
@@ -163,6 +188,12 @@ else
             "rechazada" => $"Se rechazó la solicitud de {Referencia}.",
             _ => null
         };
+        exitoDetalle = Guardado == "aprobada" ? "El solicitante ya puede hacer la operación (una sola vez, dentro de la vigencia)." : null;
+        // si hay algo por resolver, se abre directo en las pendientes
+        if (Pendientes > 0)
+        {
+            filtroEstado = "PENDIENTE";
+        }
     }
 
     private async Task Cargar()

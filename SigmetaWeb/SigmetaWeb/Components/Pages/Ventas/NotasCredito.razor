@@ -4,58 +4,62 @@
 
 <PageTitle>Notas de crédito · SIGMETA</PageTitle>
 
-@* RF013 · Notas de crédito por devolución. Las emite el Cajero con autorización; las consulta el Administrador.
+@* RF013 · Notas de crédito por devolución. Las emite el Cajero con autorización; el Cajero y el Administrador
+   las modifican (motivo), anulan y consultan. PATRÓN UX (ver Shared/ComponentesFlujo.cs): chips por estado,
+   búsqueda por fechas y texto (la hace el Java: sp_nota_credito_buscar), y <ModalMotivo> para modificar y
+   anular, que dice qué va a pasar.
    GET /api/notas-credito?desde=&hasta=&texto= · GET /api/notas-credito/{id}/lineas · POST /api/notas-credito/{id}/anular
    PUT /api/notas-credito/{id} {"motivo"}: modificar el motivo (Cajero o Administrador; el BO valida el rol y que no esté anulada) *@
 <Encabezado Rf="RF013" Titulo="Notas de crédito"
             Subtitulo="Cada nota devuelve mercadería al stock y rebaja la deuda del cliente o le devuelve su dinero por caja.">
     @if (EsCajero)
     {
-        <a class="btn btn-primary" href="/notas-credito/nueva">Nueva nota de crédito</a>
+        <a class="btn btn-primary" href="/notas-credito/nueva">+ Nueva nota de crédito</a>
     }
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<SiguientePaso Mensaje="@exito" Detalle="@exitoDetalle" AlCerrar="() => exito = null" />
 
-<Confirmacion Visible="@(porAnular is not null)" Titulo="Anular nota de crédito" TextoConfirmar="Anular nota"
-              AlConfirmar="ConfirmarAnular" AlCancelar="() => porAnular = null">
-    <p class="mb-2">Al anular la nota <strong>@porAnular?.Nota</strong> se deshace todo lo que hizo: la mercadería vuelve a salir
-        del stock, la deuda del cliente vuelve a subir y, si se devolvió dinero, se registra su ingreso en la misma caja.</p>
-    <Campo Etiqueta="Motivo" Id="motivoAnu" Obligatorio="true" Error="@errorMotivo">
-        <textarea id="motivoAnu" class="form-control" rows="2" maxlength="200" @bind="motivo" @bind:event="oninput"></textarea>
-    </Campo>
-</Confirmacion>
+<ModalMotivo Visible="@(porAnular is not null)" Titulo="@($"Anular la nota {porAnular?.Nota}")" TextoConfirmar="Anular nota"
+             Ocupado="@trabajando" Ejemplo="Ejemplo: se registró sobre el comprobante equivocado."
+             AlConfirmar="ConfirmarAnular" AlCancelar="() => porAnular = null">
+    <p class="mb-2">Se deshace todo lo que hizo la nota <strong>@porAnular?.Nota</strong> (@Formato.Soles(porAnular?.Total)):</p>
+    <ul class="small mb-0">
+        <li>La mercadería vuelve a salir del stock.</li>
+        <li>La deuda del cliente vuelve a subir o, si se le devolvió dinero, se registra su ingreso en la misma caja.</li>
+    </ul>
+</ModalMotivo>
 
 @* RF013: modificar la nota. Solo el motivo: los productos y montos ya movieron stock, deuda y caja *@
-<Confirmacion Visible="@(porEditar is not null)" Titulo="Modificar nota de crédito" TextoConfirmar="Guardar cambios"
-              AlConfirmar="ConfirmarEditar" AlCancelar="() => porEditar = null">
-    <p class="mb-2">Se modifica el motivo de la nota <strong>@porEditar?.Nota</strong>. Los productos devueltos y los montos
-        no cambian: si están mal, anule la nota y emita una nueva con otra autorización.</p>
-    <Campo Etiqueta="Motivo" Id="motivoEdit" Obligatorio="true" Error="@errorMotivoEdit">
-        <textarea id="motivoEdit" class="form-control" rows="2" maxlength="200" @bind="motivoEdit" @bind:event="oninput"></textarea>
-    </Campo>
-</Confirmacion>
+<ModalMotivo Visible="@(porEditar is not null)" Titulo="@($"Modificar el motivo de {porEditar?.Nota}")" TextoConfirmar="Guardar motivo"
+             ClaseConfirmar="btn-primary" EtiquetaMotivo="Nuevo motivo" MotivoInicial="@porEditar?.Motivo" Ejemplo="@((string?)null)"
+             Ocupado="@trabajando" AlConfirmar="ConfirmarEditar" AlCancelar="() => porEditar = null">
+    <p class="small text-muted mb-0">Los productos devueltos y los montos no cambian. Si están mal, anule la nota y emita otra con una nueva autorización.</p>
+</ModalMotivo>
 
 <div class="card card-body mb-3">
     <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
         <Campo Etiqueta="Desde" Id="fDesde" Clase="col-sm-6 col-md-2">
             <input id="fDesde" type="date" class="form-control" @bind="desde" />
         </Campo>
-        <Campo Etiqueta="Hasta" Id="fHasta" Clase="col-sm-6 col-md-2">
-            <input id="fHasta" type="date" class="form-control" @bind="hasta" />
+        <Campo Etiqueta="Hasta" Id="fHasta" Clase="col-sm-6 col-md-2" Error="@ValidacionEnVivo.ErrorRango(desde, hasta)">
+            <input id="fHasta" type="date" class="@ValidacionEnVivo.ClaseRango(desde, hasta)" @bind="hasta" />
         </Campo>
         <Campo Etiqueta="Cliente, documento o comprobante" Id="fTexto" Clase="col-md">
-            <input id="fTexto" class="form-control" maxlength="100" placeholder="Ej.: Constructora, 20548963217, F001-00000049" @bind="texto" />
+            <input id="fTexto" type="search" class="form-control" maxlength="100" placeholder="Ej.: Constructora, 20548963217, F001-00000049" @bind="texto" />
         </Campo>
         <div class="col-auto d-flex gap-2">
-            <button type="submit" class="btn btn-dark" disabled="@cargando">Buscar</button>
-            <button type="button" class="btn btn-outline-secondary" disabled="@cargando" @onclick="Limpiar">Limpiar</button>
+            <button type="submit" class="btn btn-dark" disabled="@(cargando || ValidacionEnVivo.ErrorRango(desde, hasta) is not null)">Buscar</button>
+            @if (HayFiltros)
+            {
+                <button type="button" class="btn btn-link" disabled="@cargando" @onclick="Limpiar">Quitar filtros</button>
+            }
         </div>
     </form>
+    <div class="mt-3">
+        <ChipsFiltro Opciones="@Chips" Seleccionado="@filtroEstado" SeleccionadoChanged="CambiarEstado" />
+    </div>
 </div>
 
 @if (notas is null)
@@ -64,13 +68,13 @@
 }
 else
 {
+    var filtradas = Filtradas;
     <div class="card mb-3">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
                         <th>Nota</th>
-                        <th>Emisión</th>
                         <th>Comprobante de origen</th>
                         <th>Cliente</th>
                         <th class="text-end">Total</th>
@@ -79,31 +83,43 @@ else
                     </tr>
                 </thead>
                 <tbody>
-                    @if (notas.Count == 0)
-                    {
-                        <tr><td colspan="7" class="text-center text-muted py-4">No se encontraron notas de crédito.</td></tr>
-                    }
-                    @foreach (var n in Pagina)
+                    @if (filtradas.Count == 0)
                     {
                         <tr>
-                            <td><strong>@n.Nota</strong><div class="small text-muted">@NotaCreditoDatos.TextoTipo(n.TipoNota)</div></td>
-                            <td class="text-nowrap">@Formato.Fecha(n.FechaEmision)</td>
+                            <td colspan="6">
+                                @if (HayFiltros || filtroEstado != "")
+                                {
+                                    <ListaVacia Titulo="Ninguna nota coincide con la búsqueda." AlQuitarFiltros="Limpiar" />
+                                }
+                                else
+                                {
+                                    <ListaVacia Titulo="Todavía no hay notas de crédito." Detalle="Se emiten sobre facturas o boletas con mercadería ya entregada."
+                                                TextoAccion="@(EsCajero ? "Emitir una nota de crédito" : null)" Ruta="/notas-credito/nueva" />
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var n in Pagina(filtradas))
+                    {
+                        var anulada = n.Estado == "ANULADO";
+                        <tr @key="n.Id" class="@(anulada ? "text-muted" : "")">
+                            <td>
+                                <strong>@n.Nota</strong>
+                                <div class="small text-muted">@Formato.Fecha(n.FechaEmision) · @NotaCreditoDatos.TextoTipo(n.TipoNota)</div>
+                            </td>
                             <td>@n.Origen<div class="small text-muted">@Formato.Legible(n.TipoOrigen) · venta @n.Venta (@Formato.Legible(n.CondicionPago).ToLower())</div></td>
                             <td>@n.Cliente<div class="small text-muted">@n.NumeroDocumento</div></td>
-                            <td class="text-end text-nowrap">@Formato.Soles(n.Total)</td>
-                            <td><Estado Texto="@(n.Estado == "ANULADO" ? "Anulada" : "Vigente")" /></td>
+                            <td class="text-end text-nowrap fw-semibold">@Formato.Soles(n.Total)</td>
+                            <td><Estado Texto="@(anulada ? "Anulada" : "Vigente")" /></td>
                             <td class="text-end">
-                                <div class="d-inline-flex gap-1 text-nowrap">
-                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => VerDetalle(n)">
+                                <div class="d-inline-flex align-items-center justify-content-end gap-1 text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" aria-expanded="@(detalleDe == n.Id ? "true" : "false")" @onclick="() => VerDetalle(n)">
                                         @(detalleDe == n.Id ? "Ocultar" : "Ver detalle")
                                     </button>
-                                    @if (n.Estado != "ANULADO")
+                                    @if (!anulada && PuedeModificar)
                                     {
-                                        @if (PuedeModificar)
-                                        {
-                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => PedirEditar(n)">Editar</button>
-                                        }
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirAnular(n)">Anular</button>
+                                        <button type="button" class="btn btn-sm btn-link px-2" @onclick="() => PedirEditar(n)">Editar motivo</button>
+                                        <button type="button" class="btn btn-sm btn-link link-danger px-2" @onclick="() => PedirAnular(n)">Anular</button>
                                     }
                                 </div>
                             </td>
@@ -111,7 +127,7 @@ else
                         @if (detalleDe == n.Id)
                         {
                             <tr>
-                                <td colspan="7" class="bg-body-tertiary">
+                                <td colspan="6" class="bg-body-tertiary">
                                     <div class="small mb-2"><strong>Motivo:</strong> @n.Motivo
                                         · <strong>Autorizó:</strong> @(string.IsNullOrEmpty(n.Autorizo) ? "—" : n.Autorizo)</div>
                                     <table class="table table-sm mb-0">
@@ -143,14 +159,14 @@ else
                 </tbody>
             </table>
         </div>
-        <Paginacion TotalRegistros="@notas.Count" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
+        <Paginacion TotalRegistros="@filtradas.Count" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
 }
 
 @code {
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
     private bool EsCajero => Rol == "Cajero";
-    // RF013: modifican la nota el Cajero y el Administrador (igual que ComprobanteBOImpl.modificarNotaCredito)
+    // RF013: modifican y anulan la nota el Cajero y el Administrador (igual que ComprobanteBOImpl)
     private bool PuedeModificar => Rol == "Cajero" || Rol == "Administrador";
 
     [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
@@ -162,36 +178,52 @@ else
     private DateTime? desde;
     private DateTime? hasta;
     private string texto = "";
+    private string filtroEstado = "";
     private NotaCreditoDatos? porAnular;
-    private string motivo = "";
-    private string? errorMotivo;
     private NotaCreditoDatos? porEditar;
-    private string motivoEdit = "";
-    private string? errorMotivoEdit;
     private bool cargando;
+    private bool trabajando;
     private string? error;
     private string? exito;
+    private string? exitoDetalle;
     private int paginaActual = 1;
     private int tamanoPagina = 10;
 
-    private IEnumerable<NotaCreditoDatos> Pagina => tamanoPagina == 0 ? notas!
-        : notas!.Skip((Math.Max(paginaActual, 1) - 1) * tamanoPagina).Take(tamanoPagina);
+    private bool HayFiltros => desde is not null || hasta is not null || !string.IsNullOrWhiteSpace(texto);
+
+    private List<NotaCreditoDatos> Filtradas => (notas ?? new())
+        .Where(n => filtroEstado == "" || (filtroEstado == "ANULADO") == (n.Estado == "ANULADO"))
+        .ToList();
+
+    private IReadOnlyList<OpcionChip> Chips => new List<OpcionChip>
+    {
+        new("", "Todas", notas?.Count),
+        new("VIGENTE", "Vigentes", notas?.Count(n => n.Estado != "ANULADO"), "verde"),
+        new("ANULADO", "Anuladas", notas?.Count(n => n.Estado == "ANULADO"), "rojo")
+    };
+
+    private IEnumerable<NotaCreditoDatos> Pagina(List<NotaCreditoDatos> lista)
+    {
+        if (tamanoPagina == 0) return lista;
+        var total = Math.Max(1, (int)Math.Ceiling((double)lista.Count / tamanoPagina));
+        return lista.Skip((Math.Clamp(paginaActual, 1, total) - 1) * tamanoPagina).Take(tamanoPagina);
+    }
 
     protected override async Task OnInitializedAsync()
     {
         await Buscar();
         if (Guardado == AvisoGuardado.Nuevo)
         {
-            exito = $"Se registró la nota de crédito {Referencia}. La mercadería ya reingresó al stock.";
+            exito = $"Se registró la nota de crédito {Referencia}.";
+            exitoDetalle = "La mercadería ya reingresó al stock y se ajustó la deuda o la caja del cliente.";
         }
     }
 
     private async Task Buscar()
     {
         error = null;
-        if (desde is not null && hasta is not null && desde > hasta)
+        if (ValidacionEnVivo.ErrorRango(desde, hasta) is not null)
         {
-            error = "La fecha de inicio no puede ser posterior a la fecha de fin.";
             return;
         }
         cargando = true;
@@ -217,8 +249,15 @@ else
     {
         desde = hasta = null;
         texto = "";
+        filtroEstado = "";
         exito = null;
         await Buscar();
+    }
+
+    private void CambiarEstado(string estado)
+    {
+        filtroEstado = estado;
+        paginaActual = 1;
     }
 
     private async Task VerDetalle(NotaCreditoDatos n)
@@ -241,60 +280,62 @@ else
 
     private void PedirEditar(NotaCreditoDatos n)
     {
-        error = exito = errorMotivoEdit = null;
-        motivoEdit = n.Motivo ?? "";
+        error = exito = null;
         porEditar = n;
     }
 
     // PUT /api/notas-credito/{id} {"motivo"}
-    private async Task ConfirmarEditar()
+    private async Task ConfirmarEditar(string motivo)
     {
-        if (string.IsNullOrWhiteSpace(motivoEdit))
-        {
-            errorMotivoEdit = "El motivo es obligatorio.";
-            return;
-        }
         var n = porEditar;
-        porEditar = null;
         if (n is null) return;
+        trabajando = true;
         try
         {
-            await Api.Put<object>($"notas-credito/{n.Id}", new { motivo = motivoEdit.Trim() });
+            await Api.Put<object>($"notas-credito/{n.Id}", new { motivo });
+            porEditar = null;
             await Buscar();
             exito = $"Se modificó el motivo de la nota de crédito {n.Nota}.";
+            exitoDetalle = null;
         }
         catch (ErrorApi e)
         {
+            porEditar = null;
             error = e.Message;   // por ejemplo "No se puede modificar una nota de crédito anulada"
+        }
+        finally
+        {
+            trabajando = false;
         }
     }
 
     private void PedirAnular(NotaCreditoDatos n)
     {
-        error = exito = errorMotivo = null;
-        motivo = "";
+        error = exito = null;
         porAnular = n;
     }
 
-    private async Task ConfirmarAnular()
+    private async Task ConfirmarAnular(string motivo)
     {
-        if (string.IsNullOrWhiteSpace(motivo))
-        {
-            errorMotivo = "El motivo es obligatorio.";
-            return;
-        }
         var n = porAnular;
-        porAnular = null;
         if (n is null) return;
+        trabajando = true;
         try
         {
-            await Api.Post<object>($"notas-credito/{n.Id}/anular", new { motivo = motivo.Trim() });
+            await Api.Post<object>($"notas-credito/{n.Id}/anular", new { motivo });
+            porAnular = null;
             await Buscar();
             exito = AvisoGuardado.Texto(AvisoGuardado.Anulado, "la nota de crédito", n.Nota);
+            exitoDetalle = "Se revirtieron el stock y la deuda o la caja.";
         }
         catch (ErrorApi e)
         {
-            error = e.Message;
+            porAnular = null;
+            error = e.Message;   // por ejemplo "Stock insuficiente para revertir la nota de crédito..."
+        }
+        finally
+        {
+            trabajando = false;
         }
     }
 }

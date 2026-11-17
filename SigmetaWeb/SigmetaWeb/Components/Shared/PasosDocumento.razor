@@ -1,0 +1,64 @@
+@* PATRÓN UX · Recorrido de un documento: qué pasos ya se hicieron, cuál toca ahora y QUIÉN lo hace.
+   Resuelve la duda de "¿y ahora qué sigue?" cuando el flujo pasa de un rol a otro.
+   Uso:
+       <PasosDocumento Pasos="@pasos" />
+       pasos = new() {
+           new("Cotización", EstadoPaso.Hecho, "COT-2026-0004", Ruta: "/cotizaciones/editar/4"),
+           new("Comprobante", EstadoPaso.Actual, "Por emitir", "Vendedor o Cajero"),
+           new("Despacho", EstadoPaso.Pendiente, null, "Almacenero") };
+   Los pasos los arma cada módulo con sus datos (ver Pages/Ventas/FlujoVentas.cs). *@
+@if (Pasos.Count > 0)
+{
+    <nav class="pasos mb-3" aria-label="@Titulo">
+        <ol>
+            @for (var i = 0; i < Pasos.Count; i++)
+            {
+                var p = Pasos[i];
+                var numero = i + 1;
+                <li class="paso @Clase(p.Estado)" aria-current="@(p.Estado == EstadoPaso.Actual ? "step" : null)">
+                    <span class="marca" aria-hidden="true">@Marca(p.Estado, numero)</span>
+                    <span class="texto">
+                        <span class="titulo">@p.Titulo</span>
+                        @if (!string.IsNullOrEmpty(p.Detalle))
+                        {
+                            @if (!string.IsNullOrEmpty(p.Ruta))
+                            {
+                                <a class="detalle" href="@p.Ruta">@p.Detalle</a>
+                            }
+                            else
+                            {
+                                <span class="detalle">@p.Detalle</span>
+                            }
+                        }
+                        @if (!string.IsNullOrEmpty(p.Responsable) && p.Estado is EstadoPaso.Actual or EstadoPaso.Pendiente)
+                        {
+                            <span class="quien">@(p.Estado == EstadoPaso.Actual ? "Le toca: " : "")@p.Responsable</span>
+                        }
+                    </span>
+                </li>
+            }
+        </ol>
+    </nav>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<PasoDocumento> Pasos { get; set; } = Array.Empty<PasoDocumento>();
+    [Parameter] public string Titulo { get; set; } = "Recorrido del documento";
+
+    private static string Clase(EstadoPaso e) => e switch
+    {
+        EstadoPaso.Hecho => "hecho",
+        EstadoPaso.Actual => "actual",
+        EstadoPaso.Omitido => "omitido",
+        EstadoPaso.Anulado => "anulado",
+        _ => "pendiente"
+    };
+
+    private static string Marca(EstadoPaso e, int numero) => e switch
+    {
+        EstadoPaso.Hecho => "✓",
+        EstadoPaso.Omitido => "–",
+        EstadoPaso.Anulado => "✕",
+        _ => numero.ToString()
+    };
+}

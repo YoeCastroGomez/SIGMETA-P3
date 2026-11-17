@@ -6,71 +6,73 @@
 
 <PageTitle>Cotizaciones · SIGMETA</PageTitle>
 
-@* RF007 · Lista de cotizaciones. Datos reales del Java:
-   - GET  /api/cotizaciones (?cliente=ID y/o ?estado=ESTADO)  listarTodos / buscar(cliente, estado) del BO
-   - Vendedor: registra, modifica, envía, acepta, rechaza y anula. Administrador: consulta y anula (RF007).
-   - POST /api/cotizaciones/{id}/enviar | aceptar | rechazar  ciclo REGISTRADA -> ENVIADA -> ACEPTADA o RECHAZADA
-   - POST /api/cotizaciones/{id}/anular {"motivo": ...}       anulacion logica con motivo
-   Los botones de cada fila siguen el ciclo de CotizacionBOImpl; si algo no corresponde, el BO responde con su mensaje
-   (por ejemplo "La cotizacion vencio el ..." o "No se puede anular una cotizacion aceptada"). *@
+@* RF007 · Lista de cotizaciones. PATRÓN UX de listas (ver Shared/ComponentesFlujo.cs):
+     - Chips por estado con su cantidad. El filtro cliente + estado lo hace el BO (CotizacionBO.buscar):
+       cada chip pide GET /api/cotizaciones?cliente=&estado= al Java (filtro combinado del RF007).
+     - Búsqueda rápida por número, cliente o documento sobre lo que devolvió el Java.
+     - Una acción principal por fila según el estado del ciclo: Enviar -> Aceptar -> Generar orden.
+     - Las acciones que no se deshacen piden confirmación (Rechazar) o motivo (Anular) y dicen qué pasa.
+     - Filtros y página quedan en la dirección: al volver de una cotización la lista está igual.
+   Datos reales del Java:
+   - GET  /api/cotizaciones (?cliente=ID y/o ?estado=ESTADO)    buscar(cliente, estado) del BO; ANULADA trae las anuladas
+   - POST /api/cotizaciones/{id}/enviar | aceptar | rechazar     ciclo REGISTRADA -> ENVIADA -> ACEPTADA o RECHAZADA
+   - POST /api/cotizaciones/{id}/anular {"motivo": ...}          anulación lógica con motivo (Vendedor o Administrador)
+   - GET  /api/ordenes                                           (Vendedor) qué cotizaciones aceptadas ya tienen orden *@
 <Encabezado Rf="RF007" Titulo="Cotizaciones"
-            Subtitulo="Solo una cotización registrada se modifica. Una cotización aceptada puede pasar a orden de compra del cliente.">
+            Subtitulo="Ciclo: registrar → enviar al cliente → registrar su respuesta → generar la orden del cliente.">
     @if (EsVendedor)
     {
-        <a class="btn btn-primary" href="/cotizaciones/nueva">Nueva cotización</a>
+        <a class="btn btn-primary" href="@($"/cotizaciones/nueva?volver={Volver.Parametro(RutaActual)}")">+ Nueva cotización</a>
     }
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<SiguientePaso Mensaje="@exito" Detalle="@exitoDetalle" TextoAccion="@exitoAccion" Ruta="@exitoRuta" AlCerrar="CerrarAviso" />
 
-@if (anulando is not null)
-{
-    @* RF007: anular pide un motivo (anulación lógica). *@
-    <div class="card card-body mb-3">
-        <h2 class="h6 fw-semibold mb-3">Anular cotización @anulando.Numero</h2>
-        <Campo Etiqueta="Motivo de anulación" Id="motivo" Obligatorio="true" Error="@(v.Error("motivo", Errores()))">
-            <input id="motivo" class="@(v.Clase("motivo", Errores()))" maxlength="255"
-                   @bind="motivo" @bind:event="oninput" @bind:after="@(() => v.Tocado("motivo"))" />
-        </Campo>
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
-            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-            <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary" @onclick="CerrarAnulacion">Cancelar</button>
-                <button class="btn btn-outline-danger" disabled="@trabajando" @onclick="ConfirmarAnulacion">Anular</button>
-            </div>
-        </div>
-    </div>
-}
+<ModalMotivo Visible="@(anulando is not null)" Titulo="@($"Anular la cotización {anulando?.Numero}")" TextoConfirmar="Anular cotización"
+             Ocupado="@trabajando" Maximo="255" Ejemplo="Ejemplo: el cliente ya no requiere los productos."
+             AlConfirmar="ConfirmarAnulacion" AlCancelar="() => anulando = null">
+    <p class="mb-2">La cotización <strong>@anulando?.Numero</strong> de @anulando?.Cliente:</p>
+    <ul class="small mb-0">
+        <li>Deja de valer: ya no se podrá enviar, aceptar ni convertir en orden.</li>
+        <li>Se conserva con su motivo; aparece en el filtro «Anuladas».</li>
+    </ul>
+</ModalMotivo>
+
+<Confirmacion Visible="@(rechazando is not null)" Titulo="@($"Registrar rechazo de {rechazando?.Numero}")"
+              TextoConfirmar="El cliente la rechazó" AlConfirmar="ConfirmarRechazo" AlCancelar="() => rechazando = null">
+    <p class="mb-0">La cotización quedará <strong>rechazada</strong> y no se podrá aceptar después. Si el cliente pide otra propuesta,
+        registre una cotización nueva.</p>
+</Confirmacion>
 
 <div class="card card-body mb-3">
-    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
-        <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
-            <select id="fCliente" class="form-select" @bind="filtroCliente">
-                <option value="0">Todos</option>
+    <div class="row g-2 align-items-end sigmeta-filtros">
+        <div class="col-md-6 col-lg-5">
+            <label class="form-label fw-semibold small" for="buscarCot">Buscar</label>
+            <input id="buscarCot" type="search" class="form-control" maxlength="80" autocomplete="off"
+                   placeholder="Número, cliente o documento"
+                   @bind="busqueda" @bind:event="oninput" @bind:after="AlBuscar" />
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <label class="form-label fw-semibold small" for="fCliente">Cliente</label>
+            <select id="fCliente" class="form-select" value="@filtroCliente" @onchange="CambiarCliente">
+                <option value="0">Todos los clientes</option>
                 @foreach (var c in clientes)
                 {
                     <option value="@c.Id">@c.NombreMostrado · @c.NumeroDocumento</option>
                 }
             </select>
-        </Campo>
-        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-3">
-            <select id="fEstado" class="form-select" @bind="filtroEstado">
-                <option value="">Todos</option>
-                @foreach (var e in TextosVentas.EstadosCotizacion)
-                {
-                    <option value="@e">@TextosVentas.Texto(e)</option>
-                }
-            </select>
-        </Campo>
-        <div class="col-auto d-flex gap-2">
-            <button type="submit" class="btn btn-dark">Buscar</button>
-            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
         </div>
-    </form>
+        <div class="col-lg-3 text-lg-end">
+            @if (HayFiltros)
+            {
+                <button type="button" class="btn btn-link px-0" @onclick="Limpiar">Quitar filtros</button>
+            }
+        </div>
+    </div>
+    <div class="mt-3">
+        <ChipsFiltro Opciones="@Chips" Seleccionado="@filtroEstado" SeleccionadoChanged="CambiarEstado" />
+    </div>
     <div class="form-text">El cliente y el estado se combinan: por ejemplo, las cotizaciones enviadas de un cliente.</div>
 </div>
 
@@ -80,66 +82,88 @@
 }
 else
 {
+    var filtradas = Filtradas;
     <div class="card mb-3">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Número</th>
+                        <th>Cotización</th>
                         <th>Cliente</th>
-                        <th>Fecha</th>
                         <th>Vigencia</th>
-                        <th class="text-end">Total</th>
+                        <th class="text-end">Total (S/)</th>
                         <th>Estado</th>
                         <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (cotizaciones.Count == 0)
-                    {
-                        <tr><td colspan="7" class="text-center text-muted py-4">No se encontraron cotizaciones.</td></tr>
-                    }
-                    @foreach (var c in CotizacionesPagina)
+                    @if (filtradas.Count == 0)
                     {
                         <tr>
-                            <td><strong>@c.Numero</strong></td>
+                            <td colspan="6">
+                                @if (HayFiltros)
+                                {
+                                    <ListaVacia Titulo="Ninguna cotización coincide con los filtros." Detalle="Pruebe con otro estado, cliente o texto."
+                                                AlQuitarFiltros="Limpiar" />
+                                }
+                                else
+                                {
+                                    <ListaVacia Titulo="Todavía no hay cotizaciones."
+                                                TextoAccion="@(EsVendedor ? "Registrar la primera cotización" : null)" Ruta="/cotizaciones/nueva" />
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var c in Pagina(filtradas))
+                    {
+                        var dias = DiasParaVencer(c);
+                        <tr @key="c.Id">
+                            <td>
+                                <a class="fw-semibold text-decoration-none" href="@RutaCotizacion(c)">@c.Numero</a>
+                                <div class="small text-muted">Emitida el @TextosVentas.Fecha(c.FechaEmision)</div>
+                            </td>
                             <td>@c.Cliente<div class="small text-muted">@c.DocumentoCliente</div></td>
-                            <td>@TextosVentas.Fecha(c.FechaEmision)</td>
-                            <td>@TextosVentas.Fecha(c.FechaVigencia)</td>
-                            <td class="text-end">S/ @c.Total.ToString("N2")</td>
-                            <td><Estado Texto="@TextosVentas.Texto(c.Estado)" /></td>
+                            <td class="text-nowrap">
+                                @TextosVentas.Fecha(c.FechaVigencia)
+                                @if (dias is int d)
+                                {
+                                    <div class="small @(d <= 1 ? "text-danger fw-semibold" : "text-warning-emphasis")">
+                                        @(d == 0 ? "Vence hoy" : d == 1 ? "Vence mañana" : $"Vence en {d} días")
+                                    </div>
+                                }
+                            </td>
+                            <td class="text-end fw-semibold">@c.Total.ToString("N2")</td>
+                            <td>
+                                <Estado Texto="@TextosVentas.Texto(c.Estado)" />
+                                @if (c.Estado == "ACEPTADA" && conOrden.TryGetValue(c.Id, out var numOrden))
+                                {
+                                    <div class="small text-muted mt-1">Orden @numOrden</div>
+                                }
+                            </td>
                             <td class="text-end">
-                                <div class="d-inline-flex gap-1 text-nowrap">
-                                    @if (!(EsVendedor && c.Estado == "REGISTRADA"))
-                                    {
-                                        @* RF007: consulta del detalle (el Administrador y las cotizaciones que ya no se modifican) *@
-                                        <a class="btn btn-sm btn-outline-secondary" href="@($"/cotizaciones/editar/{c.Id}")">Ver</a>
-                                    }
+                                <div class="d-inline-flex align-items-center justify-content-end gap-1 text-nowrap">
                                     @if (EsVendedor && c.Estado == "REGISTRADA")
                                     {
-                                        <a class="btn btn-sm btn-outline-secondary" href="@($"/cotizaciones/editar/{c.Id}")">Editar</a>
-                                        <button class="btn btn-sm btn-primary" disabled="@trabajando" @onclick="() => Enviar(c)">Enviar</button>
+                                        <button type="button" class="btn btn-sm btn-primary" disabled="@trabajando" @onclick="() => Enviar(c)">Enviar</button>
+                                        <a class="btn btn-sm btn-link px-2" href="@RutaCotizacion(c)">Editar</a>
                                     }
-                                    @if (EsVendedor && c.Estado == "ENVIADA")
+                                    else if (EsVendedor && c.Estado == "ENVIADA")
                                     {
-                                        <button class="btn btn-sm btn-primary" disabled="@trabajando" @onclick="() => Aceptar(c)">Aceptar</button>
-                                        <button class="btn btn-sm btn-outline-danger" disabled="@trabajando" @onclick="() => Rechazar(c)">Rechazar</button>
+                                        <button type="button" class="btn btn-sm btn-primary" disabled="@trabajando" @onclick="() => Aceptar(c)">Aceptó</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@trabajando" @onclick="() => rechazando = c">Rechazó</button>
                                     }
-                                    @if (EsVendedor && c.Estado == "ACEPTADA")
+                                    else if (EsVendedor && c.Estado == "ACEPTADA" && !conOrden.ContainsKey(c.Id))
                                     {
                                         @* RF007: la orden de compra del cliente sale de una cotización aceptada; una sola orden activa *@
-                                        @if (conOrden.Contains(c.Id))
-                                        {
-                                            <a class="btn btn-sm btn-outline-secondary" href="/ordenes">Ver orden</a>
-                                        }
-                                        else
-                                        {
-                                            <a class="btn btn-sm btn-outline-primary" href="@($"/ordenes/nueva?cotizacion={c.Id}")">Generar orden</a>
-                                        }
+                                        <a class="btn btn-sm btn-primary" href="@($"/ordenes/nueva?cotizacion={c.Id}")">Generar orden</a>
+                                    }
+                                    else
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary" href="@RutaCotizacion(c)">Ver</a>
                                     }
                                     @if ((EsVendedor || Rol == "Administrador") && c.Estado is "REGISTRADA" or "ENVIADA" or "RECHAZADA" or "VENCIDA")
                                     {
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => AbrirAnulacion(c)">Anular</button>
+                                        <button type="button" class="btn btn-sm btn-link link-danger px-2" @onclick="() => AbrirAnulacion(c)">Anular</button>
                                     }
                                 </div>
                             </td>
@@ -148,8 +172,8 @@ else
                 </tbody>
             </table>
         </div>
-        <Paginacion TotalRegistros="@cotizaciones.Count"
-                    @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
+        <Paginacion TotalRegistros="@filtradas.Count" PaginaActual="@paginaActual" PaginaActualChanged="CambiarPagina"
+                    @bind-TamanoPagina="tamanoPagina" />
     </div>
 }
 
@@ -157,37 +181,80 @@ else
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
     private bool EsVendedor => Rol == "Vendedor";
 
-    private List<CotizacionDatos>? cotizaciones;
-    private List<Cliente> clientes = new();
-    private HashSet<int> conOrden = new();   // cotizaciones que ya tienen una orden vigente
-    private int filtroCliente;
-    private string filtroEstado = "";
-    private string? error;
-    private string? exito;
-
+    // Filtros en la dirección: /cotizaciones?cliente=3&estado=ENVIADA&q=acme&pagina=2
+    [SupplyParameterFromQuery(Name = "cliente")] public int? ClienteQ { get; set; }
+    [SupplyParameterFromQuery(Name = "estado")] public string? EstadoQ { get; set; }
+    [SupplyParameterFromQuery(Name = "q")] public string? BusquedaQ { get; set; }
+    [SupplyParameterFromQuery(Name = "pagina")] public int? PaginaQ { get; set; }
     // Aviso de éxito con el patrón único (AvisoGuardado): el formulario vuelve aquí con ?guardado=…&ref=…
     [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
     [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
-    private bool avisoLeido;
 
-    protected override void OnParametersSet()
-    {
-        if (avisoLeido) return;   // solo al llegar: después manda lo que haga el usuario en la lista
-        avisoLeido = true;
-        exito = AvisoGuardado.Texto(Guardado, "la cotización", Referencia) ?? exito;
-    }
-    private bool trabajando;
-
-    private CotizacionDatos? anulando;
-    private string motivo = "";
-
-    // paginacion (componente compartido Shared/Paginacion), igual que en Compras
+    private List<CotizacionDatos>? cotizaciones;       // lo que devolvió el BO con los filtros cliente + estado
+    private List<CotizacionDatos> vigentes = new();   // del cliente, sin filtro de estado (para contar)
+    private int anuladas;                             // del cliente (el BO las trae solo con estado=ANULADA)
+    private List<Cliente> clientes = new();
+    private Dictionary<int, string> conOrden = new(); // cotizaciones con orden vigente -> número de la orden
+    private int filtroCliente;
+    private string filtroEstado = "";
+    private string busqueda = "";
     private int paginaActual = 1;
     private int tamanoPagina = 10;
-    private int TotalPaginas => tamanoPagina == 0 ? 1 : Math.Max(1, (int)Math.Ceiling((double)(cotizaciones?.Count ?? 0) / tamanoPagina));
-    private IEnumerable<CotizacionDatos> CotizacionesPagina => cotizaciones is null ? Enumerable.Empty<CotizacionDatos>()
-        : tamanoPagina == 0 ? cotizaciones
-        : cotizaciones.Skip((Math.Clamp(paginaActual, 1, TotalPaginas) - 1) * tamanoPagina).Take(tamanoPagina);
+    private string? urlPropia;
+    private (int Cliente, string Estado)? cargado;
+
+    private string? error;
+    private string? exito;
+    private string? exitoDetalle;
+    private string? exitoAccion;
+    private string? exitoRuta;
+    private bool avisoLeido;
+    private bool trabajando;
+    private CotizacionDatos? anulando;
+    private CotizacionDatos? rechazando;
+
+    private string RutaActual => "/" + Nav.ToBaseRelativePath(Nav.Uri);
+    private string RutaCotizacion(CotizacionDatos c) => $"/cotizaciones/editar/{c.Id}?volver={Volver.Parametro(RutaActual)}";
+    private bool HayFiltros => filtroCliente > 0 || filtroEstado != "" || !string.IsNullOrWhiteSpace(busqueda);
+    private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.Today);
+
+    // Las que todavía se pueden mover y vencen dentro de 3 días
+    private static int? DiasParaVencer(CotizacionDatos c) =>
+        c.Estado is "REGISTRADA" or "ENVIADA" && c.FechaVigencia is DateOnly f && f >= Hoy && f.DayNumber - Hoy.DayNumber <= 3
+            ? f.DayNumber - Hoy.DayNumber
+            : null;
+
+    private List<CotizacionDatos> Filtradas => (cotizaciones ?? new())
+        .Where(c => Busqueda.Coincide(busqueda, c.Numero, c.Cliente, c.DocumentoCliente))
+        .OrderByDescending(c => c.FechaEmision).ThenByDescending(c => c.Id)
+        .ToList();
+
+    private IReadOnlyList<OpcionChip> Chips
+    {
+        get
+        {
+            int Cuantas(string e) => vigentes.Count(c => c.Estado == e);
+            return new List<OpcionChip>
+            {
+                new("", "Vigentes", vigentes.Count),
+                new("REGISTRADA", "Registradas", Cuantas("REGISTRADA")),
+                new("ENVIADA", "Enviadas", Cuantas("ENVIADA"), "azul"),
+                new("ACEPTADA", "Aceptadas", Cuantas("ACEPTADA"), "verde"),
+                new("RECHAZADA", "Rechazadas", Cuantas("RECHAZADA"), "rojo"),
+                new("VENCIDA", "Vencidas", Cuantas("VENCIDA"), "ambar"),
+                new("ANULADA", "Anuladas", anuladas, "rojo")
+            };
+        }
+    }
+
+    private IEnumerable<CotizacionDatos> Pagina(List<CotizacionDatos> lista)
+    {
+        if (tamanoPagina == 0) return lista;
+        var total = Math.Max(1, (int)Math.Ceiling((double)lista.Count / tamanoPagina));
+        return lista.Skip((Math.Clamp(paginaActual, 1, total) - 1) * tamanoPagina).Take(tamanoPagina);
+    }
+
+    // ---------------- Carga (los filtros cliente y estado los aplica el BO) ----------------
 
     protected override async Task OnInitializedAsync()
     {
@@ -199,41 +266,53 @@ else
         {
             error = e.Message;
         }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!avisoLeido)
+        {
+            avisoLeido = true;
+            exito = AvisoGuardado.Texto(Guardado, "la cotización", Referencia);
+            if (exito is not null && Guardado is AvisoGuardado.Nuevo or AvisoGuardado.Editado)
+            {
+                exitoDetalle = "Siguiente: enviarla al cliente (botón «Enviar» de la fila).";
+            }
+        }
+        if (urlPropia is not null && Nav.Uri == urlPropia)
+        {
+            return;   // el cambio de dirección lo hizo esta misma pantalla
+        }
+        filtroCliente = ClienteQ ?? 0;
+        filtroEstado = EstadoQ ?? "";
+        busqueda = BusquedaQ ?? "";
+        paginaActual = Math.Max(1, PaginaQ ?? 1);
         await Cargar();
     }
 
-    private async Task Buscar()
+    private async Task Cargar(bool forzar = false)
     {
-        exito = null;
-        paginaActual = 1;
-        await Cargar();
-    }
-
-    private async Task Limpiar()
-    {
-        filtroCliente = 0;
-        filtroEstado = "";
-        exito = null;
-        paginaActual = 1;
-        await Cargar();
-    }
-
-    private async Task Cargar()
-    {
-        // RF007: los dos filtros se combinan (el filtro lo hace CotizacionBO.buscar en el Java)
-        var parametros = new List<string>();
-        if (filtroCliente > 0) parametros.Add($"cliente={filtroCliente}");
-        if (filtroEstado != "") parametros.Add($"estado={filtroEstado}");
-        var ruta = parametros.Count == 0 ? "cotizaciones" : "cotizaciones?" + string.Join("&", parametros);
+        if (!forzar && cargado == (filtroCliente, filtroEstado) && cotizaciones is not null) return;
+        var cliente = filtroCliente > 0 ? $"cliente={filtroCliente}" : "";
+        string Ruta(string estado) => "cotizaciones" + (cliente == "" && estado == "" ? ""
+            : "?" + string.Join("&", new[] { cliente, estado == "" ? "" : $"estado={estado}" }.Where(p => p != "")));
         try
         {
-            cotizaciones = await Api.Get<List<CotizacionDatos>>(ruta) ?? new();
+            // RF007: los conteos (vigentes y anuladas del cliente) y la lista filtrada salen del BO
+            vigentes = await Api.Get<List<CotizacionDatos>>(Ruta("")) ?? new();
+            var listaAnuladas = await Api.Get<List<CotizacionDatos>>(Ruta("ANULADA")) ?? new();
+            anuladas = listaAnuladas.Count;
+            cotizaciones = filtroEstado == "" ? vigentes
+                : filtroEstado == "ANULADA" ? listaAnuladas
+                : await Api.Get<List<CotizacionDatos>>(Ruta(filtroEstado)) ?? new();
             if (EsVendedor)
             {
                 // RF007: una cotización tiene una sola orden activa; si ya la tiene no se ofrece "Generar orden"
                 var ordenes = await Api.Get<List<OrdenDatos>>("ordenes") ?? new();
-                conOrden = ordenes.Where(o => o.Estado != "ANULADA").Select(o => o.IdCotizacion).ToHashSet();
+                conOrden = ordenes.Where(o => o.Estado != "ANULADA" && !o.Anulado)
+                    .GroupBy(o => o.IdCotizacion).ToDictionary(g => g.Key, g => g.First().Numero ?? "");
             }
+            cargado = (filtroCliente, filtroEstado);
         }
         catch (ErrorApi e)
         {
@@ -242,25 +321,100 @@ else
         }
     }
 
-    private Task Enviar(CotizacionDatos c) => Accion(c, "enviar", "enviada");
-    private Task Aceptar(CotizacionDatos c) => Accion(c, "aceptar", "aceptada");
-    private Task Rechazar(CotizacionDatos c) => Accion(c, "rechazar", "rechazada");
+    private void SincronizarUrl()
+    {
+        var uri = Nav.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["cliente"] = filtroCliente > 0 ? filtroCliente : (object?)null,
+            ["estado"] = filtroEstado == "" ? null : filtroEstado,
+            ["q"] = string.IsNullOrWhiteSpace(busqueda) ? null : busqueda.Trim(),
+            ["pagina"] = paginaActual > 1 ? paginaActual : (object?)null,
+            ["guardado"] = null,
+            ["ref"] = null
+        });
+        if (uri == Nav.Uri) return;
+        urlPropia = uri;
+        Nav.NavigateTo(uri, replace: true);
+    }
+
+    private async Task CambiarCliente(ChangeEventArgs e)
+    {
+        filtroCliente = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+        paginaActual = 1;
+        await Cargar();
+        SincronizarUrl();
+    }
+
+    private async Task CambiarEstado(string estado)
+    {
+        filtroEstado = estado;
+        paginaActual = 1;
+        await Cargar();
+        SincronizarUrl();
+    }
+
+    private void AlBuscar()
+    {
+        paginaActual = 1;
+        SincronizarUrl();
+    }
+
+    private void CambiarPagina(int pagina)
+    {
+        paginaActual = pagina;
+        SincronizarUrl();
+    }
+
+    private async Task Limpiar()
+    {
+        filtroCliente = 0;
+        filtroEstado = "";
+        busqueda = "";
+        paginaActual = 1;
+        await Cargar();
+        SincronizarUrl();
+    }
+
+    private void CerrarAviso()
+    {
+        exito = exitoDetalle = exitoAccion = exitoRuta = null;
+    }
+
+    // ---------------- Ciclo de la cotización ----------------
+
+    private Task Enviar(CotizacionDatos c) => Accion(c, "enviar", $"La cotización {c.Numero} quedó enviada.",
+        "Siguiente: cuando el cliente responda, regístrelo con «Aceptó» o «Rechazó».");
+
+    private Task Aceptar(CotizacionDatos c) => Accion(c, "aceptar", $"La cotización {c.Numero} quedó aceptada.",
+        "Siguiente: generar la orden de compra del cliente con el número de su documento.",
+        "Generar orden", $"/ordenes/nueva?cotizacion={c.Id}");
+
+    private async Task ConfirmarRechazo()
+    {
+        var c = rechazando;
+        rechazando = null;
+        if (c is null) return;
+        await Accion(c, "rechazar", $"La cotización {c.Numero} quedó rechazada.", null);
+    }
 
     // POST /api/cotizaciones/{id}/enviar | aceptar | rechazar
-    private async Task Accion(CotizacionDatos c, string accion, string participio)
+    private async Task Accion(CotizacionDatos c, string accion, string mensaje, string? detalle, string? textoAccion = null, string? ruta = null)
     {
         error = null;
-        exito = null;
+        CerrarAviso();
         trabajando = true;
         try
         {
             await Api.Post<CotizacionDatos>($"cotizaciones/{c.Id}/{accion}", null);
-            exito = $"La cotización {c.Numero} quedó {participio}.";
-            await Cargar();
+            exito = mensaje;
+            exitoDetalle = detalle;
+            exitoAccion = textoAccion;
+            exitoRuta = ruta;
+            await Cargar(forzar: true);
         }
         catch (ErrorApi e)
         {
-            error = e.Message;
+            error = e.Message;   // por ejemplo "La cotización venció el 2026-11-10"
         }
         finally
         {
@@ -270,48 +424,28 @@ else
 
     private void AbrirAnulacion(CotizacionDatos c)
     {
+        error = null;
+        CerrarAviso();
         anulando = c;
-        motivo = "";
-        v.Reiniciar();
-        exito = null;
     }
-
-    // ---------------- Validación en pantalla (RNF004) ----------------
-    // El motivo es obligatorio (igual que el BO): el error sale debajo del cuadro.
-    private readonly ValidacionEnVivo v = new();
-
-    private Dictionary<string, string> Errores()
-    {
-        var e = new Dictionary<string, string>();
-        if (string.IsNullOrWhiteSpace(motivo))
-        {
-            e["motivo"] = "Escriba el motivo de la anulación.";
-        }
-        return e;
-    }
-
-    private void CerrarAnulacion() => anulando = null;
 
     // POST /api/cotizaciones/{id}/anular {"motivo": ...}
-    private async Task ConfirmarAnulacion()
+    private async Task ConfirmarAnulacion(string motivo)
     {
         if (anulando is null) return;
-        error = null;
-        if (!v.Intentar(Errores()))
-        {
-            return;
-        }
         trabajando = true;
         try
         {
             await Api.Post<object>($"cotizaciones/{anulando.Id}/anular", new AnulacionDatos { Motivo = motivo });
             exito = $"Se anuló la cotización {anulando.Numero}.";
+            exitoDetalle = "Puede verla con su motivo en el filtro «Anuladas».";
             anulando = null;
-            await Cargar();
+            await Cargar(forzar: true);
         }
         catch (ErrorApi e)
         {
-            error = e.Message;   // por ejemplo "El campo motivo de anulacion es obligatorio"
+            anulando = null;
+            error = e.Message;   // por ejemplo "No se puede anular una cotización aceptada"
         }
         finally
         {

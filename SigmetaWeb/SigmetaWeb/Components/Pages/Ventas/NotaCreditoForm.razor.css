@@ -1,0 +1,9 @@
+/* Mismo estilo que los demás formularios del patrón: resumen fijo y lista de lo que falta */
+.resumen { position: sticky; top: 1rem; }
+
+.lista-pendientes li { display: flex; gap: .45rem; align-items: baseline; padding: .15rem 0; }
+.lista-pendientes .marca { width: 1rem; text-align: center; font-weight: 700; }
+.lista-pendientes .listo { color: var(--bs-secondary-color); }
+.lista-pendientes .listo .marca { color: var(--bs-success); }
+.lista-pendientes .falta { color: var(--bs-body-color); font-weight: 600; }
+.lista-pendientes .falta .marca { color: var(--bs-warning); }
