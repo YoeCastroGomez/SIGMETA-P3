@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SIGMETA · RF015 · Reporte comercial: credito de clientes (subreporte). Datos: sp_reporte_credito_clientes. -->
+<jasperReport name="sub_credito" language="java" pageWidth="535" pageHeight="842" whenNoDataType="NoDataSection" columnWidth="535" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+	<style name="base" default="true" fontName="DejaVu Sans" fontSize="8.0" forecolor="#1D1D1F"/>
+	<style name="seccion" fontName="DejaVu Sans" fontSize="10.0" bold="true" forecolor="#1D1D1F" vTextAlign="Middle">
+		<box leftPadding="6"><leftPen lineWidth="3.0" lineColor="#D9822B"/></box>
+	</style>
+	<style name="nota" fontName="DejaVu Sans" fontSize="7.0" italic="true" forecolor="#7A7A7A"/>
+	<style name="th" mode="Opaque" backcolor="#F3EDE6" forecolor="#5A3A1A" fontName="DejaVu Sans" fontSize="7.5" bold="true" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><bottomPen lineWidth="0.75" lineColor="#C9B8A6"/></box>
+	</style>
+	<style name="td" fontName="DejaVu Sans" fontSize="8.0" forecolor="#1D1D1F" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><bottomPen lineWidth="0.5" lineColor="#E6E1DB"/></box>
+		<conditionalStyle mode="Opaque" backcolor="#FBF8F4">
+			<conditionExpression><![CDATA[$V{REPORT_COUNT} % 2 == 0]]></conditionExpression>
+		</conditionalStyle>
+	</style>
+	<style name="tdAlerta" fontName="DejaVu Sans" fontSize="8.0" forecolor="#1D1D1F" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><bottomPen lineWidth="0.5" lineColor="#E6E1DB"/></box>
+		<conditionalStyle mode="Opaque" backcolor="#FBF8F4">
+			<conditionExpression><![CDATA[$V{REPORT_COUNT} % 2 == 0]]></conditionExpression>
+		</conditionalStyle>
+		<conditionalStyle forecolor="#B42318" bold="true">
+			<conditionExpression><![CDATA[$F{saldoVencido} != null && $F{saldoVencido}.doubleValue() > 0.005]]></conditionExpression>
+		</conditionalStyle>
+	</style>
+	<style name="tot" mode="Opaque" backcolor="#F7F1EA" fontName="DejaVu Sans" fontSize="8.0" bold="true" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><topPen lineWidth="1.0" lineColor="#B8A28C"/></box>
+	</style>
+	<style name="vacio" fontName="DejaVu Sans" fontSize="8.0" italic="true" forecolor="#7A7A7A" hTextAlign="Center" vTextAlign="Middle">
+		<box><pen lineWidth="0.5" lineColor="#E6E1DB"/></box>
+	</style>
+	<field name="cliente" class="java.lang.String"/>
+	<field name="numeroDocumento" class="java.lang.String"/>
+	<field name="calificacionTexto" class="java.lang.String"/>
+	<field name="limiteCredito" class="java.lang.Number"/>
+	<field name="saldoPendiente" class="java.lang.Number"/>
+	<field name="saldoVencido" class="java.lang.Number"/>
+	<field name="diasAtrasoTexto" class="java.lang.String"/>
+	<field name="creditoDisponible" class="java.lang.Number"/>
+	<variable name="sumLimite" calculation="Sum" class="java.lang.Double">
+		<expression><![CDATA[$F{limiteCredito} == null ? 0d : $F{limiteCredito}.doubleValue()]]></expression>
+	</variable>
+	<variable name="sumDeuda" calculation="Sum" class="java.lang.Double">
+		<expression><![CDATA[$F{saldoPendiente} == null ? 0d : $F{saldoPendiente}.doubleValue()]]></expression>
+	</variable>
+	<variable name="sumVencido" calculation="Sum" class="java.lang.Double">
+		<expression><![CDATA[$F{saldoVencido} == null ? 0d : $F{saldoVencido}.doubleValue()]]></expression>
+	</variable>
+	<variable name="sumDisponible" calculation="Sum" class="java.lang.Double">
+		<expression><![CDATA[$F{creditoDisponible} == null ? 0d : $F{creditoDisponible}.doubleValue()]]></expression>
+	</variable>
+	<group name="tabla" minHeightToStartNewPage="90" reprintHeaderOnEachPage="true">
+		<expression><![CDATA[1]]></expression>
+		<groupHeader>
+			<band height="48">
+				<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[Crédito de clientes]]></text></element>
+				<element kind="staticText" x="9" y="17" width="526" height="11" style="nota"><text><![CDATA[Situación a la fecha de emisión; no depende del periodo. En rojo, los clientes con deuda vencida.]]></text></element>
+				<element kind="staticText" x="0" y="32" width="145" height="16" style="th"><text><![CDATA[Cliente]]></text></element>
+				<element kind="staticText" x="145" y="32" width="72" height="16" style="th"><text><![CDATA[Documento]]></text></element>
+				<element kind="staticText" x="217" y="32" width="40" height="16" style="th" hTextAlign="Center"><text><![CDATA[Calif.]]></text></element>
+				<element kind="staticText" x="257" y="32" width="56" height="16" style="th" hTextAlign="Right"><text><![CDATA[Límite]]></text></element>
+				<element kind="staticText" x="313" y="32" width="56" height="16" style="th" hTextAlign="Right"><text><![CDATA[Deuda]]></text></element>
+				<element kind="staticText" x="369" y="32" width="56" height="16" style="th" hTextAlign="Right"><text><![CDATA[Vencido]]></text></element>
+				<element kind="staticText" x="425" y="32" width="40" height="16" style="th" hTextAlign="Right"><text><![CDATA[Atraso]]></text></element>
+				<element kind="staticText" x="465" y="32" width="70" height="16" style="th" hTextAlign="Right"><text><![CDATA[Disponible]]></text></element>
+			</band>
+		</groupHeader>
+	</group>
+	<detail>
+		<band height="15">
+			<element kind="textField" stretchType="ContainerHeight" x="0" y="0" width="145" height="15" style="tdAlerta" textAdjust="StretchHeight" blankWhenNull="true"><expression><![CDATA[$F{cliente}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="145" y="0" width="72" height="15" style="td" blankWhenNull="true"><expression><![CDATA[$F{numeroDocumento}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="217" y="0" width="40" height="15" style="td" hTextAlign="Center" blankWhenNull="true"><expression><![CDATA[$F{calificacionTexto}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="257" y="0" width="56" height="15" style="td" hTextAlign="Right" pattern="#,##0.00" blankWhenNull="true"><expression><![CDATA[$F{limiteCredito}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="313" y="0" width="56" height="15" style="td" hTextAlign="Right" pattern="#,##0.00" blankWhenNull="true"><expression><![CDATA[$F{saldoPendiente}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="369" y="0" width="56" height="15" style="tdAlerta" hTextAlign="Right" pattern="#,##0.00" blankWhenNull="true"><expression><![CDATA[$F{saldoVencido}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="425" y="0" width="40" height="15" style="td" hTextAlign="Right" blankWhenNull="true"><expression><![CDATA[$F{diasAtrasoTexto}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="465" y="0" width="70" height="15" style="td" hTextAlign="Right" pattern="#,##0.00" bold="true" blankWhenNull="true"><expression><![CDATA[$F{creditoDisponible}]]></expression></element>
+		</band>
+	</detail>
+	<summary height="16">
+		<element kind="staticText" x="0" y="0" width="257" height="16" style="tot"><text><![CDATA[Total]]></text></element>
+		<element kind="textField" x="257" y="0" width="56" height="16" style="tot" hTextAlign="Right" pattern="#,##0.00"><expression><![CDATA[$V{sumLimite}]]></expression></element>
+		<element kind="textField" x="313" y="0" width="56" height="16" style="tot" hTextAlign="Right" pattern="#,##0.00"><expression><![CDATA[$V{sumDeuda}]]></expression></element>
+		<element kind="textField" x="369" y="0" width="56" height="16" style="tot" hTextAlign="Right" pattern="#,##0.00"><expression><![CDATA[$V{sumVencido}]]></expression></element>
+		<element kind="staticText" x="425" y="0" width="40" height="16" style="tot"><text><![CDATA[]]></text></element>
+		<element kind="textField" x="465" y="0" width="70" height="16" style="tot" hTextAlign="Right" pattern="#,##0.00"><expression><![CDATA[$V{sumDisponible}]]></expression></element>
+	</summary>
+	<noData height="42">
+		<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[Crédito de clientes]]></text></element>
+		<element kind="staticText" x="0" y="22" width="535" height="18" style="vacio"><text><![CDATA[Ningún cliente tiene línea de crédito ni deuda.]]></text></element>
+	</noData>
+</jasperReport>

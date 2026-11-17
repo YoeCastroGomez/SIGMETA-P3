@@ -16,4 +16,7 @@ public interface ReporteBO {
 
     // cierres del periodo, dinero por medio de pago y diferencias por cajero
     Map<String, Object> caja(LocalDate desde, LocalDate hasta, int idAdministrador) throws SQLException;
+
+    // el mismo reporte en PDF (JasperReports): tipo = comercial, abastecimiento o caja
+    byte[] pdf(String tipo, LocalDate desde, LocalDate hasta, int idAdministrador) throws SQLException;
 }

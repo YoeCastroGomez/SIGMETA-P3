@@ -65,6 +65,28 @@ public class ReporteBOImpl implements ReporteBO {
         });
     }
 
+    // RF015: el reporte en PDF. Usa los mismos datos que la pantalla (y por eso las mismas validaciones de rol y
+    // periodo) y JasperReports solo les da forma de documento (ReportePdf).
+    @Override
+    public byte[] pdf(String tipo, LocalDate desde, LocalDate hasta, int idAdministrador) throws SQLException {
+        String cual = tipo == null ? "" : tipo.trim().toLowerCase(java.util.Locale.ROOT);
+        ReportePdf.nombre(cual);   // rechaza un tipo desconocido antes de consultar la base
+        Map<String, Object> datos = switch (cual) {
+            case ReportePdf.COMERCIAL -> comercial(desde, hasta, idAdministrador);
+            case ReportePdf.ABASTECIMIENTO -> abastecimiento(desde, hasta, idAdministrador);
+            default -> caja(desde, hasta, idAdministrador);
+        };
+        pe.edu.pucp.sigmeta.model.usuario.Usuario administrador = usuarioBO.obtenerAdministradorActivo(idAdministrador);
+        String nombre = (texto(administrador.getNombres()) + " " + texto(administrador.getApellidos())).trim();
+        String generadoPor = nombre.isEmpty() ? texto(administrador.getNombreUsuario())
+                : nombre + " (" + texto(administrador.getNombreUsuario()) + ")";
+        return ReportePdf.generar(cual, datos, generadoPor, java.time.LocalDateTime.now());
+    }
+
+    private static String texto(String valor) {
+        return valor == null ? "" : valor.trim();
+    }
+
     private void validarPeriodo(LocalDate desde, LocalDate hasta) {
         Validador.obligatorio(desde, "fecha de inicio");
         Validador.obligatorio(hasta, "fecha de fin");

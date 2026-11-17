@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SIGMETA · RF015 · Reporte de caja (PDF): cierres realizados, sus diferencias y responsables.
+     Plantilla principal: membrete, indicadores y los subreportes de cada tabla. Los datos llegan como
+     parametros (JRDataSource por tabla) desde ReportePdf.java; la plantilla no tiene logica de negocio. -->
+<jasperReport name="reporte_caja" language="java" pageWidth="595" pageHeight="842" columnWidth="535" leftMargin="30" rightMargin="30" topMargin="28" bottomMargin="28">
+	<style name="base" default="true" fontName="DejaVu Sans" fontSize="8.0" forecolor="#1D1D1F"/>
+	<style name="indicador" mode="Opaque" backcolor="#FFFCF8">
+		<box><pen lineWidth="0.5" lineColor="#E2D8CC"/><leftPen lineWidth="3.0" lineColor="#D9822B"/></box>
+	</style>
+	<style name="indTitulo" fontName="DejaVu Sans" fontSize="6.5" bold="true" forecolor="#7A6A5A"/>
+	<style name="indValor" fontName="DejaVu Sans" fontSize="12.0" bold="true" forecolor="#1D1D1F"/>
+	<style name="indDetalle" fontName="DejaVu Sans" fontSize="6.5" forecolor="#7A7A7A"/>
+	<style name="pie" fontName="DejaVu Sans" fontSize="7.0" forecolor="#7A7A7A" vTextAlign="Middle"/>
+	<parameter name="NOMBRE_REPORTE" class="java.lang.String"/>
+	<parameter name="PERIODO" class="java.lang.String"/>
+	<parameter name="EMITIDO" class="java.lang.String"/>
+	<parameter name="GENERADO_POR" class="java.lang.String"/>
+	<parameter name="IND1_TITULO" class="java.lang.String"/>
+	<parameter name="IND1_VALOR" class="java.lang.String"/>
+	<parameter name="IND1_DETALLE" class="java.lang.String"/>
+	<parameter name="IND2_TITULO" class="java.lang.String"/>
+	<parameter name="IND2_VALOR" class="java.lang.String"/>
+	<parameter name="IND2_DETALLE" class="java.lang.String"/>
+	<parameter name="IND3_TITULO" class="java.lang.String"/>
+	<parameter name="IND3_VALOR" class="java.lang.String"/>
+	<parameter name="IND3_DETALLE" class="java.lang.String"/>
+	<parameter name="IND4_TITULO" class="java.lang.String"/>
+	<parameter name="IND4_VALOR" class="java.lang.String"/>
+	<parameter name="IND4_DETALLE" class="java.lang.String"/>
+	<parameter name="SUB_CIERRES" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="SUB_MEDIO_PAGO" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="SUB_CAJERO" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="DS_CIERRES" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<parameter name="DS_MEDIO_PAGO" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<parameter name="DS_CAJERO" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<title height="116">
+		<element kind="staticText" x="0" y="0" width="260" height="22" fontSize="17.0" bold="true"><text><![CDATA[GRUPO META]]></text></element>
+		<element kind="staticText" x="0" y="22" width="260" height="12" fontSize="7.0" forecolor="#8A8A8A"><text><![CDATA[SIGMETA · GESTIÓN EMPRESARIAL]]></text></element>
+		<element kind="textField" x="235" y="0" width="300" height="18" fontSize="12.0" bold="true" forecolor="#B8641A" hTextAlign="Right"><expression><![CDATA[$P{NOMBRE_REPORTE}]]></expression></element>
+		<element kind="textField" x="235" y="18" width="300" height="11" fontSize="7.5" hTextAlign="Right"><expression><![CDATA["Periodo: " + $P{PERIODO}]]></expression></element>
+		<element kind="textField" x="235" y="29" width="300" height="11" fontSize="7.5" forecolor="#5F5F5F" hTextAlign="Right"><expression><![CDATA["Emitido: " + $P{EMITIDO}]]></expression></element>
+		<element kind="textField" x="235" y="40" width="300" height="11" fontSize="7.5" forecolor="#5F5F5F" hTextAlign="Right"><expression><![CDATA["Generado por: " + $P{GENERADO_POR}]]></expression></element>
+		<element kind="line" x="0" y="55" width="535" height="1"><pen lineWidth="2.0" lineColor="#D9822B"/></element>
+		<element kind="frame" x="0" y="64" width="127" height="46" style="indicador">
+			<element kind="textField" x="8" y="5" width="115" height="10" style="indTitulo" blankWhenNull="true"><expression><![CDATA[$P{IND1_TITULO}]]></expression></element>
+			<element kind="textField" x="8" y="16" width="115" height="16" style="indValor" blankWhenNull="true"><expression><![CDATA[$P{IND1_VALOR}]]></expression></element>
+			<element kind="textField" x="8" y="32" width="115" height="10" style="indDetalle" blankWhenNull="true"><expression><![CDATA[$P{IND1_DETALLE}]]></expression></element>
+		</element>
+		<element kind="frame" x="136" y="64" width="127" height="46" style="indicador">
+			<element kind="textField" x="8" y="5" width="115" height="10" style="indTitulo" blankWhenNull="true"><expression><![CDATA[$P{IND2_TITULO}]]></expression></element>
+			<element kind="textField" x="8" y="16" width="115" height="16" style="indValor" blankWhenNull="true"><expression><![CDATA[$P{IND2_VALOR}]]></expression></element>
+			<element kind="textField" x="8" y="32" width="115" height="10" style="indDetalle" blankWhenNull="true"><expression><![CDATA[$P{IND2_DETALLE}]]></expression></element>
+		</element>
+		<element kind="frame" x="272" y="64" width="127" height="46" style="indicador">
+			<element kind="textField" x="8" y="5" width="115" height="10" style="indTitulo" blankWhenNull="true"><expression><![CDATA[$P{IND3_TITULO}]]></expression></element>
+			<element kind="textField" x="8" y="16" width="115" height="16" style="indValor" blankWhenNull="true"><expression><![CDATA[$P{IND3_VALOR}]]></expression></element>
+			<element kind="textField" x="8" y="32" width="115" height="10" style="indDetalle" blankWhenNull="true"><expression><![CDATA[$P{IND3_DETALLE}]]></expression></element>
+		</element>
+		<element kind="frame" x="408" y="64" width="127" height="46" style="indicador">
+			<element kind="textField" x="8" y="5" width="115" height="10" style="indTitulo" blankWhenNull="true"><expression><![CDATA[$P{IND4_TITULO}]]></expression></element>
+			<element kind="textField" x="8" y="16" width="115" height="16" style="indValor" blankWhenNull="true"><expression><![CDATA[$P{IND4_VALOR}]]></expression></element>
+			<element kind="textField" x="8" y="32" width="115" height="10" style="indDetalle" blankWhenNull="true"><expression><![CDATA[$P{IND4_DETALLE}]]></expression></element>
+		</element>
+	</title>
+	<detail>
+		<band height="56">
+			<element kind="subreport" positionType="Float" x="0" y="4" width="535" height="10">
+				<dataSourceExpression><![CDATA[$P{DS_CIERRES}]]></dataSourceExpression>
+				<expression><![CDATA[$P{SUB_CIERRES}]]></expression>
+			</element>
+			<element kind="subreport" positionType="Float" x="0" y="20" width="535" height="10">
+				<dataSourceExpression><![CDATA[$P{DS_MEDIO_PAGO}]]></dataSourceExpression>
+				<expression><![CDATA[$P{SUB_MEDIO_PAGO}]]></expression>
+			</element>
+			<element kind="subreport" positionType="Float" x="0" y="36" width="535" height="10">
+				<dataSourceExpression><![CDATA[$P{DS_CAJERO}]]></dataSourceExpression>
+				<expression><![CDATA[$P{SUB_CAJERO}]]></expression>
+			</element>
+		</band>
+	</detail>
+	<pageFooter height="22">
+		<element kind="line" x="0" y="4" width="535" height="1"><pen lineWidth="0.5" lineColor="#D9D2C9"/></element>
+		<element kind="textField" x="0" y="8" width="380" height="12" style="pie"><expression><![CDATA["SIGMETA · Grupo Meta  |  " + $P{NOMBRE_REPORTE} + "  |  " + $P{PERIODO}]]></expression></element>
+		<element kind="textField" x="380" y="8" width="125" height="12" style="pie" hTextAlign="Right"><expression><![CDATA["Página " + $V{PAGE_NUMBER} + " de "]]></expression></element>
+		<element kind="textField" x="505" y="8" width="30" height="12" style="pie" evaluationTime="Report"><expression><![CDATA[" " + $V{PAGE_NUMBER}]]></expression></element>
+	</pageFooter>
+	<summary height="30">
+		<element kind="staticText" x="0" y="8" width="535" height="20" style="pie"><text><![CDATA[Importes en soles (S/). Los cobros de ventas anuladas y lo devuelto con notas de crédito se compensan con egresos. Documento generado por SIGMETA.]]></text></element>
+	</summary>
+</jasperReport>

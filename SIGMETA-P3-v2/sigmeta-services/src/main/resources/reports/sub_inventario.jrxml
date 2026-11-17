@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SIGMETA · RF015 · Reporte de abastecimiento: inventario valorizado por categoria (subreporte). Datos: sp_reporte_inventario_valorizado. -->
+<jasperReport name="sub_inventario" language="java" pageWidth="535" pageHeight="842" whenNoDataType="NoDataSection" columnWidth="535" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+	<style name="base" default="true" fontName="DejaVu Sans" fontSize="8.0" forecolor="#1D1D1F"/>
+	<style name="seccion" fontName="DejaVu Sans" fontSize="10.0" bold="true" forecolor="#1D1D1F" vTextAlign="Middle">
+		<box leftPadding="6"><leftPen lineWidth="3.0" lineColor="#D9822B"/></box>
+	</style>
+	<style name="nota" fontName="DejaVu Sans" fontSize="7.0" italic="true" forecolor="#7A7A7A"/>
+	<style name="th" mode="Opaque" backcolor="#F3EDE6" forecolor="#5A3A1A" fontName="DejaVu Sans" fontSize="7.5" bold="true" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><bottomPen lineWidth="0.75" lineColor="#C9B8A6"/></box>
+	</style>
+	<style name="td" fontName="DejaVu Sans" fontSize="8.0" forecolor="#1D1D1F" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><bottomPen lineWidth="0.5" lineColor="#E6E1DB"/></box>
+		<conditionalStyle mode="Opaque" backcolor="#FBF8F4">
+			<conditionExpression><![CDATA[$V{REPORT_COUNT} % 2 == 0]]></conditionExpression>
+		</conditionalStyle>
+	</style>
+	<style name="tot" mode="Opaque" backcolor="#F7F1EA" fontName="DejaVu Sans" fontSize="8.0" bold="true" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><topPen lineWidth="1.0" lineColor="#B8A28C"/></box>
+	</style>
+	<style name="vacio" fontName="DejaVu Sans" fontSize="8.0" italic="true" forecolor="#7A7A7A" hTextAlign="Center" vTextAlign="Middle">
+		<box><pen lineWidth="0.5" lineColor="#E6E1DB"/></box>
+	</style>
+	<field name="categoria" class="java.lang.String"/>
+	<field name="productos" class="java.lang.Number"/>
+	<field name="enMinimo" class="java.lang.Number"/>
+	<field name="valorCosto" class="java.lang.Number"/>
+	<field name="valorVenta" class="java.lang.Number"/>
+	<variable name="sumProductos" calculation="Sum" class="java.lang.Double">
+		<expression><![CDATA[$F{productos} == null ? 0d : $F{productos}.doubleValue()]]></expression>
+	</variable>
+	<variable name="sumEnMinimo" calculation="Sum" class="java.lang.Double">
+		<expression><![CDATA[$F{enMinimo} == null ? 0d : $F{enMinimo}.doubleValue()]]></expression>
+	</variable>
+	<variable name="sumCosto" calculation="Sum" class="java.lang.Double">
+		<expression><![CDATA[$F{valorCosto} == null ? 0d : $F{valorCosto}.doubleValue()]]></expression>
+	</variable>
+	<variable name="sumVenta" calculation="Sum" class="java.lang.Double">
+		<expression><![CDATA[$F{valorVenta} == null ? 0d : $F{valorVenta}.doubleValue()]]></expression>
+	</variable>
+	<group name="tabla" minHeightToStartNewPage="90" reprintHeaderOnEachPage="true">
+		<expression><![CDATA[1]]></expression>
+		<groupHeader>
+			<band height="48">
+				<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[Inventario valorizado por categoría]]></text></element>
+				<element kind="staticText" x="9" y="17" width="526" height="11" style="nota"><text><![CDATA[Existencias a la fecha de emisión, al costo promedio ponderado.]]></text></element>
+				<element kind="staticText" x="0" y="32" width="195" height="16" style="th"><text><![CDATA[Categoría]]></text></element>
+				<element kind="staticText" x="195" y="32" width="70" height="16" style="th" hTextAlign="Right"><text><![CDATA[Productos]]></text></element>
+				<element kind="staticText" x="265" y="32" width="75" height="16" style="th" hTextAlign="Right"><text><![CDATA[En su mínimo]]></text></element>
+				<element kind="staticText" x="340" y="32" width="95" height="16" style="th" hTextAlign="Right"><text><![CDATA[Valor al costo (S/)]]></text></element>
+				<element kind="staticText" x="435" y="32" width="100" height="16" style="th" hTextAlign="Right"><text><![CDATA[Valor de venta (S/)]]></text></element>
+			</band>
+		</groupHeader>
+	</group>
+	<detail>
+		<band height="15">
+			<element kind="textField" stretchType="ContainerHeight" x="0" y="0" width="195" height="15" style="td" textAdjust="StretchHeight" blankWhenNull="true"><expression><![CDATA[$F{categoria}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="195" y="0" width="70" height="15" style="td" hTextAlign="Right" pattern="#,##0" blankWhenNull="true"><expression><![CDATA[$F{productos}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="265" y="0" width="75" height="15" style="td" hTextAlign="Right" pattern="#,##0" blankWhenNull="true"><expression><![CDATA[$F{enMinimo}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="340" y="0" width="95" height="15" style="td" hTextAlign="Right" pattern="#,##0.00" blankWhenNull="true"><expression><![CDATA[$F{valorCosto}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="435" y="0" width="100" height="15" style="td" hTextAlign="Right" pattern="#,##0.00" bold="true" blankWhenNull="true"><expression><![CDATA[$F{valorVenta}]]></expression></element>
+		</band>
+	</detail>
+	<summary height="16">
+		<element kind="staticText" x="0" y="0" width="195" height="16" style="tot"><text><![CDATA[Total]]></text></element>
+		<element kind="textField" x="195" y="0" width="70" height="16" style="tot" hTextAlign="Right" pattern="#,##0"><expression><![CDATA[$V{sumProductos}]]></expression></element>
+		<element kind="textField" x="265" y="0" width="75" height="16" style="tot" hTextAlign="Right" pattern="#,##0"><expression><![CDATA[$V{sumEnMinimo}]]></expression></element>
+		<element kind="textField" x="340" y="0" width="95" height="16" style="tot" hTextAlign="Right" pattern="#,##0.00"><expression><![CDATA[$V{sumCosto}]]></expression></element>
+		<element kind="textField" x="435" y="0" width="100" height="16" style="tot" hTextAlign="Right" pattern="#,##0.00"><expression><![CDATA[$V{sumVenta}]]></expression></element>
+	</summary>
+	<noData height="42">
+		<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[Inventario valorizado por categoría]]></text></element>
+		<element kind="staticText" x="0" y="22" width="535" height="18" style="vacio"><text><![CDATA[No hay productos activos.]]></text></element>
+	</noData>
+</jasperReport>

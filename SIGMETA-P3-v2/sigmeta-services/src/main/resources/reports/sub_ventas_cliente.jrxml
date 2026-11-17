@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SIGMETA · RF015 · Reporte comercial: clientes que mas compraron (subreporte). Datos: sp_reporte_ventas_por_cliente. -->
+<jasperReport name="sub_ventas_cliente" language="java" pageWidth="535" pageHeight="842" whenNoDataType="NoDataSection" columnWidth="535" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+	<style name="base" default="true" fontName="DejaVu Sans" fontSize="8.0" forecolor="#1D1D1F"/>
+	<style name="seccion" fontName="DejaVu Sans" fontSize="10.0" bold="true" forecolor="#1D1D1F" vTextAlign="Middle">
+		<box leftPadding="6"><leftPen lineWidth="3.0" lineColor="#D9822B"/></box>
+	</style>
+	<style name="th" mode="Opaque" backcolor="#F3EDE6" forecolor="#5A3A1A" fontName="DejaVu Sans" fontSize="7.5" bold="true" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><bottomPen lineWidth="0.75" lineColor="#C9B8A6"/></box>
+	</style>
+	<style name="td" fontName="DejaVu Sans" fontSize="8.0" forecolor="#1D1D1F" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><bottomPen lineWidth="0.5" lineColor="#E6E1DB"/></box>
+		<conditionalStyle mode="Opaque" backcolor="#FBF8F4">
+			<conditionExpression><![CDATA[$V{REPORT_COUNT} % 2 == 0]]></conditionExpression>
+		</conditionalStyle>
+	</style>
+	<style name="tot" mode="Opaque" backcolor="#F7F1EA" fontName="DejaVu Sans" fontSize="8.0" bold="true" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><topPen lineWidth="1.0" lineColor="#B8A28C"/></box>
+	</style>
+	<style name="vacio" fontName="DejaVu Sans" fontSize="8.0" italic="true" forecolor="#7A7A7A" hTextAlign="Center" vTextAlign="Middle">
+		<box><pen lineWidth="0.5" lineColor="#E6E1DB"/></box>
+	</style>
+	<field name="cliente" class="java.lang.String"/>
+	<field name="numeroDocumento" class="java.lang.String"/>
+	<field name="ventas" class="java.lang.Number"/>
+	<field name="total" class="java.lang.Number"/>
+	<variable name="sumVentas" calculation="Sum" class="java.lang.Double">
+		<expression><![CDATA[$F{ventas} == null ? 0d : $F{ventas}.doubleValue()]]></expression>
+	</variable>
+	<variable name="sumTotal" calculation="Sum" class="java.lang.Double">
+		<expression><![CDATA[$F{total} == null ? 0d : $F{total}.doubleValue()]]></expression>
+	</variable>
+	<group name="tabla" minHeightToStartNewPage="90" reprintHeaderOnEachPage="true">
+		<expression><![CDATA[1]]></expression>
+		<groupHeader>
+			<band height="38">
+				<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[Clientes que más compraron (10 primeros)]]></text></element>
+				<element kind="staticText" x="0" y="22" width="245" height="16" style="th"><text><![CDATA[Cliente]]></text></element>
+				<element kind="staticText" x="245" y="22" width="110" height="16" style="th"><text><![CDATA[Documento]]></text></element>
+				<element kind="staticText" x="355" y="22" width="80" height="16" style="th" hTextAlign="Right"><text><![CDATA[Ventas]]></text></element>
+				<element kind="staticText" x="435" y="22" width="100" height="16" style="th" hTextAlign="Right"><text><![CDATA[Total (S/)]]></text></element>
+			</band>
+		</groupHeader>
+	</group>
+	<detail>
+		<band height="15">
+			<element kind="textField" stretchType="ContainerHeight" x="0" y="0" width="245" height="15" style="td" textAdjust="StretchHeight" blankWhenNull="true"><expression><![CDATA[$F{cliente}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="245" y="0" width="110" height="15" style="td" blankWhenNull="true"><expression><![CDATA[$F{numeroDocumento}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="355" y="0" width="80" height="15" style="td" hTextAlign="Right" pattern="#,##0" blankWhenNull="true"><expression><![CDATA[$F{ventas}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="435" y="0" width="100" height="15" style="td" hTextAlign="Right" pattern="#,##0.00" bold="true" blankWhenNull="true"><expression><![CDATA[$F{total}]]></expression></element>
+		</band>
+	</detail>
+	<summary height="16">
+		<element kind="staticText" x="0" y="0" width="355" height="16" style="tot"><text><![CDATA[Total de los 10 primeros]]></text></element>
+		<element kind="textField" x="355" y="0" width="80" height="16" style="tot" hTextAlign="Right" pattern="#,##0"><expression><![CDATA[$V{sumVentas}]]></expression></element>
+		<element kind="textField" x="435" y="0" width="100" height="16" style="tot" hTextAlign="Right" pattern="#,##0.00"><expression><![CDATA[$V{sumTotal}]]></expression></element>
+	</summary>
+	<noData height="42">
+		<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[Clientes que más compraron (10 primeros)]]></text></element>
+		<element kind="staticText" x="0" y="22" width="535" height="18" style="vacio"><text><![CDATA[Sin ventas en el periodo.]]></text></element>
+	</noData>
+</jasperReport>

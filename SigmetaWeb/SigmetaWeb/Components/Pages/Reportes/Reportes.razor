@@ -2,16 +2,23 @@
 @* RF001: solo estos roles abren esta pantalla *@
 @attribute [Authorize(Roles = "Administrador")]
 @inject ApiJava Api
+@inject IJSRuntime JS
 @using SigmetaWeb.Components.Pages.Almacen
 
 <PageTitle>Reportes · SIGMETA</PageTitle>
 
 @* RF015 · Reportes del Administrador sobre un periodo: comercial (ventas y crédito), abastecimiento e inventario, y caja.
-   GET /api/reportes/comercial|abastecimiento|caja?desde=&hasta=. Las sumas vienen hechas de la base (RNF003). *@
-<Encabezado Rf="RF015" Titulo="Reportes" Subtitulo="Elige el periodo y el reporte. Importes en soles (S/).">
-    @if (!string.IsNullOrEmpty(csv))
+   GET /api/reportes/comercial|abastecimiento|caja?desde=&hasta=. Las sumas vienen hechas de la base (RNF003).
+   Descargar PDF: GET /api/reportes/{tipo}/pdf?desde=&hasta=. El PDF lo genera el Java con JasperReports
+   (plantillas .jrxml en sigmeta-services/src/main/resources/reports) y aquí solo se descarga. *@
+
+<Encabezado Rf="RF015" Titulo="Reportes" Subtitulo="Reportes comercial, de abastecimiento e inventario y de caja. Importes en soles (S/).">
+    @if (HayReporte)
     {
-        <a class="btn btn-outline-secondary" download="@nombreCsv" href="@("data:text/csv;charset=utf-8,%EF%BB%BF" + Uri.EscapeDataString(csv))">Exportar a CSV</a>
+        <button type="button" class="btn btn-primary" disabled="@(cargando || descargando)" @onclick="DescargarPdf">
+            @(descargando ? "Generando PDF..." : "Descargar PDF")
+        </button>
+        <a class="btn btn-outline-secondary" download="@nombreCsv" href="@("data:text/csv;charset=utf-8,%EF%BB%BF" + Uri.EscapeDataString(csv!))">Exportar a CSV</a>
     }
 </Encabezado>
 
@@ -456,6 +463,7 @@ else if (reporte == "caja" && caja is not null)
     </div>
 }
 
+
 @code {
     private DateTime desde = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     private DateTime hasta = DateTime.Today;
@@ -470,6 +478,44 @@ else if (reporte == "caja" && caja is not null)
     private int tamanoCierres = 10;
 
     private string nombreCsv => $"sigmeta-{reporte}-{Formato.Iso(desde)}-a-{Formato.Iso(hasta)}.csv";
+
+    // ---------------- Descarga en PDF (RF015, JasperReports en el Java) ----------------
+
+    private bool descargando;
+
+    private bool HayReporte => !string.IsNullOrEmpty(csv) && reporte switch
+    {
+        "abastecimiento" => abastecimiento is not null,
+        "caja" => caja is not null,
+        _ => comercial is not null
+    };
+
+    // GET /api/reportes/{tipo}/pdf: el Java arma el PDF con JasperReports y aquí solo se descarga el archivo
+    private async Task DescargarPdf()
+    {
+        if (!HayReporte) return;
+        error = null;
+        descargando = true;
+        try
+        {
+            var pdf = await Api.GetArchivo($"reportes/{reporte}/pdf?desde={Formato.Iso(desde)}&hasta={Formato.Iso(hasta)}");
+            var nombre = $"SIGMETA-reporte-{reporte}-{Formato.Iso(desde)}-a-{Formato.Iso(hasta)}.pdf";
+            await JS.InvokeVoidAsync("sigmetaDescargar", nombre, "application/pdf", Convert.ToBase64String(pdf));
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        catch (JSException)
+        {
+            error = "El PDF se generó, pero el navegador no pudo descargarlo. Vuelva a intentarlo.";
+        }
+        finally
+        {
+            descargando = false;
+        }
+    }
+
     private IEnumerable<CierreReporte> PaginaCierres => tamanoCierres == 0 ? caja!.Cierres
         : caja!.Cierres.Skip((Math.Max(paginaCierres, 1) - 1) * tamanoCierres).Take(tamanoCierres);
 

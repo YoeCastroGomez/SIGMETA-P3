@@ -60,6 +60,14 @@ public class ApiJava
         await Enviar(HttpMethod.Delete, ruta, null);
     }
 
+    // Archivos que genera el Java (por ejemplo los reportes PDF de RF015): devuelve los bytes tal cual.
+    // Los errores llegan como JSON y se lanzan como ErrorApi, igual que en las demás llamadas.
+    public async Task<byte[]> GetArchivo(string ruta)
+    {
+        var respuesta = await Enviar(HttpMethod.Get, ruta, null);
+        return await respuesta.Content.ReadAsByteArrayAsync();
+    }
+
     private async Task<HttpResponseMessage> Enviar(HttpMethod metodo, string ruta, object? cuerpo)
     {
         var pedido = new HttpRequestMessage(metodo, ruta);
