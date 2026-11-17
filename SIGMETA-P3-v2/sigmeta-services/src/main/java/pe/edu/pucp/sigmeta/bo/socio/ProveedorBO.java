@@ -16,4 +16,5 @@ public interface ProveedorBO {
     Proveedor buscarPorRuc(String ruc) throws SQLException;
     List<Proveedor> buscarPorRazonSocial(String razonSocial) throws SQLException;
     List<Proveedor> listarPorEstado(boolean estado) throws SQLException;
+    List<Proveedor> buscar(String ruc, String razonSocial, Boolean estado, int idAdministrador) throws SQLException;
 }
