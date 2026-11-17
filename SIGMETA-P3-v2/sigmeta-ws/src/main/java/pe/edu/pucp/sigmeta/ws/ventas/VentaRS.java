@@ -68,10 +68,13 @@ public class VentaRS extends VentanillaBase {
             List<Venta> ventas = idCliente != null ? ventaBO.listarPorCliente(idCliente) : ventaBO.listarTodos();
             Map<Integer, Comprobante> comprobantes = comprobantesVigentes();
             Map<Integer, String> numerosOrden = numerosOrden();
+            java.util.Set<Integer> cobradas = ventaBO.idsCobradasAlContado();
             Nombres nombres = new Nombres();
             List<VentaDatos> lista = new ArrayList<>();
             for (Venta v : ventas) {
-                lista.add(convertir(v, nombres, comprobantes, numerosOrden, false));
+                VentaDatos d = convertir(v, nombres, comprobantes, numerosOrden, false);
+                d.cobradaContado = cobradas.contains(v.getId());
+                lista.add(d);
             }
             return lista;
         });
@@ -188,7 +191,9 @@ public class VentaRS extends VentanillaBase {
     }
 
     private VentaDatos conDetalle(Venta venta) throws SQLException {
-        return convertir(venta, new Nombres(), comprobantesVigentes(), numerosOrden(), true);
+        VentaDatos d = convertir(venta, new Nombres(), comprobantesVigentes(), numerosOrden(), true);
+        d.cobradaContado = ventaBO.idsCobradasAlContado().contains(venta.getId());
+        return d;
     }
 
     // boleta o factura vigente de cada venta (una venta tiene un solo comprobante vigente)

@@ -107,6 +107,8 @@ public class VentaDatos
     public int IdComprobante { get; set; }
     public string? TipoComprobante { get; set; }
     public string? Comprobante { get; set; }
+    // RF008/RF010: venta al contado ya cobrada en caja; el BO ya no la deja modificar
+    public bool CobradaContado { get; set; }
     public List<LineaDatos> Lineas { get; set; } = new();
 }
 

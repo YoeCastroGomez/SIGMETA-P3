@@ -566,4 +566,18 @@ public class VentaBOImpl implements VentaBO {
         return Transaccion.ejecutar(() -> ventaDAO.listarPorCliente(idCliente));
     }
 
+    // RF008/RF010: mismo criterio que la regla de modificar (sp_venta_contar_cobros_contado), en una sola consulta
+    @Override
+    public Set<Integer> idsCobradasAlContado() throws SQLException {
+        return Transaccion.consultar(() -> {
+            Set<Integer> ids = new HashSet<>();
+            for (Map<String, Object> fila : consultaDAO.consultar("sp_venta_ids_cobradas_contado")) {
+                if (fila.get("idVenta") instanceof Number id) {
+                    ids.add(id.intValue());
+                }
+            }
+            return ids;
+        });
+    }
+
 }

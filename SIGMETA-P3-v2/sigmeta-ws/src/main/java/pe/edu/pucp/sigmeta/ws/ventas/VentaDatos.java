@@ -39,6 +39,9 @@ public class VentaDatos {
     public String tipoComprobante;
     public String comprobante;
 
+    // RF008/RF010: venta al contado ya cobrada en caja (ya no se modifica). Solo lo lee la pantalla.
+    public boolean cobradaContado;
+
     public List<LineaDatos> lineas = new ArrayList<>();
 
     public VentaDatos() {

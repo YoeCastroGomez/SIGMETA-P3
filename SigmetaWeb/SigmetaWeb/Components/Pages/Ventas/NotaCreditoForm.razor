@@ -23,7 +23,15 @@
 }
 else
 {
-    @if (autorizacion is null)
+    @if (autorizacion is null && solicitudPendiente)
+    {
+        @* RF014: ya hay una solicitud enviada; falta que el Administrador la apruebe *@
+        <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span>Tu solicitud de autorización está <strong>pendiente</strong>: cuando el Administrador la apruebe, vuelve a esta pantalla.</span>
+            <a class="btn btn-sm btn-outline-dark" href="/autorizaciones/mias">Ver mis solicitudes</a>
+        </div>
+    }
+    else if (autorizacion is null)
     {
         <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2">
             <span>Para emitir una nota de crédito necesitas una <strong>autorización vigente del Administrador</strong>. Cada autorización sirve para una nota.</span>
@@ -169,7 +177,11 @@ else
 @code {
     private const double TasaIgv = 0.18;
 
+    // viene del comprobante de la venta: /notas-credito/nueva?comprobante=ID
+    [SupplyParameterFromQuery(Name = "comprobante")] public int? IdComprobanteInicial { get; set; }
+
     private SolicitudDatos? autorizacion;
+    private bool solicitudPendiente;
     private List<ComprobanteParaNota> comprobantes = new();
     private List<LineaDevolvible> lineas = new();
     private int idComprobante;
@@ -208,6 +220,17 @@ else
         {
             comprobantes = await Api.Get<List<ComprobanteParaNota>>("notas-credito/comprobantes") ?? new();
             autorizacion = await Api.Get<SolicitudDatos>($"solicitudes/vigente?operacion={TextosSeguridad.OperacionNotaCredito}");
+            if (autorizacion is null)
+            {
+                // RF014: ¿ya pidió una y espera la aprobación? (así no intenta una segunda solicitud pendiente)
+                var mias = await Api.Get<List<SolicitudDatos>>("solicitudes/mias") ?? new();
+                solicitudPendiente = mias.Any(s => s.Operacion == TextosSeguridad.OperacionNotaCredito && s.Estado == "PENDIENTE");
+            }
+            if (IdComprobanteInicial is int inicial && comprobantes.Any(c => c.Id == inicial))
+            {
+                idComprobante = inicial;
+                await AlElegirComprobante();
+            }
         }
         catch (ErrorApi e)
         {

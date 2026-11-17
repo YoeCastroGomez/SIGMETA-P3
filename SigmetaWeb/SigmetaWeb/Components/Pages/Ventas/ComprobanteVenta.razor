@@ -129,8 +129,13 @@ else if (venta is not null)
             </div>
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
                 <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-                <div class="d-flex gap-2">
+                <div class="d-flex flex-wrap gap-2">
                     <a class="btn btn-outline-secondary" href="/ventas">Cancelar</a>
+                    @if (Rol == "Vendedor" && venta.Estado == "REGISTRADA" && !venta.CobradaContado)
+                    {
+                        @* RF008: sin comprobante vigente la venta se puede corregir (por ejemplo, tras anular la factura) *@
+                        <a class="btn btn-outline-primary" href="@($"/ventas/editar/{venta.Id}")">Editar venta</a>
+                    }
                     <button class="btn btn-primary" disabled="@trabajando" @onclick="Emitir">
                         @(trabajando ? "Emitiendo..." : "Emitir comprobante")
                     </button>
@@ -218,7 +223,7 @@ else if (venta is not null)
                         @if (Rol == "Cajero")
                         {
                             @* RF013: la nota de crédito la registra el Cajero (con autorización) sobre un comprobante emitido *@
-                            <a class="btn btn-outline-secondary" href="/notas-credito/nueva">Nota de crédito</a>
+                            <a class="btn btn-outline-secondary" href="@($"/notas-credito/nueva?comprobante={comprobante.Id}")">Nota de crédito</a>
                         }
                         @* RF008: formato imprimible. Registra el envío IMPRESO y abre la impresión (Vendedor y Cajero) *@
                         <button class="btn btn-outline-primary" disabled="@trabajando" @onclick="Imprimir">Imprimir</button>
@@ -440,7 +445,9 @@ else if (venta is not null)
         {
             await Api.Post<object>($"comprobantes/{comprobante.Id}/anular", new AnulacionDatos { Motivo = motivoAnulacion.Trim() });
             await Cargar();
-            exito = $"Se anuló el comprobante {anulado}. Puede emitir uno nuevo o, desde la lista de ventas, corregir o anular la venta.";
+            exito = Rol == "Vendedor"
+                ? $"Se anuló el comprobante {anulado}. Ahora puede corregir la venta con \"Editar venta\", emitir un comprobante nuevo o anular la venta desde la lista."
+                : $"Se anuló el comprobante {anulado}. Puede emitir uno nuevo; la venta la corrige o anula el Vendedor.";
         }
         catch (ErrorApi e)
         {

@@ -13,5 +13,7 @@ public interface VentaBO {
     Venta obtener(int id) throws SQLException;
     List<Venta> listarTodos() throws SQLException;
     List<Venta> listarPorCliente(int idCliente) throws SQLException;
+    // RF008/RF010: ids de las ventas al contado ya cobradas en caja (esas ya no se modifican)
+    java.util.Set<Integer> idsCobradasAlContado() throws SQLException;
 
 }

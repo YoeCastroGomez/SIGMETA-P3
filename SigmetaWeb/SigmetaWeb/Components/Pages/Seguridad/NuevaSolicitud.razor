@@ -108,7 +108,9 @@ else
         try
         {
             await Api.Post<SolicitudDatos>("solicitudes", new { operacion, motivo = motivo.Trim() });
-            Nav.NavigateTo(AvisoGuardado.Ruta("/autorizaciones/mias", AvisoGuardado.Nuevo, operacion));
+            // si se vino desde otra pantalla (por ejemplo la nota de crédito) se vuelve allí: esa pantalla muestra que está pendiente
+            Nav.NavigateTo(VolverA != "/autorizaciones/mias" ? VolverA
+                : AvisoGuardado.Ruta("/autorizaciones/mias", AvisoGuardado.Nuevo, operacion));
         }
         catch (ErrorApi e)
         {

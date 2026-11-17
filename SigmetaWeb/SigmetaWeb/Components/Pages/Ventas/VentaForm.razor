@@ -29,7 +29,14 @@ else
     @if (!Editable)
     {
         <div class="alert alert-secondary">
-            Esta venta no se puede modificar: solo se modifica una venta registrada sin comprobante ni despacho.
+            @if (venta.CobradaContado)
+            {
+                <span>Esta venta ya se cobró en caja y no se puede modificar: si hay un error, anúlela y registre otra.</span>
+            }
+            else
+            {
+                <span>Esta venta no se puede modificar: solo se modifica una venta registrada sin comprobante ni despacho.</span>
+            }
         </div>
     }
 
@@ -299,8 +306,10 @@ else
     // RF008: rango de la fecha de una venta nueva (VentaBOImpl.DIAS_ATRASO_MAXIMO = 7)
     private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.Today);
     private static DateOnly FechaMinima => Hoy.AddDays(-7);
-    private string Titulo => EsNuevo ? "Nueva venta" : "Editar venta";
-    private bool Editable => EsNuevo || (venta?.Estado == "REGISTRADA" && venta.Comprobante is null);
+    private string Titulo => EsNuevo ? "Nueva venta" : Editable ? "Editar venta" : "Venta";
+    // RF008: venta REGISTRADA, sin comprobante vigente y (al contado) sin cobro en caja; el despacho lo valida el BO
+    private bool Editable => EsNuevo || (Rol == "Vendedor" && venta?.Estado == "REGISTRADA" && venta.Comprobante is null && !venta.CobradaContado);
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
     private string AyudaCondicion => EsNuevo ? "Crédito solo para clientes con línea de crédito autorizada." : "No se cambia al modificar.";
 
     private decimal SubTotal => Editable ? TextosVentas.SubTotal(venta!.Lineas) : venta!.SubTotal;

@@ -76,6 +76,19 @@ public class CotizacionDAOImpl implements CotizacionDAO {
     }
 
 
+    // RF007: cotizaciones anuladas (filtro por estado ANULADA)
+    @Override
+    public List<Cotizacion> listarAnuladas() throws SQLException {
+        String sql = "{CALL sp_cotizacion_listar_anuladas()}";
+        List<Cotizacion> cotizaciones = new ArrayList<>();
+        Connection conn = transactionContext.getConnection();
+        try (CallableStatement cs = conn.prepareCall(sql);
+             ResultSet rs = cs.executeQuery()) {
+            while (rs.next()) cotizaciones.add(mapearCotizacion(rs));
+        }
+        return cotizaciones;
+    }
+
     @Override
     public List<String> listarNumeros() throws SQLException {
         List<String> numeros = new ArrayList<>();
