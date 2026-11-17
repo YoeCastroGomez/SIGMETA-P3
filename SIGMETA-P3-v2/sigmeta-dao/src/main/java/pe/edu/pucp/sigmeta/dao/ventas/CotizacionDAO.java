@@ -9,4 +9,5 @@ import java.util.List;
 
 public interface CotizacionDAO extends BaseDAO<Cotizacion, Integer> {
     List<Cotizacion> listarTodos() throws SQLException;
+    List<String> listarNumeros() throws SQLException;
 }
