@@ -128,6 +128,23 @@ El `Main` corre 13 pruebas, todas a traves de la capa de negocio. Tiene que term
 
 Las pruebas insertan datos en la base. Correrlas solo en la base del curso o en una de prueba.
 
+## 4. Reportes en PDF (RF015)
+
+Los tres reportes del Administrador (comercial, abastecimiento e inventario, y caja) se descargan en PDF.
+Los genera el Java con **JasperReports 7.0.6**:
+
+| Pieza | Dónde |
+|---|---|
+| Plantillas `.jrxml` (una principal por reporte y un subreporte por tabla) | `sigmeta-services/src/main/resources/reports/` |
+| Generación (compila cada plantilla una vez, llena los datos y exporta el PDF) | `sigmeta-services/.../boimpl/reporte/ReportePdf.java` |
+| Servicio REST | `GET /api/reportes/{comercial\|abastecimiento\|caja}/pdf?desde=AAAA-MM-DD&hasta=AAAA-MM-DD` |
+
+Las plantillas se pueden abrir y editar con **Jaspersoft Studio**.
+
+Después de bajar estos cambios hay que ejecutar `mvn clean install` **con GlassFish detenido** (la primera vez
+descarga JasperReports) y volver a desplegar `sigmeta-ws`. El proyecto fija Jackson en la versión 2.21.3, la misma
+que trae GlassFish 8, para que el `.war` no mezcle dos versiones.
+
 ## Reglas del grupo
 
 - Cada uno trabaja en su rama. Solo se mergea a `main` lo que compila.
