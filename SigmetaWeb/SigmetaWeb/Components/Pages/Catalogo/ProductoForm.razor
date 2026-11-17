@@ -172,13 +172,8 @@ else
                                      ParsingErrorMessage="El stock mínimo debe ser un número" />
                     </Campo>
                 </div>
-                <div class="col-md-8">
-                    @* Por ahora la imagen se guarda como texto: el nombre o la ruta del archivo. *@
-                    <Campo Etiqueta="Imagen" Id="imagen" Ayuda="Nombre o ruta del archivo, por ejemplo martillo-acero.jpg">
-                        <InputText id="imagen" class="form-control" maxlength="255" placeholder="martillo-acero.jpg"
-                                   @bind-Value="producto.Imagen" />
-                    </Campo>
-                </div>
+                @* La imagen del producto quedó fuera del alcance: no se pide en el formulario.
+                   Producto.Imagen se conserva en el modelo para no borrar el valor de los productos que ya lo tienen. *@
             </div>
 
             @if (EsNuevo)
