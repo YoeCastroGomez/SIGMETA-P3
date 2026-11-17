@@ -40,6 +40,29 @@ public class ProductoBOImpl implements ProductoBO {
         this.usuarioBO = new UsuarioBOImpl();
     }
 
+    @Override
+    public String proponerCodigoInterno(int idResponsable) throws SQLException {
+        verificarPermiso(idResponsable);
+        return Transaccion.consultar(this::siguienteCodigoInterno);
+    }
+
+    private String siguienteCodigoInterno() throws SQLException {
+        long maximo = 0;
+        for (String codigo : productoDAO.listarCodigosInternos()) {
+            if (codigo == null || !codigo.regionMatches(true, 0, "INT-", 0, 4)) continue;
+            String digitos = codigo.substring(4);
+            if (digitos.matches("[0-9]+")) {
+                try {
+                    maximo = Math.max(maximo, Long.parseLong(digitos));
+                } catch (NumberFormatException e) {
+                    throw new IllegalStateException("Código interno de producto fuera de rango");
+                }
+            }
+        }
+        if (maximo == Long.MAX_VALUE) throw new IllegalStateException("Sin códigos internos disponibles");
+        return "INT-" + String.format(Locale.ROOT, "%04d", maximo + 1);
+    }
+
     // RF005
     @Override
     public Producto registrar(Producto producto, int idResponsable) throws SQLException {
@@ -49,6 +72,7 @@ public class ProductoBOImpl implements ProductoBO {
         producto.setStockActual(0);
         return Transaccion.ejecutar(() -> {
             verificarCategoriaActiva(producto.getCategoria().getId());
+            producto.setCodigoInterno(siguienteCodigoInterno());
             validarCodigosUnicos(producto);
             validarNombreUnico(producto);
             productoDAO.save(producto);
@@ -67,6 +91,7 @@ public class ProductoBOImpl implements ProductoBO {
             if (!actual.isEstado()) {
                 throw new IllegalStateException("No se puede modificar un producto desactivado");
             }
+            producto.setCodigoInterno(actual.getCodigoInterno());
             if (producto.getUnidadVenta() != actual.getUnidadVenta()) {
                 throw new IllegalArgumentException("La unidad base de inventario no puede cambiar; registre otra presentación/producto");
             }
@@ -221,8 +246,10 @@ public class ProductoBOImpl implements ProductoBO {
         Validador.obligatorio(producto.getUnidadCompra(), "unidad de compra");
         Validador.obligatorio(producto.getUnidadVenta(), "unidad de venta");
         // Nombres y descripciones en mayúsculas; la ruta de imagen conserva su formato.
-        producto.setCodigoInterno(TextoNormalizado.codigo(
-                Validador.textoObligatorio(producto.getCodigoInterno(), "código interno", 50)));
+        if (producto.getCodigoInterno() != null && !producto.getCodigoInterno().isBlank()) {
+            producto.setCodigoInterno(TextoNormalizado.codigo(
+                    Validador.textoObligatorio(producto.getCodigoInterno(), "código interno", 50)));
+        }
         producto.setCodigoFabricante(TextoNormalizado.codigo(
                 Validador.textoOpcional(producto.getCodigoFabricante(), "código de fabricante", 50)));
         producto.setCodigoProveedor(TextoNormalizado.codigo(
