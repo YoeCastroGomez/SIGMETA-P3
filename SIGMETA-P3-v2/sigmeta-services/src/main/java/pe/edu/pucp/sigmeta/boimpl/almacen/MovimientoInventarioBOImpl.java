@@ -193,7 +193,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
                 if (linea == null || linea.getCantidadRecibida() + EPSILON < d.getCantidadRecibida()) {
                     throw new IllegalStateException("Las cantidades recibidas no son consistentes");
                 }
-                double unidades = d.getCantidadRecibida() * linea.getFactorConversion();
+                double unidades = ReglasInventario.convertirAStock(d.getCantidadRecibida(), linea.getFactorConversion());
                 cantidadesEsperadas.merge(linea.getProducto().getId(), unidades, Double::sum);
             }
             Map<Integer, Double> cantidadesRegistradas = new HashMap<>();
@@ -219,11 +219,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
                 movimientoDAO.bloquearMovimiento(m.getId());
                 int idProducto = m.getProducto().getId();
                 double stock = stockDAO.obtenerStockParaActualizar(idProducto);
-                double nuevoStock = stock - m.getCantidad();
-                if (!Double.isFinite(nuevoStock) || nuevoStock < -EPSILON) {
-                    throw new IllegalStateException("Stock insuficiente para revertir la recepción");
-                }
-                if (nuevoStock < 0) nuevoStock = 0;
+                double nuevoStock = ReglasInventario.retirarPorReversion(stock, m.getCantidad());
                 MovimientoInventario inverso = nuevaCompensacion(m, idAlmacenero, razon);
                 inverso.setTipo(TipoMovimientoInventario.SALIDA_REVERSION_COMPRA);
                 inverso.setRecepcionCompra(recepcion);
