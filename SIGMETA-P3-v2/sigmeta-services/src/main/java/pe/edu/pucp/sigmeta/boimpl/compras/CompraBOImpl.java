@@ -200,6 +200,15 @@ public class CompraBOImpl implements CompraBO {
         });
     }
 
+    @Override
+    public String proponerNumero(LocalDate fechaEmision, int idAdministrador) throws SQLException {
+        Validador.obligatorio(fechaEmision, "fecha de emisión");
+        return Transaccion.consultar(() -> {
+            usuarioBO.verificarRol(idAdministrador, TipoRol.ADMINISTRADOR);
+            return siguienteNumero(fechaEmision);
+        });
+    }
+
     private String siguienteNumero(LocalDate fechaEmision) throws SQLException {
         String prefijo = "OC-" + fechaEmision.getYear() + "-";
         long mayor = 0;
