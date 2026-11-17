@@ -226,6 +226,17 @@ public class VentaDAOImpl implements VentaDAO {
         }
     }
     @Override
+    public long proximoCorrelativo(int anio) throws SQLException {
+        try (PreparedStatement ps = transactionContext.getConnection()
+                .prepareStatement("SELECT COALESCE(ultimo, 0) + 1 FROM correlativo_documento WHERE tipo = 'VTA' AND anio = ?")) {
+            ps.setInt(1, anio);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getLong(1) : 1L;
+            }
+        }
+    }
+
+    @Override
     public double cantidadComprometida(int idLineaOrden, int idVentaExcluir) throws SQLException {
         try (CallableStatement cs = transactionContext.getConnection().prepareCall("{call sp_detalle_orden_comprometida(?, ?)}")) {
             cs.setInt(1, idLineaOrden); cs.setInt(2, idVentaExcluir);
