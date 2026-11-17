@@ -360,6 +360,10 @@ else
             {
                 e[n + "descuento"] = "El descuento no puede ser negativo.";
             }
+            else if (ValidacionEnVivo.MasDecimales(l.Descuento, 2))
+            {
+                e[n + "descuento"] = "Máximo 2 decimales.";
+            }
             else if (l.Descuento > l.Cantidad * l.PrecioUnitario)
             {
                 e[n + "descuento"] = "El descuento no puede ser mayor que cantidad × precio.";
