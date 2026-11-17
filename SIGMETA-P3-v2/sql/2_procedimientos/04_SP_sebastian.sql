@@ -1023,6 +1023,27 @@ BEGIN
     SET p_cantidad = ROW_COUNT();
 END$$
 
+-- RF007: cotizaciones anuladas (baja logica), para el filtro por estado "Anulada" de la lista.
+-- sp_cotizacion_listar (02_SP_claudia.sql) sigue trayendo solo las vigentes y no se toca.
+DROP PROCEDURE IF EXISTS sp_cotizacion_listar_anuladas$$
+CREATE PROCEDURE sp_cotizacion_listar_anuladas()
+BEGIN
+    SELECT *
+    FROM cotizacion
+    WHERE anulado = TRUE
+    ORDER BY id;
+END$$
+
+-- RF008/RF010: ventas al contado que ya tienen su cobro en caja (no se modifican). Una sola consulta para
+-- toda la lista de ventas, con el mismo criterio que sp_venta_contar_cobros_contado (07_SP_reforma.sql).
+DROP PROCEDURE IF EXISTS sp_venta_ids_cobradas_contado$$
+CREATE PROCEDURE sp_venta_ids_cobradas_contado()
+BEGIN
+    SELECT DISTINCT id_documento_origen AS id_venta
+    FROM movimiento_caja
+    WHERE documento_origen = 'VENTA' AND tipo = 'COBRO_CONTADO';
+END$$
+
 DELIMITER ;
 
 

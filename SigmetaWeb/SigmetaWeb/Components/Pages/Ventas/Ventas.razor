@@ -130,9 +130,9 @@ else
                                         @* RF010 (Adriano): el Cajero cobra la venta al contado; queda como movimiento COBRO_CONTADO de su caja *@
                                         <a class="btn btn-sm btn-primary" href="@($"/ventas/{v.Id}/cobro?volver=/ventas")">Cobrar</a>
                                     }
-                                    @if (Rol == "Vendedor" && v.Estado == "REGISTRADA" && v.Comprobante is null)
+                                    @if (Rol == "Vendedor" && v.Estado == "REGISTRADA" && v.Comprobante is null && !v.CobradaContado)
                                     {
-                                        @* RF008: solo se modifica una venta REGISTRADA sin comprobante ni despacho *@
+                                        @* RF008: solo se modifica una venta REGISTRADA sin comprobante ni despacho, y no cobrada en caja *@
                                         <a class="btn btn-sm btn-outline-secondary" href="@($"/ventas/editar/{v.Id}")">Editar</a>
                                     }
                                     @if (Rol == "Vendedor" && v.Estado == "REGISTRADA" && v.Comprobante is null)

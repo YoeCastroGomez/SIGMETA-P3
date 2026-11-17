@@ -24,10 +24,25 @@
 }
 else
 {
-    @if (!Editable)
+    @if (cotizacion.Anulado)
+    {
+        @* RF007: la anulación es lógica; se muestra quién y por qué ya no vale *@
+        <div class="alert alert-secondary">
+            Cotización <strong>anulada</strong> el @TextosVentas.FechaHora(cotizacion.FechaAnulacion).
+            <div class="small mt-1"><strong>Motivo:</strong> @cotizacion.MotivoAnulacion</div>
+        </div>
+    }
+    else if (!Editable)
     {
         <div class="alert alert-secondary">
-            Esta cotización está <strong>@TextosVentas.Texto(cotizacion.Estado)</strong>: solo se modifica una cotización registrada.
+            @if (!EsVendedor)
+            {
+                <span>Solo consulta: las cotizaciones las registra y modifica el Vendedor.</span>
+            }
+            else
+            {
+                <span>Esta cotización está <strong>@TextosVentas.Texto(cotizacion.Estado)</strong>: solo se modifica una cotización registrada.</span>
+            }
         </div>
     }
 
@@ -192,6 +207,8 @@ else
 
 @code {
     [Parameter] public int? Id { get; set; }
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
+    private bool EsVendedor => Rol == "Vendedor";
 
     private CotizacionDatos? cotizacion;
     private List<Cliente> clientes = new();
@@ -199,8 +216,9 @@ else
     private bool guardando;
 
     private bool EsNuevo => Id is null;
-    private string Titulo => EsNuevo ? "Nueva cotización" : "Editar cotización";
-    private bool Editable => EsNuevo || cotizacion?.Estado == "REGISTRADA";
+    private string Titulo => EsNuevo ? "Nueva cotización" : Editable ? "Editar cotización" : "Cotización";
+    // RF007: solo el Vendedor modifica, y solo una cotización REGISTRADA (el Administrador la consulta)
+    private bool Editable => EsVendedor && (EsNuevo || cotizacion?.Estado == "REGISTRADA");
 
     private sealed class NumeroPropuesto
     {

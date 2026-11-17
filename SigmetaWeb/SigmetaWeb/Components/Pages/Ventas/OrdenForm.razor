@@ -65,7 +65,7 @@ else if (EsNuevo)
                     </div>
                     <div class="col-md-3 mb-3">
                         <div class="small text-muted text-uppercase">Fecha de emisión</div>
-                        <div class="fw-semibold">@DateTime.Today.ToString("yyyy-MM-dd")</div>
+                        <div class="fw-semibold">@TextosVentas.Fecha(DateOnly.FromDateTime(DateTime.Today))</div>
                     </div>
                     <div class="col-md-3 mb-3">
                         <div class="small text-muted text-uppercase">Estado inicial</div>
@@ -165,7 +165,8 @@ else if (orden is not null)
             <span></span>
             <div class="d-flex gap-2">
                 <a class="btn btn-outline-secondary" href="/ordenes">Volver</a>
-                @if (orden.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL")
+                @* RF008: la venta la registra solo el Vendedor (igual que en la lista de órdenes) *@
+                @if (Rol == "Vendedor" && orden.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL")
                 {
                     <a class="btn btn-outline-primary" href="@($"/ventas/nueva?orden={orden.Id}")">Registrar venta</a>
                 }

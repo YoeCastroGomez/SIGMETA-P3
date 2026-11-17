@@ -71,7 +71,7 @@
             <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
         </div>
     </form>
-    <div class="form-text">Se busca por cliente; si es "Todos", por estado. Las cotizaciones anuladas no se listan.</div>
+    <div class="form-text">El cliente y el estado se combinan: por ejemplo, las cotizaciones enviadas de un cliente.</div>
 </div>
 
 @if (cotizaciones is null)
@@ -110,6 +110,11 @@ else
                             <td><Estado Texto="@TextosVentas.Texto(c.Estado)" /></td>
                             <td class="text-end">
                                 <div class="d-inline-flex gap-1 text-nowrap">
+                                    @if (!(EsVendedor && c.Estado == "REGISTRADA"))
+                                    {
+                                        @* RF007: consulta del detalle (el Administrador y las cotizaciones que ya no se modifican) *@
+                                        <a class="btn btn-sm btn-outline-secondary" href="@($"/cotizaciones/editar/{c.Id}")">Ver</a>
+                                    }
                                     @if (EsVendedor && c.Estado == "REGISTRADA")
                                     {
                                         <a class="btn btn-sm btn-outline-secondary" href="@($"/cotizaciones/editar/{c.Id}")">Editar</a>
@@ -122,8 +127,15 @@ else
                                     }
                                     @if (EsVendedor && c.Estado == "ACEPTADA")
                                     {
-                                        @* RF007: la orden de compra del cliente sale de una cotización aceptada *@
-                                        <a class="btn btn-sm btn-outline-primary" href="@($"/ordenes/nueva?cotizacion={c.Id}")">Generar orden</a>
+                                        @* RF007: la orden de compra del cliente sale de una cotización aceptada; una sola orden activa *@
+                                        @if (conOrden.Contains(c.Id))
+                                        {
+                                            <a class="btn btn-sm btn-outline-secondary" href="/ordenes">Ver orden</a>
+                                        }
+                                        else
+                                        {
+                                            <a class="btn btn-sm btn-outline-primary" href="@($"/ordenes/nueva?cotizacion={c.Id}")">Generar orden</a>
+                                        }
                                     }
                                     @if ((EsVendedor || Rol == "Administrador") && c.Estado is "REGISTRADA" or "ENVIADA" or "RECHAZADA" or "VENCIDA")
                                     {
@@ -147,6 +159,7 @@ else
 
     private List<CotizacionDatos>? cotizaciones;
     private List<Cliente> clientes = new();
+    private HashSet<int> conOrden = new();   // cotizaciones que ya tienen una orden vigente
     private int filtroCliente;
     private string filtroEstado = "";
     private string? error;
@@ -215,6 +228,12 @@ else
         try
         {
             cotizaciones = await Api.Get<List<CotizacionDatos>>(ruta) ?? new();
+            if (EsVendedor)
+            {
+                // RF007: una cotización tiene una sola orden activa; si ya la tiene no se ofrece "Generar orden"
+                var ordenes = await Api.Get<List<OrdenDatos>>("ordenes") ?? new();
+                conOrden = ordenes.Where(o => o.Estado != "ANULADA").Select(o => o.IdCotizacion).ToHashSet();
+            }
         }
         catch (ErrorApi e)
         {

@@ -32,7 +32,8 @@ import pe.edu.pucp.sigmeta.ws.caja.Utilidades;
 //   GET    /api/cotizaciones                  listar todas (no anuladas); antes de listar marca como VENCIDA
 //                                             las REGISTRADA o ENVIADA con vigencia pasada (marcarVencidas)
 //   GET    /api/cotizaciones?cliente=3        listar por cliente (listarPorCliente)
-//   GET    /api/cotizaciones?estado=ENVIADA   listar por estado (listarPorEstado)
+//   GET    /api/cotizaciones?estado=ENVIADA   listar por estado (listarPorEstado); ?estado=ANULADA trae las anuladas
+//                                             (cliente y estado se combinan: CotizacionBO.buscar)
 //   GET    /api/cotizaciones/5                una cotizacion con sus lineas
 //   POST   /api/cotizaciones                  registrar (cabecera + lineas)
 //   PUT    /api/cotizaciones/5                modificar (solo REGISTRADA)

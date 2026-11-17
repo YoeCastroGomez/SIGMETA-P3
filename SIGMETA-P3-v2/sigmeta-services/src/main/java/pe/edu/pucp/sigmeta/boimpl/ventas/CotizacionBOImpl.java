@@ -191,24 +191,28 @@ public class CotizacionBOImpl implements CotizacionBO {
         });
     }
 
-    // RF007: busqueda combinada (cliente y/o estado); null en un filtro = no se filtra por el
+    // RF007: busqueda combinada (cliente y/o estado); null en un filtro = no se filtra por el.
+    // Sin estado se listan las vigentes; con estado ANULADA, las anuladas (baja logica).
     @Override
     public List<Cotizacion> buscar(Integer idCliente, EstadoCotizacion estado) throws SQLException {
-        return Transaccion.ejecutar(() -> cotizacionDAO.listarTodos().stream()
-                .filter(c -> idCliente == null || c.getCliente().getId() == idCliente)
-                .filter(c -> estado == null || c.getEstado() == estado)
-                .toList());
+        return Transaccion.ejecutar(() -> {
+            if (estado == EstadoCotizacion.ANULADA) {
+                return cotizacionDAO.listarAnuladas().stream()
+                        .filter(c -> idCliente == null || c.getCliente().getId() == idCliente)
+                        .toList();
+            }
+            return cotizacionDAO.listarTodos().stream()
+                    .filter(c -> idCliente == null || c.getCliente().getId() == idCliente)
+                    .filter(c -> estado == null || c.getEstado() == estado)
+                    .toList();
+        });
     }
 
     // RF007
     @Override
     public List<Cotizacion> listarPorEstado(EstadoCotizacion estado) throws SQLException {
         Validador.obligatorio(estado, "estado");
-        return Transaccion.ejecutar(() -> {
-            return cotizacionDAO.listarTodos().stream()
-                    .filter(c -> c.getEstado() == estado)
-                    .toList();
-        });
+        return buscar(null, estado);   // mismo criterio: ANULADA consulta las anuladas
     }
 
     // RF007
