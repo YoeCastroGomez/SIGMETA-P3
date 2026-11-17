@@ -220,10 +220,7 @@ public class ProductoBOImpl implements ProductoBO {
         Validador.obligatorio(producto.getCategoria(), "categoría");
         Validador.obligatorio(producto.getUnidadCompra(), "unidad de compra");
         Validador.obligatorio(producto.getUnidadVenta(), "unidad de venta");
-        // Preprocesado de los textos (TextoNormalizado):
-        //   códigos: en MAYÚSCULAS y sin espacios (" int-001 " -> "INT-001")
-        //   nombre y descripción: como los escribe el usuario, con un solo espacio (" Martillo  de acero " -> "Martillo de acero")
-        //   imagen: tal cual, porque es el nombre de un archivo
+        // Nombres y descripciones en mayúsculas; la ruta de imagen conserva su formato.
         producto.setCodigoInterno(TextoNormalizado.codigo(
                 Validador.textoObligatorio(producto.getCodigoInterno(), "código interno", 50)));
         producto.setCodigoFabricante(TextoNormalizado.codigo(
