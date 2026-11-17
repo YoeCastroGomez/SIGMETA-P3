@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface CompraBO {
+    String proponerNumero(LocalDate fechaEmision, int idAdministrador) throws SQLException;
     Compra registrar(Compra compra) throws SQLException;
     Compra modificar(Compra compra, int idAdministrador) throws SQLException;
     void anular(int idCompra, int idAdministrador) throws SQLException;
