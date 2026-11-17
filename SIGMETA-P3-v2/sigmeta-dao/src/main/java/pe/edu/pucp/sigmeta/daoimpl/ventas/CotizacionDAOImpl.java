@@ -77,6 +77,17 @@ public class CotizacionDAOImpl implements CotizacionDAO {
 
 
     @Override
+    public List<String> listarNumeros() throws SQLException {
+        List<String> numeros = new ArrayList<>();
+        try (PreparedStatement ps = transactionContext.getConnection()
+                .prepareStatement("SELECT numero FROM cotizacion");
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) numeros.add(rs.getString(1));
+        }
+        return numeros;
+    }
+
+    @Override
     public Cotizacion save(Cotizacion cot) throws SQLException {
         String sql = "{CALL sp_cotizacion_insertar(?,?,?,?,?,?,?,?,?,?,?)}";
         Connection conn = transactionContext.getConnection();
