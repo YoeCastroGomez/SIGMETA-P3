@@ -216,10 +216,12 @@ public class ClienteBOImpl implements ClienteBO {
             cliente.setRazonSocial(null);
         }
         Validador.obligatorio(cliente.getContacto(), "datos de contacto");
-        cliente.getContacto().setDireccion(Validador.textoOpcional(cliente.getContacto().getDireccion(), "dirección", 200));
+        cliente.getContacto().setDireccion(TextoNormalizado.opcional(
+                Validador.textoOpcional(cliente.getContacto().getDireccion(), "dirección", 200)));
         cliente.getContacto().setTelefono(Validador.telefono(cliente.getContacto().getTelefono()));
         cliente.getContacto().setCorreo(Validador.correo(cliente.getContacto().getCorreo()));
-        cliente.getContacto().setNombreContacto(Validador.textoOpcional(cliente.getContacto().getNombreContacto(), "contacto", 100));
+        cliente.getContacto().setNombreContacto(TextoNormalizado.opcional(
+                Validador.textoOpcional(cliente.getContacto().getNombreContacto(), "contacto", 100)));
     }
 
     // la razon social es UNIQUE en la tabla; aqui se da un mensaje claro antes de llegar a la BD
