@@ -11,7 +11,9 @@ import pe.edu.pucp.sigmeta.daoimpl.socio.ProveedorDAOImpl;
 import pe.edu.pucp.sigmeta.model.socio.Proveedor;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class ProveedorBOImpl implements ProveedorBO {
 
@@ -99,6 +101,43 @@ public class ProveedorBOImpl implements ProveedorBO {
     public List<Proveedor> listarPorEstado(boolean estado) throws SQLException {
         return Transaccion.ejecutar(() -> {
             return proveedorDAO.listarPorEstado(estado);
+        });
+    }
+
+    @Override
+    public List<Proveedor> buscar(String ruc, String razonSocial, Boolean estado, int idAdministrador)
+            throws SQLException {
+        String numero = ruc == null || ruc.isBlank() ? null : Validador.ruc(ruc.trim());
+        String texto = razonSocial == null || razonSocial.isBlank() ? null
+                : Validador.textoObligatorio(razonSocial.trim(), "razón social", 150);
+
+        return Transaccion.consultar(() -> {
+            usuarioBO.obtenerAdministradorActivo(idAdministrador);
+            List<Proveedor> resultado;
+            if (numero != null) {
+                Proveedor encontrado = proveedorDAO.buscarPorRuc(numero);
+                resultado = new ArrayList<>();
+                if (encontrado != null) {
+                    resultado.add(encontrado);
+                }
+            } else if (texto != null) {
+                resultado = proveedorDAO.buscarPorRazonSocial(texto);
+            } else if (estado != null) {
+                return proveedorDAO.listarPorEstado(estado);
+            } else {
+                resultado = new ArrayList<>(proveedorDAO.listarPorEstado(true));
+                resultado.addAll(proveedorDAO.listarPorEstado(false));
+            }
+
+            if (numero != null && texto != null) {
+                String buscado = texto.toLowerCase(Locale.ROOT);
+                resultado.removeIf(p -> p.getRazonSocial() == null
+                        || !p.getRazonSocial().toLowerCase(Locale.ROOT).contains(buscado));
+            }
+            if (estado != null) {
+                resultado.removeIf(p -> p.isEstado() != estado);
+            }
+            return resultado;
         });
     }
 
