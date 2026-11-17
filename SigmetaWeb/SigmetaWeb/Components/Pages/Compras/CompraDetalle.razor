@@ -111,7 +111,7 @@ else if (compra is not null)
         </div>
     </div>
     <div class="d-flex justify-content-end gap-2">
-        <a class="btn btn-outline-secondary" href="/compras">Volver a la lista</a>
+    
         @if (compra.Estado == "REGISTRADA" && !compra.Anulado)
         {
             <a class="btn btn-primary" href="@($"/compras/editar/{compra.Id}")">Editar compra</a>
