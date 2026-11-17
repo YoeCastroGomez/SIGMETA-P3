@@ -8,6 +8,7 @@ import java.util.List;
 // RF005
 public interface ProductoBO {
     // idResponsable: usuario en sesion; debe ser Administrador (incluye la modificacion del precio)
+    String proponerCodigoInterno(int idResponsable) throws SQLException;
     Producto registrar(Producto producto, int idResponsable) throws SQLException;
     Producto modificar(Producto producto, int idResponsable) throws SQLException;
     void desactivar(int idProducto, int idResponsable) throws SQLException;
