@@ -88,6 +88,13 @@ public class ProductoRS extends VentanillaBase {
     }
 
     @GET
+    @Path("siguiente-codigo")
+    public Response siguienteCodigo(@HeaderParam("ticket") String ticket) {
+        return ejecutar(ticket, id -> java.util.Map.of(
+                "codigo", productoBO.proponerCodigoInterno(id)));
+    }
+
+    @GET
     @Path("{id}")
     public Response obtener(@HeaderParam("ticket") String ticket, @PathParam("id") int idProducto) {
         Response respuesta = ejecutar(ticket, id -> {
