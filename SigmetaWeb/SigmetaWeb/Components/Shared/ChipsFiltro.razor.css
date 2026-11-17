@@ -1,0 +1,38 @@
+.chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .32rem .8rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    font-size: .84rem;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: border-color .15s, background-color .15s;
+}
+.chip:hover { border-color: var(--bs-primary); }
+.chip:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+
+.cantidad {
+    min-width: 1.4rem;
+    padding: 0 .4rem;
+    border-radius: 999px;
+    text-align: center;
+    font-size: .74rem;
+    font-weight: 700;
+    background: var(--bs-secondary-bg);
+    color: var(--bs-secondary-color);
+}
+
+/* el número toma el color del estado (mismo estándar que <Estado>) */
+.verde .cantidad { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+.ambar .cantidad { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+.rojo .cantidad { background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis); }
+.azul .cantidad { background: var(--bs-info-bg-subtle); color: var(--bs-info-text-emphasis); }
+
+.chip.activo { background: var(--bs-primary); border-color: var(--bs-primary); color: #fff; }
+.chip.activo .cantidad { background: rgba(255, 255, 255, .25); color: #fff; }

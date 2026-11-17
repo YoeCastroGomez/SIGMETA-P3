@@ -1,44 +1,56 @@
 @page "/ordenes"
 @inject ApiJava Api
+@inject NavigationManager Nav
 
 <PageTitle>Órdenes de compra de clientes · SIGMETA</PageTitle>
 
-@* RF007 · Órdenes de compra de clientes (Vendedor). Datos reales del Java:
-   - GET  /api/ordenes                       lista con el estado de atención (PENDIENTE, ATENDIDA_PARCIAL, ATENDIDA)
+@* RF007 · Órdenes de compra de clientes (Vendedor; el Administrador consulta y anula). PATRÓN UX de listas
+   (ver Shared/ComponentesFlujo.cs): chips por estado de atención con su cantidad, búsqueda rápida, filtros en la
+   dirección y una acción principal por fila (Registrar venta mientras falte vender).
+   Datos reales del Java:
+   - GET  /api/ordenes                       lista con el estado de atención (PENDIENTE, ATENDIDA_PARCIAL, ATENDIDA, ANULADA)
    - POST /api/ordenes/{id}/anular {"motivo"} anular (solo PENDIENTE y sin ventas vigentes)
    El estado de atención lo actualiza el BO solo, con los despachos de las ventas de la orden (cantidad entregada). *@
 <Encabezado Rf="RF007" Titulo="Órdenes de compra de clientes"
-            Subtitulo="Cada orden se genera desde una cotización aceptada y toma su detalle sin volver a digitarlo.">
+            Subtitulo="Cada orden sale de una cotización aceptada; se atiende con ventas y se completa con los despachos.">
     @if (EsVendedor)
     {
-        <a class="btn btn-primary" href="/ordenes/nueva">Nueva orden</a>
+        <a class="btn btn-primary" href="/ordenes/nueva">+ Nueva orden</a>
     }
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<SiguientePaso Mensaje="@exito" Detalle="@exitoDetalle" AlCerrar="() => exito = null" />
 
-@if (anulando is not null)
-{
-    @* RF007: anular pide un motivo (anulación lógica). *@
-    <div class="card card-body mb-3">
-        <h2 class="h6 fw-semibold mb-3">Anular orden @anulando.Numero</h2>
-        <Campo Etiqueta="Motivo de anulación" Id="motivo" Obligatorio="true" Error="@(v.Error("motivo", Errores()))">
-            <input id="motivo" class="@(v.Clase("motivo", Errores()))" maxlength="200"
-                   @bind="motivo" @bind:event="oninput" @bind:after="@(() => v.Tocado("motivo"))" />
-        </Campo>
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
-            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-            <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary" @onclick="CerrarAnulacion">Cancelar</button>
-                <button class="btn btn-outline-danger" disabled="@trabajando" @onclick="ConfirmarAnulacion">Anular</button>
-            </div>
+<ModalMotivo Visible="@(anulando is not null)" Titulo="@($"Anular la orden {anulando?.Numero}")" TextoConfirmar="Anular orden"
+             Ocupado="@trabajando" Ejemplo="Ejemplo: el cliente canceló su pedido."
+             AlConfirmar="ConfirmarAnulacion" AlCancelar="() => anulando = null">
+    <p class="mb-2">La orden <strong>@anulando?.Numero</strong> de @anulando?.Cliente:</p>
+    <ul class="small mb-0">
+        <li>Deja de valer y ya no se podrán registrar ventas con ella.</li>
+        <li>Su cotización @anulando?.NumeroCotizacion queda libre para generar otra orden.</li>
+    </ul>
+</ModalMotivo>
+
+<div class="card card-body mb-3">
+    <div class="row g-2 align-items-end sigmeta-filtros">
+        <div class="col-md-8 col-lg-6">
+            <label class="form-label fw-semibold small" for="buscarOrden">Buscar</label>
+            <input id="buscarOrden" type="search" class="form-control" maxlength="80" autocomplete="off"
+                   placeholder="Número, orden del cliente, cliente o cotización"
+                   @bind="busqueda" @bind:event="oninput" @bind:after="AlBuscar" />
+        </div>
+        <div class="col-md-4 col-lg-6 text-md-end">
+            @if (HayFiltros)
+            {
+                <button type="button" class="btn btn-link px-0" @onclick="Limpiar">Quitar filtros</button>
+            }
         </div>
     </div>
-}
+    <div class="mt-3">
+        <ChipsFiltro Opciones="@Chips" Seleccionado="@filtroEstado" SeleccionadoChanged="CambiarEstado" Etiqueta="Filtrar por estado de atención" />
+    </div>
+</div>
 
 @if (ordenes is null)
 {
@@ -46,50 +58,84 @@
 }
 else
 {
+    var filtradas = Filtradas;
     <div class="card mb-3">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Número</th>
-                        <th>Nº orden del cliente</th>
+                        <th>Orden</th>
                         <th>Cliente</th>
                         <th>Cotización</th>
-                        <th>Fecha</th>
                         <th class="text-end">Total (S/)</th>
-                        <th>Estado</th>
+                        <th>Atención</th>
                         <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (ordenes.Count == 0)
-                    {
-                        <tr><td colspan="8" class="text-center text-muted py-4">No hay órdenes de compra de clientes.</td></tr>
-                    }
-                    @foreach (var o in OrdenesPagina)
+                    @if (filtradas.Count == 0)
                     {
                         <tr>
-                            <td><strong>@o.Numero</strong></td>
-                            <td>@o.NumeroOrdenCliente</td>
+                            <td colspan="6">
+                                @if (HayFiltros)
+                                {
+                                    <ListaVacia Titulo="Ninguna orden coincide con los filtros." AlQuitarFiltros="Limpiar" />
+                                }
+                                else
+                                {
+                                    <ListaVacia Titulo="Todavía no hay órdenes de clientes." Detalle="Se generan desde una cotización aceptada."
+                                                TextoAccion="@(EsVendedor ? "Ver cotizaciones aceptadas" : null)" Ruta="/cotizaciones?estado=ACEPTADA" />
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var o in Pagina(filtradas))
+                    {
+                        <tr @key="o.Id">
+                            <td>
+                                <a class="fw-semibold text-decoration-none" href="@RutaOrden(o)">@o.Numero</a>
+                                <div class="small text-muted">
+                                    @(string.IsNullOrEmpty(o.NumeroOrdenCliente) ? "Sin Nº del cliente" : $"OC del cliente {o.NumeroOrdenCliente}") · @TextosVentas.Fecha(o.FechaEmision)
+                                </div>
+                            </td>
                             <td>@o.Cliente<div class="small text-muted">@o.DocumentoCliente</div></td>
-                            <td>@o.NumeroCotizacion</td>
-                            <td>@TextosVentas.Fecha(o.FechaEmision)</td>
-                            <td class="text-end">@o.Total.ToString("N2")</td>
-                            <td><Estado Texto="@TextosVentas.Texto(o.Estado)" /></td>
+                            <td>
+                                @if (o.IdCotizacion > 0)
+                                {
+                                    <a class="text-decoration-none" href="@($"/cotizaciones/editar/{o.IdCotizacion}")">@o.NumeroCotizacion</a>
+                                }
+                                else
+                                {
+                                    @o.NumeroCotizacion
+                                }
+                            </td>
+                            <td class="text-end fw-semibold">@o.Total.ToString("N2")</td>
+                            <td>
+                                <Estado Texto="@TextosVentas.Texto(o.Estado)" />
+                                @if (o.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL")
+                                {
+                                    <div class="small mt-1">@(o.Estado == "PENDIENTE" ? "Registrar venta" : "Vender o despachar lo que falta") · <span class="text-muted">@(o.Estado == "PENDIENTE" ? "Vendedor" : "Vendedor / Almacenero")</span></div>
+                                }
+                            </td>
                             <td class="text-end">
-                                <div class="d-inline-flex gap-1 text-nowrap">
-                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/ordenes/editar/{o.Id}")">
-                                        @(EsVendedor && o.Estado == "PENDIENTE" ? "Editar" : "Ver")
-                                    </a>
+                                <div class="d-inline-flex align-items-center justify-content-end gap-1 text-nowrap">
                                     @if (EsVendedor && o.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL")
                                     {
                                         @* RF008: la venta se registra a partir de una orden pendiente o atendida parcialmente *@
-                                        <a class="btn btn-sm btn-outline-primary" href="@($"/ventas/nueva?orden={o.Id}")">Registrar venta</a>
+                                        <a class="btn btn-sm btn-primary" href="@($"/ventas/nueva?orden={o.Id}")">Registrar venta</a>
+                                    }
+                                    else
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary" href="@RutaOrden(o)">Ver</a>
+                                    }
+                                    @if (EsVendedor && o.Estado == "PENDIENTE")
+                                    {
+                                        <a class="btn btn-sm btn-link px-2" href="@RutaOrden(o)">Editar</a>
                                     }
                                     @* RF007: anulan el Vendedor y el Administrador (OrdenCompraClienteBOImpl.anular) *@
                                     @if ((EsVendedor || Rol == "Administrador") && o.Estado == "PENDIENTE")
                                     {
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => AbrirAnulacion(o)">Anular</button>
+                                        <button type="button" class="btn btn-sm btn-link link-danger px-2" @onclick="() => AbrirAnulacion(o)">Anular</button>
                                     }
                                 </div>
                             </td>
@@ -98,8 +144,8 @@ else
                 </tbody>
             </table>
         </div>
-        <Paginacion TotalRegistros="@ordenes.Count"
-                    @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
+        <Paginacion TotalRegistros="@filtradas.Count" PaginaActual="@paginaActual" PaginaActualChanged="CambiarPagina"
+                    @bind-TamanoPagina="tamanoPagina" />
     </div>
 }
 
@@ -107,35 +153,81 @@ else
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
     private bool EsVendedor => Rol == "Vendedor";
 
-    private List<OrdenDatos>? ordenes;
-    private string? error;
-    private string? exito;
-
+    [SupplyParameterFromQuery(Name = "estado")] public string? EstadoQ { get; set; }
+    [SupplyParameterFromQuery(Name = "q")] public string? BusquedaQ { get; set; }
+    [SupplyParameterFromQuery(Name = "pagina")] public int? PaginaQ { get; set; }
     // Aviso de éxito con el patrón único (AvisoGuardado): el formulario vuelve aquí con ?guardado=…&ref=…
     [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
     [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
-    private bool avisoLeido;
 
-    protected override void OnParametersSet()
-    {
-        if (avisoLeido) return;   // solo al llegar: después manda lo que haga el usuario en la lista
-        avisoLeido = true;
-        exito = AvisoGuardado.Texto(Guardado, "la orden", Referencia) ?? exito;
-    }
-    private bool trabajando;
-
-    private OrdenDatos? anulando;
-    private string motivo = "";
-
-    // paginacion (componente compartido Shared/Paginacion), igual que en Compras
+    private List<OrdenDatos>? ordenes;
+    private string filtroEstado = "";
+    private string busqueda = "";
     private int paginaActual = 1;
     private int tamanoPagina = 10;
-    private int TotalPaginas => tamanoPagina == 0 ? 1 : Math.Max(1, (int)Math.Ceiling((double)(ordenes?.Count ?? 0) / tamanoPagina));
-    private IEnumerable<OrdenDatos> OrdenesPagina => ordenes is null ? Enumerable.Empty<OrdenDatos>()
-        : tamanoPagina == 0 ? ordenes
-        : ordenes.Skip((Math.Clamp(paginaActual, 1, TotalPaginas) - 1) * tamanoPagina).Take(tamanoPagina);
+    private string? urlPropia;
 
-    protected override async Task OnInitializedAsync() => await Cargar();
+    private string? error;
+    private string? exito;
+    private string? exitoDetalle;
+    private bool avisoLeido;
+    private bool trabajando;
+    private OrdenDatos? anulando;
+
+    private string RutaActual => "/" + Nav.ToBaseRelativePath(Nav.Uri);
+    private string RutaOrden(OrdenDatos o) => $"/ordenes/editar/{o.Id}?volver={Volver.Parametro(RutaActual)}";
+    private bool HayFiltros => filtroEstado != "" || !string.IsNullOrWhiteSpace(busqueda);
+    private static string EstadoDe(OrdenDatos o) => o.Anulado ? "ANULADA" : o.Estado ?? "";
+
+    private List<OrdenDatos> PorBusqueda => (ordenes ?? new())
+        .Where(o => Busqueda.Coincide(busqueda, o.Numero, o.NumeroOrdenCliente, o.Cliente, o.DocumentoCliente, o.NumeroCotizacion))
+        .ToList();
+
+    private List<OrdenDatos> Filtradas => PorBusqueda
+        .Where(o => filtroEstado == "" ? EstadoDe(o) != "ANULADA" : EstadoDe(o) == filtroEstado)
+        .OrderByDescending(o => o.FechaEmision).ThenByDescending(o => o.Id)
+        .ToList();
+
+    private IReadOnlyList<OpcionChip> Chips
+    {
+        get
+        {
+            var base_ = PorBusqueda;
+            int Cuantas(string e) => base_.Count(o => EstadoDe(o) == e);
+            return new List<OpcionChip>
+            {
+                new("", "Vigentes", base_.Count(o => EstadoDe(o) != "ANULADA")),
+                new("PENDIENTE", "Pendientes", Cuantas("PENDIENTE"), "ambar"),
+                new("ATENDIDA_PARCIAL", "Atendidas en parte", Cuantas("ATENDIDA_PARCIAL"), "azul"),
+                new("ATENDIDA", "Atendidas", Cuantas("ATENDIDA"), "verde"),
+                new("ANULADA", "Anuladas", Cuantas("ANULADA"), "rojo")
+            };
+        }
+    }
+
+    private IEnumerable<OrdenDatos> Pagina(List<OrdenDatos> lista)
+    {
+        if (tamanoPagina == 0) return lista;
+        var total = Math.Max(1, (int)Math.Ceiling((double)lista.Count / tamanoPagina));
+        return lista.Skip((Math.Clamp(paginaActual, 1, total) - 1) * tamanoPagina).Take(tamanoPagina);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!avisoLeido)
+        {
+            avisoLeido = true;
+            exito = AvisoGuardado.Texto(Guardado, "la orden", Referencia);
+        }
+        if (urlPropia is not null && Nav.Uri == urlPropia)
+        {
+            return;
+        }
+        filtroEstado = EstadoQ ?? "";
+        busqueda = BusquedaQ ?? "";
+        paginaActual = Math.Max(1, PaginaQ ?? 1);
+        if (ordenes is null) await Cargar();
+    }
 
     private async Task Cargar()
     {
@@ -150,49 +242,71 @@ else
         }
     }
 
+    private void SincronizarUrl()
+    {
+        var uri = Nav.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["estado"] = filtroEstado == "" ? null : filtroEstado,
+            ["q"] = string.IsNullOrWhiteSpace(busqueda) ? null : busqueda.Trim(),
+            ["pagina"] = paginaActual > 1 ? paginaActual : (object?)null,
+            ["guardado"] = null,
+            ["ref"] = null
+        });
+        if (uri == Nav.Uri) return;
+        urlPropia = uri;
+        Nav.NavigateTo(uri, replace: true);
+    }
+
+    private void CambiarEstado(string estado)
+    {
+        filtroEstado = estado;
+        paginaActual = 1;
+        SincronizarUrl();
+    }
+
+    private void AlBuscar()
+    {
+        paginaActual = 1;
+        SincronizarUrl();
+    }
+
+    private void CambiarPagina(int pagina)
+    {
+        paginaActual = pagina;
+        SincronizarUrl();
+    }
+
+    private void Limpiar()
+    {
+        filtroEstado = "";
+        busqueda = "";
+        paginaActual = 1;
+        SincronizarUrl();
+    }
+
     private void AbrirAnulacion(OrdenDatos o)
     {
-        anulando = o;
-        motivo = "";
-        v.Reiniciar();
+        error = null;
         exito = null;
+        anulando = o;
     }
-
-    // ---------------- Validación en pantalla (RNF004) ----------------
-    // El motivo es obligatorio (igual que el BO): el error sale debajo del cuadro.
-    private readonly ValidacionEnVivo v = new();
-
-    private Dictionary<string, string> Errores()
-    {
-        var e = new Dictionary<string, string>();
-        if (string.IsNullOrWhiteSpace(motivo))
-        {
-            e["motivo"] = "Escriba el motivo de la anulación.";
-        }
-        return e;
-    }
-
-    private void CerrarAnulacion() => anulando = null;
 
     // POST /api/ordenes/{id}/anular {"motivo": ...}
-    private async Task ConfirmarAnulacion()
+    private async Task ConfirmarAnulacion(string motivo)
     {
         if (anulando is null) return;
-        error = null;
-        if (!v.Intentar(Errores()))
-        {
-            return;
-        }
         trabajando = true;
         try
         {
             await Api.Post<object>($"ordenes/{anulando.Id}/anular", new AnulacionDatos { Motivo = motivo });
             exito = $"Se anuló la orden {anulando.Numero}.";
+            exitoDetalle = $"La cotización {anulando.NumeroCotizacion} queda libre para generar otra orden.";
             anulando = null;
             await Cargar();
         }
         catch (ErrorApi e)
         {
+            anulando = null;
             error = e.Message;   // por ejemplo "Anule primero las ventas vigentes de la orden"
         }
         finally

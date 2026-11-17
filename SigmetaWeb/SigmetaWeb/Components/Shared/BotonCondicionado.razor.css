@@ -1,0 +1,12 @@
+.condicionado { gap: .25rem; vertical-align: top; }
+.condicionado .btn:disabled { cursor: not-allowed; pointer-events: none; }
+.motivo {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: .3rem;
+    font-size: .76rem;
+    line-height: 1.25;
+    color: var(--bs-secondary-color);
+    max-width: 22rem;
+}
+.motivo svg { flex: 0 0 auto; margin-top: .1rem; }

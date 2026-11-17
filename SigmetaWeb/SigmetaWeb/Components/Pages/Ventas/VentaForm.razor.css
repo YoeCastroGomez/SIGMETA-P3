@@ -1,0 +1,39 @@
+/* Número de sección (1 Origen, 2 Productos, 3 Condiciones) */
+.seccion {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-right: .35rem;
+    border-radius: 50%;
+    font-size: .78rem;
+    background: rgba(var(--bs-primary-rgb), .12);
+    color: var(--bs-primary);
+}
+
+/* Opción elegible como tarjeta (origen de la venta) */
+.opcion {
+    padding: .75rem .9rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .55rem;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    transition: border-color .15s, box-shadow .15s;
+}
+.opcion:hover { border-color: var(--bs-primary); }
+.opcion.elegida {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb), .15);
+}
+
+/* Resumen fijo a la derecha */
+.resumen { position: sticky; top: 1rem; }
+
+/* Lista de lo que falta para guardar */
+.lista-pendientes li { display: flex; gap: .45rem; align-items: baseline; padding: .15rem 0; }
+.lista-pendientes .marca { width: 1rem; text-align: center; font-weight: 700; }
+.lista-pendientes .listo { color: var(--bs-secondary-color); }
+.lista-pendientes .listo .marca { color: var(--bs-success); }
+.lista-pendientes .falta { color: var(--bs-body-color); font-weight: 600; }
+.lista-pendientes .falta .marca { color: var(--bs-warning); }

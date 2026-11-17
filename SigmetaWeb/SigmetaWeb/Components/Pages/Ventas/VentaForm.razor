@@ -7,15 +7,21 @@
 
 <PageTitle>@Titulo · SIGMETA</PageTitle>
 
-@* RF008 · Registrar o modificar una venta (Vendedor).
+@* RF008 · Registrar o modificar una venta (Vendedor). PATRÓN UX de formularios (ver Shared/ComponentesFlujo.cs):
+     - Secciones numeradas en el orden en que se llenan: 1 Origen y cliente, 2 Productos, 3 Condiciones.
+     - Resumen fijo a la derecha: totales, LISTA DE LO QUE FALTA y el botón Guardar, que se bloquea hasta que
+       todo esté completo (y dice qué falta).
+     - Información útil al decidir: línea de crédito del cliente (y "Crédito" bloqueado si no tiene),
+       stock en almacén de cada producto, lo pendiente en la orden.
+     - Al guardar va al siguiente paso (emitir el comprobante) o vuelve a donde estaba, con sus filtros.
    Nueva: POST /api/ventas. Desde una orden (?orden=ID o eligiéndola): GET /api/ordenes/{id} y cada línea de la venta
           apunta a su línea de la orden (idDetalleOrden); directa: productos con el BuscadorProducto de RF005.
-   Editar: GET /api/ventas/{Id} y PUT /api/ventas/{Id} (solo REGISTRADA sin comprobante ni despacho;
+   Editar: GET /api/ventas/{Id} y PUT /api/ventas/{Id} (solo REGISTRADA sin comprobante, despacho ni cobro en caja;
           la condición de pago y la orden no cambian).
-   Stock, línea de crédito, límite, plazo, correlativo, totales y la cuenta por cobrar los maneja el BO;
+   Stock disponible, línea de crédito, límite, plazo, correlativo, totales y la cuenta por cobrar los valida el BO;
    sus mensajes salen en el aviso rojo. *@
-<Encabezado Rf="RF008" Titulo="@Titulo">
-    <a class="btn btn-outline-secondary" href="/ventas">Volver a la lista</a>
+<Encabezado Rf="RF008" Titulo="@Titulo" Subtitulo="@Subtitulo">
+    <a class="btn btn-outline-secondary" href="@VolverA">← Volver</a>
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
@@ -26,256 +32,276 @@
 }
 else
 {
+    @if (!EsNuevo)
+    {
+        <PasosDocumento Pasos="@FlujoVentas.PasosVenta(venta, ordenElegida)" Titulo="Recorrido de la venta" />
+    }
     @if (!Editable)
     {
-        <div class="alert alert-secondary">
-            @if (venta.CobradaContado)
-            {
-                <span>Esta venta ya se cobró en caja y no se puede modificar: si hay un error, anúlela y registre otra.</span>
-            }
-            else
-            {
-                <span>Esta venta no se puede modificar: solo se modifica una venta registrada sin comprobante ni despacho.</span>
-            }
+        <div class="alert alert-secondary d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span><strong>Solo consulta.</strong> @(Rol != "Vendedor" ? "Las ventas las modifica el Vendedor." : FlujoVentas.MotivoNoEditable(venta) ?? "Esta venta ya no se puede modificar.")</span>
+            <a class="btn btn-sm btn-outline-secondary" href="@($"/ventas/{venta.Id}/comprobante")">Ir a la venta</a>
         </div>
     }
 
-    <div class="card card-body mb-3">
-        <h2 class="h6 fw-semibold mb-3">Origen y cliente</h2>
-        <div class="row">
-            <div class="col-md-4">
-                <Campo Etiqueta="Número de venta">
-                    <input class="form-control sigmeta-correlativo" value="@(EsNuevo ? numeroPropuesto : venta?.Numero)" disabled />
-                </Campo>
-            </div>
-        </div>
+    <div class="row g-3">
+        <div class="col-lg-8">
+            @* -------- 1. Origen y cliente -------- *@
+            <div class="card card-body mb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-3">
+                    <h2 class="h6 fw-semibold mb-0"><span class="seccion">1</span> Origen y cliente</h2>
+                    <span class="small text-muted">
+                        @(EsNuevo ? "Se registrará como" : "Venta") <strong class="text-body">@(EsNuevo ? (string.IsNullOrEmpty(numeroPropuesto) ? "…" : numeroPropuesto) : venta.Numero)</strong>
+                    </span>
+                </div>
 
-        @if (EsNuevo)
-        {
-            <Campo Etiqueta="Origen de la venta" Obligatorio="true">
-                <div class="d-flex flex-wrap gap-4">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="origen" id="origenOrden"
-                               checked="@desdeOrden" @onchange="UsarOrden" />
-                        <label class="form-check-label" for="origenOrden">Desde una orden de compra de cliente</label>
+                @if (EsNuevo)
+                {
+                    <div class="row g-2 mb-3" role="radiogroup" aria-label="Origen de la venta">
+                        <div class="col-sm-6">
+                            <button type="button" role="radio" aria-checked="@(desdeOrden ? "true" : "false")"
+                                    class="opcion w-100 text-start @(desdeOrden ? "elegida" : "")" @onclick="UsarOrden">
+                                <span class="fw-semibold d-block">Desde una orden del cliente</span>
+                                <span class="small text-muted d-block">Toma los productos y precios pactados. @(ordenesAbiertas.Count) por vender.</span>
+                            </button>
+                        </div>
+                        <div class="col-sm-6">
+                            <button type="button" role="radio" aria-checked="@(!desdeOrden ? "true" : "false")"
+                                    class="opcion w-100 text-start @(!desdeOrden ? "elegida" : "")" @onclick="UsarDirecta">
+                                <span class="fw-semibold d-block">Venta directa</span>
+                                <span class="small text-muted d-block">En mostrador: elige el cliente y agrega productos.</span>
+                            </button>
+                        </div>
                     </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="origen" id="origenDirecta"
-                               checked="@(!desdeOrden)" @onchange="UsarDirecta" />
-                        <label class="form-check-label" for="origenDirecta">Venta directa</label>
-                    </div>
-                </div>
-            </Campo>
-        }
+                }
 
-        <div class="row">
-            @if (desdeOrden)
-            {
-                <div class="col-md-6">
-                    @* Estándar RNF004: cada error sale en rojo debajo de su cuadro mientras se escribe (ValidacionEnVivo);
-                       los del BO (stock insuficiente, límite de crédito...) en el aviso rojo de arriba. *@
-                    <Campo Etiqueta="Orden de compra de cliente" Id="orden" Obligatorio="true" Error="@(v.Error("orden", Errores()))"
-                           Ayuda="Solo órdenes pendientes o atendidas parcialmente.">
-                        @if (EsNuevo)
-                        {
-                            <select id="orden" class="@(v.Clase("orden", Errores(), "form-select"))" value="@venta.IdOrden" @onchange="CambiarOrden">
-                                <option value="0">Seleccione…</option>
-                                @foreach (var o in ordenesAbiertas)
-                                {
-                                    <option value="@o.Id">@o.Numero · @o.NumeroOrdenCliente · @o.Cliente</option>
-                                }
-                            </select>
-                        }
-                        else
-                        {
-                            <input id="orden" class="form-control" value="@venta.NumeroOrden" disabled />
-                        }
-                    </Campo>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <div class="small text-muted text-uppercase">Cliente</div>
-                    <div class="fw-semibold">@(venta.Cliente ?? "—") <span class="small text-muted">@venta.DocumentoCliente</span></div>
-                </div>
-            }
-            else
-            {
-                <div class="col-md-6">
-                    <Campo Etiqueta="Cliente" Id="cliente" Obligatorio="true" Ayuda="Solo clientes activos." Error="@(v.Error("cliente", Errores()))">
-                        <select id="cliente" class="@(v.Clase("cliente", Errores(), "form-select"))"
-                                @bind="venta.IdCliente" @bind:after="@(() => v.Tocado("cliente"))" disabled="@(!Editable)">
-                            <option value="0">Seleccione…</option>
-                            @foreach (var c in clientes)
-                            {
-                                <option value="@c.Id">@c.NombreMostrado · @Cliente.Texto(c.TipoDocumento) @c.NumeroDocumento</option>
-                            }
-                        </select>
-                    </Campo>
-                </div>
-            }
-        </div>
-    </div>
-
-    <div class="card card-body mb-3">
-        <h2 class="h6 fw-semibold mb-3">Condiciones</h2>
-        <div class="row">
-            <div class="col-md-4">
-                <Campo Etiqueta="Fecha de emisión" Id="fecha" Obligatorio="true" Error="@(v.Error("fecha", Errores()))">
-                    <input id="fecha" type="date" class="@(v.Clase("fecha", Errores()))"
-                           min="@(EsNuevo ? FechaMinima.ToString("yyyy-MM-dd") : null)" max="@(EsNuevo ? Hoy.ToString("yyyy-MM-dd") : null)"
-                           @bind="venta.FechaEmision" @bind:format="yyyy-MM-dd" @bind:after="@(() => v.Tocado("fecha"))" disabled="@(!Editable)" />
-                </Campo>
-            </div>
-            <div class="col-md-4">
-                <Campo Etiqueta="Condición de pago" Id="condicion" Obligatorio="true"
-                       Ayuda="@AyudaCondicion">
-                    <select id="condicion" class="form-select" @bind="venta.CondicionPago" disabled="@(!EsNuevo)">
-                        <option value="CONTADO">Contado</option>
-                        <option value="CREDITO">Crédito</option>
-                    </select>
-                </Campo>
-            </div>
-            @if (venta.CondicionPago == "CREDITO")
-            {
-                <div class="col-md-4">
-                    <Campo Etiqueta="Plazo de crédito (días)" Id="plazo" Error="@(v.Error("plazo", Errores()))"
-                           Ayuda="No puede superar el plazo autorizado del cliente. En 0 se usa el plazo del cliente.">
-                        <input id="plazo" type="number" class="@(v.Clase("plazo", Errores()))" onkeydown="@ValidacionEnVivo.SoloPositivos"
-                               @bind="venta.PlazoCreditoDias" @bind:event="oninput" @bind:after="@(() => v.Tocado("plazo"))" disabled="@(!EsNuevo)" />
-                    </Campo>
-                </div>
-            }
-            <div class="col-12">
-                <Campo Etiqueta="Observaciones" Id="observaciones">
-                    <textarea id="observaciones" class="form-control" rows="2" maxlength="300"
-                              @bind="venta.Observaciones" disabled="@(!Editable)"></textarea>
-                </Campo>
-            </div>
-        </div>
-        @if (EsNuevo && venta.CondicionPago == "CREDITO")
-        {
-            <div class="alert alert-secondary mb-0">
-                Al guardar se genera la cuenta por cobrar. El total no puede superar el crédito disponible del cliente.
-            </div>
-        }
-    </div>
-
-    <div class="card mb-3">
-        <div class="card-body pb-0">
-            <h2 class="h6 fw-semibold mb-1">Detalle</h2>
-            @if (desdeOrden)
-            {
-                <p class="small text-muted">
-                    Líneas de la orden. Puede reducir las cantidades o quitar líneas: no se puede vender más de lo pedido.
-                </p>
-            }
-            else if (Editable)
-            {
-                <p class="small text-muted mb-2">Agregue los productos de la venta. El sistema valida el stock disponible al guardar.</p>
-                <BuscadorProducto Etiqueta="Agregar producto" Id="buscadorVenta" AlElegir="AgregarProducto" />
-            }
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width: 3rem;">#</th>
-                        <th>Producto</th>
-                        @if (desdeOrden)
-                        {
-                            <th class="text-end">En la orden</th>
-                        }
-                        <th style="width: 8rem;">Cantidad</th>
-                        <th style="width: 9rem;">Precio unit. (S/)</th>
-                        <th style="width: 9rem;">Descuento (S/)</th>
-                        <th class="text-end">Importe (S/)</th>
-                        @if (Editable) { <th></th> }
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (venta.Lineas.Count == 0)
+                <div class="row">
+                    @if (desdeOrden)
                     {
-                        <tr><td colspan="8" class="text-center text-muted py-4">@(desdeOrden ? "Elija la orden de compra del cliente." : "Agregue al menos un producto con el buscador.")</td></tr>
-                    }
-                    @for (var i = 0; i < venta.Lineas.Count; i++)
-                    {
-                        var l = venta.Lineas[i];
-                        var n = v.Clave(l);
-                        <tr @key="l">
-                            <td>@(i + 1)</td>
-                            <td><span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto</td>
-                            @if (desdeOrden)
-                            {
-                                <td class="text-end">@CantidadEnOrden(l).ToString("0.###")</td>
-                            }
-                            @if (Editable)
-                            {
-                                <td>
-                                    <input type="number" step="0.001" class="@(v.Clase(n + "cantidad", Errores(), "form-control form-control-sm text-end"))" aria-label="Cantidad"
-                                           onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.Cantidad" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "cantidad"))" />
-                                    <ErrorCampo Mensaje="@(v.Error(n + "cantidad", Errores()))" />
-                                </td>
-                                @if (desdeOrden)
+                        <div class="col-md-6">
+                            @* Estándar RNF004: cada error sale en rojo debajo de su cuadro mientras se escribe (ValidacionEnVivo);
+                               los del BO (stock insuficiente, límite de crédito...) en el aviso rojo de arriba. *@
+                            <Campo Etiqueta="Orden de compra del cliente" Id="orden" Obligatorio="true" Error="@(v.Error("orden", Errores()))"
+                                   Ayuda="@(ordenesAbiertas.Count == 0 && EsNuevo ? "No hay órdenes por vender: genere una desde una cotización aceptada." : "Solo órdenes pendientes o atendidas en parte.")">
+                                @if (EsNuevo)
                                 {
-                                    @* desde una orden el precio es el pactado en la orden *@
-                                    <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
+                                    <select id="orden" class="@(v.Clase("orden", Errores(), "form-select"))" value="@venta.IdOrden" @onchange="CambiarOrden">
+                                        <option value="0">Seleccione…</option>
+                                        @foreach (var o in ordenesAbiertas)
+                                        {
+                                            <option value="@o.Id">@(o.Numero + " · " + o.Cliente + (string.IsNullOrEmpty(o.NumeroOrdenCliente) ? "" : " · OC " + o.NumeroOrdenCliente))</option>
+                                        }
+                                    </select>
                                 }
                                 else
                                 {
-                                    <td>
-                                        <input type="number" step="0.01" class="@(v.Clase(n + "precio", Errores(), "form-control form-control-sm text-end"))" aria-label="Precio unitario"
-                                               onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.PrecioUnitario" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "precio"))" />
-                                        <ErrorCampo Mensaje="@(v.Error(n + "precio", Errores()))" />
-                                    </td>
+                                    <input id="orden" class="form-control" value="@venta.NumeroOrden" disabled />
                                 }
-                                <td>
-                                    <input type="number" step="0.01" class="@(v.Clase(n + "descuento", Errores(), "form-control form-control-sm text-end", n + "cantidad", n + "precio"))" aria-label="Descuento"
-                                           onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.Descuento" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "descuento"))" />
-                                    <ErrorCampo Mensaje="@(v.Error(n + "descuento", Errores(), n + "cantidad", n + "precio"))" />
-                                </td>
-                                <td class="text-end fw-semibold">@l.ImporteCalculado.ToString("N2")</td>
-                                <td class="text-end"><button class="btn btn-sm btn-outline-danger" @onclick="() => Quitar(l)">Quitar</button></td>
-                            }
-                            else
-                            {
-                                <td class="text-end">@l.Cantidad.ToString("0.###")</td>
-                                <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
-                                <td class="text-end">@l.Descuento.ToString("N2")</td>
-                                <td class="text-end fw-semibold">@l.Importe.ToString("N2")</td>
-                            }
-                        </tr>
+                            </Campo>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="small fw-semibold">Cliente</div>
+                            <div class="mt-2">@(venta.Cliente ?? "Se toma de la orden")</div>
+                            <div class="small text-muted">@venta.DocumentoCliente</div>
+                        </div>
                     }
-                </tbody>
-            </table>
-        </div>
-        <div class="card-body">
-            @if (v.Error("lineas", Errores()) is { } errorLineas)
-            {
-                <div class="small text-danger mb-2">@errorLineas</div>
-            }
-            <div class="row justify-content-end">
-                <div class="col-sm-6 col-md-4">
-                    <div class="d-flex justify-content-between"><span class="text-muted">Subtotal</span><span>S/ @SubTotal.ToString("N2")</span></div>
-                    <div class="d-flex justify-content-between"><span class="text-muted">IGV (18%)</span><span>S/ @Igv.ToString("N2")</span></div>
-                    <div class="d-flex justify-content-between border-top mt-2 pt-2 fw-semibold"><span>Total</span><span>S/ @Total.ToString("N2")</span></div>
-                    @if (Editable)
+                    else
                     {
-                        <div class="form-text text-end">Referencial: el sistema calcula los importes al guardar.</div>
+                        <div class="col-md-8">
+                            <Campo Etiqueta="Cliente" Id="cliente" Obligatorio="true" Ayuda="Solo clientes activos." Error="@(v.Error("cliente", Errores()))">
+                                <select id="cliente" class="@(v.Clase("cliente", Errores(), "form-select"))"
+                                        @bind="venta.IdCliente" @bind:after="AlCambiarCliente" disabled="@(!Editable)">
+                                    <option value="0">Seleccione…</option>
+                                    @foreach (var c in clientes)
+                                    {
+                                        <option value="@c.Id">@c.NombreMostrado · @Cliente.Texto(c.TipoDocumento) @c.NumeroDocumento</option>
+                                    }
+                                </select>
+                            </Campo>
+                        </div>
                     }
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div class="card card-body mb-3">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-            <div class="d-flex gap-2">
-                <a class="btn btn-outline-secondary" href="/ventas">Cancelar</a>
+            @* -------- 2. Productos -------- *@
+            <div class="card mb-3">
+                <div class="card-body pb-0">
+                    <h2 class="h6 fw-semibold mb-1"><span class="seccion">2</span> Productos</h2>
+                    @if (desdeOrden)
+                    {
+                        <p class="small text-muted">
+                            Se propone lo que falta entregar de la orden. Puede reducir cantidades o quitar líneas: no se vende más de lo pedido.
+                        </p>
+                    }
+                    else if (Editable)
+                    {
+                        <p class="small text-muted mb-2">Escanee o escriba el código y presione Enter. El sistema valida el stock disponible al guardar.</p>
+                        <BuscadorProducto Etiqueta="Agregar producto" Id="buscadorVenta" AlElegir="AgregarProducto" />
+                    }
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 3rem;">#</th>
+                                <th>Producto</th>
+                                @if (desdeOrden)
+                                {
+                                    <th class="text-end">En la orden</th>
+                                }
+                                <th style="width: 8rem;">Cantidad</th>
+                                <th style="width: 9rem;">Precio unit. (S/)</th>
+                                <th style="width: 9rem;">Descuento (S/)</th>
+                                <th class="text-end">Importe (S/)</th>
+                                @if (Editable) { <th></th> }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (venta.Lineas.Count == 0)
+                            {
+                                <tr><td colspan="8" class="text-center text-muted py-4">@(desdeOrden ? "Elija la orden del cliente: sus productos aparecen aquí." : "Agregue al menos un producto con el buscador.")</td></tr>
+                            }
+                            @for (var i = 0; i < venta.Lineas.Count; i++)
+                            {
+                                var l = venta.Lineas[i];
+                                var n = v.Clave(l);
+                                var hayStock = stock.TryGetValue(l.IdProducto, out var enAlmacen);
+                                <tr @key="l">
+                                    <td>@(i + 1)</td>
+                                    <td>
+                                        <span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto
+                                        @if (hayStock && Editable)
+                                        {
+                                            <div class="small @(l.Cantidad > enAlmacen ? "text-danger fw-semibold" : "text-muted")">
+                                                En almacén: @enAlmacen.ToString("0.###")@(l.Cantidad > enAlmacen ? " · no alcanza" : "")
+                                            </div>
+                                        }
+                                    </td>
+                                    @if (desdeOrden)
+                                    {
+                                        <td class="text-end">@CantidadEnOrden(l).ToString("0.###")</td>
+                                    }
+                                    @if (Editable)
+                                    {
+                                        <td>
+                                            <input type="number" step="0.001" class="@(v.Clase(n + "cantidad", Errores(), "form-control form-control-sm text-end"))" aria-label="Cantidad"
+                                                   onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.Cantidad" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "cantidad"))" />
+                                            <ErrorCampo Mensaje="@(v.Error(n + "cantidad", Errores()))" />
+                                        </td>
+                                        @if (desdeOrden)
+                                        {
+                                            @* desde una orden el precio es el pactado en la orden *@
+                                            <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
+                                        }
+                                        else
+                                        {
+                                            <td>
+                                                <input type="number" step="0.01" class="@(v.Clase(n + "precio", Errores(), "form-control form-control-sm text-end"))" aria-label="Precio unitario"
+                                                       onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.PrecioUnitario" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "precio"))" />
+                                                <ErrorCampo Mensaje="@(v.Error(n + "precio", Errores()))" />
+                                            </td>
+                                        }
+                                        <td>
+                                            <input type="number" step="0.01" class="@(v.Clase(n + "descuento", Errores(), "form-control form-control-sm text-end", n + "cantidad", n + "precio"))" aria-label="Descuento"
+                                                   onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.Descuento" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "descuento"))" />
+                                            <ErrorCampo Mensaje="@(v.Error(n + "descuento", Errores(), n + "cantidad", n + "precio"))" />
+                                        </td>
+                                        <td class="text-end fw-semibold">@l.ImporteCalculado.ToString("N2")</td>
+                                        <td class="text-end"><button type="button" class="btn btn-sm btn-link link-danger" aria-label="@($"Quitar {l.Producto}")" @onclick="() => Quitar(l)">Quitar</button></td>
+                                    }
+                                    else
+                                    {
+                                        <td class="text-end">@l.Cantidad.ToString("0.###")</td>
+                                        <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
+                                        <td class="text-end">@l.Descuento.ToString("N2")</td>
+                                        <td class="text-end fw-semibold">@l.Importe.ToString("N2")</td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (v.Error("lineas", Errores()) is { } errorLineas)
+                {
+                    <div class="card-body pt-2"><div class="small text-danger">@errorLineas</div></div>
+                }
+            </div>
+
+            @* -------- 3. Condiciones -------- *@
+            <div class="card card-body mb-3">
+                <h2 class="h6 fw-semibold mb-3"><span class="seccion">3</span> Condiciones</h2>
+                <div class="row">
+                    <div class="col-md-4">
+                        <Campo Etiqueta="Fecha de emisión" Id="fecha" Obligatorio="true" Error="@(v.Error("fecha", Errores()))"
+                               Ayuda="@(EsNuevo ? $"Desde {FechaMinima:dd/MM} hasta hoy." : null)">
+                            <input id="fecha" type="date" class="@(v.Clase("fecha", Errores()))"
+                                   min="@(EsNuevo ? FechaMinima.ToString("yyyy-MM-dd") : null)" max="@(EsNuevo ? Hoy.ToString("yyyy-MM-dd") : null)"
+                                   @bind="venta.FechaEmision" @bind:format="yyyy-MM-dd" @bind:after="@(() => v.Tocado("fecha"))" disabled="@(!Editable)" />
+                        </Campo>
+                    </div>
+                    <div class="col-md-4">
+                        <Campo Etiqueta="Condición de pago" Id="condicion" Obligatorio="true" Ayuda="@AyudaCondicion">
+                            <select id="condicion" class="form-select" @bind="venta.CondicionPago" disabled="@(!EsNuevo)">
+                                <option value="CONTADO">Contado</option>
+                                <option value="CREDITO" disabled="@(EsNuevo && !TieneLinea)">@(EsNuevo && !TieneLinea ? "Crédito (el cliente no tiene línea)" : "Crédito")</option>
+                            </select>
+                        </Campo>
+                    </div>
+                    @if (venta.CondicionPago == "CREDITO")
+                    {
+                        <div class="col-md-4">
+                            <Campo Etiqueta="Plazo de crédito (días)" Id="plazo" Error="@(v.Error("plazo", Errores()))"
+                                   Ayuda="@(ClienteActual is { } cp ? $"En 0 se usa el plazo del cliente ({cp.PlazoCreditoDias} días)." : "En 0 se usa el plazo del cliente.")">
+                                <input id="plazo" type="number" class="@(v.Clase("plazo", Errores()))" onkeydown="@ValidacionEnVivo.SoloPositivos"
+                                       @bind="venta.PlazoCreditoDias" @bind:event="oninput" @bind:after="@(() => v.Tocado("plazo"))" disabled="@(!EsNuevo)" />
+                            </Campo>
+                        </div>
+                    }
+                    <div class="col-12">
+                        <Campo Etiqueta="Observaciones" Id="observaciones" Clase="mb-0">
+                            <textarea id="observaciones" class="form-control" rows="2" maxlength="300"
+                                      @bind="venta.Observaciones" disabled="@(!Editable)"></textarea>
+                        </Campo>
+                    </div>
+                </div>
+                @if (EsNuevo && venta.CondicionPago == "CREDITO" && ClienteActual is { } cl)
+                {
+                    <div class="alert alert-light border small mt-3 mb-0">
+                        <strong>Línea de crédito del cliente:</strong> hasta S/ @cl.LimiteCredito.ToString("N2") y @cl.PlazoCreditoDias días.
+                        Al guardar se crea la cuenta por cobrar; el sistema verifica que su deuda pendiente más esta venta no pase el límite.
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* -------- Resumen fijo: totales, lo que falta y Guardar -------- *@
+        <div class="col-lg-4">
+            <div class="card card-body resumen">
+                <div class="small text-muted text-uppercase">Total</div>
+                <div class="display-6 fw-bold">S/ @Total.ToString("N2")</div>
+                <div class="d-flex justify-content-between small text-muted mt-1"><span>Subtotal</span><span>S/ @SubTotal.ToString("N2")</span></div>
+                <div class="d-flex justify-content-between small text-muted"><span>IGV (18 %)</span><span>S/ @Igv.ToString("N2")</span></div>
                 @if (Editable)
                 {
-                    <button class="btn btn-primary" disabled="@guardando" @onclick="Guardar">
-                        @(guardando ? "Guardando..." : "Guardar")
-                    </button>
+                    <div class="form-text">Referencial: el sistema recalcula los importes al guardar.</div>
+
+                    <ul class="lista-pendientes list-unstyled small my-3" aria-label="Lo que falta para guardar">
+                        @foreach (var item in Pendientes)
+                        {
+                            <li class="@(item.Listo ? "listo" : "falta")">
+                                <span class="marca" aria-hidden="true">@(item.Listo ? "✓" : "•")</span>
+                                <span>@item.Texto</span>
+                            </li>
+                        }
+                    </ul>
+                    <BotonCondicionado Texto="@(EsNuevo ? "Registrar venta" : "Guardar cambios")" TextoOcupado="Guardando..." Bloque="true"
+                                       Clase="btn-primary w-100" Ocupado="@guardando" AlHacerClic="Guardar"
+                                       Motivo="@(Pendientes.All(p => p.Listo) ? null : "Complete lo marcado con • para guardar.")" />
+                    <a class="btn btn-link w-100 mt-1" href="@VolverA">Cancelar</a>
+                    @if (EsNuevo)
+                    {
+                        <div class="small text-muted mt-1">Después de registrar pasará a emitir el comprobante.</div>
+                    }
                 }
             </div>
         </div>
@@ -284,9 +310,12 @@ else
 
 @code {
     [Parameter] public int? Id { get; set; }
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
 
     // viene de la lista de órdenes: /ventas/nueva?orden=ID
     [SupplyParameterFromQuery(Name = "orden")] public int? IdOrdenInicial { get; set; }
+    // a dónde volver (la lista con sus filtros o la página de la venta)
+    [SupplyParameterFromQuery(Name = "volver")] public string? VolverQ { get; set; }
 
     private VentaDatos? venta;
     private List<Cliente> clientes = new();
@@ -296,25 +325,57 @@ else
     private string? error;
     private bool guardando;
     private string numeroPropuesto = "";
+    // stock en almacén de los productos agregados con el buscador (referencial: el BO descuenta lo ya comprometido)
+    private readonly Dictionary<int, decimal> stock = new();
 
     private sealed class NumeroPropuesto
     {
         public string Numero { get; set; } = "";
     }
 
+    private sealed record Pendiente(string Texto, bool Listo);
+
     private bool EsNuevo => Id is null;
     // RF008: rango de la fecha de una venta nueva (VentaBOImpl.DIAS_ATRASO_MAXIMO = 7)
     private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.Today);
     private static DateOnly FechaMinima => Hoy.AddDays(-7);
-    private string Titulo => EsNuevo ? "Nueva venta" : Editable ? "Editar venta" : "Venta";
-    // RF008: venta REGISTRADA, sin comprobante vigente y (al contado) sin cobro en caja; el despacho lo valida el BO
-    private bool Editable => EsNuevo || (Rol == "Vendedor" && venta?.Estado == "REGISTRADA" && venta.Comprobante is null && !venta.CobradaContado);
-    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
-    private string AyudaCondicion => EsNuevo ? "Crédito solo para clientes con línea de crédito autorizada." : "No se cambia al modificar.";
+    private string Titulo => EsNuevo ? "Nueva venta" : Editable ? $"Editar venta {venta?.Numero}" : $"Venta {venta?.Numero}";
+    private string? Subtitulo => EsNuevo ? "Complete las tres secciones; a la derecha ve lo que falta." : venta?.Cliente;
+    private string VolverA => Volver.A(VolverQ, "/ventas");
+    // RF008: venta REGISTRADA, sin comprobante vigente, sin despacho y (al contado) sin cobro en caja; las reglas reales están en el BO
+    private bool Editable => EsNuevo || (Rol == "Vendedor" && venta is not null && FlujoVentas.MotivoNoEditable(venta) is null);
+    private string AyudaCondicion => !EsNuevo ? "No se cambia al modificar."
+        : TieneLinea ? "El cliente tiene línea de crédito." : "Crédito solo para clientes con línea de crédito autorizada.";
+
+    // Cliente elegido (directo o el de la orden) con su línea de crédito
+    private Cliente? ClienteActual => venta is null ? null : clientes.FirstOrDefault(c => c.Id == venta.IdCliente);
+    // Mismo criterio que VentaBOImpl.registrar: condición CREDITO con límite y plazo mayores a 0
+    private bool TieneLinea => ClienteActual is { } c && c.CondicionPago == "CREDITO" && c.LimiteCredito > 0 && c.PlazoCreditoDias > 0;
 
     private decimal SubTotal => Editable ? TextosVentas.SubTotal(venta!.Lineas) : venta!.SubTotal;
     private decimal Igv => Editable ? TextosVentas.Igv(venta!.Lineas) : venta!.Igv;
     private decimal Total => Editable ? TextosVentas.Total(venta!.Lineas) : venta!.Total;
+
+    // Lista de lo que falta, a partir de las mismas reglas de Errores()
+    private List<Pendiente> Pendientes
+    {
+        get
+        {
+            var e = Errores();
+            var lista = new List<Pendiente>
+            {
+                new(desdeOrden ? "Orden del cliente elegida" : "Cliente elegido", !e.ContainsKey("orden") && !e.ContainsKey("cliente")),
+                new("Al menos un producto", !e.ContainsKey("lineas")),
+                new("Cantidades, precios y descuentos válidos", !e.Keys.Any(k => k.StartsWith('l') && k.Contains('.'))),
+                new("Fecha de emisión válida", !e.ContainsKey("fecha"))
+            };
+            if (venta?.CondicionPago == "CREDITO")
+            {
+                lista.Add(new("Plazo de crédito válido", !e.ContainsKey("plazo")));
+            }
+            return lista;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -357,15 +418,18 @@ else
 
     private void UsarOrden()
     {
+        if (desdeOrden) return;
         desdeOrden = true;
         venta!.Lineas.Clear();
         venta.IdCliente = 0;
         venta.Cliente = null;
         venta.DocumentoCliente = null;
+        AjustarCondicion();
     }
 
     private void UsarDirecta()
     {
+        if (!desdeOrden) return;
         desdeOrden = false;
         ordenElegida = null;
         venta!.IdOrden = 0;
@@ -374,6 +438,22 @@ else
         venta.DocumentoCliente = null;
         venta.IdCliente = 0;
         venta.Lineas.Clear();
+        AjustarCondicion();
+    }
+
+    private void AlCambiarCliente()
+    {
+        v.Tocado("cliente");
+        AjustarCondicion();
+    }
+
+    // si el cliente nuevo no tiene línea de crédito, la venta vuelve a contado (la opción Crédito queda bloqueada)
+    private void AjustarCondicion()
+    {
+        if (EsNuevo && venta is not null && venta.CondicionPago == "CREDITO" && !TieneLinea)
+        {
+            venta.CondicionPago = "CONTADO";
+        }
     }
 
     private async Task CambiarOrden(ChangeEventArgs e)
@@ -415,6 +495,7 @@ else
                     IdDetalleOrden = lo.IdLinea
                 });
             }
+            AjustarCondicion();
         }
         catch (ErrorApi e)
         {
@@ -425,10 +506,17 @@ else
     private decimal CantidadEnOrden(LineaDatos l) =>
         ordenElegida?.Lineas.FirstOrDefault(o => o.IdLinea == l.IdDetalleOrden)?.Cantidad ?? 0;
 
-    // Lo llama el BuscadorProducto con el producto elegido (venta directa)
+    // Lo llama el BuscadorProducto con el producto elegido (venta directa). Si ya estaba, suma 1 a su cantidad.
     private void AgregarProducto(Producto p)
     {
-        venta!.Lineas.Add(new LineaDatos
+        stock[p.Id] = p.StockActual;
+        var existente = venta!.Lineas.FirstOrDefault(l => l.IdProducto == p.Id && l.IdDetalleOrden == 0);
+        if (existente is not null)
+        {
+            existente.Cantidad += 1;
+            return;
+        }
+        venta.Lineas.Add(new LineaDatos
         {
             IdProducto = p.Id,
             Producto = p.Nombre,
@@ -442,7 +530,7 @@ else
     private void Quitar(LineaDatos l) => venta!.Lineas.Remove(l);
 
     // ---------------- Validación en pantalla (RNF004) ----------------
-    // Mismas reglas que VentaBOImpl. Lo que solo sabe el BO (stock, línea de crédito, límite) sale en el aviso rojo.
+    // Mismas reglas que VentaBOImpl. Lo que solo sabe el BO (stock disponible, deuda del cliente) sale en el aviso rojo.
     private readonly ValidacionEnVivo v = new();
 
     // Lo que falta entregar de la línea de la orden (no se puede vender más)
@@ -476,11 +564,18 @@ else
         else if (EsNuevo && (venta.FechaEmision > Hoy || venta.FechaEmision < FechaMinima))
         {
             // misma regla que VentaBOImpl: ni futura ni con más de 7 días de atraso
-            e["fecha"] = $"La fecha debe estar entre {FechaMinima:yyyy-MM-dd} y hoy.";
+            e["fecha"] = $"La fecha debe estar entre {FechaMinima:dd/MM/yyyy} y hoy.";
         }
-        if (venta.CondicionPago == "CREDITO" && venta.PlazoCreditoDias < 0)
+        if (venta.CondicionPago == "CREDITO")
         {
-            e["plazo"] = "El plazo no puede ser negativo.";
+            if (venta.PlazoCreditoDias < 0)
+            {
+                e["plazo"] = "El plazo no puede ser negativo.";
+            }
+            else if (EsNuevo && ClienteActual is { } c && venta.PlazoCreditoDias > c.PlazoCreditoDias)
+            {
+                e["plazo"] = $"Máximo {c.PlazoCreditoDias} días (plazo autorizado del cliente).";
+            }
         }
         if (venta.Lineas.Count == 0)
         {
@@ -518,18 +613,20 @@ else
             if (EsNuevo)
             {
                 var nueva = await Api.Post<VentaDatos>("ventas", venta);           // POST /api/ventas
-                // siguiente paso del flujo: emitir su comprobante
-                Nav.NavigateTo(nueva is not null ? $"/ventas/{nueva.Id}/comprobante" : "/ventas");
+                // siguiente paso del flujo: emitir su comprobante (allí se avisa que se registró)
+                Nav.NavigateTo(nueva is not null
+                    ? $"/ventas/{nueva.Id}/comprobante?nueva=true&volver={Volver.Parametro(VolverA)}"
+                    : VolverA);
             }
             else
             {
                 var guardada = await Api.Put<VentaDatos>($"ventas/{Id}", venta);   // PUT /api/ventas/{Id}
-                Nav.NavigateTo(AvisoGuardado.Ruta("/ventas", AvisoGuardado.Editado, guardada?.Numero ?? venta.Numero));
+                Nav.NavigateTo(Volver.ConAviso(VolverA, AvisoGuardado.Editado, guardada?.Numero ?? venta.Numero));
             }
         }
         catch (ErrorApi e)
         {
-            error = e.Message;   // por ejemplo "Stock insuficiente para ..." o "El cliente no tiene linea de credito autorizada"
+            error = e.Message;   // por ejemplo "Stock insuficiente para ..." o "La venta supera el límite de crédito del cliente"
         }
         finally
         {

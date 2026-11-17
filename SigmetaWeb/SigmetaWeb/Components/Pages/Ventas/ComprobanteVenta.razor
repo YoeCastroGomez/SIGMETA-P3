@@ -2,17 +2,24 @@
 @inject ApiJava Api
 @inject IJSRuntime JS
 
-<PageTitle>Comprobante de la venta · SIGMETA</PageTitle>
+<PageTitle>@(venta?.Numero ?? "Venta") · SIGMETA</PageTitle>
 
-@* RF008 · Emisión del comprobante electrónico de una venta y registro de su envío (Vendedor y Cajero). Datos reales del Java:
-   - GET  /api/ventas/{Id}                       la venta, sus líneas y su comprobante vigente
+@* RF008 · Centro de la venta: su recorrido, la emisión del comprobante, su entrega al cliente y su anulación.
+   Es la pantalla de referencia del PATRÓN UX (ver Shared/ComponentesFlujo.cs):
+     - <PasosDocumento>: en qué paso está la venta y a quién le toca lo siguiente.
+     - <BotonCondicionado>: lo que no se puede hacer aparece bloqueado y dice por qué (factura sin RUC,
+       anular con mercadería entregada...). Las reglas siguen en el BO; aquí solo se anticipan.
+     - <SiguientePaso>: después de cada acción, qué sigue y el botón para hacerlo.
+     - <ModalMotivo>: la anulación dice qué va a pasar y exige el motivo.
+   Datos reales del Java:
+   - GET  /api/ventas/{Id}                       la venta, sus líneas, su comprobante vigente y si ya se cobró
+   - GET  /api/ordenes/{id}                      (si viene de una orden) para mostrar su cotización en el recorrido
    - GET  /api/comprobantes/{id}                 el comprobante con el cliente
+   - GET  /api/comprobantes/siguiente-numero     el número que recibiría
    - POST /api/comprobantes {"idVenta", "tipo"}  emitir BOLETA o FACTURA (la serie y el número los pone el BO)
-   - POST /api/comprobantes/{id}/envio {"medioEnvio"}  registrar el envío (CORREO, MENSAJERIA o IMPRESO; la fecha la pone el BO)
-   - POST /api/comprobantes/{id}/anular {"motivo"}  anular la factura o boleta si la mercadería no se entregó
-   - Botón Imprimir: registra el envío IMPRESO y abre la impresión del navegador con la vista .sigmeta-impresion
-     (formato imprimible del RF008; en pantalla está oculta y al imprimir es lo único que sale)
-   Mensajes del BO: factura a un cliente sin RUC, venta que ya tiene comprobante, venta anulada... *@
+   - POST /api/comprobantes/{id}/envio {"medioEnvio"}  registrar el envío (CORREO, MENSAJERIA o IMPRESO)
+   - POST /api/comprobantes/{id}/anular {"motivo"}  anular si la mercadería no salió del almacén
+   - Imprimir: registra el envío IMPRESO y abre la impresión del navegador con la vista .sigmeta-impresion *@
 
 <style>
     .sigmeta-impresion { display: none; }
@@ -35,25 +42,26 @@
         .sigmeta-impresion .imp-totales td { border: 0; }
     }
 </style>
-<Encabezado Rf="RF008" Titulo="Comprobante de la venta" Subtitulo="@Subtitulo">
-    <a class="btn btn-outline-secondary" href="/ventas">Volver a la lista</a>
+
+<Encabezado Rf="RF008" Titulo="@Titulo" Subtitulo="@Subtitulo">
+    <a class="btn btn-outline-secondary" href="@VolverA">← Volver a ventas</a>
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<SiguientePaso Mensaje="@exito" Detalle="@exitoDetalle" TextoAccion="@exitoAccion" Ruta="@exitoRuta"
+               AlAccion="@(exitoImprimir ? EventCallback.Factory.Create(this, Imprimir) : default)"
+               AlCerrar="CerrarAviso" />
 
-@* RF008: anular la factura o boleta. Si la mercadería ya se despachó, el BO lo rechaza: se usa nota de crédito *@
-<Confirmacion Visible="@pidiendoAnulacion" Titulo="Anular comprobante" TextoConfirmar="Anular comprobante"
-              AlConfirmar="ConfirmarAnulacion" AlCancelar="() => pidiendoAnulacion = false">
-    <p class="mb-2">Se anula <strong>@comprobante?.Comprobante</strong>. Solo se puede si la mercadería todavía no salió del almacén;
-        si ya se entregó, la devolución se hace con una nota de crédito. Después podrá corregir la venta, volver a emitir o anularla.</p>
-    <Campo Etiqueta="Motivo" Id="motivoAnulacion" Obligatorio="true" Error="@errorMotivo">
-        <textarea id="motivoAnulacion" class="form-control" rows="2" maxlength="200" @bind="motivoAnulacion" @bind:event="oninput"></textarea>
-    </Campo>
-</Confirmacion>
+<ModalMotivo Visible="@pidiendoAnulacion" Titulo="@($"Anular {comprobante?.Comprobante}")" TextoConfirmar="Anular comprobante"
+             Ocupado="@trabajando" Ejemplo="Ejemplo: se emitió con el cliente equivocado."
+             AlConfirmar="ConfirmarAnulacion" AlCancelar="() => pidiendoAnulacion = false">
+    <p class="mb-2">Al anular <strong>@comprobante?.Comprobante</strong>:</p>
+    <ul class="small mb-0">
+        <li>El comprobante deja de valer (queda registrado como anulado).</li>
+        <li>La venta <strong>@venta?.Numero</strong> queda sin comprobante: se puede corregir y volver a emitir, o anular.</li>
+        <li>No se toca el stock: la mercadería todavía no salió del almacén.</li>
+    </ul>
+</ModalMotivo>
 
 @if (cargando)
 {
@@ -61,180 +69,203 @@
 }
 else if (venta is not null)
 {
-    <div class="card card-body mb-3">
-        <h2 class="h6 fw-semibold mb-3">Venta</h2>
-        <div class="row">
-            <div class="col-sm-6 col-md-3 mb-3">
-                <div class="small text-muted text-uppercase">Número</div>
-                <div class="fw-semibold">@venta.Numero</div>
+    <PasosDocumento Pasos="@pasos" Titulo="Recorrido de la venta" />
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            @if (FlujoVentas.EstaAnulada(venta))
+            {
+                <div class="alert alert-secondary">
+                    <strong>Venta anulada.</strong> No se emite comprobante.
+                    @if (!string.IsNullOrWhiteSpace(venta.MotivoAnulacion))
+                    {
+                        <div class="small mt-1">Motivo: @venta.MotivoAnulacion</div>
+                    }
+                </div>
+            }
+            else if (comprobante is null)
+            {
+                @* -------- 1. Emitir el comprobante -------- *@
+                <div class="card card-body mb-3">
+                    <h2 class="h6 fw-semibold mb-1">Emitir comprobante</h2>
+                    <p class="small text-muted mb-3">Elija el tipo. La serie y el número los asigna el sistema al emitir.</p>
+                    <div class="row g-2 mb-3" role="radiogroup" aria-label="Tipo de comprobante">
+                        <div class="col-sm-6">
+                            <button type="button" role="radio" aria-checked="@(esFactura ? "true" : "false")"
+                                    class="opcion-tipo w-100 text-start @(esFactura ? "elegida" : "")" disabled="@(!EsRuc)" @onclick="ElegirFactura">
+                                <span class="fw-semibold d-block">Factura</span>
+                                <span class="small text-muted d-block">Serie F001 · para clientes con RUC</span>
+                                @if (!EsRuc)
+                                {
+                                    <span class="small text-danger d-block mt-1">El cliente no tiene RUC: solo puede recibir boleta.</span>
+                                }
+                            </button>
+                        </div>
+                        <div class="col-sm-6">
+                            <button type="button" role="radio" aria-checked="@(!esFactura ? "true" : "false")"
+                                    class="opcion-tipo w-100 text-start @(!esFactura ? "elegida" : "")" @onclick="ElegirBoleta">
+                                <span class="fw-semibold d-block">Boleta</span>
+                                <span class="small text-muted d-block">Serie B001 · para cualquier cliente</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 border-top pt-3">
+                        <div class="small text-muted">
+                            Se emitirá: <strong class="text-body">@(esFactura ? "F001" : "B001")-@(string.IsNullOrEmpty(numeroPropuesto) ? "…" : numeroPropuesto)</strong>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 align-items-start">
+                            @if (Rol == "Vendedor")
+                            {
+                                <BotonCondicionado Texto="Editar venta" Clase="btn-outline-secondary" Ruta="@($"/ventas/editar/{venta.Id}?volver={Uri.EscapeDataString(RutaActual)}")"
+                                                   Motivo="@FlujoVentas.MotivoNoEditable(venta)" />
+                            }
+                            <BotonCondicionado Texto="Emitir comprobante" TextoOcupado="Emitiendo..." Ocupado="@trabajando"
+                                               Motivo="@((Rol is "Vendedor" or "Cajero") ? null : "Solo el Vendedor o el Cajero emiten comprobantes.")"
+                                               AlHacerClic="Emitir" />
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                @* -------- 2. Comprobante emitido -------- *@
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                            <div>
+                                <div class="small text-muted text-uppercase">@TextosVentas.Texto(comprobante.Tipo)</div>
+                                <div class="h5 fw-bold mb-0">@comprobante.Comprobante</div>
+                                <div class="small text-muted">Emitido el @TextosVentas.Fecha(comprobante.FechaEmision)</div>
+                            </div>
+                            <Estado Texto="@TextosVentas.Texto(comprobante.Estado)" />
+                        </div>
+                        <div class="row small">
+                            <div class="col-md-6 mb-2">
+                                <div class="text-muted">Cliente</div>
+                                <div class="fw-semibold">@comprobante.Cliente</div>
+                                <div class="text-muted">@TextosVentas.Texto(comprobante.TipoDocumentoCliente) @comprobante.DocumentoCliente</div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="text-muted">Contacto</div>
+                                <div>@(string.IsNullOrWhiteSpace(comprobante.CorreoCliente) ? "Sin correo registrado" : comprobante.CorreoCliente)</div>
+                                <div class="text-muted">@comprobante.DireccionCliente</div>
+                            </div>
+                        </div>
+                    </div>
+                    @if (comprobante.Estado != "ANULADO")
+                    {
+                        <div class="card-footer bg-transparent d-flex flex-wrap gap-2 align-items-start">
+                            <BotonCondicionado Texto="Imprimir o guardar PDF" Clase="btn-primary" Ocupado="@trabajando" AlHacerClic="Imprimir"
+                                               Motivo="@((Rol is "Vendedor" or "Cajero") ? null : "Solo el Vendedor o el Cajero entregan comprobantes.")" />
+                            @if (Rol == "Cajero")
+                            {
+                                @* RF013: si la mercadería ya se entregó, la devolución va con nota de crédito *@
+                                <BotonCondicionado Texto="Nota de crédito" Clase="btn-outline-secondary"
+                                                   Ruta="@($"/notas-credito/nueva?comprobante={comprobante.Id}")"
+                                                   Motivo="@(FlujoVentas.TieneDespacho(venta) ? null : "Aún no se entregó mercadería: anule el comprobante en su lugar.")" />
+                            }
+                            @if (Rol is "Vendedor" or "Cajero")
+                            {
+                                <BotonCondicionado Texto="Anular comprobante" Clase="btn-outline-danger" ClaseContenedor="ms-sm-auto" Ocupado="@trabajando"
+                                                   Motivo="@(FlujoVentas.TieneDespacho(venta) ? "Ya salió mercadería: para devolverla use una nota de crédito (Cajero)." : null)"
+                                                   AlHacerClic="PedirAnulacion" />
+                            }
+                        </div>
+                    }
+                </div>
+
+                @if (comprobante.Estado != "ANULADO" && Rol is "Vendedor" or "Cajero")
+                {
+                    @* RF008: se deja registro del medio y la fecha de envío (ComprobanteBO.registrarEnvio) *@
+                    <div class="card card-body mb-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                            <h2 class="h6 fw-semibold mb-0">Enviar al cliente</h2>
+                            <span class="small text-muted">
+                                Último envío:
+                                @if (comprobante.MedioEnvio is null)
+                                {
+                                    <strong>ninguno</strong>
+                                }
+                                else
+                                {
+                                    <strong>@TextosVentas.Texto(comprobante.MedioEnvio)</strong> <span>· @TextosVentas.FechaHora(comprobante.FechaEnvio)</span>
+                                }
+                            </span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-3 mb-3" role="radiogroup" aria-label="Medio de envío">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="medio" id="medioCorreo" checked="@(medioEnvio == "CORREO")"
+                                       disabled="@SinCorreo" @onchange="@(() => medioEnvio = "CORREO")" />
+                                <label class="form-check-label" for="medioCorreo">
+                                    Correo electrónico
+                                    @if (SinCorreo)
+                                    {
+                                        <span class="small text-muted d-block">El cliente no tiene correo registrado.</span>
+                                    }
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="medio" id="medioMensajeria" checked="@(medioEnvio == "MENSAJERIA")"
+                                       @onchange="@(() => medioEnvio = "MENSAJERIA")" />
+                                <label class="form-check-label" for="medioMensajeria">
+                                    Mensajería
+                                    <span class="small text-muted d-block">Al teléfono de contacto del cliente.</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <BotonCondicionado Texto="Registrar envío" TextoOcupado="Registrando..." Clase="btn-outline-primary" Ocupado="@trabajando"
+                                               AlHacerClic="RegistrarEnvio" />
+                            <span class="small text-muted ms-2">Para entregarlo impreso use «Imprimir o guardar PDF».</span>
+                        </div>
+                    </div>
+                }
+            }
+
+            <div class="card mb-3">
+                <div class="card-body pb-0 d-flex justify-content-between align-items-center">
+                    <h2 class="h6 fw-semibold mb-2">Detalle de la venta</h2>
+                    @if (FlujoVentas.TieneDespacho(venta))
+                    {
+                        <span class="small text-muted mb-2">«Despachada»: lo que ya salió del almacén.</span>
+                    }
+                </div>
+                <TablaDetalle Lineas="@venta.Lineas" SubTotal="@venta.SubTotal" Igv="@venta.Igv" Total="@venta.Total" MostrarDespachada="true" />
             </div>
-            <div class="col-sm-6 col-md-3 mb-3">
-                <div class="small text-muted text-uppercase">Fecha</div>
-                <div class="fw-semibold">@TextosVentas.Fecha(venta.FechaEmision)</div>
-            </div>
-            <div class="col-sm-6 col-md-3 mb-3">
-                <div class="small text-muted text-uppercase">Condición de pago</div>
-                <div class="fw-semibold">@TextosVentas.Texto(venta.CondicionPago)</div>
-            </div>
-            <div class="col-sm-6 col-md-3 mb-3">
-                <div class="small text-muted text-uppercase">Total</div>
-                <div class="fw-semibold">S/ @venta.Total.ToString("N2")</div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <div class="small text-muted text-uppercase">Cliente</div>
-                <div class="fw-semibold">@venta.Cliente <span class="small text-muted">@venta.DocumentoCliente</span></div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <div class="small text-muted text-uppercase">Estado</div>
-                <div><Estado Texto="@TextosVentas.Texto(venta.Estado)" /></div>
+        </div>
+
+        @* -------- Resumen fijo: lo esencial y lo que sigue -------- *@
+        <div class="col-lg-4">
+            <div class="card card-body resumen">
+                <div class="small text-muted text-uppercase">Total de la venta</div>
+                <div class="display-6 fw-bold mb-2">S/ @venta.Total.ToString("N2")</div>
+                <dl class="row small mb-0">
+                    <dt class="col-5 fw-normal text-muted">Cliente</dt>
+                    <dd class="col-7 mb-1">@venta.Cliente<br /><span class="text-muted">@venta.DocumentoCliente</span></dd>
+                    <dt class="col-5 fw-normal text-muted">Fecha</dt>
+                    <dd class="col-7 mb-1">@TextosVentas.Fecha(venta.FechaEmision)</dd>
+                    <dt class="col-5 fw-normal text-muted">Pago</dt>
+                    <dd class="col-7 mb-1">
+                        @TextosVentas.Texto(venta.CondicionPago)
+                        @if (venta.CondicionPago == "CREDITO")
+                        {
+                            <span class="text-muted"> · @venta.PlazoCreditoDias días</span>
+                        }
+                    </dd>
+                    <dt class="col-5 fw-normal text-muted">Estado</dt>
+                    <dd class="col-7 mb-1"><Estado Texto="@TextosVentas.Texto(venta.Estado)" /></dd>
+                </dl>
+                <div class="siguiente-paso mt-3">
+                    <div class="small text-muted text-uppercase">Siguiente paso</div>
+                    <div class="fw-semibold">@Siguiente.Que</div>
+                    @if (Siguiente.Quien is not null)
+                    {
+                        <div class="small">Le toca: <strong>@Siguiente.Quien</strong></div>
+                    }
+                </div>
             </div>
         </div>
     </div>
-
-    @if (venta.Estado == "ANULADA")
-    {
-        <div class="alert alert-secondary">La venta está anulada: no se emite comprobante.</div>
-    }
-    else if (comprobante is null)
-    {
-        @* La venta todavía no tiene comprobante vigente: se emite factura o boleta *@
-        <div class="card card-body mb-3">
-            <h2 class="h6 fw-semibold mb-3">Emitir comprobante</h2>
-            <div class="row">
-                <div class="col-md-6">
-                    <Campo Etiqueta="Tipo de comprobante" Obligatorio="true"
-                           Ayuda="La factura exige que el cliente tenga RUC. Una venta tiene un solo comprobante vigente.">
-                        <div class="d-flex gap-4">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="tipo" id="tipoFactura"
-                                       checked="@esFactura" @onchange="ElegirFactura" />
-                                <label class="form-check-label" for="tipoFactura">Factura</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="tipo" id="tipoBoleta"
-                                       checked="@(!esFactura)" @onchange="ElegirBoleta" />
-                                <label class="form-check-label" for="tipoBoleta">Boleta</label>
-                            </div>
-                        </div>
-                    </Campo>
-                </div>
-                <div class="col-sm-6 col-md-3 mb-3">
-                    <div class="small text-muted text-uppercase">Serie</div>
-                    <input class="form-control sigmeta-correlativo" value="@(esFactura ? "F001" : "B001")" disabled />
-                </div>
-                <div class="col-sm-6 col-md-3 mb-3">
-                    <div class="small text-muted text-uppercase">Número</div>
-                    <input class="form-control sigmeta-correlativo" value="@numeroPropuesto" disabled />
-                </div>
-            </div>
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
-                <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-                <div class="d-flex flex-wrap gap-2">
-                    <a class="btn btn-outline-secondary" href="/ventas">Cancelar</a>
-                    @if (Rol == "Vendedor" && venta.Estado == "REGISTRADA" && !venta.CobradaContado)
-                    {
-                        @* RF008: sin comprobante vigente la venta se puede corregir (por ejemplo, tras anular la factura) *@
-                        <a class="btn btn-outline-primary" href="@($"/ventas/editar/{venta.Id}")">Editar venta</a>
-                    }
-                    <button class="btn btn-primary" disabled="@trabajando" @onclick="Emitir">
-                        @(trabajando ? "Emitiendo..." : "Emitir comprobante")
-                    </button>
-                </div>
-            </div>
-        </div>
-    }
-    else
-    {
-        <div class="card card-body mb-3">
-            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-                <h2 class="h6 fw-semibold mb-0">Comprobante emitido</h2>
-                <div class="d-flex align-items-center gap-2">
-                    <Estado Texto="@TextosVentas.Texto(comprobante.Estado)" />
-                    @if (comprobante.Estado != "ANULADO" && (Rol == "Vendedor" || Rol == "Cajero"))
-                    {
-                        <button class="btn btn-sm btn-outline-danger" disabled="@trabajando" @onclick="PedirAnulacion">Anular comprobante</button>
-                    }
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-sm-6 col-md-3 mb-3">
-                    <div class="small text-muted text-uppercase">Tipo</div>
-                    <div class="fw-semibold">@TextosVentas.Texto(comprobante.Tipo)</div>
-                </div>
-                <div class="col-sm-6 col-md-3 mb-3">
-                    <div class="small text-muted text-uppercase">Serie y número</div>
-                    <div class="fw-semibold">@comprobante.Comprobante</div>
-                </div>
-                <div class="col-sm-6 col-md-3 mb-3">
-                    <div class="small text-muted text-uppercase">Fecha de emisión</div>
-                    <div class="fw-semibold">@TextosVentas.Fecha(comprobante.FechaEmision)</div>
-                </div>
-                <div class="col-sm-6 col-md-3 mb-3">
-                    <div class="small text-muted text-uppercase">Último envío</div>
-                    <div class="fw-semibold">
-                        @if (comprobante.MedioEnvio is null)
-                        {
-                            <span class="text-muted">Sin enviar</span>
-                        }
-                        else
-                        {
-                            @TextosVentas.Texto(comprobante.MedioEnvio)
-                            <div class="small text-muted">@TextosVentas.FechaHora(comprobante.FechaEnvio)</div>
-                        }
-                    </div>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <div class="small text-muted text-uppercase">Cliente</div>
-                    <div class="fw-semibold">@comprobante.Cliente</div>
-                    <div class="small text-muted">@TextosVentas.Texto(comprobante.TipoDocumentoCliente) @comprobante.DocumentoCliente</div>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <div class="small text-muted text-uppercase">Contacto</div>
-                    <div>@(comprobante.CorreoCliente ?? "—")</div>
-                    <div class="small text-muted">@comprobante.DireccionCliente</div>
-                </div>
-                <div class="col-md-12">
-                    <div class="d-flex justify-content-end gap-4 border-top pt-2">
-                        <span class="text-muted">Subtotal S/ @comprobante.SubTotal.ToString("N2")</span>
-                        <span class="text-muted">IGV S/ @comprobante.Igv.ToString("N2")</span>
-                        <span class="fw-semibold">Total S/ @comprobante.Total.ToString("N2")</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        @* RF008: se deja registro del medio y la fecha de envío (ComprobanteBO.registrarEnvio) *@
-        @if (comprobante.Estado != "ANULADO")
-        {
-            <div class="card card-body mb-3">
-                <h2 class="h6 fw-semibold mb-3">Entregar al cliente</h2>
-                <div class="row align-items-end">
-                    <div class="col-md-6">
-                        <Campo Etiqueta="Medio de envío" Id="medio" Obligatorio="true"
-                               Ayuda="La fecha y hora del envío se registran automáticamente.">
-                            <select id="medio" class="form-select" @bind="medioEnvio">
-                                <option value="CORREO">Correo electrónico</option>
-                                <option value="MENSAJERIA">Mensajería al contacto registrado</option>
-                                <option value="IMPRESO">Formato imprimible</option>
-                            </select>
-                        </Campo>
-                    </div>
-                    <div class="col-md-6 mb-3 d-flex flex-wrap gap-2 justify-content-md-end">
-                        @if (Rol == "Cajero")
-                        {
-                            @* RF013: la nota de crédito la registra el Cajero (con autorización) sobre un comprobante emitido *@
-                            <a class="btn btn-outline-secondary" href="@($"/notas-credito/nueva?comprobante={comprobante.Id}")">Nota de crédito</a>
-                        }
-                        @* RF008: formato imprimible. Registra el envío IMPRESO y abre la impresión (Vendedor y Cajero) *@
-                        <button class="btn btn-outline-primary" disabled="@trabajando" @onclick="Imprimir">Imprimir</button>
-                        <button class="btn btn-primary" disabled="@trabajando" @onclick="RegistrarEnvio">
-                            @(trabajando ? "Registrando..." : "Registrar envío")
-                        </button>
-                    </div>
-                </div>
-            </div>
-        }
-    }
 
     @if (comprobante is not null && comprobante.Estado != "ANULADO")
     {
@@ -316,21 +347,25 @@ else if (venta is not null)
             </p>
         </div>
     }
-
-    <div class="card mb-3">
-        <div class="card-body pb-0">
-            <h2 class="h6 fw-semibold mb-1">Detalle de la venta</h2>
-        </div>
-        <TablaDetalle Lineas="@venta.Lineas" SubTotal="@venta.SubTotal" Igv="@venta.Igv" Total="@venta.Total" MostrarDespachada="true" />
-    </div>
 }
 
 @code {
     [Parameter] public int Id { get; set; }
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
 
+    // de dónde se vino (la lista de ventas con sus filtros) y si se acaba de registrar la venta
+    [SupplyParameterFromQuery(Name = "volver")] public string? VolverQ { get; set; }
+    [SupplyParameterFromQuery(Name = "nueva")] public bool Nueva { get; set; }
+    // vuelve del formulario de la venta después de modificarla (?guardado=editado&ref=VTA-...)
+    [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
+    [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
+
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
     private VentaDatos? venta;
+    private OrdenDatos? orden;
     private ComprobanteDatos? comprobante;
+    private List<PasoDocumento> pasos = new();
     private bool esFactura;
     private string numeroPropuesto = "";
     private sealed class NumeroPropuesto { public string Numero { get; set; } = ""; }
@@ -338,20 +373,45 @@ else if (venta is not null)
     private bool cargando = true;
     private bool trabajando;
     private string? error;
-    private string? exito;
     private bool pidiendoAnulacion;
-    private string motivoAnulacion = "";
-    private string? errorMotivo;
+    private bool avisoNuevaMostrado;
 
-    private string Subtitulo => venta is null ? "" : $"Venta {venta.Numero} · {venta.Cliente}";
+    // aviso de éxito con el siguiente paso
+    private string? exito;
+    private string? exitoDetalle;
+    private string? exitoAccion;
+    private string? exitoRuta;
+    private bool exitoImprimir;
 
+    private string VolverA => Volver.A(VolverQ, "/ventas");
+    private string RutaActual => "/" + Nav.ToBaseRelativePath(Nav.Uri);
+    private string Titulo => venta is null ? "Venta" : $"Venta {venta.Numero}";
+    private string Subtitulo => venta is null ? "" : $"{venta.Cliente} · {TextosVentas.Texto(venta.CondicionPago)}";
     private string TituloImpreso => comprobante?.Tipo == "FACTURA" ? "FACTURA ELECTRÓNICA" : "BOLETA DE VENTA ELECTRÓNICA";
+
+    // RUC: 11 dígitos (la factura exige RUC; el BO lo vuelve a validar con el tipo de documento real)
+    private bool EsRuc => venta?.DocumentoCliente is { Length: 11 } doc && doc.All(char.IsAsciiDigit);
+    private bool SinCorreo => string.IsNullOrWhiteSpace(comprobante?.CorreoCliente);
+    private (string Que, string? Quien) Siguiente => venta is null ? ("", null) : FlujoVentas.Siguiente(venta);
 
     protected override async Task OnParametersSetAsync()
     {
         cargando = true;
         await Cargar();
         cargando = false;
+        if (!avisoNuevaMostrado && venta is not null && comprobante is null)
+        {
+            if (Nueva)
+            {
+                avisoNuevaMostrado = true;
+                Avisar($"Se registró la venta {venta.Numero}.", "Siguiente: emitir su factura o boleta aquí mismo.");
+            }
+            else if (AvisoGuardado.Texto(Guardado, "la venta", Referencia) is { } editada)
+            {
+                avisoNuevaMostrado = true;
+                Avisar(editada, "Siguiente: emitir su factura o boleta aquí mismo.");
+            }
+        }
     }
 
     private async Task Cargar()
@@ -364,9 +424,16 @@ else if (venta is not null)
             {
                 comprobante = await Api.Get<ComprobanteDatos>($"comprobantes/{venta.IdComprobante}");
             }
-            // por defecto se propone factura si el cliente tiene RUC (11 dígitos) y boleta si no
-            esFactura = venta?.DocumentoCliente?.Length == 11;
-            if (comprobante is null && venta is not null) await ObtenerNumeroPropuesto();
+            if (venta is not null && venta.IdOrden > 0 && orden is null)
+            {
+                try { orden = await Api.Get<OrdenDatos>($"ordenes/{venta.IdOrden}"); }
+                catch (ErrorApi) { orden = null; }   // el recorrido se muestra igual, sin la cotización
+            }
+            pasos = venta is null ? new() : FlujoVentas.PasosVenta(venta, orden);
+            // se propone factura si el cliente tiene RUC y boleta si no
+            esFactura = EsRuc;
+            if (SinCorreo) medioEnvio = "MENSAJERIA";
+            if (comprobante is null && venta is not null && !FlujoVentas.EstaAnulada(venta)) await ObtenerNumeroPropuesto();
         }
         catch (ErrorApi e)
         {
@@ -374,8 +441,20 @@ else if (venta is not null)
         }
     }
 
+    private void Avisar(string mensaje, string? detalle = null, string? accion = null, string? ruta = null, bool imprimir = false)
+    {
+        exito = mensaje;
+        exitoDetalle = detalle;
+        exitoAccion = accion;
+        exitoRuta = ruta;
+        exitoImprimir = imprimir;
+    }
+
+    private void CerrarAviso() => Avisar(null!);
+
     private async Task ElegirFactura()
     {
+        if (!EsRuc) return;
         esFactura = true;
         await ObtenerNumeroPropuesto();
     }
@@ -403,14 +482,18 @@ else if (venta is not null)
     private async Task Emitir()
     {
         error = null;
-        exito = null;
+        CerrarAviso();
         trabajando = true;
         try
         {
             var emitido = await Api.Post<ComprobanteDatos>("comprobantes",
                 new ComprobanteDatos { IdVenta = Id, Tipo = esFactura ? "FACTURA" : "BOLETA" });
-            exito = $"Se emitió el comprobante {emitido?.Comprobante}.";
             await Cargar();
+            var despues = venta?.CondicionPago == "CONTADO"
+                ? "Siguiente: entréguelo al cliente. Luego le toca al Cajero cobrar la venta en caja."
+                : "Siguiente: entréguelo al cliente. Luego el Almacenero despacha la mercadería.";
+            Avisar($"Se emitió la {TextosVentas.Texto(emitido?.Tipo).ToLowerInvariant()} {emitido?.Comprobante}.", despues,
+                "Imprimir o guardar PDF", imprimir: true);
         }
         catch (ErrorApi e)
         {
@@ -424,33 +507,35 @@ else if (venta is not null)
 
     private void PedirAnulacion()
     {
-        error = exito = errorMotivo = null;
-        motivoAnulacion = "";
+        error = null;
+        CerrarAviso();
         pidiendoAnulacion = true;
     }
 
     // POST /api/comprobantes/{id}/anular {"motivo"}
-    private async Task ConfirmarAnulacion()
+    private async Task ConfirmarAnulacion(string motivo)
     {
-        if (string.IsNullOrWhiteSpace(motivoAnulacion))
-        {
-            errorMotivo = "El motivo es obligatorio.";
-            return;
-        }
-        pidiendoAnulacion = false;
         if (comprobante is null) return;
         var anulado = comprobante.Comprobante;
         trabajando = true;
         try
         {
-            await Api.Post<object>($"comprobantes/{comprobante.Id}/anular", new AnulacionDatos { Motivo = motivoAnulacion.Trim() });
+            await Api.Post<object>($"comprobantes/{comprobante.Id}/anular", new AnulacionDatos { Motivo = motivo });
+            pidiendoAnulacion = false;
             await Cargar();
-            exito = Rol == "Vendedor"
-                ? $"Se anuló el comprobante {anulado}. Ahora puede corregir la venta con \"Editar venta\", emitir un comprobante nuevo o anular la venta desde la lista."
-                : $"Se anuló el comprobante {anulado}. Puede emitir uno nuevo; la venta la corrige o anula el Vendedor.";
+            if (Rol == "Vendedor")
+            {
+                Avisar($"Se anuló el comprobante {anulado}.", "Ahora puede corregir la venta y luego emitir un comprobante nuevo.",
+                    "Editar venta", $"/ventas/editar/{Id}?volver={Uri.EscapeDataString(RutaActual)}");
+            }
+            else
+            {
+                Avisar($"Se anuló el comprobante {anulado}.", "Puede emitir uno nuevo. La venta solo la corrige o anula el Vendedor.");
+            }
         }
         catch (ErrorApi e)
         {
+            pidiendoAnulacion = false;
             error = e.Message;   // por ejemplo "La venta ya tiene mercadería despachada: para devolverla emita una nota de crédito..."
         }
         finally
@@ -465,14 +550,13 @@ else if (venta is not null)
     {
         if (comprobante is null) return;
         error = null;
-        exito = null;
         trabajando = true;
         try
         {
             await Api.Post<ComprobanteDatos>($"comprobantes/{comprobante.Id}/envio",
                 new ComprobanteDatos { MedioEnvio = "IMPRESO" });
             await Cargar();
-            exito = "Se registró el envío en formato imprimible.";
+            Avisar("Se registró la entrega en formato imprimible.", Siguiente.Quien is null ? null : $"Siguiente: {Siguiente.Que.ToLowerInvariant()} ({Siguiente.Quien}).");
         }
         catch (ErrorApi e)
         {
@@ -504,18 +588,19 @@ else if (venta is not null)
     {
         if (comprobante is null) return;
         error = null;
-        exito = null;
+        CerrarAviso();
         trabajando = true;
         try
         {
             await Api.Post<ComprobanteDatos>($"comprobantes/{comprobante.Id}/envio",
                 new ComprobanteDatos { MedioEnvio = medioEnvio });
-            exito = $"Se registró el envío por {TextosVentas.Texto(medioEnvio).ToLowerInvariant()}.";
             await Cargar();
+            Avisar($"Se registró el envío por {TextosVentas.Texto(medioEnvio).ToLowerInvariant()}.",
+                Siguiente.Quien is null ? null : $"Siguiente: {Siguiente.Que.ToLowerInvariant()} ({Siguiente.Quien}).");
         }
         catch (ErrorApi e)
         {
-            error = e.Message;
+            error = e.Message;   // por ejemplo "El cliente no tiene teléfono de contacto registrado..."
         }
         finally
         {

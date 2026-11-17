@@ -1,0 +1,67 @@
+@* PATRÓN UX · Ventana única para acciones que piden motivo (anular, rechazar, corregir).
+   Antes de confirmar, dice QUÉ VA A PASAR (el contenido que se pone adentro) y no deja confirmar sin motivo.
+   Se usa igual en todas las pantallas, en lugar de tarjetas sueltas dentro de la página.
+   Uso:
+       <ModalMotivo Visible="@(porAnular is not null)" Titulo="Anular cotización COT-2026-0004"
+                    TextoConfirmar="Anular cotización" Ocupado="@trabajando"
+                    AlConfirmar="ConfirmarAnulacion" AlCancelar="() => porAnular = null">
+           <p class="mb-0">Deja de valer y no se podrá enviar ni aceptar. Queda registrada como anulada.</p>
+       </ModalMotivo>
+       private async Task ConfirmarAnulacion(string motivo) { ... }   // el motivo llega ya sin espacios
+   Con MotivoInicial se edita un motivo que ya existía (por ejemplo, el de una nota de crédito). *@
+<Confirmacion Visible="@Visible" Titulo="@Titulo" ClaseConfirmar="@ClaseConfirmar"
+              TextoConfirmar="@(Ocupado ? "Procesando..." : TextoConfirmar)"
+              AlConfirmar="Confirmar" AlCancelar="AlCancelar">
+    @ChildContent
+    <Campo Etiqueta="@EtiquetaMotivo" Id="@idCampo" Obligatorio="true" Error="@error" Clase="mt-3 mb-0">
+        <textarea id="@idCampo" class="form-control @(error is null ? "" : "is-invalid")" rows="3" maxlength="@Maximo"
+                  placeholder="@Ejemplo" @bind="motivo" @bind:event="oninput" @bind:after="LimpiarError"></textarea>
+        <div class="d-flex justify-content-end">
+            <span class="small text-muted">@motivo.Length / @Maximo</span>
+        </div>
+    </Campo>
+</Confirmacion>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public string Titulo { get; set; } = "Confirmar";
+    [Parameter] public string TextoConfirmar { get; set; } = "Anular";
+    [Parameter] public string ClaseConfirmar { get; set; } = "btn-danger";
+    [Parameter] public string EtiquetaMotivo { get; set; } = "Motivo";
+    [Parameter] public string? Ejemplo { get; set; } = "Ejemplo: el cliente desistió de la compra.";
+    [Parameter] public string? MotivoInicial { get; set; }
+    [Parameter] public int Maximo { get; set; } = 200;
+    [Parameter] public bool Ocupado { get; set; }
+    [Parameter] public EventCallback<string> AlConfirmar { get; set; }
+    [Parameter] public EventCallback AlCancelar { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private readonly string idCampo = "motivo-" + Guid.NewGuid().ToString("N")[..8];
+    private string motivo = "";
+    private string? error;
+    private bool estabaVisible;
+
+    // cada vez que se abre empieza limpio (o con el motivo que ya tenía)
+    protected override void OnParametersSet()
+    {
+        if (Visible && !estabaVisible)
+        {
+            motivo = MotivoInicial ?? "";
+            error = null;
+        }
+        estabaVisible = Visible;
+    }
+
+    private void LimpiarError() => error = null;
+
+    private async Task Confirmar()
+    {
+        if (Ocupado) return;
+        if (string.IsNullOrWhiteSpace(motivo))
+        {
+            error = "Escriba el motivo.";
+            return;
+        }
+        await AlConfirmar.InvokeAsync(motivo.Trim());
+    }
+}
