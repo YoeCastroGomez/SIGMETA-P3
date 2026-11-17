@@ -58,6 +58,14 @@ public class CompraRS extends VentanillaBase {
     }
 
     @GET
+    @Path("siguiente-numero")
+    public Response siguienteNumero(@HeaderParam("ticket") String ticket,
+                                    @QueryParam("fechaEmision") String fechaEmision) {
+        return ejecutar(ticket, id -> Map.of(
+                "numero", compraBO.proponerNumero(fecha(fechaEmision), id)));
+    }
+
+    @GET
     @Path("{id}")
     public Response obtener(@HeaderParam("ticket") String ticket,
                             @PathParam("id") int idCompra) {
