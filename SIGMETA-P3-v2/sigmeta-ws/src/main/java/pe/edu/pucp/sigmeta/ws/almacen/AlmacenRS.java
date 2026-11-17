@@ -34,6 +34,9 @@ import pe.edu.pucp.sigmeta.model.compras.DetalleCompra;
 import pe.edu.pucp.sigmeta.model.usuario.Usuario;
 import pe.edu.pucp.sigmeta.model.ventas.DetalleVenta;
 import pe.edu.pucp.sigmeta.model.ventas.Venta;
+import pe.edu.pucp.sigmeta.bo.usuario.UsuarioBO;
+import pe.edu.pucp.sigmeta.boimpl.usuario.UsuarioBOImpl;
+import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.ws.base.VentanillaBase;
 import pe.edu.pucp.sigmeta.ws.caja.Utilidades;
 
@@ -72,6 +75,7 @@ public class AlmacenRS extends VentanillaBase {
     private final AlmacenConsultaBO consultaBO = new AlmacenConsultaBOImpl();
     private final RecepcionCompraBO recepcionBO = new RecepcionCompraBOImpl();
     private final DespachoBO despachoBO = new DespachoBOImpl();
+    private final UsuarioBO usuarioBO = new UsuarioBOImpl();
     private final MovimientoInventarioBO movimientoBO = new MovimientoInventarioBOImpl();
 
     // ----- recepciones -----
@@ -182,6 +186,21 @@ public class AlmacenRS extends VentanillaBase {
     @Path("despachos")
     public Response despachos(@HeaderParam("ticket") String ticket, @QueryParam("venta") int idVenta) {
         return ejecutar(ticket, id -> consultaBO.despachos(idVenta, id));
+    }
+
+    @GET
+    @Path("despachos/siguiente-guia")
+    public Response siguienteGuia(@HeaderParam("ticket") String ticket) {
+        return ejecutar(ticket, id -> {
+            usuarioBO.verificarRol(id, TipoRol.ALMACENERO, TipoRol.ADMINISTRADOR);
+            long mayor = 0;
+            for (Despacho despacho : despachoBO.listarTodos()) {
+                String numero = despacho.getNumeroGuia();
+                if (!"T001".equals(despacho.getSerieGuia()) || numero == null || !numero.matches("[0-9]+")) continue;
+                mayor = Math.max(mayor, Long.parseLong(numero));
+            }
+            return Map.of("guia", "T001-" + String.format(java.util.Locale.ROOT, "%08d", mayor + 1));
+        });
     }
 
     @GET
