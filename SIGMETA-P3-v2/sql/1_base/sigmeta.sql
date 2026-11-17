@@ -961,6 +961,8 @@ GROUP BY SUBSTRING_INDEX(SUBSTRING_INDEX(numero, '-', 2), '-', -1);
 -- El numero OCC-AAAA-NNNN lo reserva sp_correlativo_siguiente('OCC', anio), igual que las ventas.
 ALTER TABLE comprobante ADD CONSTRAINT uk_comprobante_serie_numero UNIQUE (serie, numero);
 ALTER TABLE orden_compra_cliente ADD CONSTRAINT uk_orden_compra_cliente_numero UNIQUE (numero);
+-- H09 (Claudia): el numero de cotizacion COT-AAAA-NNNN tampoco se repite.
+ALTER TABLE cotizacion ADD CONSTRAINT uk_cotizacion_numero UNIQUE (numero);
 INSERT INTO correlativo_documento (tipo, anio, ultimo)
 SELECT 'OCC' AS tipo,
        CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(numero, '-', 2), '-', -1) AS UNSIGNED) AS anio,

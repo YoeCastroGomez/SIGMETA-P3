@@ -44,6 +44,7 @@ En MySQL 8, quitar antes `ONLY_FULL_GROUP_BY` del `sql_mode` (ver el `README.md`
 | `04_migracion_lab9_sebastian.sql` | Agrega el administrador que autoriza la nota de crédito |
 | `05_migracion_nombres_catalogo.sql` | Junta las categorías repetidas y deja los códigos en MAYÚSCULAS (también pasaba los nombres a MAYÚSCULAS sin tildes; eso lo corrige la 06) |
 | `06_migracion_textos_legibles.sql` | Nombres y descripciones de categorías y productos en mayúscula normal y con tildes ("Látex y esmaltes"); tildes de proveedores, clientes y usuarios de los datos demo. Va **después** de la 05 |
+| `07_migracion_unicidad_cotizacion.sql` | Agrega `UNIQUE(numero)` en cotizaciones (H09). Re-ejecutable: si hay números repetidos, los muestra y no cambia nada |
 
 Nota H09: `04_SP_sebastian.sql` termina con un bloque que agrega, si todavía no están, `UNIQUE(serie, numero)` en comprobantes, `UNIQUE(numero)` en órdenes de compra de clientes y el correlativo `OCC`. No hace falta una migración aparte: basta con recargar los procedimientos como siempre.
 
