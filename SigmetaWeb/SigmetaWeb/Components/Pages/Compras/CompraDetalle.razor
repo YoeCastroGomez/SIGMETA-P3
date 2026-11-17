@@ -74,8 +74,8 @@ else if (compra is not null)
                             <td>@d.NumeroLinea</td>
                             <td>@NombreProducto(d.IdProducto)</td>
                             <td>@MuestrasCatalogo.Texto(d.UnidadCompra)</td>
-                            <td class="text-end">@d.Cantidad.ToString("N3")</td>
-                            <td class="text-end">@d.CantidadRecibida.ToString("N3")</td>
+                            <td class="text-end">@MostrarCantidad(d.Cantidad)</td>
+                            <td class="text-end">@MostrarCantidad(d.CantidadRecibida)</td>
                             <td class="text-end">S/ @d.PrecioUnitario.ToString("N2")</td>
                             <td class="text-end">S/ @d.Descuento.ToString("N2")</td>
                             <td class="text-end">S/ @d.Importe.ToString("N2")</td>
@@ -140,6 +140,10 @@ else if (compra is not null)
     private string NombreProveedor =>
         proveedores.FirstOrDefault(p => p.Id == compra?.IdProveedor)?.RazonSocial
         ?? $"Proveedor #{compra?.IdProveedor}";
+
+    // La cantidad no es dinero: se muestran hasta tres decimales solo si existen.
+    // Así, 120.000 unidades se ve como 120, pero 12.500 kg como 12.5.
+    private static string MostrarCantidad(decimal cantidad) => cantidad.ToString("#,##0.###");
 
     private static string MostrarFecha(string? valor) =>
         DateTime.TryParse(valor, out var fecha) ? fecha.ToString("yyyy-MM-dd") : "—";
