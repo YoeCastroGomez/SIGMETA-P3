@@ -72,6 +72,17 @@ public class ProductoDAOImpl implements ProductoDAO {
 
 
     @Override
+    public List<String> listarCodigosInternos() throws SQLException {
+        List<String> codigos = new ArrayList<>();
+        try (PreparedStatement ps = transactionContext.getConnection()
+                .prepareStatement("SELECT codigo_interno FROM producto");
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) codigos.add(rs.getString(1));
+        }
+        return codigos;
+    }
+
+    @Override
     public Producto load(Integer id) throws SQLException {
         String sql = "{CALL sp_producto_obtener(?)}";
         Connection conn = transactionContext.getConnection();
