@@ -3,6 +3,7 @@ package pe.edu.pucp.sigmeta.boimpl.usuario;
 import pe.edu.pucp.sigmeta.boimpl.Transaccion;
 import pe.edu.pucp.sigmeta.bo.usuario.UsuarioBO;
 import pe.edu.pucp.sigmeta.boimpl.Validador;
+import pe.edu.pucp.sigmeta.boimpl.producto.TextoNormalizado;
 import pe.edu.pucp.sigmeta.dao.usuario.RolDAO;
 import pe.edu.pucp.sigmeta.dao.usuario.UsuarioDAO;
 import pe.edu.pucp.sigmeta.daoimpl.usuario.RolDAOImpl;
@@ -205,8 +206,10 @@ public class UsuarioBOImpl implements UsuarioBO {
             throw new IllegalArgumentException("El nombre de usuario solo puede contener letras, dígitos, '.', '_' y '-'");
         }
         usuario.setNombreUsuario(nombreUsuario);
-        usuario.setNombres(Validador.textoObligatorio(usuario.getNombres(), "nombres", 100));
-        usuario.setApellidos(Validador.textoObligatorio(usuario.getApellidos(), "apellidos", 100));
+        usuario.setNombres(TextoNormalizado.nombre(
+                Validador.textoObligatorio(usuario.getNombres(), "nombres", 100)));
+        usuario.setApellidos(TextoNormalizado.nombre(
+                Validador.textoObligatorio(usuario.getApellidos(), "apellidos", 100)));
         usuario.setCorreo(Validador.correo(usuario.getCorreo()));
 
         // RF002: un unico rol, que debe existir y estar activo
