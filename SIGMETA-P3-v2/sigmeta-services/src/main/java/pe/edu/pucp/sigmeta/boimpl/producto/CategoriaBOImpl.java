@@ -166,7 +166,6 @@ public class CategoriaBOImpl implements CategoriaBO {
         return categoria;
     }
 
-    // El nombre se guarda como lo escribe el usuario (trim, NFC, un solo espacio): ver TextoNormalizado
     static String normalizarNombre(String nombre) {
         return TextoNormalizado.nombre(nombre);
     }
@@ -174,7 +173,6 @@ public class CategoriaBOImpl implements CategoriaBO {
     private void validarDatos(Categoria categoria) {
         Validador.obligatorio(categoria, "categoría");
         categoria.setNombre(normalizarNombre(Validador.textoObligatorio(categoria.getNombre(), "nombre", 100)));
-        // la descripción también se guarda como la escribe el usuario
         categoria.setDescripcion(TextoNormalizado.opcional(
                 Validador.textoOpcional(categoria.getDescripcion(), "descripción", 255)));
     }
