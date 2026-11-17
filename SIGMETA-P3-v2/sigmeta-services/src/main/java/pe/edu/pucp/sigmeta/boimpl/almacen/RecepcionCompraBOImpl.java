@@ -125,12 +125,7 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
                     throw new IllegalArgumentException("El detalle no pertenece a la compra");
                 }
                 double cantidad = detalle.getCantidadRecibida();
-                if (!Double.isFinite(cantidad) || cantidad <= 0) {
-                    throw new IllegalArgumentException("La cantidad recibida debe ser positiva");
-                }
-                if (cantidad + linea.getCantidadRecibida() > linea.getCantidad() + EPSILON) {
-                    throw new IllegalArgumentException("La recepción excede la cantidad pendiente de la línea " + linea.getNumeroLinea());
-                }
+                ReglasInventario.validarCantidadRecepcion(cantidad, linea.getCantidadRecibida(), linea.getCantidad());
                 if (!Double.isFinite(linea.getFactorConversion()) || linea.getFactorConversion() <= 0) {
                     throw new IllegalArgumentException("El factor de conversión debe ser positivo");
                 }
@@ -147,13 +142,11 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
                 detalleCompraDAO.update(linea);
 
                 // La cantidad recibida esta en unidad de compra; el stock se lleva en unidad de venta.
-                double cantidadStock = detalle.getCantidadRecibida() * linea.getFactorConversion();
-                if (!Double.isFinite(cantidadStock) || cantidadStock <= 0) {
-                    throw new IllegalArgumentException("La cantidad convertida no es válida");
-                }
+                double cantidadStock = ReglasInventario.convertirAStock(
+                        detalle.getCantidadRecibida(), linea.getFactorConversion());
                 int idProducto = linea.getProducto().getId();
                 double stockAnterior = stockDAO.obtenerStockParaActualizar(idProducto);
-                double nuevoStock = stockAnterior + cantidadStock;
+                double nuevoStock = ReglasInventario.ingresar(stockAnterior, cantidadStock);
                 actualizarCostoPromedio(idProducto, stockAnterior, cantidadStock, linea);
                 stockDAO.actualizarStock(idProducto, nuevoStock);
 
