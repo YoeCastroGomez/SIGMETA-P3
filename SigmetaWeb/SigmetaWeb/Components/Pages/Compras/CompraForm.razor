@@ -22,8 +22,8 @@ else
         <div class="row g-3">
             @* Estándar RNF004: cada error sale en rojo debajo de su cuadro mientras se escribe (ValidacionEnVivo);
                los del BO (proveedor desactivado...) en el aviso rojo de arriba. *@
-            <Campo Etiqueta="Número de orden" Id="numeroCompra" Clase="col-md-4" Ayuda="@(EsNuevo ? "El número correlativo se genera al guardar." : "El número de orden no se puede modificar.")">
-                <input id="numeroCompra" class="form-control" value="@(EsNuevo ? "Se asignará al guardar" : numero)" readonly />
+            <Campo Etiqueta="Número de orden" Id="numeroCompra" Clase="col-md-4">
+                <input id="numeroCompra" class="form-control sigmeta-correlativo" value="@numero" disabled />
             </Campo>
             <Campo Etiqueta="Proveedor" Id="proveedorCompra" Clase="col-md-8" Obligatorio="true" Error="@(v.Error("proveedor", Errores()))">
                 <select id="proveedorCompra" class="@(v.Clase("proveedor", Errores(), "form-select"))"
@@ -36,7 +36,7 @@ else
                 </select>
             </Campo>
             <Campo Etiqueta="Fecha de emisión" Id="fechaCompra" Clase="col-md-6" Obligatorio="true">
-                <input id="fechaCompra" type="date" class="form-control" @bind="fecha" @bind:after="@(() => v.Tocado("fecha"))" />
+                <input id="fechaCompra" type="date" class="form-control" @bind="fecha" @bind:after="AlCambiarFecha" />
             </Campo>
             <Campo Etiqueta="Fecha estimada de recepción" Id="fechaEstimadaCompra" Clase="col-md-6" Error="@(v.Error("fechaEstimada", Errores(), "fecha"))">
                 <input id="fechaEstimadaCompra" type="date" class="@(v.Clase("fechaEstimada", Errores(), "form-control", "fecha"))"
@@ -178,6 +178,7 @@ else
                 observaciones = null;
                 textosProductos.Clear();
                 lineas = new() { NuevaLinea() };
+                await ObtenerCorrelativo();
             }
             else
             {
@@ -218,6 +219,34 @@ else
         }
         catch (ErrorApi e) { error = e.Message; }
         finally { cargando = false; }
+    }
+
+    private async Task AlCambiarFecha()
+    {
+        v.Tocado("fecha");
+        if (EsNuevo)
+            await ObtenerCorrelativo();
+    }
+
+    private async Task ObtenerCorrelativo()
+    {
+        var fechaSolicitada = fecha.Date;
+        numero = "Calculando...";
+        try
+        {
+            var propuesta = await Api.Get<CorrelativoCompraRest>(
+                $"compras/siguiente-numero?fechaEmision={fechaSolicitada:yyyy-MM-dd}");
+            if (fecha.Date == fechaSolicitada)
+                numero = propuesta?.Numero ?? "";
+        }
+        catch (ErrorApi e)
+        {
+            if (fecha.Date == fechaSolicitada)
+            {
+                numero = "";
+                error = e.Message;
+            }
+        }
     }
 
     private static string EtiquetaProducto(ProductoCompraRest p) =>
@@ -352,7 +381,7 @@ else
         {
             var pedido = new SolicitudCompraRest
             {
-                Numero = numero.Trim(),
+                Numero = EsNuevo ? "" : numero,
                 IdProveedor = proveedorId,
                 FechaEmision = fecha.ToString("yyyy-MM-dd"),
                 FechaRecepcionEstimada = fechaEstimada?.ToString("yyyy-MM-dd"),
