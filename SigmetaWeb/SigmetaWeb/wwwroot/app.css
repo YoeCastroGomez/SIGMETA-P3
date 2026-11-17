@@ -1070,7 +1070,7 @@ html[data-bs-theme="dark"] .form-switch .form-check-input:checked {
     border: 1px dashed var(--bs-border-color);
     color: var(--bs-secondary-color);
     opacity: 1;
-    cursor: not-allowed;
+    cursor: default;
     font-weight: 700;
     letter-spacing: .035em;
 }
