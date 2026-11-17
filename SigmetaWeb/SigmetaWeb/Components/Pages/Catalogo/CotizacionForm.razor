@@ -34,13 +34,11 @@ else
     <div class="card card-body mb-3">
         <h2 class="h6 fw-semibold mb-3">Cabecera</h2>
         <div class="row">
-            @* RF007: el número lo ingresa el usuario (CotizacionBOImpl lo exige, máx. 20). *@
-            <div class="col-md-4">
+                        <div class="col-md-4">
                 @* Estándar RNF004: cada error sale en rojo debajo de su cuadro mientras se escribe (ValidacionEnVivo);
                    los del BO (cliente desactivado...) en el aviso rojo de arriba. *@
-                <Campo Etiqueta="Número" Id="numero" Obligatorio="true" Error="@(v.Error("numero", Errores()))">
-                    <input id="numero" class="@(v.Clase("numero", Errores()))" maxlength="20" placeholder="COT-2026-0010"
-                           @bind="cotizacion.Numero" @bind:event="oninput" @bind:after="@(() => v.Tocado("numero"))" disabled="@(!Editable)" />
+                <Campo Etiqueta="Número" Id="numero">
+                    <input id="numero" class="form-control sigmeta-correlativo" value="@cotizacion.Numero" disabled />
                 </Campo>
             </div>
             <div class="col-md-4 mb-3">
@@ -71,7 +69,7 @@ else
             <div class="col-md-3">
                 <Campo Etiqueta="Fecha de emisión" Id="fechaEmision" Obligatorio="true" Error="@(v.Error("fechaEmision", Errores()))">
                     <input id="fechaEmision" type="date" class="@(v.Clase("fechaEmision", Errores()))"
-                           @bind="cotizacion.FechaEmision" @bind:format="yyyy-MM-dd" @bind:after="@(() => v.Tocado("fechaEmision"))" disabled="@(!Editable)" />
+                           @bind="cotizacion.FechaEmision" @bind:format="yyyy-MM-dd" @bind:after="AlCambiarFecha" disabled="@(!Editable)" />
                 </Campo>
             </div>
             <div class="col-md-3">
@@ -204,6 +202,29 @@ else
     private string Titulo => EsNuevo ? "Nueva cotización" : "Editar cotización";
     private bool Editable => EsNuevo || cotizacion?.Estado == "REGISTRADA";
 
+    private sealed class NumeroPropuesto
+    {
+        public string Numero { get; set; } = "";
+    }
+
+    private async Task AlCambiarFecha()
+    {
+        v.Tocado("fechaEmision");
+        if (EsNuevo) await ObtenerCorrelativo();
+    }
+
+    private async Task ObtenerCorrelativo()
+    {
+        if (cotizacion?.FechaEmision is not DateOnly solicitada) return;
+        cotizacion.Numero = "";
+        try
+        {
+            var propuesto = await Api.Get<NumeroPropuesto>($"cotizaciones/siguiente-numero?fechaEmision={solicitada:yyyy-MM-dd}");
+            if (cotizacion?.FechaEmision == solicitada) cotizacion.Numero = propuesto?.Numero ?? "";
+        }
+        catch (ErrorApi e) { error = e.Message; }
+    }
+
     // Mientras se edita se muestran los importes de referencia; una cotización ya cerrada muestra los del BO.
     private decimal SubTotal => Editable ? TextosVentas.SubTotal(cotizacion!.Lineas) : cotizacion!.SubTotal;
     private decimal Igv => Editable ? TextosVentas.Igv(cotizacion!.Lineas) : cotizacion!.Igv;
@@ -218,6 +239,7 @@ else
             {
                 var hoy = DateOnly.FromDateTime(DateTime.Today);
                 cotizacion = new CotizacionDatos { FechaEmision = hoy, FechaVigencia = hoy.AddDays(15), Estado = "REGISTRADA" };
+                await ObtenerCorrelativo();
             }
             else
             {
@@ -263,10 +285,6 @@ else
         if (cotizacion is null || !Editable)
         {
             return e;
-        }
-        if (string.IsNullOrWhiteSpace(cotizacion.Numero))
-        {
-            e["numero"] = "El número es obligatorio.";
         }
         if (cotizacion.IdCliente <= 0)
         {
