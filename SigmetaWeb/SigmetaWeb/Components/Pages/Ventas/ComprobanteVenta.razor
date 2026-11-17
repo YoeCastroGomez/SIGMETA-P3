@@ -84,11 +84,11 @@ else if (venta is not null)
                 </div>
                 <div class="col-sm-6 col-md-3 mb-3">
                     <div class="small text-muted text-uppercase">Serie</div>
-                    <div class="fw-semibold">@(esFactura ? "F001" : "B001")</div>
+                    <input class="form-control sigmeta-correlativo" value="@(esFactura ? "F001" : "B001")" disabled />
                 </div>
                 <div class="col-sm-6 col-md-3 mb-3">
                     <div class="small text-muted text-uppercase">Número</div>
-                    <div class="text-muted">Se asigna al emitir</div>
+                    <input class="form-control sigmeta-correlativo" value="@numeroPropuesto" disabled />
                 </div>
             </div>
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
@@ -202,6 +202,8 @@ else if (venta is not null)
     private VentaDatos? venta;
     private ComprobanteDatos? comprobante;
     private bool esFactura;
+    private string numeroPropuesto = "";
+    private sealed class NumeroPropuesto { public string Numero { get; set; } = ""; }
     private string medioEnvio = "CORREO";
     private bool cargando = true;
     private bool trabajando;
@@ -229,6 +231,7 @@ else if (venta is not null)
             }
             // por defecto se propone factura si el cliente tiene RUC (11 dígitos) y boleta si no
             esFactura = venta?.DocumentoCliente?.Length == 11;
+            if (comprobante is null && venta is not null) await ObtenerNumeroPropuesto();
         }
         catch (ErrorApi e)
         {
@@ -236,8 +239,30 @@ else if (venta is not null)
         }
     }
 
-    private void ElegirFactura() => esFactura = true;
-    private void ElegirBoleta() => esFactura = false;
+    private async Task ElegirFactura()
+    {
+        esFactura = true;
+        await ObtenerNumeroPropuesto();
+    }
+
+    private async Task ElegirBoleta()
+    {
+        esFactura = false;
+        await ObtenerNumeroPropuesto();
+    }
+
+    private async Task ObtenerNumeroPropuesto()
+    {
+        string serie = esFactura ? "F001" : "B001";
+        numeroPropuesto = "";
+        try
+        {
+            var propuesta = await Api.Get<NumeroPropuesto>($"comprobantes/siguiente-numero?serie={serie}");
+            if (serie == (esFactura ? "F001" : "B001"))
+                numeroPropuesto = propuesta?.Numero ?? "";
+        }
+        catch (ErrorApi e) { error = e.Message; }
+    }
 
     // POST /api/comprobantes {"idVenta", "tipo"}
     private async Task Emitir()
