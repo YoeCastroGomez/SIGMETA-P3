@@ -20,3 +20,7 @@
 /docs/LOGICA_NEGOCIO.md
 /docs/PLAN_IMPLEMENTACION.md
 /docs/PENDIENTES_REPARTO.md
+/docs/GUIA_PRUEBAS_POR_ROL.md
+
+# Configuración local de Claude Code (agentes y ajustes de cada integrante)
+/.claude/
