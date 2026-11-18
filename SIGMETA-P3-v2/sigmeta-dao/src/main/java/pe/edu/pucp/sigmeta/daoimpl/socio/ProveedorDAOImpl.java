@@ -69,6 +69,17 @@ public class ProveedorDAOImpl implements ProveedorDAO {
         proveedor.setEstado(false);
     }
 
+    // RF004: se integra con el procedimiento SQL pendiente de implementar.
+    // Debe cambiar únicamente el estado a activo y preservar el registro histórico.
+    @Override
+    public void activar(int idProveedor) throws SQLException {
+        Connection connection = transactionContext.getConnection();
+        try (CallableStatement cs = connection.prepareCall("{call sp_proveedor_activar(?)}")) {
+            cs.setInt(1, idProveedor);
+            cs.executeUpdate();
+        }
+    }
+
     // RF004
     @Override
     public List<Proveedor> listarTodos() throws SQLException {
