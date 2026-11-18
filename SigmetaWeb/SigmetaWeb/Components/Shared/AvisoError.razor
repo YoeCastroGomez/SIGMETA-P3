@@ -1,17 +1,10 @@
-@* Aviso rojo con el mensaje de error que devolvió el Java (el texto del BO).
-   Uso: <AvisoError Mensaje="@error" />   (si error es null o vacío no se muestra nada) *@
-@if (!string.IsNullOrWhiteSpace(Mensaje))
-{
-    <div class="alert alert-danger d-flex justify-content-between align-items-start gap-2" role="alert">
-        <span>@Mensaje</span>
-        @if (AlCerrar.HasDelegate)
-        {
-            <button type="button" class="btn-close" aria-label="Cerrar" @onclick="AlCerrar"></button>
-        }
-    </div>
-}
+@* Mensaje de error de una acción (el texto que devolvió el Java, por ejemplo la regla del BO que no se cumplió),
+   en una ventana modal. Uso: <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+   Si error es null o vacío no se muestra nada. Los errores de cada campo siguen debajo del campo (ErrorCampo). *@
+<MensajeModal Tipo="TipoMensaje.Error" Titulo="@Titulo" Mensaje="@Mensaje" AlCerrar="AlCerrar" />
 
 @code {
     [Parameter] public string? Mensaje { get; set; }
+    [Parameter] public string? Titulo { get; set; }
     [Parameter] public EventCallback AlCerrar { get; set; }
 }

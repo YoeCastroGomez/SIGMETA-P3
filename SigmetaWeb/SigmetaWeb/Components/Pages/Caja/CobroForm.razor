@@ -201,7 +201,9 @@ else
                     IdCuentaPorCobrar = Id, cobro.Monto, cobro.MedioPago, cobro.FechaCobro, cobro.Referencia
                 });
             }
-            Nav.NavigateTo($"/cobranzas/{Id}");
+            // vuelve a la cuenta con el aviso: "Se registró el cobro de S/ 120.00." / "Se modificó el cobro."
+            Nav.NavigateTo(AvisoGuardado.Ruta($"/cobranzas/{Id}", Editando ? AvisoGuardado.Editado : AvisoGuardado.Nuevo,
+                Editando ? null : $"de S/ {cobro.Monto:N2}"));
         }
         catch (ErrorApi e)
         {

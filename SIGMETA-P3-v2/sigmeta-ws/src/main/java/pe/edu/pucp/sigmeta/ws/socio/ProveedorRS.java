@@ -31,6 +31,7 @@ import java.util.ArrayList;
 // POST   /api/proveedores                         registrar
 // PUT    /api/proveedores/{id}                    modificar
 // DELETE /api/proveedores/{id}                    desactivar (baja logica)
+// POST   /api/proveedores/{id}/activar             reactivar (solo Administrador)
 //
 // Todos los pedidos reciben el ticket en la cabecera HTTP "ticket".
 // La identidad del Administrador viene de la sesion, nunca del JSON de Blazor.
@@ -98,6 +99,16 @@ public class ProveedorRS extends VentanillaBase {
             proveedor.setEstado(actual.isEstado());
             proveedor.setCompras(new ArrayList<>());
             return proveedorBO.modificar(proveedor, id);
+        });
+    }
+
+    @POST
+    @Path("{id}/activar")
+    public Response activar(@HeaderParam("ticket") String ticket,
+                            @PathParam("id") int idProveedor) {
+        return ejecutar(ticket, id -> {
+            proveedorBO.activar(idProveedor, id);
+            return null; // 204 sin contenido
         });
     }
 

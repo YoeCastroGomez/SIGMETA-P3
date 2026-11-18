@@ -11,6 +11,14 @@ import java.util.List;
 
 import pe.edu.pucp.sigmeta.dao.caja.CajaDAO;
 import pe.edu.pucp.sigmeta.model.caja.Caja;
+import pe.edu.pucp.sigmeta.model.enums.CondicionPago;
+import pe.edu.pucp.sigmeta.model.enums.EstadoComprobante;
+import pe.edu.pucp.sigmeta.model.enums.TipoComprobante;
+import pe.edu.pucp.sigmeta.model.enums.TipoDocumentoIdentidad;
+import pe.edu.pucp.sigmeta.model.enums.TipoPersona;
+import pe.edu.pucp.sigmeta.model.socio.Cliente;
+import pe.edu.pucp.sigmeta.model.ventas.Comprobante;
+import pe.edu.pucp.sigmeta.model.ventas.Venta;
 import pe.edu.pucp.sigmeta.model.usuario.Usuario;
 import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
@@ -135,6 +143,55 @@ public class CajaDAOImpl implements CajaDAO {
              ResultSet rs = cs.executeQuery()) {
             while (rs.next()) {
                 lista.add(mapearCajaConUsuario(rs));
+            }
+        }
+        return lista;
+    }
+
+    // RF010, H10: la base ya entrega solo las ventas pendientes de cobro, con su cliente y comprobante
+    // (antes se cargaban todas las ventas, clientes, comprobantes y movimientos de caja)
+    @Override
+    public List<Venta> listarVentasPorCobrarAlContado() throws SQLException {
+        List<Venta> lista = new ArrayList<>();
+        String sql = "{call sp_caja_listar_ventas_por_cobrar_contado()}";
+        Connection con = transactionContext.getConnection();
+        try (CallableStatement cs = con.prepareCall(sql);
+             ResultSet rs = cs.executeQuery()) {
+            while (rs.next()) {
+                Venta venta = new Venta();
+                venta.setId(rs.getInt("venta_id"));
+                venta.setNumero(rs.getString("venta_numero"));
+                java.sql.Date fecha = rs.getDate("fecha_emision");
+                if (fecha != null) {
+                    venta.setFechaEmision(fecha.toLocalDate());
+                }
+                venta.setTotal(rs.getDouble("total"));
+                venta.setCondicionPago(CondicionPago.valueOf(rs.getString("condicion_pago")));
+
+                Cliente cliente = new Cliente();
+                cliente.setId(rs.getInt("cliente_id"));
+                cliente.setTipoPersona(TipoPersona.valueOf(rs.getString("tipo_persona")));
+                cliente.setTipoDocumento(TipoDocumentoIdentidad.valueOf(rs.getString("tipo_documento")));
+                cliente.setNombres(rs.getString("nombres"));
+                cliente.setApellidos(rs.getString("apellidos"));
+                cliente.setRazonSocial(rs.getString("razon_social"));
+                cliente.setNumeroDocumento(rs.getString("numero_documento"));
+                venta.setCliente(cliente);
+
+                List<Comprobante> comprobantes = new ArrayList<>();
+                int idComprobante = rs.getInt("comprobante_id");
+                if (!rs.wasNull()) {
+                    Comprobante c = new Comprobante();
+                    c.setId(idComprobante);
+                    c.setTipo(TipoComprobante.valueOf(rs.getString("comprobante_tipo")));
+                    c.setSerie(rs.getString("comprobante_serie"));
+                    c.setNumero(rs.getString("comprobante_numero"));
+                    c.setEstado(EstadoComprobante.valueOf(rs.getString("comprobante_estado")));
+                    c.setVenta(venta);
+                    comprobantes.add(c);
+                }
+                venta.setComprobantes(comprobantes);
+                lista.add(venta);
             }
         }
         return lista;

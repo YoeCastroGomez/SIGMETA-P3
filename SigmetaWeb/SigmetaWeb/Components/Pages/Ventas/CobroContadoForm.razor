@@ -148,7 +148,8 @@ else
         try
         {
             await Api.Post<MovimientoDatos>($"cajas/{caja.Id}/cobros-contado", new CobroContado { IdVenta = venta.Id, MedioPago = medioPago });
-            Nav.NavigateTo(Volver);
+            // vuelve a la caja o a ventas con el aviso: "Se cobró la venta V-2026-0012."
+            Nav.NavigateTo(AvisoGuardado.Ruta(Volver, AvisoGuardado.Cobrado, venta.Numero));
         }
         catch (ErrorApi e)
         {

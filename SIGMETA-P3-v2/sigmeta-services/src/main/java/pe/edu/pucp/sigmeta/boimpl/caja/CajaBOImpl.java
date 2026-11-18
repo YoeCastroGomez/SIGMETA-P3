@@ -3,12 +3,7 @@ package pe.edu.pucp.sigmeta.boimpl.caja;
 import pe.edu.pucp.sigmeta.boimpl.Transaccion;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import pe.edu.pucp.sigmeta.bo.caja.CajaBO;
 import pe.edu.pucp.sigmeta.bo.caja.CierreCajaBO;
 import pe.edu.pucp.sigmeta.bo.caja.MovimientoCajaBO;
@@ -24,14 +19,6 @@ import pe.edu.pucp.sigmeta.daoimpl.caja.MovimientoCajaDAOImpl;
 import pe.edu.pucp.sigmeta.model.caja.Caja;
 import pe.edu.pucp.sigmeta.model.caja.CierreCaja;
 import pe.edu.pucp.sigmeta.model.caja.MovimientoCaja;
-import pe.edu.pucp.sigmeta.daoimpl.socio.ClienteDAOImpl;
-import pe.edu.pucp.sigmeta.daoimpl.ventas.ComprobanteDAOImpl;
-import pe.edu.pucp.sigmeta.daoimpl.ventas.VentaDAOImpl;
-import pe.edu.pucp.sigmeta.model.enums.CondicionPago;
-import pe.edu.pucp.sigmeta.model.enums.EstadoComprobante;
-import pe.edu.pucp.sigmeta.model.enums.TipoComprobante;
-import pe.edu.pucp.sigmeta.model.socio.Cliente;
-import pe.edu.pucp.sigmeta.model.ventas.Comprobante;
 import pe.edu.pucp.sigmeta.model.ventas.Venta;
 import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.model.usuario.Usuario;
@@ -170,38 +157,13 @@ public class CajaBOImpl implements CajaBO {
         return cierreCajaBO.obtenerPorCaja(idCaja);
     }
 
-    // RF010: ventas al contado vigentes sin cobro en caja. Se arma aqui con las ventas, los movimientos
-    // de caja (documento VENTA), los clientes y los comprobantes vigentes de cada venta.
+    // RF010: ventas al contado vigentes sin cobro en caja, con su cliente y su comprobante vigente.
+    // H10: lo resuelve la base (sp_caja_listar_ventas_por_cobrar_contado); antes se cargaban todas las
+    // ventas, clientes, comprobantes y movimientos de caja para filtrarlos aqui.
     @Override
     public List<Venta> listarVentasPorCobrarAlContado() throws SQLException {
         return Transaccion.ejecutar(() -> {
-            Set<Integer> cobradas = movimientoCajaDAO.listarTodosConDetalle().stream()
-                    .filter(m -> CompensacionCaja.DOCUMENTO_VENTA.equals(m.getDocumentoOrigen()))
-                    .map(MovimientoCaja::getIdDocumentoOrigen)
-                    .collect(Collectors.toSet());
-            Map<Integer, Cliente> clientes = new HashMap<>();
-            for (Cliente c : new ClienteDAOImpl().listarTodos()) {
-                clientes.put(c.getId(), c);
-            }
-            Map<Integer, List<Comprobante>> comprobantes = new HashMap<>();
-            for (Comprobante c : new ComprobanteDAOImpl().listarTodos()) {
-                if (c.getVenta() != null && c.getEstado() != EstadoComprobante.ANULADO
-                        && (c.getTipo() == TipoComprobante.FACTURA || c.getTipo() == TipoComprobante.BOLETA)) {
-                    comprobantes.computeIfAbsent(c.getVenta().getId(), k -> new ArrayList<>()).add(c);
-                }
-            }
-            List<Venta> porCobrar = new ArrayList<>();
-            for (Venta v : new VentaDAOImpl().listarTodos()) {
-                if (v.getCondicionPago() != CondicionPago.CONTADO || v.isAnulado() || cobradas.contains(v.getId())) {
-                    continue;
-                }
-                if (v.getCliente() != null && clientes.containsKey(v.getCliente().getId())) {
-                    v.setCliente(clientes.get(v.getCliente().getId()));
-                }
-                v.setComprobantes(comprobantes.getOrDefault(v.getId(), new ArrayList<>()));
-                porCobrar.add(v);
-            }
-            return porCobrar;
+            return cajaDAO.listarVentasPorCobrarAlContado();
         });
     }
 

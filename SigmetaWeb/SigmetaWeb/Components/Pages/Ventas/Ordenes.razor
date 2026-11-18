@@ -13,12 +13,9 @@
    - GET  /api/ordenes                       lista con el estado de atención (PENDIENTE, ATENDIDA_PARCIAL, ATENDIDA, ANULADA)
    - POST /api/ordenes/{id}/anular {"motivo"} anular (solo PENDIENTE y sin ventas vigentes)
    El estado de atención lo actualiza el BO solo, con los despachos de las ventas de la orden (cantidad entregada). *@
-<Encabezado Rf="RF007" Titulo="Órdenes de compra de clientes">
-    @if (EsVendedor)
-    {
-        <a class="btn btn-primary" href="/ordenes/nueva">+ Nueva orden</a>
-    }
-</Encabezado>
+@* La orden se crea solo desde la cotización aceptada (botón "Generar orden" en Cotizaciones) *@
+<Encabezado Rf="RF007" Titulo="Órdenes de compra de clientes"
+            Subtitulo="Órdenes de compra recibidas de los clientes." />
 
 <Notificacion Mensaje="@error" Error="true" AlCerrar="() => error = null" />
 <Notificacion Mensaje="@exito" AlCerrar="() => exito = null" />

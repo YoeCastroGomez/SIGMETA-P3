@@ -1,0 +1,11 @@
+@* Mensaje de éxito de una acción ("Se registró el cliente…", "Se anuló el cobro…") en una ventana modal.
+   Uso: <AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
+   Si exito es null o vacío no se muestra nada. *@
+<MensajeModal Tipo="TipoMensaje.Exito" Titulo="@Titulo" Mensaje="@Mensaje" Detalle="@Detalle" AlCerrar="AlCerrar" />
+
+@code {
+    [Parameter] public string? Mensaje { get; set; }
+    [Parameter] public string? Detalle { get; set; }
+    [Parameter] public string? Titulo { get; set; }
+    [Parameter] public EventCallback AlCerrar { get; set; }
+}

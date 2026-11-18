@@ -206,4 +206,22 @@ public class MovimientoCajaDAOImpl implements MovimientoCajaDAO {
         }
         return lista;
     }
+
+    // H10: antes se traian todos los movimientos y se filtraban en Java (CompensacionCaja.buscar)
+    @Override
+    public List<MovimientoCaja> buscarPorDocumento(String documentoOrigen, int idDocumentoOrigen) throws SQLException {
+        List<MovimientoCaja> lista = new ArrayList<>();
+        String sql = "{call sp_movimiento_caja_buscar_por_documento(?, ?)}";
+        Connection con = transactionContext.getConnection();
+        try (CallableStatement cs = con.prepareCall(sql)) {
+            cs.setString(1, documentoOrigen);
+            cs.setInt(2, idDocumentoOrigen);
+            try (ResultSet rs = cs.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(mapearMovimientoConDetalle(rs));
+                }
+            }
+        }
+        return lista;
+    }
 }

@@ -32,3 +32,13 @@ SELECT 'OCC' AS tipo,
        MAX(CAST(SUBSTRING_INDEX(numero, '-', -1) AS UNSIGNED)) AS ultimo
 FROM orden_compra_cliente WHERE numero REGEXP '^OCC-[0-9]{4}-[0-9]+$'
 GROUP BY anio;
+
+-- H10, RNF003 (Adriano): indices de las busquedas de caja y cobranza (RF009, RF010) y de los reportes (RF015)
+CREATE INDEX idx_movimiento_caja_documento ON movimiento_caja (documento_origen, id_documento_origen);
+CREATE INDEX idx_cobro_fecha ON cobro (fecha_cobro);
+CREATE INDEX idx_cxc_fecha_emision ON cuenta_por_cobrar (fecha_emision);
+CREATE INDEX idx_cxc_fecha_vencimiento ON cuenta_por_cobrar (fecha_vencimiento);
+CREATE INDEX idx_cierre_caja_fecha ON cierre_caja (fecha_cierre);
+CREATE INDEX idx_venta_fecha_emision ON venta (fecha_emision);
+CREATE INDEX idx_compra_fecha_emision ON compra (fecha_emision);
+CREATE INDEX idx_movimiento_inventario_producto_fecha ON movimiento_inventario (id_producto, fecha_movimiento);

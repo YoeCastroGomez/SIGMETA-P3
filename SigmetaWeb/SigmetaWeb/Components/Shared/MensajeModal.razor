@@ -1,0 +1,138 @@
+@* Ventana modal de mensaje (feedback de una acción): éxito, error o aviso. Usa el mismo estilo que las
+   confirmaciones (sigmeta-confirmacion) para que todas las ventanas del sistema se vean iguales.
+   Se cierra con «Aceptar», con la X, con Escape o haciendo clic fuera de la ventana.
+
+   Uso directo:
+       <MensajeModal Tipo="TipoMensaje.Exito" Mensaje="@exito" AlCerrar="() => exito = null" />
+   Normalmente se usa a través de <AvisoError>, <AvisoExito> o <SiguientePaso>.
+
+   Si la pantalla no pasa AlCerrar, la ventana se cierra sola al pulsar Aceptar y vuelve a aparecer
+   cuando llega un mensaje distinto. *@
+
+@if (Abierto)
+{
+    <div class="modal-backdrop fade show sigmeta-confirmacion-fondo" @onclick="Cerrar"></div>
+    <div class="modal fade show d-block sigmeta-confirmacion sigmeta-mensaje @ClaseTipo" tabindex="-1"
+         role="@(Tipo == TipoMensaje.Error ? "alertdialog" : "dialog")" aria-modal="true" aria-labelledby="@idTitulo"
+         @onkeydown="AlPresionarTecla" @onclick="Cerrar">
+        <div class="modal-dialog modal-dialog-centered" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="mensaje-icono" aria-hidden="true">@Icono</span>
+                    <h2 class="modal-title h5" id="@idTitulo">@TituloMostrado</h2>
+                    <button type="button" class="btn-close ms-auto" aria-label="Cerrar" @onclick="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0 fw-semibold">@Mensaje</p>
+                    @if (!string.IsNullOrWhiteSpace(Detalle))
+                    {
+                        <p class="mt-2 mb-0 text-muted">@Detalle</p>
+                    }
+                    @ChildContent
+                </div>
+                <div class="modal-footer">
+                    @if (!string.IsNullOrWhiteSpace(TextoAccion) && !string.IsNullOrWhiteSpace(Ruta))
+                    {
+                        <a class="btn btn-outline-secondary" href="@Ruta" @onclick="Cerrar">@TextoAccion</a>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(TextoAccion) && AlAccion.HasDelegate)
+                    {
+                        <button type="button" class="btn btn-outline-secondary" @onclick="Accionar">@TextoAccion</button>
+                    }
+                    <button type="button" class="btn @ClaseBoton" @ref="botonAceptar" @onclick="Cerrar">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public TipoMensaje Tipo { get; set; } = TipoMensaje.Exito;
+    [Parameter] public string? Titulo { get; set; }
+    [Parameter] public string? Mensaje { get; set; }
+    [Parameter] public string? Detalle { get; set; }
+    [Parameter] public string? TextoAccion { get; set; }
+    [Parameter] public string? Ruta { get; set; }
+    [Parameter] public EventCallback AlAccion { get; set; }
+    [Parameter] public EventCallback AlCerrar { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private readonly string idTitulo = "mensaje-" + Guid.NewGuid().ToString("N")[..8];
+    private ElementReference botonAceptar;
+    private string? mensajeCerrado;   // el mensaje que el usuario ya cerró (cuando la pantalla no pasa AlCerrar)
+    private bool enfocar;
+
+    private bool Abierto => !string.IsNullOrWhiteSpace(Mensaje) && Mensaje != mensajeCerrado;
+
+    private string TituloMostrado => Titulo ?? Tipo switch
+    {
+        TipoMensaje.Error => "No se pudo completar la acción",
+        TipoMensaje.Aviso => "Atención",
+        _ => "Listo"
+    };
+
+    private string Icono => Tipo switch
+    {
+        TipoMensaje.Error => "!",
+        TipoMensaje.Aviso => "i",
+        _ => "✓"
+    };
+
+    private string ClaseTipo => Tipo switch
+    {
+        TipoMensaje.Error => "mensaje-error",
+        TipoMensaje.Aviso => "mensaje-aviso",
+        _ => "mensaje-exito"
+    };
+
+    private string ClaseBoton => Tipo == TipoMensaje.Error ? "btn-danger" : "btn-primary";
+
+    protected override void OnParametersSet()
+    {
+        // un mensaje nuevo (distinto al que se cerró) vuelve a abrir la ventana
+        if (Mensaje != mensajeCerrado)
+        {
+            mensajeCerrado = null;
+            enfocar = Abierto;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (enfocar && Abierto)
+        {
+            enfocar = false;
+            try
+            {
+                await botonAceptar.FocusAsync();   // Enter o Espacio cierran la ventana
+            }
+            catch (Exception)
+            {
+                // si el navegador no deja enfocar no pasa nada
+            }
+        }
+    }
+
+    private async Task Cerrar()
+    {
+        mensajeCerrado = Mensaje;
+        if (AlCerrar.HasDelegate)
+        {
+            await AlCerrar.InvokeAsync();
+        }
+    }
+
+    private async Task Accionar()
+    {
+        mensajeCerrado = Mensaje;
+        await AlAccion.InvokeAsync();
+    }
+
+    private async Task AlPresionarTecla(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            await Cerrar();
+        }
+    }
+}

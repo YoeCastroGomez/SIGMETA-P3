@@ -497,6 +497,63 @@ public class ComprobanteBOImpl implements ComprobanteBO {
         });
     }
 
+    // RF008: representacion impresa del comprobante en PDF (JasperReports, plantilla reports/comprobante.jrxml).
+    // La descargan el Vendedor y el Cajero (quienes entregan el comprobante) y el Administrador (consulta).
+    @Override
+    public byte[] pdf(int idComprobante, int idResponsable) throws SQLException {
+        Usuario responsable = usuarioBO.verificarRol(idResponsable, TipoRol.VENDEDOR, TipoRol.CAJERO, TipoRol.ADMINISTRADOR);
+        Map<String, Object> cabecera = new HashMap<>();
+        List<Map<String, ?>> lineas = new java.util.ArrayList<>();
+        Transaccion.consultar(() -> {
+            Comprobante c = comprobanteDAO.load(idComprobante);
+            if (c == null) {
+                throw new IllegalArgumentException("No existe el comprobante con id " + idComprobante);
+            }
+            if (c.getTipo() != TipoComprobante.FACTURA && c.getTipo() != TipoComprobante.BOLETA) {
+                throw new IllegalArgumentException("Solo se genera el PDF de una FACTURA o BOLETA");
+            }
+            if (c.getEstado() == EstadoComprobante.ANULADO) {
+                throw new IllegalStateException("El comprobante " + c.getSerie() + "-" + c.getNumero() + " está anulado");
+            }
+            Venta venta = ventaDAO.load(c.getVenta().getId());
+            Cliente cliente = venta == null || venta.getCliente() == null ? null : clienteDAO.load(venta.getCliente().getId());
+            cabecera.put("TITULO", c.getTipo() == TipoComprobante.FACTURA ? "FACTURA ELECTRÓNICA" : "BOLETA DE VENTA ELECTRÓNICA");
+            cabecera.put("NUMERO", c.getSerie() + "-" + c.getNumero());
+            cabecera.put("FECHA_EMISION", c.getFechaEmision() == null ? ""
+                    : c.getFechaEmision().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            cabecera.put("SUB_TOTAL", c.getSubTotal());
+            cabecera.put("IGV", c.getIgv());
+            cabecera.put("TOTAL", c.getTotal());
+            cabecera.put("VENTA", venta == null ? "" : venta.getNumero());
+            cabecera.put("CONDICION_PAGO", venta == null || venta.getCondicionPago() == null ? ""
+                    : venta.getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CREDITO ? "Crédito" : "Contado");
+            if (cliente != null) {
+                cabecera.put("CLIENTE", cliente.getNombreMostrado());
+                cabecera.put("TIPO_DOCUMENTO", cliente.getTipoDocumento() == null ? "Documento" : cliente.getTipoDocumento().name());
+                cabecera.put("DOCUMENTO", cliente.getNumeroDocumento());
+                cabecera.put("DIRECCION", cliente.getContacto() == null || cliente.getContacto().getDireccion() == null
+                        ? "—" : cliente.getContacto().getDireccion());
+            }
+            if (venta != null) {
+                for (DetalleVenta d : detalleVentaDAO.listarPorVenta(venta.getId())) {
+                    Producto producto = d.getProducto() == null ? null : productoDAO.load(d.getProducto().getId());
+                    Map<String, Object> linea = new HashMap<>();
+                    linea.put("numeroLinea", d.getNumeroLinea());
+                    linea.put("codigo", producto == null ? "" : producto.getCodigoInterno());
+                    linea.put("descripcion", producto == null ? "" : producto.getNombre());
+                    linea.put("cantidad", d.getCantidad());
+                    linea.put("precioUnitario", d.getPrecioUnitario());
+                    linea.put("descuento", d.getDescuento());
+                    linea.put("importe", d.getImporte());
+                    lineas.add(linea);
+                }
+            }
+            return null;
+        });
+        String autor = (responsable.getNombres() + " " + responsable.getApellidos()).trim();
+        return pe.edu.pucp.sigmeta.boimpl.reporte.ComprobantePdf.generar(cabecera, lineas, autor);
+    }
+
     // RF008: Registro de envio de comprobante electronico
     @Override
     public Comprobante registrarEnvio(int idComprobante, String medioEnvio, int idResponsable) throws SQLException {

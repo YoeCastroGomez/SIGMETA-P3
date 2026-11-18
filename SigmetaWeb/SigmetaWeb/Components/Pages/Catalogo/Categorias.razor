@@ -16,10 +16,7 @@
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
 
 @* Confirmación antes de desactivar: solo si se pulsa Desactivar en el cuadro se llama al Java *@
 <Confirmacion Visible="@(porDesactivar is not null)"
@@ -28,13 +25,9 @@
               AlConfirmar="ConfirmarDesactivar"
               AlCancelar="() => porDesactivar = null">
     <p class="mb-2">¿Seguro que desea desactivar la categoría <strong>@porDesactivar?.Nombre</strong>?</p>
-    <p class="small text-muted mb-2">
+    <p class="small text-muted mb-0">
         No se borra: queda inactiva. Solo se puede desactivar si ya no tiene productos activos.
-        Una categoría inactiva ya no se puede modificar ni elegir en productos nuevos.
-    </p>
-    @* RF006 no incluye reactivar: la desactivación es definitiva y el nombre no puede volver a usarse *@
-    <p class="small text-danger fw-semibold mb-0">
-        Esta acción no se puede deshacer: no podrá reactivarla ni registrar otra categoría con el mismo nombre.
+        Una categoría inactiva ya no se puede elegir en productos nuevos. Se puede volver a activar desde la lista.
     </p>
 </Confirmacion>
 

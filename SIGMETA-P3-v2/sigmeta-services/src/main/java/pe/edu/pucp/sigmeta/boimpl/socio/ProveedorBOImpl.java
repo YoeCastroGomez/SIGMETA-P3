@@ -62,6 +62,23 @@ public class ProveedorBOImpl implements ProveedorBO {
         });
     }
 
+    // RF004: reactivación administrativa de un proveedor ya existente.
+    // No crea un nuevo RUC ni elimina su historial de compras.
+    @Override
+    public void activar(int idProveedor, int idAdministrador) throws SQLException {
+        Transaccion.ejecutar(() -> {
+            usuarioBO.obtenerAdministradorActivo(idAdministrador);
+            Proveedor proveedor = obtenerExistente(idProveedor);
+            if (proveedor.isEstado()) {
+                throw new IllegalArgumentException("El proveedor ya está activo");
+            }
+            validarRucUnico(proveedor);
+            validarRazonSocialUnica(proveedor);
+            proveedorDAO.activar(idProveedor);
+            return null;
+        });
+    }
+
     // RF004
     @Override
     public Proveedor obtener(int idProveedor) throws SQLException {

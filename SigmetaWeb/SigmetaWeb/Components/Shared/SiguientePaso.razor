@@ -1,43 +1,11 @@
-@* PATRÓN UX · Aviso de éxito que además dice QUÉ SIGUE y lleva directo a esa acción.
-   Reemplaza el "Se guardó." que deja al usuario sin saber a dónde ir.
+@* Mensaje de éxito de una acción en una ventana modal, con un botón opcional para la acción que sigue
+   (por ejemplo, después de aceptar una cotización: «Generar orden»).
    Uso:
-       <SiguientePaso Mensaje="Se registró la venta VTA-2026-0012."
-                      Detalle="Siguiente: emitir su factura o boleta."
-                      TextoAccion="Emitir comprobante" Ruta="/ventas/12/comprobante"
-                      AlCerrar="() => exito = null" />
-   Si el siguiente paso lo hace otro rol, se indica en Detalle ("Le toca al Cajero: cobrar en caja") y sin botón. *@
-@if (!string.IsNullOrWhiteSpace(Mensaje))
-{
-    <div class="alert alert-success siguiente d-flex flex-wrap align-items-center justify-content-between gap-2" role="status">
-        <div class="d-flex align-items-start gap-2">
-            <span class="icono" aria-hidden="true">✓</span>
-            <div>
-                <div class="fw-semibold">@Mensaje</div>
-                @if (!string.IsNullOrWhiteSpace(Detalle))
-                {
-                    <div class="small">@Detalle</div>
-                }
-            </div>
-        </div>
-        <div class="d-flex align-items-center gap-2 ms-auto">
-            @if (!string.IsNullOrWhiteSpace(TextoAccion))
-            {
-                @if (!string.IsNullOrWhiteSpace(Ruta))
-                {
-                    <a class="btn btn-success btn-sm" href="@Ruta">@TextoAccion →</a>
-                }
-                else if (AlAccion.HasDelegate)
-                {
-                    <button type="button" class="btn btn-success btn-sm" @onclick="AlAccion">@TextoAccion →</button>
-                }
-            }
-            @if (AlCerrar.HasDelegate)
-            {
-                <button type="button" class="btn-close" aria-label="Cerrar" @onclick="AlCerrar"></button>
-            }
-        </div>
-    </div>
-}
+       <SiguientePaso Mensaje="Se aceptó la cotización COT-2026-0012."
+                      TextoAccion="Generar orden" Ruta="/ordenes/nueva?cotizacion=12"
+                      AlCerrar="() => exito = null" /> *@
+<MensajeModal Tipo="TipoMensaje.Exito" Mensaje="@Mensaje" Detalle="@Detalle" TextoAccion="@TextoAccion" Ruta="@Ruta"
+              AlAccion="AlAccion" AlCerrar="AlCerrar" />
 
 @code {
     [Parameter] public string? Mensaje { get; set; }

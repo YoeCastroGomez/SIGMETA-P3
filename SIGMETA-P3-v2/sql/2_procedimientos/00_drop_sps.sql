@@ -234,3 +234,12 @@ DROP PROCEDURE IF EXISTS sp_movimiento_reversion_despacho;
 DROP PROCEDURE IF EXISTS sp_movimiento_compensacion;
 
 DROP PROCEDURE IF EXISTS sp_venta_listar_por_cliente;
+
+-- Adriano: busquedas filtradas en la base (H10)
+DROP PROCEDURE IF EXISTS sp_movimiento_caja_buscar_por_documento;
+DROP PROCEDURE IF EXISTS sp_caja_listar_ventas_por_cobrar_contado;
+DROP PROCEDURE IF EXISTS sp_cobro_buscar_por_fechas;
+DROP PROCEDURE IF EXISTS sp_cuenta_por_cobrar_buscar_por_comprobante;
+DROP PROCEDURE IF EXISTS sp_cuenta_por_cobrar_buscar_por_fechas;
+DROP PROCEDURE IF EXISTS sp_cuenta_por_cobrar_resumen;
+DROP PROCEDURE IF EXISTS sp_cuenta_por_cobrar_comprobantes_vigentes;

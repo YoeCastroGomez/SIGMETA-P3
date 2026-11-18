@@ -12,10 +12,7 @@
             Subtitulo="Cada recepción ingresa la mercadería al stock y recalcula el costo promedio del producto." />
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
 
 <Confirmacion Visible="@(porRevertir is not null)" Titulo="Revertir recepción" TextoConfirmar="Revertir"
               AlConfirmar="ConfirmarRevertir" AlCancelar="() => porRevertir = null">

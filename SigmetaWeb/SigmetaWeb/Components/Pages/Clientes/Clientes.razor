@@ -23,10 +23,7 @@
     ¿Seguro que desea desactivar a <strong>@porDesactivar?.NombreMostrado</strong>?
     <div class="small text-muted mt-2">Conserva su historial, pero ya no podrá elegirse en cotizaciones ni ventas.</div>
 </Confirmacion>
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
 
 <div class="card card-body mb-3">
     <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>

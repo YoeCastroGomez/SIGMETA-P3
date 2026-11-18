@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SIGMETA · RF008 · Representacion impresa del comprobante electronico (FACTURA o BOLETA) en PDF.
+     Data source: las lineas de la venta (JRMapCollectionDataSource). Cabecera, cliente y totales llegan como
+     parametros desde ComprobantePdf.java; la plantilla no calcula nada (los montos son los del comprobante). -->
+<jasperReport name="comprobante" language="java" pageWidth="595" pageHeight="842" whenNoDataType="AllSectionsNoDetail" columnWidth="535" leftMargin="30" rightMargin="30" topMargin="28" bottomMargin="28">
+	<style name="base" default="true" fontName="Liberation Sans" fontSize="8.0" forecolor="#000000"/>
+	<style name="etiqueta" mode="Opaque" backcolor="#EFEFEF" fontName="Liberation Sans" fontSize="7.5" bold="true" vTextAlign="Middle">
+		<box leftPadding="5" rightPadding="4"><pen lineWidth="0.5" lineColor="#A6A6A6"/></box>
+	</style>
+	<style name="valor" fontName="Liberation Sans" fontSize="8.0" vTextAlign="Middle">
+		<box leftPadding="5" rightPadding="4"><pen lineWidth="0.5" lineColor="#A6A6A6"/></box>
+	</style>
+	<style name="th" mode="Opaque" backcolor="#E6E6E6" forecolor="#000000" fontName="Liberation Sans" fontSize="7.5" bold="true" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><pen lineWidth="0.5" lineColor="#808080"/></box>
+	</style>
+	<style name="td" fontName="Liberation Sans" fontSize="8.0" forecolor="#000000" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><pen lineWidth="0.5" lineColor="#A6A6A6"/></box>
+	</style>
+	<style name="totEtiqueta" fontName="Liberation Sans" fontSize="8.0" vTextAlign="Middle">
+		<box leftPadding="6"/>
+	</style>
+	<style name="totValor" fontName="Liberation Sans" fontSize="8.0" hTextAlign="Right" vTextAlign="Middle">
+		<box rightPadding="6"/>
+	</style>
+	<style name="pie" fontName="Liberation Sans" fontSize="7.0" forecolor="#4D4D4D" vTextAlign="Middle"/>
+	<parameter name="TITULO" class="java.lang.String"/>
+	<parameter name="NUMERO" class="java.lang.String"/>
+	<parameter name="CLIENTE" class="java.lang.String"/>
+	<parameter name="TIPO_DOCUMENTO" class="java.lang.String"/>
+	<parameter name="DOCUMENTO" class="java.lang.String"/>
+	<parameter name="DIRECCION" class="java.lang.String"/>
+	<parameter name="FECHA_EMISION" class="java.lang.String"/>
+	<parameter name="CONDICION_PAGO" class="java.lang.String"/>
+	<parameter name="VENTA" class="java.lang.String"/>
+	<parameter name="SUB_TOTAL" class="java.lang.Number"/>
+	<parameter name="IGV" class="java.lang.Number"/>
+	<parameter name="TOTAL" class="java.lang.Number"/>
+	<field name="numeroLinea" class="java.lang.Number"/>
+	<field name="codigo" class="java.lang.String"/>
+	<field name="descripcion" class="java.lang.String"/>
+	<field name="cantidad" class="java.lang.Number"/>
+	<field name="precioUnitario" class="java.lang.Number"/>
+	<field name="descuento" class="java.lang.Number"/>
+	<field name="importe" class="java.lang.Number"/>
+	<title height="134">
+		<element kind="staticText" x="0" y="4" width="320" height="20" fontSize="16.0" bold="true"><text><![CDATA[GRUPO META]]></text></element>
+		<element kind="staticText" x="0" y="25" width="320" height="12" fontSize="8.0" forecolor="#333333"><text><![CDATA[Ferretería industrial · herramientas y suministros]]></text></element>
+		<element kind="staticText" x="0" y="37" width="320" height="12" fontSize="8.0" forecolor="#333333"><text><![CDATA[Sistema de Gestión Empresarial SIGMETA]]></text></element>
+		<element kind="frame" x="325" y="0" width="210" height="54">
+			<box><pen lineWidth="1.0" lineColor="#000000"/></box>
+			<element kind="textField" mode="Opaque" x="0" y="0" width="210" height="20" backcolor="#E6E6E6" fontSize="9.0" bold="true" hTextAlign="Center" vTextAlign="Middle">
+				<expression><![CDATA[$P{TITULO}]]></expression>
+				<box><bottomPen lineWidth="1.0" lineColor="#000000"/></box>
+			</element>
+			<element kind="textField" x="0" y="22" width="210" height="30" fontSize="15.0" bold="true" hTextAlign="Center" vTextAlign="Middle"><expression><![CDATA[$P{NUMERO}]]></expression></element>
+		</element>
+		<element kind="line" x="0" y="62" width="535" height="1"><pen lineWidth="1.0" lineColor="#000000"/></element>
+		<element kind="staticText" x="0" y="70" width="80" height="16" style="etiqueta"><text><![CDATA[Cliente]]></text></element>
+		<element kind="textField" x="80" y="70" width="270" height="16" style="valor" textAdjust="ScaleFont" blankWhenNull="true"><expression><![CDATA[$P{CLIENTE}]]></expression></element>
+		<element kind="staticText" x="350" y="70" width="95" height="16" style="etiqueta"><text><![CDATA[Fecha de emisión]]></text></element>
+		<element kind="textField" x="445" y="70" width="90" height="16" style="valor" blankWhenNull="true"><expression><![CDATA[$P{FECHA_EMISION}]]></expression></element>
+		<element kind="textField" x="0" y="86" width="80" height="16" style="etiqueta" blankWhenNull="true"><expression><![CDATA[$P{TIPO_DOCUMENTO}]]></expression></element>
+		<element kind="textField" x="80" y="86" width="270" height="16" style="valor" blankWhenNull="true"><expression><![CDATA[$P{DOCUMENTO}]]></expression></element>
+		<element kind="staticText" x="350" y="86" width="95" height="16" style="etiqueta"><text><![CDATA[Condición de pago]]></text></element>
+		<element kind="textField" x="445" y="86" width="90" height="16" style="valor" blankWhenNull="true"><expression><![CDATA[$P{CONDICION_PAGO}]]></expression></element>
+		<element kind="staticText" x="0" y="102" width="80" height="16" style="etiqueta"><text><![CDATA[Dirección]]></text></element>
+		<element kind="textField" x="80" y="102" width="270" height="16" style="valor" textAdjust="ScaleFont" blankWhenNull="true"><expression><![CDATA[$P{DIRECCION}]]></expression></element>
+		<element kind="staticText" x="350" y="102" width="95" height="16" style="etiqueta"><text><![CDATA[Venta]]></text></element>
+		<element kind="textField" x="445" y="102" width="90" height="16" style="valor" blankWhenNull="true"><expression><![CDATA[$P{VENTA}]]></expression></element>
+		<element kind="staticText" x="0" y="121" width="535" height="11" fontSize="7.0" forecolor="#4D4D4D"><text><![CDATA[Moneda: soles (PEN). Precios unitarios sin IGV.]]></text></element>
+	</title>
+	<columnHeader height="16">
+		<element kind="staticText" x="0" y="0" width="25" height="16" style="th" hTextAlign="Center"><text><![CDATA[#]]></text></element>
+		<element kind="staticText" x="25" y="0" width="70" height="16" style="th"><text><![CDATA[Código]]></text></element>
+		<element kind="staticText" x="95" y="0" width="215" height="16" style="th"><text><![CDATA[Descripción]]></text></element>
+		<element kind="staticText" x="310" y="0" width="55" height="16" style="th" hTextAlign="Right"><text><![CDATA[Cantidad]]></text></element>
+		<element kind="staticText" x="365" y="0" width="55" height="16" style="th" hTextAlign="Right"><text><![CDATA[P. unit.]]></text></element>
+		<element kind="staticText" x="420" y="0" width="50" height="16" style="th" hTextAlign="Right"><text><![CDATA[Dscto.]]></text></element>
+		<element kind="staticText" x="470" y="0" width="65" height="16" style="th" hTextAlign="Right"><text><![CDATA[Importe]]></text></element>
+	</columnHeader>
+	<detail>
+		<band height="15">
+			<element kind="textField" stretchType="ContainerHeight" x="0" y="0" width="25" height="15" style="td" hTextAlign="Center" pattern="#,##0" blankWhenNull="true"><expression><![CDATA[$F{numeroLinea}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="25" y="0" width="70" height="15" style="td" blankWhenNull="true"><expression><![CDATA[$F{codigo}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="95" y="0" width="215" height="15" style="td" textAdjust="StretchHeight" blankWhenNull="true"><expression><![CDATA[$F{descripcion}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="310" y="0" width="55" height="15" style="td" hTextAlign="Right" pattern="#,##0.###" blankWhenNull="true"><expression><![CDATA[$F{cantidad}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="365" y="0" width="55" height="15" style="td" hTextAlign="Right" pattern="#,##0.00" blankWhenNull="true"><expression><![CDATA[$F{precioUnitario}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="420" y="0" width="50" height="15" style="td" hTextAlign="Right" pattern="#,##0.00" blankWhenNull="true"><expression><![CDATA[$F{descuento}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="470" y="0" width="65" height="15" style="td" hTextAlign="Right" pattern="#,##0.00" blankWhenNull="true"><expression><![CDATA[$F{importe}]]></expression></element>
+		</band>
+	</detail>
+	<pageFooter height="22">
+		<element kind="line" x="0" y="5" width="535" height="1"><pen lineWidth="0.5" lineColor="#000000"/></element>
+		<element kind="textField" x="0" y="9" width="420" height="12" style="pie"><expression><![CDATA["Representación impresa del comprobante electrónico " + $P{NUMERO} + " · Grupo Meta - SIGMETA"]]></expression></element>
+		<element kind="textField" x="420" y="9" width="85" height="12" style="pie" hTextAlign="Right"><expression><![CDATA["Página " + $V{PAGE_NUMBER} + " de"]]></expression></element>
+		<element kind="textField" x="505" y="9" width="30" height="12" style="pie" evaluationTime="Report"><expression><![CDATA[" " + $V{PAGE_NUMBER}]]></expression></element>
+	</pageFooter>
+	<summary height="66">
+		<element kind="frame" x="335" y="10" width="200" height="54">
+			<box><pen lineWidth="0.5" lineColor="#808080"/></box>
+			<element kind="staticText" x="0" y="2" width="110" height="15" style="totEtiqueta"><text><![CDATA[Op. gravada]]></text></element>
+			<element kind="textField" x="110" y="2" width="90" height="15" style="totValor" pattern="S/ #,##0.00"><expression><![CDATA[$P{SUB_TOTAL}]]></expression></element>
+			<element kind="staticText" x="0" y="17" width="110" height="15" style="totEtiqueta"><text><![CDATA[IGV (18 %)]]></text></element>
+			<element kind="textField" x="110" y="17" width="90" height="15" style="totValor" pattern="S/ #,##0.00"><expression><![CDATA[$P{IGV}]]></expression></element>
+			<element kind="staticText" mode="Opaque" x="0" y="35" width="110" height="19" backcolor="#E6E6E6" style="totEtiqueta" bold="true" fontSize="9.0">
+				<text><![CDATA[Importe total]]></text>
+				<box leftPadding="6"><topPen lineWidth="1.0" lineColor="#000000"/></box>
+			</element>
+			<element kind="textField" mode="Opaque" x="110" y="35" width="90" height="19" backcolor="#E6E6E6" style="totValor" bold="true" fontSize="9.0" pattern="S/ #,##0.00">
+				<expression><![CDATA[$P{TOTAL}]]></expression>
+				<box rightPadding="6"><topPen lineWidth="1.0" lineColor="#000000"/></box>
+			</element>
+		</element>
+	</summary>
+</jasperReport>

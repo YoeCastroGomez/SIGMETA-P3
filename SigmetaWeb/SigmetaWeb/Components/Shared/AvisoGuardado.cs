@@ -12,6 +12,7 @@ public static class AvisoGuardado
     public const string Anulado = "anulado";
     public const string Desactivado = "desactivado";
     public const string Enviado = "enviado";   // RF007: la cotización se marcó como enviada al cliente
+    public const string Cobrado = "cobrado";      // cobro al contado de una venta: "Se cobró la venta V-2026-0012."
 
     // "/proveedores" + "nuevo" + "Aceros del Perú S.A." -> "/proveedores?guardado=nuevo&ref=Aceros%20del%20Per%C3%BA%20S.A."
     public static string Ruta(string ruta, string accion, string? referencia)
@@ -31,6 +32,7 @@ public static class AvisoGuardado
             Anulado => "Se anuló",
             Desactivado => "Se desactivó",
             Enviado => "Se envió",
+            Cobrado => "Se cobró",
             _ => null
         };
         if (verbo is null) return null;

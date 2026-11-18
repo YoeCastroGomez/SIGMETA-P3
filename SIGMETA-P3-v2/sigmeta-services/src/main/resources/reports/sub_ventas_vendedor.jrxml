@@ -1,24 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- SIGMETA · RF015 · Reporte comercial: ventas por vendedor (subreporte). Datos: sp_reporte_ventas_por_vendedor. -->
 <jasperReport name="sub_ventas_vendedor" language="java" pageWidth="535" pageHeight="842" whenNoDataType="NoDataSection" columnWidth="535" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
-	<style name="base" default="true" fontName="DejaVu Sans" fontSize="8.0" forecolor="#1D1D1F"/>
-	<style name="seccion" fontName="DejaVu Sans" fontSize="10.0" bold="true" forecolor="#1D1D1F" vTextAlign="Middle">
-		<box leftPadding="6"><leftPen lineWidth="3.0" lineColor="#D9822B"/></box>
+	<style name="base" default="true" fontName="Liberation Sans" fontSize="8.0" forecolor="#000000"/>
+	<style name="seccion" fontName="Liberation Sans" fontSize="9.0" bold="true" forecolor="#000000" vTextAlign="Bottom">
+		<box bottomPadding="2"><bottomPen lineWidth="0.75" lineColor="#000000"/></box>
 	</style>
-	<style name="th" mode="Opaque" backcolor="#F3EDE6" forecolor="#5A3A1A" fontName="DejaVu Sans" fontSize="7.5" bold="true" vTextAlign="Middle">
-		<box leftPadding="4" rightPadding="4"><bottomPen lineWidth="0.75" lineColor="#C9B8A6"/></box>
+	<style name="th" mode="Opaque" backcolor="#E6E6E6" forecolor="#000000" fontName="Liberation Sans" fontSize="7.5" bold="true" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><pen lineWidth="0.5" lineColor="#808080"/></box>
 	</style>
-	<style name="td" fontName="DejaVu Sans" fontSize="8.0" forecolor="#1D1D1F" vTextAlign="Middle">
-		<box leftPadding="4" rightPadding="4"><bottomPen lineWidth="0.5" lineColor="#E6E1DB"/></box>
-		<conditionalStyle mode="Opaque" backcolor="#FBF8F4">
-			<conditionExpression><![CDATA[$V{REPORT_COUNT} % 2 == 0]]></conditionExpression>
-		</conditionalStyle>
+	<style name="td" fontName="Liberation Sans" fontSize="8.0" forecolor="#000000" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><pen lineWidth="0.5" lineColor="#A6A6A6"/></box>
 	</style>
-	<style name="tot" mode="Opaque" backcolor="#F7F1EA" fontName="DejaVu Sans" fontSize="8.0" bold="true" vTextAlign="Middle">
-		<box leftPadding="4" rightPadding="4"><topPen lineWidth="1.0" lineColor="#B8A28C"/></box>
+	<style name="tot" mode="Opaque" backcolor="#EFEFEF" fontName="Liberation Sans" fontSize="8.0" bold="true" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><pen lineWidth="0.5" lineColor="#808080"/><topPen lineWidth="1.0" lineColor="#000000"/></box>
 	</style>
-	<style name="vacio" fontName="DejaVu Sans" fontSize="8.0" italic="true" forecolor="#7A7A7A" hTextAlign="Center" vTextAlign="Middle">
-		<box><pen lineWidth="0.5" lineColor="#E6E1DB"/></box>
+	<style name="vacio" fontName="Liberation Sans" fontSize="8.0" forecolor="#4D4D4D" hTextAlign="Center" vTextAlign="Middle">
+		<box><pen lineWidth="0.5" lineColor="#A6A6A6"/></box>
 	</style>
 	<field name="vendedor" class="java.lang.String"/>
 	<field name="usuario" class="java.lang.String"/>
@@ -34,7 +31,7 @@
 		<expression><![CDATA[1]]></expression>
 		<groupHeader>
 			<band height="38">
-				<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[Ventas por vendedor]]></text></element>
+				<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[2. VENTAS POR VENDEDOR]]></text></element>
 				<element kind="staticText" x="0" y="22" width="235" height="16" style="th"><text><![CDATA[Vendedor]]></text></element>
 				<element kind="staticText" x="235" y="22" width="120" height="16" style="th"><text><![CDATA[Usuario]]></text></element>
 				<element kind="staticText" x="355" y="22" width="80" height="16" style="th" hTextAlign="Right"><text><![CDATA[Ventas]]></text></element>
@@ -56,7 +53,7 @@
 		<element kind="textField" x="435" y="0" width="100" height="16" style="tot" hTextAlign="Right" pattern="#,##0.00"><expression><![CDATA[$V{sumTotal}]]></expression></element>
 	</summary>
 	<noData height="42">
-		<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[Ventas por vendedor]]></text></element>
+		<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[2. VENTAS POR VENDEDOR]]></text></element>
 		<element kind="staticText" x="0" y="22" width="535" height="18" style="vacio"><text><![CDATA[Sin ventas en el periodo.]]></text></element>
 	</noData>
 </jasperReport>

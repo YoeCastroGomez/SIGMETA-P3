@@ -179,4 +179,21 @@ public class CobroDAOImpl implements CobroDAO {
         }
         return lista;
     }
+
+    @Override
+    public List<Cobro> buscarPorRangoFechas(java.time.LocalDate fechaInicio, java.time.LocalDate fechaFin) throws SQLException {
+        List<Cobro> lista = new ArrayList<>();
+        String sql = "{call sp_cobro_buscar_por_fechas(?, ?)}";
+        Connection con = transactionContext.getConnection();
+        try (CallableStatement cs = con.prepareCall(sql)) {
+            cs.setDate(1, Date.valueOf(fechaInicio));
+            cs.setDate(2, Date.valueOf(fechaFin));
+            try (ResultSet rs = cs.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(mapearCobro(rs));
+                }
+            }
+        }
+        return lista;
+    }
 }

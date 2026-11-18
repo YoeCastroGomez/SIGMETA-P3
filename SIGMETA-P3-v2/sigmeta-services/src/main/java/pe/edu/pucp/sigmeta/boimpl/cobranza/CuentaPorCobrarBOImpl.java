@@ -6,7 +6,6 @@ import java.math.RoundingMode;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -17,28 +16,22 @@ import pe.edu.pucp.sigmeta.boimpl.Validador;
 import pe.edu.pucp.sigmeta.boimpl.usuario.UsuarioBOImpl;
 import pe.edu.pucp.sigmeta.dao.cobranza.CobroDAO;
 import pe.edu.pucp.sigmeta.dao.cobranza.CuentaPorCobrarDAO;
-import pe.edu.pucp.sigmeta.dao.ventas.ComprobanteDAO;
 import pe.edu.pucp.sigmeta.daoimpl.cobranza.CobroDAOImpl;
 import pe.edu.pucp.sigmeta.daoimpl.cobranza.CuentaPorCobrarDAOImpl;
-import pe.edu.pucp.sigmeta.daoimpl.ventas.ComprobanteDAOImpl;
 import pe.edu.pucp.sigmeta.model.cobranza.CuentaPorCobrar;
 import pe.edu.pucp.sigmeta.model.cobranza.ResumenCuentasPorCobrar;
-import pe.edu.pucp.sigmeta.model.enums.EstadoComprobante;
 import pe.edu.pucp.sigmeta.model.enums.EstadoCuentaPorCobrar;
-import pe.edu.pucp.sigmeta.model.enums.TipoComprobante;
 import pe.edu.pucp.sigmeta.model.ventas.Comprobante;
 
 public class CuentaPorCobrarBOImpl implements CuentaPorCobrarBO {
 
     private final CuentaPorCobrarDAO cuentaPorCobrarDAO;
     private final CobroDAO cobroDAO;
-    private final ComprobanteDAO comprobanteDAO;
     private final UsuarioBO usuarioBO;
 
     public CuentaPorCobrarBOImpl() {
         this.cuentaPorCobrarDAO = new CuentaPorCobrarDAOImpl();
         this.cobroDAO = new CobroDAOImpl();
-        this.comprobanteDAO = new ComprobanteDAOImpl();
         this.usuarioBO = new UsuarioBOImpl();
     }
 
@@ -150,25 +143,17 @@ public class CuentaPorCobrarBOImpl implements CuentaPorCobrarBO {
         });
     }
 
-    // RF009: busqueda por comprobante. El comprobante (FACTURA o BOLETA vigente) se busca por su serie-numero
-    // y con su venta se encuentra la cuenta. Se filtra aqui en el BO (no hay SP para esta busqueda).
+    // RF009: busqueda por comprobante vigente (FACTURA o BOLETA) de la venta, por su serie-numero.
+    // H10: filtra la base (sp_cuenta_por_cobrar_buscar_por_comprobante).
     @Override
     public List<CuentaPorCobrar> buscarPorComprobante(String comprobante) throws SQLException {
         String texto = Validador.textoObligatorio(comprobante, "comprobante", 20).toUpperCase();
         return Transaccion.ejecutar(() -> {
-            Set<Integer> ventas = comprobanteDAO.listarTodos().stream()
-                    .filter(this::esComprobanteVigente)
-                    .filter(c -> numeroComprobante(c).contains(texto))
-                    .map(c -> c.getVenta().getId())
-                    .collect(Collectors.toSet());
-            List<CuentaPorCobrar> todas = completarComprobantes(cuentaPorCobrarDAO.listarTodasConDetalle());
-            return todas.stream()
-                    .filter(cxc -> cxc.getVenta() != null && ventas.contains(cxc.getVenta().getId()))
-                    .collect(Collectors.toList());
+            return completarComprobantes(cuentaPorCobrarDAO.buscarPorComprobante(texto));
         });
     }
 
-    // RF009: busqueda por rango de fechas (de emision o de vencimiento). Se filtra aqui en el BO.
+    // RF009: busqueda por rango de fechas (de emision o de vencimiento). H10: filtra la base.
     @Override
     public List<CuentaPorCobrar> buscarPorRangoFechas(LocalDate fechaInicio, LocalDate fechaFin, boolean porVencimiento) throws SQLException {
         Validador.obligatorio(fechaInicio, "fecha de inicio");
@@ -177,69 +162,39 @@ public class CuentaPorCobrarBOImpl implements CuentaPorCobrarBO {
             throw new IllegalArgumentException("La fecha de inicio no puede ser posterior a la fecha de fin");
         }
         return Transaccion.ejecutar(() -> {
-            List<CuentaPorCobrar> lista = new ArrayList<>();
-            for (CuentaPorCobrar cxc : cuentaPorCobrarDAO.listarTodasConDetalle()) {
-                LocalDate fecha = porVencimiento ? cxc.getFechaVencimiento() : cxc.getFechaEmision();
-                if (fecha != null && !fecha.isBefore(fechaInicio) && !fecha.isAfter(fechaFin)) {
-                    lista.add(cxc);
-                }
-            }
-            return completarComprobantes(lista);
+            return completarComprobantes(cuentaPorCobrarDAO.buscarPorRangoFechas(fechaInicio, fechaFin, porVencimiento));
         });
     }
 
-    // RF009: el Administrador ve el total de saldos pendientes y de cuentas vencidas
+    // RF009: el Administrador ve el total de saldos pendientes y de cuentas vencidas. H10: lo suma la base.
     @Override
     public ResumenCuentasPorCobrar obtenerResumen(int idResponsable) throws SQLException {
         usuarioBO.obtenerAdministradorActivo(idResponsable);
         return Transaccion.ejecutar(() -> {
-            ResumenCuentasPorCobrar resumen = new ResumenCuentasPorCobrar();
-            double pendiente = 0;
-            double vencido = 0;
-            int conSaldo = 0;
-            int vencidas = 0;
-            for (CuentaPorCobrar cxc : cuentaPorCobrarDAO.listarTodasConDetalle()) {
-                if (cxc.getSaldoPendiente() <= 0.005) {
-                    continue;
-                }
-                pendiente += cxc.getSaldoPendiente();
-                conSaldo++;
-                if (cxc.isVencida()) {
-                    vencido += cxc.getSaldoPendiente();
-                    vencidas++;
-                }
-            }
-            resumen.setTotalSaldoPendiente(redondear(pendiente));
-            resumen.setTotalSaldoVencido(redondear(vencido));
-            resumen.setCuentasConSaldo(conSaldo);
-            resumen.setCuentasVencidas(vencidas);
+            ResumenCuentasPorCobrar resumen = cuentaPorCobrarDAO.obtenerResumen();
+            resumen.setTotalSaldoPendiente(redondear(resumen.getTotalSaldoPendiente()));
+            resumen.setTotalSaldoVencido(redondear(resumen.getTotalSaldoVencido()));
             return resumen;
         });
     }
 
-    // RF009: a cada cuenta le pone el comprobante vigente de su venta (para mostrarlo y buscar por el)
+    // RF009: a cada cuenta le pone el comprobante vigente de su venta (para mostrarlo y buscar por el).
+    // H10: solo se piden a la base los comprobantes de las ventas de la lista (antes, todos los comprobantes).
     private List<CuentaPorCobrar> completarComprobantes(List<CuentaPorCobrar> cuentas) throws SQLException {
         if (cuentas.isEmpty()) {
             return cuentas;
         }
-        Map<Integer, List<Comprobante>> porVenta = new HashMap<>();
-        for (Comprobante c : comprobanteDAO.listarTodos()) {
-            if (esComprobanteVigente(c)) {
-                porVenta.computeIfAbsent(c.getVenta().getId(), k -> new ArrayList<>()).add(c);
-            }
-        }
+        Set<Integer> idsVenta = cuentas.stream()
+                .filter(cxc -> cxc.getVenta() != null)
+                .map(cxc -> cxc.getVenta().getId())
+                .collect(Collectors.toSet());
+        Map<Integer, List<Comprobante>> porVenta = cuentaPorCobrarDAO.listarComprobantesVigentes(idsVenta);
         for (CuentaPorCobrar cxc : cuentas) {
             if (cxc.getVenta() != null) {
                 cxc.getVenta().setComprobantes(porVenta.getOrDefault(cxc.getVenta().getId(), new ArrayList<>()));
             }
         }
         return cuentas;
-    }
-
-    private boolean esComprobanteVigente(Comprobante c) {
-        return c.getVenta() != null
-                && (c.getTipo() == TipoComprobante.FACTURA || c.getTipo() == TipoComprobante.BOLETA)
-                && c.getEstado() != EstadoComprobante.ANULADO;
     }
 
     // serie-numero del comprobante, por ejemplo F001-00000123
