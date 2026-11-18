@@ -1,15 +1,16 @@
-@* PATRÓN UX · Recorrido de un documento: qué pasos ya se hicieron, cuál toca ahora y QUIÉN lo hace.
-   Resuelve la duda de "¿y ahora qué sigue?" cuando el flujo pasa de un rol a otro.
+@* PATRÓN UX · Recorrido de un documento en una sola línea: pasos hechos (✓), el actual (resaltado) y los que vienen.
+   Solo lo necesario: el título del paso y, si aporta, el número del documento o un dato corto.
+   "Le toca: X" aparece solo en el paso actual y solo si lo hace OTRO rol (al Vendedor no se le dice que le toca a él).
    Uso:
        <PasosDocumento Pasos="@pasos" />
        pasos = new() {
            new("Cotización", EstadoPaso.Hecho, "COT-2026-0004", Ruta: "/cotizaciones/editar/4"),
-           new("Comprobante", EstadoPaso.Actual, "Por emitir", "Vendedor o Cajero"),
+           new("Comprobante", EstadoPaso.Actual, null, "Vendedor o Cajero"),
            new("Despacho", EstadoPaso.Pendiente, null, "Almacenero") };
    Los pasos los arma cada módulo con sus datos (ver Pages/Ventas/FlujoVentas.cs). *@
 @if (Pasos.Count > 0)
 {
-    <nav class="pasos mb-3" aria-label="@Titulo">
+    <nav class="card pasos mb-3" aria-label="@Titulo">
         <ol>
             @for (var i = 0; i < Pasos.Count; i++)
             {
@@ -19,9 +20,9 @@
                     <span class="marca" aria-hidden="true">@Marca(p.Estado, numero)</span>
                     <span class="texto">
                         <span class="titulo">@p.Titulo</span>
-                        @if (!string.IsNullOrEmpty(p.Detalle))
+                        @if (!string.IsNullOrEmpty(p.Detalle) && p.Estado != EstadoPaso.Pendiente)
                         {
-                            @if (!string.IsNullOrEmpty(p.Ruta))
+                            @if (!string.IsNullOrEmpty(p.Ruta) && p.Estado == EstadoPaso.Hecho)
                             {
                                 <a class="detalle" href="@p.Ruta">@p.Detalle</a>
                             }
@@ -30,9 +31,9 @@
                                 <span class="detalle">@p.Detalle</span>
                             }
                         }
-                        @if (!string.IsNullOrEmpty(p.Responsable) && p.Estado is EstadoPaso.Actual or EstadoPaso.Pendiente)
+                        @if (LeTocaAOtro(p))
                         {
-                            <span class="quien">@(p.Estado == EstadoPaso.Actual ? "Le toca: " : "")@p.Responsable</span>
+                            <span class="quien">Le toca: @p.Responsable</span>
                         }
                     </span>
                 </li>
@@ -44,6 +45,11 @@
 @code {
     [Parameter] public IReadOnlyList<PasoDocumento> Pasos { get; set; } = Array.Empty<PasoDocumento>();
     [Parameter] public string Titulo { get; set; } = "Recorrido del documento";
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
+
+    private bool LeTocaAOtro(PasoDocumento p) =>
+        p.Estado == EstadoPaso.Actual && !string.IsNullOrEmpty(p.Responsable)
+        && (string.IsNullOrEmpty(Rol) || !p.Responsable.Contains(Rol, StringComparison.OrdinalIgnoreCase));
 
     private static string Clase(EstadoPaso e) => e switch
     {

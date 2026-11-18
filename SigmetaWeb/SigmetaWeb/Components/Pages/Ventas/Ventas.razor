@@ -15,8 +15,7 @@
    Datos reales del Java:
    - GET  /api/ventas (?cliente=ID)            listarTodos / listarPorCliente, con comprobante vigente y si ya se cobró
    - POST /api/ventas/{id}/anular {"motivo"}   anular (no con comprobante o despacho vigente) *@
-<Encabezado Rf="RF008" Titulo="Ventas y comprobantes"
-            Subtitulo="Ventas registradas. Importes en soles.">
+<Encabezado Rf="RF008" Titulo="Ventas y comprobantes">
     @if (Rol == "Vendedor")
     {
         @* RF008: la venta la registra el Vendedor (VentaBOImpl.registrar exige el rol VENDEDOR) *@
@@ -24,57 +23,40 @@
     }
 </Encabezado>
 
-<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-<SiguientePaso Mensaje="@exito" Detalle="@exitoDetalle" AlCerrar="() => exito = null" />
+<Notificacion Mensaje="@error" Error="true" AlCerrar="() => error = null" />
+<Notificacion Mensaje="@exito" AlCerrar="() => exito = null" />
 
-<ModalMotivo Visible="@(anulando is not null)" Titulo="@($"Anular la venta {anulando?.Numero}")" TextoConfirmar="Anular venta"
+@* Lo que pasa al anular cambia según la venta (stock, cuenta por cobrar, caja, orden): se dice solo lo que aplica *@
+<ModalMotivo Visible="@(anulando is not null)" Titulo="@($"Anular {anulando?.Numero}")" TextoConfirmar="Anular"
              Ocupado="@trabajando" AlConfirmar="ConfirmarAnulacion" AlCancelar="() => anulando = null">
-    <p class="mb-2">Al anular la venta <strong>@anulando?.Numero</strong> (S/ @anulando?.Total.ToString("N2")):</p>
-    <ul class="small mb-0">
-        <li>Deja de valer y libera el stock que tenía reservado.</li>
+    <ul class="small text-muted mb-0 ps-3">
+        <li>Libera el stock reservado.</li>
         @if (anulando?.CondicionPago == "CREDITO")
         {
             <li>Se retira su cuenta por cobrar.</li>
         }
         @if (anulando?.CobradaContado == true)
         {
-            <li>El cobro en caja se devuelve con un egreso en la caja donde se cobró.</li>
+            <li>Se devuelve el cobro con un egreso de caja.</li>
         }
         @if (!string.IsNullOrEmpty(anulando?.NumeroOrden))
         {
-            <li>Lo vendido vuelve a estar pendiente en la orden @anulando.NumeroOrden.</li>
+            <li>La orden @anulando.NumeroOrden vuelve a quedar pendiente.</li>
         }
     </ul>
 </ModalMotivo>
 
-<div class="card card-body mb-3">
-    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
-        <Campo Etiqueta="Número o comprobante" Id="fTexto" Clase="col-sm-6 col-md-3">
-            <input id="fTexto" class="form-control" maxlength="80" @bind="textoElegido" />
-        </Campo>
-        <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
-            <select id="fCliente" class="form-select" @bind="clienteElegido">
-                <option value="0">Todos</option>
-                @foreach (var c in clientes)
-                {
-                    <option value="@c.Id">@c.NombreMostrado · @c.NumeroDocumento</option>
-                }
-            </select>
-        </Campo>
-        <Campo Etiqueta="Situación" Id="fSituacion" Clase="col-sm-6 col-md-3">
-            <select id="fSituacion" class="form-select" @bind="situacionElegida">
-                @foreach (var o in Chips)
-                {
-                    <option value="@o.Valor">@o.Texto</option>
-                }
-            </select>
-        </Campo>
-        <div class="col-auto d-flex gap-2">
-            <button type="submit" class="btn btn-dark">Buscar</button>
-            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
-        </div>
-    </form>
-</div>
+<FiltrosLista @bind-Busqueda="busqueda" @bind-Busqueda:after="AlBuscar" Placeholder="Buscar por número, cliente o comprobante"
+              Opciones="@Chips" Estado="@situacion" EstadoChanged="CambiarSituacion" EtiquetaChips="Filtrar por situación"
+              HayFiltros="@HayFiltros" AlLimpiar="Limpiar">
+    <select class="form-select filtro" aria-label="Filtrar por cliente" value="@filtroCliente" @onchange="CambiarCliente">
+        <option value="0">Todos los clientes</option>
+        @foreach (var c in clientes)
+        {
+            <option value="@c.Id">@c.NombreMostrado</option>
+        }
+    </select>
+</FiltrosLista>
 
 @if (ventas is null)
 {
@@ -83,17 +65,18 @@
 else
 {
     var filtradas = Filtradas;
+    var pagina = Pagina(filtradas).ToList();
     <div class="card mb-3">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+        <div class="table-responsive tabla-lista-contenedor">
+            <table class="table table-hover align-middle mb-0 tabla-lista">
+                <thead>
                     <tr>
                         <th>Venta</th>
                         <th>Cliente</th>
-                        <th>Fecha</th>
+                        <th>Pago</th>
                         <th class="text-end">Total (S/)</th>
-                        <th>Situación y siguiente paso</th>
-                        <th class="text-end">Acciones</th>
+                        <th>Situación</th>
+                        <th><span class="visually-hidden">Acciones</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -103,8 +86,7 @@ else
                             <td colspan="6">
                                 @if (HayFiltros)
                                 {
-                                    <ListaVacia Titulo="Ninguna venta coincide con los filtros." Detalle="Pruebe con otra situación, otro cliente u otro texto."
-                                                AlQuitarFiltros="Limpiar" />
+                                    <ListaVacia Titulo="Ninguna venta coincide con los filtros." AlQuitarFiltros="Limpiar" />
                                 }
                                 else
                                 {
@@ -114,55 +96,28 @@ else
                             </td>
                         </tr>
                     }
-                    @foreach (var v in Pagina(filtradas))
+                    @for (var i = 0; i < pagina.Count; i++)
                     {
+                        var v = pagina[i];
                         var sit = FlujoVentas.Situacion(v);
-                        var sig = FlujoVentas.Siguiente(v);
+                        var haciaArriba = pagina.Count > 3 && i >= pagina.Count - 2;
                         <tr @key="v.Id">
                             <td>
-                                <a class="fw-semibold text-decoration-none" href="@RutaVenta(v)">@v.Numero</a>
-                                <div class="small text-muted">
-                                    @(string.IsNullOrEmpty(v.NumeroOrden) ? "Venta directa" : $"Orden {v.NumeroOrden}") · @TextosVentas.Texto(v.CondicionPago)
-                                </div>
+                                <a class="numero" href="@RutaVenta(v)">@v.Numero</a>
+                                <div class="sub">@TextosVentas.Fecha(v.FechaEmision)</div>
                             </td>
-                            <td>@v.Cliente<div class="small text-muted">@v.DocumentoCliente</div></td>
-                            <td class="text-nowrap">@TextosVentas.Fecha(v.FechaEmision)</td>
+                            <td>@v.Cliente</td>
+                            <td>@TextosVentas.Texto(v.CondicionPago)</td>
                             <td class="text-end fw-semibold">@v.Total.ToString("N2")</td>
                             <td>
                                 <span class="badge rounded-pill border @Tonos.Clase(FlujoVentas.TonoSituacion(sit))">@FlujoVentas.TextoSituacion(sit)</span>
                                 @if (v.Comprobante is not null)
                                 {
-                                    <span class="small text-muted ms-1">@v.Comprobante</span>
-                                }
-                                @if (sig.Quien is not null)
-                                {
-                                    <div class="small mt-1">@sig.Que · <span class="text-muted">@sig.Quien</span></div>
+                                    <div class="sub">@v.Comprobante</div>
                                 }
                             </td>
-                            <td class="text-end">
-                                <div class="d-inline-flex align-items-center justify-content-end gap-1 text-nowrap">
-                                    @if (Rol == "Cajero" && v.CondicionPago == "CONTADO" && !v.CobradaContado && !FlujoVentas.EstaAnulada(v))
-                                    {
-                                        @* RF010 (Adriano): el Cajero cobra la venta al contado; queda como movimiento COBRO_CONTADO de su caja *@
-                                        <a class="btn btn-sm btn-primary" href="@($"/ventas/{v.Id}/cobro?volver=/ventas")">Cobrar</a>
-                                    }
-                                    else if (sit == FlujoVentas.SinComprobante && Rol is "Vendedor" or "Cajero")
-                                    {
-                                        <a class="btn btn-sm btn-primary" href="@RutaVenta(v)">Emitir</a>
-                                    }
-                                    else
-                                    {
-                                        <a class="btn btn-sm btn-outline-secondary" href="@RutaVenta(v)">Ver</a>
-                                    }
-                                    @if (Rol == "Vendedor" && FlujoVentas.MotivoNoEditable(v) is null)
-                                    {
-                                        <a class="btn btn-sm btn-outline-secondary" href="@($"/ventas/editar/{v.Id}?volver={Volver.Parametro(RutaActual)}")">Editar</a>
-                                    }
-                                    @if (Rol == "Vendedor" && FlujoVentas.MotivoNoAnulable(v) is null)
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => AbrirAnulacion(v)">Anular</button>
-                                    }
-                                </div>
+                            <td class="acciones">
+                                <AccionesFila Principal="@Principal(v)" Otras="@Secundarias(v)" Ocupado="@trabajando" HaciaArriba="@haciaArriba" AlElegir="Ejecutar" />
                             </td>
                         </tr>
                     }
@@ -198,7 +153,6 @@ else
 
     private string? error;
     private string? exito;
-    private string? exitoDetalle;
     private bool avisoLeido;
     private bool trabajando;
     private VentaDatos? anulando;
@@ -206,6 +160,33 @@ else
     private string RutaActual => "/" + Nav.ToBaseRelativePath(Nav.Uri);
     private string RutaVenta(VentaDatos v) => $"/ventas/{v.Id}/comprobante?volver={Volver.Parametro(RutaActual)}";
     private bool HayFiltros => filtroCliente > 0 || situacion != "" || !string.IsNullOrWhiteSpace(busqueda);
+
+    // Botón principal según el rol y lo que le falta a la venta; si no hay nada que hacer, "Ver"
+    private AccionFila Principal(VentaDatos v)
+    {
+        // RF010 (Adriano): el Cajero cobra la venta al contado; queda como movimiento COBRO_CONTADO de su caja
+        if (Rol == "Cajero" && v.CondicionPago == "CONTADO" && !v.CobradaContado && !FlujoVentas.EstaAnulada(v))
+            return new("Cobrar", Ruta: $"/ventas/{v.Id}/cobro?volver=/ventas");
+        if (FlujoVentas.Situacion(v) == FlujoVentas.SinComprobante && Rol is "Vendedor" or "Cajero")
+            return new("Emitir", Ruta: RutaVenta(v));
+        return new("Ver", Ruta: RutaVenta(v), Destacada: false);
+    }
+
+    // Lo llama AccionesFila: la acción corre en esta pantalla para que se redibuje (ventana de anular)
+    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
+
+    // Menú «⋯»
+    private List<AccionFila> Secundarias(VentaDatos v)
+    {
+        var lista = new List<AccionFila>();
+        if (Principal(v).Texto != "Ver")
+            lista.Add(new("Ver detalle", Ruta: RutaVenta(v)));
+        if (Rol == "Vendedor" && FlujoVentas.MotivoNoEditable(v) is null)
+            lista.Add(new("Editar", Ruta: $"/ventas/editar/{v.Id}?volver={Volver.Parametro(RutaActual)}"));
+        if (Rol == "Vendedor" && FlujoVentas.MotivoNoAnulable(v) is null)
+            lista.Add(new("Anular", Hacer: () => AbrirAnulacion(v), Peligro: true));
+        return lista;
+    }
 
     // ---------------- Filtrado (en la pantalla, sobre lo que ya devolvió el Java) ----------------
 
@@ -263,10 +244,6 @@ else
         {
             avisoLeido = true;
             exito = AvisoGuardado.Texto(Guardado, "la venta", Referencia);
-            if (exito is not null && Guardado == AvisoGuardado.Editado)
-            {
-                exitoDetalle = null;
-            }
         }
         if (urlPropia is not null && Nav.Uri == urlPropia)
         {
@@ -275,9 +252,6 @@ else
         filtroCliente = ClienteQ ?? 0;
         situacion = SituacionQ ?? "";
         busqueda = BusquedaQ ?? "";
-        textoElegido = busqueda;
-        clienteElegido = filtroCliente;
-        situacionElegida = situacion;
         paginaActual = Math.Max(1, PaginaQ ?? 1);
         if (ventas is null || clienteCargado != filtroCliente)
         {
@@ -316,19 +290,24 @@ else
         Nav.NavigateTo(uri, replace: true);
     }
 
-    // Filtros estándar: lo elegido en el formulario se aplica al pulsar Buscar (igual que en el resto de la aplicación)
-    private string textoElegido = "";
-    private int clienteElegido;
-    private string situacionElegida = "";
-
-    private async Task Buscar()
+    private async Task CambiarCliente(ChangeEventArgs e)
     {
-        var recargar = clienteElegido != filtroCliente;
-        busqueda = textoElegido.Trim();
-        filtroCliente = clienteElegido;
-        situacion = situacionElegida;
+        filtroCliente = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
         paginaActual = 1;
-        if (recargar) await Cargar();
+        await Cargar();
+        SincronizarUrl();
+    }
+
+    private void CambiarSituacion(string valor)
+    {
+        situacion = valor;
+        paginaActual = 1;
+        SincronizarUrl();
+    }
+
+    private void AlBuscar()
+    {
+        paginaActual = 1;
         SincronizarUrl();
     }
 
@@ -341,9 +320,9 @@ else
     private async Task Limpiar()
     {
         var recargar = filtroCliente > 0;
-        filtroCliente = clienteElegido = 0;
-        situacion = situacionElegida = "";
-        busqueda = textoElegido = "";
+        filtroCliente = 0;
+        situacion = "";
+        busqueda = "";
         paginaActual = 1;
         if (recargar) await Cargar();
         SincronizarUrl();
@@ -351,11 +330,12 @@ else
 
     // ---------------- Anular (RF008) ----------------
 
-    private void AbrirAnulacion(VentaDatos v)
+    private Task AbrirAnulacion(VentaDatos v)
     {
         error = null;
         exito = null;
         anulando = v;
+        return Task.CompletedTask;
     }
 
     // POST /api/ventas/{id}/anular {"motivo": ...}
@@ -367,7 +347,6 @@ else
         {
             await Api.Post<object>($"ventas/{anulando.Id}/anular", new AnulacionDatos { Motivo = motivo });
             exito = $"Se anuló la venta {anulando.Numero}.";
-            exitoDetalle = "El stock que tenía reservado quedó libre para otras ventas.";
             anulando = null;
             await Cargar();
         }

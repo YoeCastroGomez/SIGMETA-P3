@@ -1,0 +1,82 @@
+.acciones-fila {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+}
+
+/* mismo ancho en todas las filas */
+.principal { width: 7.75rem; }
+
+.menu-fila { position: relative; }
+
+.btn-mas {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    background: transparent;
+    color: var(--bs-body-color);
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.btn-mas:hover,
+.btn-mas[aria-expanded="true"] {
+    border-color: var(--bs-primary);
+    color: var(--bs-primary);
+}
+
+.btn-mas:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+
+.btn-mas.vacio { visibility: hidden; }
+
+.cerrar-menu {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+}
+
+.menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + .3rem);
+    z-index: 1001;
+    min-width: 10rem;
+    padding: .3rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    background: var(--bs-body-bg);
+    box-shadow: 0 .6rem 1.5rem rgba(0, 0, 0, .3);
+    text-align: left;
+    text-transform: none;   /* las celdas de las tablas van en mayúsculas (app.css); el menú no */
+}
+
+.menu.arriba {
+    top: auto;
+    bottom: calc(100% + .3rem);
+}
+
+.item {
+    display: block;
+    width: 100%;
+    padding: .45rem .7rem;
+    border: 0;
+    border-radius: calc(var(--bs-border-radius) - 2px);
+    background: none;
+    color: var(--bs-body-color);
+    font-size: .875rem;
+    text-align: left;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.item:hover,
+.item:focus-visible { background: var(--bs-secondary-bg); }
+
+.item:disabled { opacity: .6; }
+
+.item.peligro { color: var(--bs-danger-text-emphasis); }

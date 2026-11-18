@@ -1,0 +1,53 @@
+@* PATRÓN UX · Cuadro fijo del total de un documento (cotización, orden, venta, nota de crédito).
+   Solo lo necesario: estado, total, su desglose de IGV, las acciones y quién lo registró.
+   Uso:
+       <ResumenTotal Total="@total" SubTotal="@valorVenta" Igv="@igv" EstadoTexto="Registrada"
+                     Registro="Registrada por lrojas · 2026-11-17 20:29">
+           <a class="btn btn-primary" href="...">Generar orden</a>
+       </ResumenTotal>
+   Sin SubTotal o Igv no se muestra el desglose. Las acciones (ChildContent) se apilan a todo lo ancho. *@
+<div class="card card-body resumen-total">
+    <div class="cabecera">
+        <span class="etiqueta">@Etiqueta</span>
+        @if (!string.IsNullOrEmpty(EstadoTexto))
+        {
+            <Estado Texto="@EstadoTexto" />
+        }
+    </div>
+    @if (!string.IsNullOrEmpty(Numero))
+    {
+        <div class="numero">@Numero</div>
+    }
+    <div class="monto">S/ @Total.ToString("N2")</div>
+    @if (!string.IsNullOrEmpty(Detalle))
+    {
+        <div class="detalle">@Detalle</div>
+    }
+    @if (SubTotal is decimal valor && Igv is decimal igv)
+    {
+        <dl class="desglose">
+            <div><dt>Valor de venta</dt><dd>S/ @valor.ToString("N2")</dd></div>
+            <div><dt>IGV (18 %)</dt><dd>S/ @igv.ToString("N2")</dd></div>
+        </dl>
+    }
+    @if (ChildContent is not null)
+    {
+        <div class="acciones">@ChildContent</div>
+    }
+    @if (!string.IsNullOrEmpty(Registro))
+    {
+        <div class="registro">@Registro</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Etiqueta { get; set; } = "Total";
+    [Parameter] public decimal Total { get; set; }
+    [Parameter] public decimal? SubTotal { get; set; }
+    [Parameter] public decimal? Igv { get; set; }
+    [Parameter] public string? EstadoTexto { get; set; }
+    [Parameter] public string? Numero { get; set; }      // número propuesto de un documento nuevo
+    [Parameter] public string? Detalle { get; set; }     // un dato corto debajo del total (por ejemplo, el cliente)
+    [Parameter] public string? Registro { get; set; }    // "Registrada por … · fecha"
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

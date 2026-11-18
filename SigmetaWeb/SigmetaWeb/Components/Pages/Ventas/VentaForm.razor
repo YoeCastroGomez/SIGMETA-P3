@@ -25,11 +25,11 @@
 <Encabezado Rf="RF008" Titulo="@Titulo" Subtitulo="@Subtitulo">
     @if (venta is not null && !Editable)
     {
-    <a class="btn btn-outline-secondary" href="@VolverA">Volver</a>
+    <a class="btn btn-outline-secondary" href="@VolverA">← Volver</a>
     }
 </Encabezado>
 
-<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+<Notificacion Mensaje="@error" Error="true" AlCerrar="() => error = null" />
 
 @if (venta is null)
 {
@@ -41,12 +41,11 @@ else
     {
         <PasosDocumento Pasos="@FlujoVentas.PasosVenta(venta, ordenElegida)" Titulo="Recorrido de la venta" />
     }
-    @if (!Editable)
+    @* se deja solo cuando dice algo que no está en otro lugar: por qué el Vendedor ya no puede corregirla y qué hacer
+       (por ejemplo, "anule primero el comprobante"). Si está anulada, el recorrido y el total ya lo dicen. *@
+    @if (!Editable && Rol == "Vendedor" && !FlujoVentas.EstaAnulada(venta) && FlujoVentas.MotivoNoEditable(venta) is { } motivoNoEditable)
     {
-        <div class="alert alert-secondary d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <span><strong>Solo consulta.</strong> @(Rol != "Vendedor" ? "Las ventas las modifica el Vendedor." : FlujoVentas.MotivoNoEditable(venta) ?? "Esta venta ya no se puede modificar.")</span>
-            <a class="btn btn-sm btn-outline-secondary" href="@($"/ventas/{venta.Id}/comprobante")">Ir a la venta</a>
-        </div>
+        <div class="alert alert-secondary">@motivoNoEditable</div>
     }
 
     <div class="row g-3">
@@ -56,7 +55,7 @@ else
                 <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-3">
                     <h2 class="h6 fw-semibold mb-0"><span class="seccion">1</span> Origen y cliente</h2>
                     <span class="small text-muted">
-                        @(EsNuevo ? "Se registrará como" : "Venta") <strong class="text-body">@(EsNuevo ? (string.IsNullOrEmpty(numeroPropuesto) ? "…" : numeroPropuesto) : venta.Numero)</strong>
+                        N.º <strong class="text-body">@(EsNuevo ? (string.IsNullOrEmpty(numeroPropuesto) ? "…" : numeroPropuesto) : venta.Numero)</strong>
                     </span>
                 </div>
 
@@ -67,14 +66,14 @@ else
                             <button type="button" role="radio" aria-checked="@(desdeOrden ? "true" : "false")"
                                     class="opcion w-100 text-start @(desdeOrden ? "elegida" : "")" @onclick="UsarOrden">
                                 <span class="fw-semibold d-block">Desde una orden del cliente</span>
-                                <span class="small text-muted d-block">Toma los productos y precios pactados. @(ordenesAbiertas.Count) por vender.</span>
+                                <span class="small text-muted d-block">@(ordenesAbiertas.Count) por vender</span>
                             </button>
                         </div>
                         <div class="col-sm-6">
                             <button type="button" role="radio" aria-checked="@(!desdeOrden ? "true" : "false")"
                                     class="opcion w-100 text-start @(!desdeOrden ? "elegida" : "")" @onclick="UsarDirecta">
                                 <span class="fw-semibold d-block">Venta directa</span>
-                                <span class="small text-muted d-block">En mostrador: elige el cliente y agrega productos.</span>
+                                <span class="small text-muted d-block">Cliente y productos a elección</span>
                             </button>
                         </div>
                     </div>
@@ -87,7 +86,7 @@ else
                             @* Estándar RNF004: cada error sale en rojo debajo de su cuadro mientras se escribe (ValidacionEnVivo);
                                los del BO (stock insuficiente, límite de crédito...) en el aviso rojo de arriba. *@
                             <Campo Etiqueta="Orden de compra del cliente" Id="orden" Obligatorio="true" Error="@(v.Error("orden", Errores()))"
-                                   Ayuda="@(ordenesAbiertas.Count == 0 && EsNuevo ? "No hay órdenes por vender: genere una desde una cotización aceptada." : "Solo órdenes pendientes o atendidas en parte.")">
+                                   Ayuda="@(ordenesAbiertas.Count == 0 && EsNuevo ? "No hay órdenes por vender." : null)">
                                 @if (EsNuevo)
                                 {
                                     <select id="orden" class="@(v.Clase("orden", Errores(), "form-select"))" value="@venta.IdOrden" @onchange="CambiarOrden">
@@ -113,15 +112,9 @@ else
                     else
                     {
                         <div class="col-md-8">
-                            <Campo Etiqueta="Cliente" Id="cliente" Obligatorio="true" Ayuda="Solo clientes activos." Error="@(v.Error("cliente", Errores()))">
-                                <select id="cliente" class="@(v.Clase("cliente", Errores(), "form-select"))"
-                                        @bind="venta.IdCliente" @bind:after="AlCambiarCliente" disabled="@(!Editable)">
-                                    <option value="0">Seleccione…</option>
-                                    @foreach (var c in clientes)
-                                    {
-                                        <option value="@c.Id">@c.NombreMostrado · @Cliente.Texto(c.TipoDocumento) @c.NumeroDocumento</option>
-                                    }
-                                </select>
+                            <Campo Etiqueta="Cliente" Id="cliente" Obligatorio="true" Error="@(v.Error("cliente", Errores()))">
+                                <BuscadorCliente Id="cliente" Clientes="clientes" IdCliente="venta.IdCliente" IdClienteChanged="ElegirCliente"
+                                                 ClaseCaja="@(v.Clase("cliente", Errores(), "form-control"))" Deshabilitado="@(!Editable)" />
                             </Campo>
                         </div>
                     }
@@ -132,46 +125,47 @@ else
             <div class="card mb-3">
                 <div class="card-body pb-0">
                     <h2 class="h6 fw-semibold mb-1"><span class="seccion">2</span> Productos</h2>
+                    @* desde una orden se propone lo que falta entregar (se puede reducir o quitar, no aumentar) *@
                     @if (!desdeOrden && Editable)
                     {
-                        <BuscadorProducto Etiqueta="Agregar producto" Id="buscadorVenta" AlElegir="AgregarProducto" />
+                        <SelectorProducto Id="buscadorVenta" AlElegir="AgregarProducto" />
                     }
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 tabla-lineas">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 3rem;">#</th>
+                                <th class="text-muted" style="width: 2.5rem;">#</th>
                                 <th>Producto</th>
                                 @if (desdeOrden)
                                 {
                                     <th class="text-end">En la orden</th>
                                 }
-                                <th style="width: 8rem;">Cantidad</th>
-                                <th style="width: 9rem;">Precio unit. (S/)</th>
-                                <th style="width: 9rem;">Descuento (S/)</th>
-                                <th class="text-end">Importe (S/)</th>
+                                <th style="width: 9.5rem;">Cantidad</th>
+                                <th class="text-end" style="width: 7rem;">Precio unit.</th>
+                                <th style="width: 8rem;">Descuento</th>
+                                <th class="text-end">Importe</th>
                                 @if (Editable) { <th></th> }
                             </tr>
                         </thead>
                         <tbody>
                             @if (venta.Lineas.Count == 0)
                             {
-                                <tr><td colspan="8" class="text-center text-muted py-4">@(desdeOrden ? "Elija la orden del cliente: sus productos aparecen aquí." : "Agregue al menos un producto con el buscador.")</td></tr>
+                                <tr><td colspan="8" class="text-center text-muted py-4">@(desdeOrden ? "Elija la orden del cliente." : "Aún no hay productos: búsquelos arriba por nombre, código o categoría.")</td></tr>
                             }
                             @for (var i = 0; i < venta.Lineas.Count; i++)
                             {
                                 var l = venta.Lineas[i];
                                 var n = v.Clave(l);
                                 var hayStock = stock.TryGetValue(l.IdProducto, out var enAlmacen);
-                                <tr @key="l">
-                                    <td>@(i + 1)</td>
+                                <tr @key="l" class="@(Editable && AvisoLinea(l) is not null ? "con-aviso" : null)">
+                                    <td class="text-muted small">@(i + 1)</td>
                                     <td>
-                                        <span class="small text-muted">@l.CodigoProducto</span><br />@l.Producto
+                                        <div class="producto-nombre">@l.Producto</div>
                                         @if (hayStock && Editable)
                                         {
                                             <div class="small @(l.Cantidad > enAlmacen ? "text-danger fw-semibold" : "text-muted")">
-                                                En almacén: @enAlmacen.ToString("0.###")@(l.Cantidad > enAlmacen ? " · no alcanza" : "")
+                                                Stock: @enAlmacen.ToString("0.###") @l.UnidadCorta@(l.Cantidad > enAlmacen ? " · no alcanza" : "")
                                             </div>
                                         }
                                     </td>
@@ -182,39 +176,47 @@ else
                                     @if (Editable)
                                     {
                                         <td>
-                                            <input type="number" step="0.001" class="@(v.Clase(n + "cantidad", Errores(), "form-control form-control-sm text-end"))" aria-label="Cantidad"
-                                                   onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.Cantidad" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "cantidad"))" />
-                                            <ErrorCampo Mensaje="@(v.Error(n + "cantidad", Errores()))" />
+                                            @* las flechas suben y bajan de 1 en 1; kg, m y L aceptan decimales escritos *@
+                                            <div class="input-group input-group-sm cantidad">
+                                                @* el valor no válido (0, negativo, más de 3 decimales) no se deja escribir: LineaDatos.Validar *@
+                                                <input type="number" step="1" min="@l.MinimoCantidad" data-positivo="1"
+                                                       class="@(v.Clase(n + "cantidad", Errores(), "form-control text-end"))" aria-label="Cantidad"
+                                                       onkeydown="@l.TeclasCantidad" oninput="@LineaDatos.Validar" onfocusout="@LineaDatos.Restaurar"
+                                                       @bind="l.Cantidad" @bind:after="@(() => v.Tocado(n + "cantidad"))" @onblur="l.Ajustar" />
+                                                <span class="input-group-text">@l.UnidadCorta</span>
+                                            </div>
                                         </td>
-                                        @if (desdeOrden)
-                                        {
-                                            @* desde una orden el precio es el pactado en la orden *@
-                                            <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
-                                        }
-                                        else
-                                        {
-                                            <td>
-                                                <input type="number" step="0.01" class="@(v.Clase(n + "precio", Errores(), "form-control form-control-sm text-end"))" aria-label="Precio unitario"
-                                                       onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.PrecioUnitario" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "precio"))" />
-                                                <ErrorCampo Mensaje="@(v.Error(n + "precio", Errores()))" />
-                                            </td>
-                                        }
+                                        @* RF005: precio de lista (o el pactado en la orden); no se edita, el BO lo vuelve a poner *@
+                                        <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
                                         <td>
-                                            <input type="number" step="0.01" class="@(v.Clase(n + "descuento", Errores(), "form-control form-control-sm text-end", n + "cantidad", n + "precio"))" aria-label="Descuento"
-                                                   onkeydown="@ValidacionEnVivo.SoloPositivos" @bind="l.Descuento" @bind:event="oninput" @bind:after="@(() => v.Tocado(n + "descuento"))" />
-                                            <ErrorCampo Mensaje="@(v.Error(n + "descuento", Errores(), n + "cantidad", n + "precio"))" />
+                                            <div class="input-group input-group-sm descuento">
+                                                <span class="input-group-text">S/</span>
+                                                @* no se deja escribir un descuento mayor que el importe de la línea ni con más de 2 decimales *@
+                                                <input type="number" step="1" min="0" max="@l.DescuentoMaximo" data-decimales="2"
+                                                       class="@(v.Clase(n + "descuento", Errores(), "form-control text-end", n + "cantidad", n + "precio"))" aria-label="Descuento en soles"
+                                                       onkeydown="@l.TeclasDescuento" oninput="@LineaDatos.Validar" onfocusout="@LineaDatos.Restaurar"
+                                                       @bind="l.Descuento" @bind:after="@(() => v.Tocado(n + "descuento"))" @onblur="l.Ajustar" />
+                                            </div>
                                         </td>
                                         <td class="text-end fw-semibold">@l.ImporteCalculado.ToString("N2")</td>
-                                        <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" aria-label="@($"Quitar {l.Producto}")" @onclick="() => Quitar(l)">Quitar</button></td>
+                                        <td class="text-end"><button type="button" class="btn btn-sm btn-quitar" title="Quitar" aria-label="@($"Quitar {l.Producto}")" @onclick="() => Quitar(l)"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M6.5 1h3a1 1 0 0 1 1 1v1H13a.5.5 0 0 1 0 1h-.6l-.7 9.1A1.5 1.5 0 0 1 10.2 14.5H5.8a1.5 1.5 0 0 1-1.5-1.4L3.6 4H3a.5.5 0 0 1 0-1h2.5V2a1 1 0 0 1 1-1Zm0 2h3V2h-3v1ZM4.6 4l.7 9a.5.5 0 0 0 .5.5h4.4a.5.5 0 0 0 .5-.5l.7-9H4.6Zm2 1.5a.5.5 0 0 1 .5.5v5.5a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.8 0a.5.5 0 0 1 .5.5v5.5a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Z"/></svg></button></td>
                                     }
                                     else
                                     {
-                                        <td class="text-end">@l.Cantidad.ToString("0.###")</td>
+                                        <td class="text-end">@l.Cantidad.ToString("0.###") <span class="text-muted small">@l.UnidadCorta</span></td>
                                         <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
                                         <td class="text-end">@l.Descuento.ToString("N2")</td>
                                         <td class="text-end fw-semibold">@l.Importe.ToString("N2")</td>
                                     }
                                 </tr>
+                                @* los avisos de la línea van en una fila aparte, a todo lo ancho: no deforman las columnas *@
+                                @if (Editable && AvisoLinea(l) is { } aviso)
+                                {
+                                    <tr @key="(l, 1)" class="fila-aviso">
+                                        <td></td>
+                                        <td colspan="@(desdeOrden ? 7 : 6)"><span class="aviso">⚠ @aviso</span></td>
+                                    </tr>
+                                }
                             }
                         </tbody>
                     </table>
@@ -257,50 +259,47 @@ else
                     }
                     <div class="col-12">
                         <Campo Etiqueta="Observaciones" Id="observaciones" Clase="mb-0">
-                            <textarea id="observaciones" class="form-control" rows="2" maxlength="300"
-                                      @bind="venta.Observaciones" disabled="@(!Editable)"></textarea>
+                            <textarea id="observaciones" class="form-control observaciones" rows="2" maxlength="300"
+                                      placeholder="Opcional: indicaciones de entrega o de pago"
+                                      @bind="venta.Observaciones" @bind:event="oninput" disabled="@(!Editable)"></textarea>
                         </Campo>
                     </div>
                 </div>
                 @if (EsNuevo && venta.CondicionPago == "CREDITO" && ClienteActual is { } cl)
                 {
                     <div class="alert alert-light border small mt-3 mb-0">
-                        <strong>Línea de crédito del cliente:</strong> hasta S/ @cl.LimiteCredito.ToString("N2") y @cl.PlazoCreditoDias días.
+                        <strong>Línea de crédito:</strong> hasta S/ @cl.LimiteCredito.ToString("N2") a @cl.PlazoCreditoDias días.
                     </div>
                 }
             </div>
         </div>
 
-        @* -------- Resumen fijo: totales, lo que falta y Guardar -------- *@
+        @* -------- Resumen fijo: total, desglose, lo que falta y Guardar (ResumenTotal) -------- *@
         <div class="col-lg-4">
-            <div class="card card-body resumen">
-                <div class="small text-muted text-uppercase">Total</div>
-                <div class="display-6 fw-bold">S/ @Total.ToString("N2")</div>
-                <div class="d-flex justify-content-between small text-muted mt-1"><span>Subtotal</span><span>S/ @SubTotal.ToString("N2")</span></div>
-                <div class="d-flex justify-content-between small text-muted"><span>IGV (18 %)</span><span>S/ @Igv.ToString("N2")</span></div>
+            <ResumenTotal Total="@Total" SubTotal="@SubTotal" Igv="@Igv"
+                          EstadoTexto="@(EsNuevo ? null : TextosVentas.Texto(FlujoVentas.EstaAnulada(venta) ? "ANULADA" : venta.Estado))"
+                          Detalle="@(EsNuevo ? null : TextosVentas.Texto(venta.CondicionPago))">
                 @if (Editable)
                 {
-                    <div class="form-text">Referencial: el sistema recalcula los importes al guardar.</div>
-
-                    <ul class="lista-pendientes list-unstyled small my-3" aria-label="Lo que falta para guardar">
-                        @foreach (var item in Pendientes)
-                        {
-                            <li class="@(item.Listo ? "listo" : "falta")">
-                                <span class="marca" aria-hidden="true">@(item.Listo ? "✓" : "•")</span>
-                                <span>@item.Texto</span>
-                            </li>
-                        }
-                    </ul>
+                    @if (Pendientes.Any(p => !p.Listo))
+                    {
+                        <ul class="lista-pendientes list-unstyled small mb-0" aria-label="Lo que falta para guardar">
+                            @foreach (var item in Pendientes.Where(p => !p.Listo))
+                            {
+                                <li class="falta"><span class="marca" aria-hidden="true">•</span><span>@item.Texto</span></li>
+                            }
+                        </ul>
+                    }
                     <BotonCondicionado Texto="@(EsNuevo ? "Registrar venta" : "Guardar cambios")" TextoOcupado="Guardando..." Bloque="true"
                                        Clase="btn-primary w-100" Ocupado="@guardando" AlHacerClic="Guardar"
-                                       Motivo="@(Pendientes.All(p => p.Listo) ? null : "Complete lo marcado con • para guardar.")" />
-                    <a class="btn btn-outline-secondary w-100 mt-1" href="@VolverA">Cancelar</a>
-                    @if (EsNuevo)
-                    {
-                        <div class="small text-muted mt-1">Después de registrar pasará a emitir el comprobante.</div>
-                    }
+                                       Motivo="@(Pendientes.All(p => p.Listo) ? null : "Falta completar lo indicado.")" MostrarMotivo="false" />
+                    <a class="btn btn-outline-secondary w-100" href="@VolverA">Cancelar</a>
                 }
-            </div>
+                else
+                {
+                    <a class="btn btn-primary w-100" href="@($"/ventas/{venta.Id}/comprobante")">Ir a la venta</a>
+                }
+            </ResumenTotal>
         </div>
     </div>
 }
@@ -363,7 +362,6 @@ else
             {
                 new(desdeOrden ? "Orden del cliente elegida" : "Cliente elegido", !e.ContainsKey("orden") && !e.ContainsKey("cliente")),
                 new("Al menos un producto", !e.ContainsKey("lineas")),
-                new("Cantidades, precios y descuentos válidos", !e.Keys.Any(k => k.StartsWith('l') && k.Contains('.'))),
                 new("Fecha de emisión válida", !e.ContainsKey("fecha"))
             };
             if (venta?.CondicionPago == "CREDITO")
@@ -438,6 +436,12 @@ else
         AjustarCondicion();
     }
 
+    private void ElegirCliente(int id)
+    {
+        venta!.IdCliente = id;
+        AlCambiarCliente();
+    }
+
     private void AlCambiarCliente()
     {
         v.Tocado("cliente");
@@ -485,6 +489,7 @@ else
                     IdProducto = lo.IdProducto,
                     Producto = lo.Producto,
                     CodigoProducto = lo.CodigoProducto,
+                    UnidadVenta = lo.UnidadVenta,
                     Cantidad = cantidad,
                     PrecioUnitario = lo.PrecioUnitario,
                     // el descuento de la línea de la orden en proporción a la cantidad propuesta
@@ -518,6 +523,7 @@ else
             IdProducto = p.Id,
             Producto = p.Nombre,
             CodigoProducto = p.CodigoInterno,
+            UnidadVenta = p.UnidadVenta,
             Cantidad = 1,
             PrecioUnitario = p.PrecioVenta,
             Descuento = 0
@@ -525,6 +531,17 @@ else
     }
 
     private void Quitar(LineaDatos l) => venta!.Lineas.Remove(l);
+
+    // Avisos de una línea (cantidad y descuento) en una sola frase, para la fila de avisos de la tabla
+    private string? AvisoLinea(LineaDatos l)
+    {
+        var e = Errores();
+        var n = v.Clave(l);
+        var partes = new List<string>();
+        if (v.Error(n + "cantidad", e) is { } c) partes.Add("Cantidad: " + c);
+        if (v.Error(n + "descuento", e, n + "cantidad", n + "precio") is { } d) partes.Add("Descuento: " + d);
+        return partes.Count == 0 ? null : string.Join("  ·  ", partes);
+    }
 
     // ---------------- Validación en pantalla (RNF004) ----------------
     // Mismas reglas que VentaBOImpl. Lo que solo sabe el BO (stock disponible, deuda del cliente) sale en el aviso rojo.
@@ -582,6 +599,10 @@ else
         {
             var n = v.Clave(l);
             ValidacionEnVivo.ErroresLinea(e, n, l.Cantidad, l.PrecioUnitario, l.Descuento);
+            if (l.CantidadNoEntera && !e.ContainsKey(n + "cantidad"))
+            {
+                e[n + "cantidad"] = "Solo cantidades enteras.";
+            }
             // en una venta nueva desde una orden, no más de lo que falta entregar de esa línea
             if (EsNuevo && desdeOrden && !e.ContainsKey(n + "cantidad") && l.Cantidad > PendienteEnOrden(l))
             {

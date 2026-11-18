@@ -1,0 +1,47 @@
+@* PATRÓN UX · Tarjeta de filtros de una lista (separada de la tabla): buscador con lupa, filtros extra y chips de estado.
+   Uso:
+       <FiltrosLista @bind-Busqueda="busqueda" @bind-Busqueda:after="AlBuscar" Placeholder="Buscar por número o cliente"
+                     Opciones="@Chips" Estado="@filtroEstado" EstadoChanged="CambiarEstado"
+                     HayFiltros="@HayFiltros" AlLimpiar="Limpiar">
+           <select class="form-select filtro" aria-label="Cliente">...</select>   (opcional)
+       </FiltrosLista> *@
+<div class="card filtros-lista mb-3">
+    <div class="barra">
+        <div class="buscar">
+            <svg class="lupa" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <input type="search" class="form-control" maxlength="80" autocomplete="off" aria-label="Buscar"
+                   placeholder="@Placeholder" value="@Busqueda" @oninput="CambiarBusqueda" />
+        </div>
+        @ChildContent
+        @if (HayFiltros && AlLimpiar.HasDelegate)
+        {
+            <button type="button" class="btn btn-link btn-sm text-decoration-none" @onclick="AlLimpiar">Quitar filtros</button>
+        }
+    </div>
+    @if (Opciones.Count > 0)
+    {
+        <div class="estados">
+            <ChipsFiltro Opciones="@Opciones" Seleccionado="@Estado" SeleccionadoChanged="EstadoChanged" Etiqueta="@EtiquetaChips" />
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Busqueda { get; set; } = "";
+    [Parameter] public EventCallback<string> BusquedaChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Buscar";
+    [Parameter] public IReadOnlyList<OpcionChip> Opciones { get; set; } = Array.Empty<OpcionChip>();
+    [Parameter] public string Estado { get; set; } = "";
+    [Parameter] public EventCallback<string> EstadoChanged { get; set; }
+    [Parameter] public string EtiquetaChips { get; set; } = "Filtrar por estado";
+    [Parameter] public bool HayFiltros { get; set; }
+    [Parameter] public EventCallback AlLimpiar { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private async Task CambiarBusqueda(ChangeEventArgs e)
+    {
+        Busqueda = e.Value?.ToString() ?? "";
+        await BusquedaChanged.InvokeAsync(Busqueda);
+    }
+}

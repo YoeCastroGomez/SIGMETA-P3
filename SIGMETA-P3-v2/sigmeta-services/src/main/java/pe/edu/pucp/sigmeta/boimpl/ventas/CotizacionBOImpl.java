@@ -35,7 +35,6 @@ import java.util.Set;
 
 public class CotizacionBOImpl implements CotizacionBO {
 
-    private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
 
     private final CotizacionDAO cotizacionDAO;
     private final DetalleCotizacionDAO detalleCotizacionDAO;
@@ -288,15 +287,20 @@ public class CotizacionBOImpl implements CotizacionBO {
                 throw new IllegalArgumentException("El producto " + detalle.getProducto().getId()
                         + " no existe o está desactivado");
             }
+            // RF005: el precio de lista lo fija el Administrador. Se cotiza siempre al precio de venta vigente del
+            // producto, no al que mande la pantalla; el Vendedor solo ajusta con descuento.
+            detalle.setPrecioUnitario(producto.getPrecioVenta());
+            UnidadesVenta.validarCantidad(producto, detalle.getCantidad(), detalle.getNumeroLinea());
             // RF005: no se cotiza por debajo del costo (precio efectivo = precio unitario menos el descuento
             // repartido por unidad). Una venta bajo el costo solo sale con autorizacion (ver VentaBOImpl)
             if (detalle.getCantidad() > 0) {
                 double efectivo = (detalle.getCantidad() * detalle.getPrecioUnitario() - detalle.getDescuento())
                         / detalle.getCantidad();
-                if (efectivo + 0.00005 < producto.getCostoUnitario()) {
+                // el precio incluye IGV y el costo no: se comparan ambos sin IGV (PreciosIgv)
+                if (PreciosIgv.sinIgv(efectivo) + 0.00005 < producto.getCostoUnitario()) {
                     throw new IllegalArgumentException(String.format(java.util.Locale.ROOT,
-                            "La línea %d (%s) queda en S/ %.2f por unidad, por debajo de su costo (S/ %.2f). Reduzca el descuento",
-                            detalle.getNumeroLinea(), producto.getNombre(), efectivo, producto.getCostoUnitario()));
+                            "La línea %d (%s) queda en S/ %.2f por unidad sin IGV, por debajo de su costo (S/ %.2f). Reduzca el descuento",
+                            detalle.getNumeroLinea(), producto.getNombre(), PreciosIgv.sinIgv(efectivo), producto.getCostoUnitario()));
                 }
             }
         }
@@ -332,7 +336,8 @@ public class CotizacionBOImpl implements CotizacionBO {
         }
     }
 
-    // RF007: subtotal, IGV y total se calculan aqui; no se confia en los que manda la interfaz
+    // RF007: valor de venta, IGV y total se calculan aqui (precios con IGV incluido, ver PreciosIgv);
+    // no se confia en los que manda la interfaz
     private void calcularTotales(Cotizacion cotizacion) {
         BigDecimal subTotal = BigDecimal.ZERO;
         for (DetalleCotizacion detalle : cotizacion.getDetalles()) {
@@ -347,10 +352,11 @@ public class CotizacionBOImpl implements CotizacionBO {
             detalle.setImporte(importe.doubleValue());
             subTotal = subTotal.add(importe);
         }
-        BigDecimal igv = subTotal.multiply(TASA_IGV).setScale(2, RoundingMode.HALF_UP);
-        cotizacion.setSubTotal(subTotal.doubleValue());
-        cotizacion.setIgv(igv.doubleValue());
-        cotizacion.setTotal(subTotal.add(igv).doubleValue());
+        // los precios incluyen IGV: el total es la suma de los importes y se desglosa en valor de venta + IGV
+        BigDecimal total = subTotal;
+        cotizacion.setSubTotal(PreciosIgv.valorVenta(total).doubleValue());
+        cotizacion.setIgv(PreciosIgv.igv(total).doubleValue());
+        cotizacion.setTotal(total.doubleValue());
     }
 
     private void validarCabecera(Cotizacion cotizacion) {

@@ -1,0 +1,76 @@
+/* Botón de categoría (izquierda del buscador): se ve como un botón, con embudo, nombre y flecha.
+   Con una categoría elegida se resalta, para que se note que la lista está filtrada. */
+.btn-categoria {
+    flex: 0 0 auto;
+    max-width: 15rem;
+    padding-inline: .8rem;
+    font-size: .9rem;
+    font-weight: 500;
+    color: var(--bs-body-color);
+    background-color: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+}
+.btn-categoria:hover,
+.btn-categoria:focus-visible {
+    border-color: var(--bs-primary);
+    color: var(--bs-primary);
+}
+.btn-categoria.activa {
+    color: var(--bs-primary);
+    font-weight: 600;
+    border-color: rgba(var(--bs-primary-rgb), .6);
+    background-color: rgba(var(--bs-primary-rgb), .12);
+}
+.btn-categoria .flecha { opacity: .7; }
+
+/* Menú de categorías debajo del botón */
+.menu-categorias {
+    left: 0;
+    z-index: 1060;
+    min-width: 16rem;
+    max-height: 22rem;
+    overflow-y: auto;
+}
+.cantidad-categoria {
+    background-color: var(--bs-secondary-bg);
+    color: var(--bs-secondary-color);
+    font-weight: 600;
+}
+.menu-categorias .active .cantidad-categoria {
+    background-color: rgba(255, 255, 255, .25);
+    color: inherit;
+}
+
+/* Lista de productos encima del resto del formulario */
+.sugerencias {
+    z-index: 1050;
+    max-height: 24rem;
+    overflow-y: auto;
+}
+
+/* Cabecera fija mientras se desplaza la lista */
+.cabecera {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--bs-tertiary-bg);
+    color: var(--bs-secondary-color);
+}
+
+.opcion {
+    padding-top: .55rem;
+    padding-bottom: .55rem;
+}
+
+.opcion .detalle {
+    color: var(--bs-secondary-color);
+}
+
+.opcion.active .detalle {
+    color: inherit;
+    opacity: .8;
+}
+
+@media (max-width: 575.98px) {
+    .btn-categoria { max-width: 9rem; }
+}

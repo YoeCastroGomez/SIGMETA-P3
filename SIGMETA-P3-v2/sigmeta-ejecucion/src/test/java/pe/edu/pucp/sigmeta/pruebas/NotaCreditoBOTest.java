@@ -98,11 +98,11 @@ class NotaCreditoBOTest {
         return nota;
     }
 
-    /** Lo que deberia devolver la nota: importe de la linea (con descuento) por unidad devuelta, mas IGV. */
+    /** Lo que deberia devolver la nota: importe de la linea (con descuento) por unidad devuelta; ya incluye IGV. */
     private double totalEsperado(double cantidad) {
         BigDecimal sub = BigDecimal.valueOf(linea.getImporte()).multiply(BigDecimal.valueOf(cantidad))
                 .divide(BigDecimal.valueOf(linea.getCantidad()), 2, RoundingMode.HALF_UP);
-        return sub.add(sub.multiply(IGV).setScale(2, RoundingMode.HALF_UP)).doubleValue();
+        return sub.doubleValue();   // el importe cobrado ya incluye IGV
     }
 
     // ------------------------------------------------------------------ autorizacion (RF014)
@@ -168,7 +168,7 @@ class NotaCreditoBOTest {
 
         Comprobante nota = emitir(2);
 
-        assertEquals(totalEsperado(2), nota.getTotal(), CENTAVO, "precio cobrado por unidad devuelta, mas IGV");
+        assertEquals(totalEsperado(2), nota.getTotal(), CENTAVO, "precio cobrado por unidad devuelta (con IGV incluido)");
         assertTrue(nota.getTotal() <= factura.getTotal(), "nunca supera el comprobante de origen");
         assertTrue(nota.getSerie().equals("FC01"), "una nota sobre factura usa la serie FC01");
         assertEquals(stockAntes + 2, stockFisico(producto.getId()), 0.001, "las 2 unidades vuelven al almacen");

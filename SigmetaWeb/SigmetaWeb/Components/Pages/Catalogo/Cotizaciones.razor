@@ -9,91 +9,94 @@
 <PageTitle>Cotizaciones · SIGMETA</PageTitle>
 
 @* RF007 · Lista de cotizaciones. PATRÓN UX de listas (ver Shared/ComponentesFlujo.cs):
-     - Chips por estado con su cantidad. El filtro cliente + estado lo hace el BO (CotizacionBO.buscar):
-       cada chip pide GET /api/cotizaciones?cliente=&estado= al Java (filtro combinado del RF007).
-     - Búsqueda rápida por número, cliente o documento sobre lo que devolvió el Java.
-     - Una acción principal por fila según el estado del ciclo: Enviar -> Aceptar -> Generar orden.
-     - Las acciones que no se deshacen piden confirmación (Rechazar) o motivo (Anular) y dicen qué pasa.
+     - <FiltrosLista>: tarjeta propia, separada de la lista: búsqueda, cliente y chips por estado con su cantidad.
+       El filtro cliente + estado lo hace el BO (CotizacionBO.buscar): GET /api/cotizaciones?cliente=&estado=
+     - <AccionesFila>: un botón principal del mismo ancho (el siguiente paso del ciclo) y el menú «⋯» con lo demás.
+     - «Enviar» abre la cotización como documento (CotizacionEnviar.razor): se imprime o guarda en PDF y se marca enviada.
+     - El resultado de cada acción sale en una <Notificacion> flotante: no mueve la tabla.
      - Filtros y página quedan en la dirección: al volver de una cotización la lista está igual.
    Datos reales del Java:
    - GET  /api/cotizaciones (?cliente=ID y/o ?estado=ESTADO)    buscar(cliente, estado) del BO; ANULADA trae las anuladas
    - POST /api/cotizaciones/{id}/enviar | aceptar | rechazar     ciclo REGISTRADA -> ENVIADA -> ACEPTADA o RECHAZADA
    - POST /api/cotizaciones/{id}/anular {"motivo": ...}          anulación lógica con motivo (Vendedor o Administrador)
    - GET  /api/ordenes                                           (Vendedor) qué cotizaciones aceptadas ya tienen orden *@
-<Encabezado Rf="RF007" Titulo="Cotizaciones"
-            Subtitulo="Cotizaciones emitidas a los clientes. Importes en soles.">
+<Encabezado Rf="RF007" Titulo="Cotizaciones">
     @if (EsVendedor)
     {
         <a class="btn btn-primary" href="@($"/cotizaciones/nueva?volver={Volver.Parametro(RutaActual)}")">+ Nueva cotización</a>
     }
 </Encabezado>
 
-<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-<SiguientePaso Mensaje="@exito" Detalle="@exitoDetalle" TextoAccion="@exitoAccion" Ruta="@exitoRuta" AlCerrar="CerrarAviso" />
+<Notificacion Mensaje="@aviso" Error="@avisoError" TextoAccion="@avisoAccion" Ruta="@avisoRuta" AlCerrar="CerrarAviso" />
 
-<ModalMotivo Visible="@(anulando is not null)" Titulo="@($"Anular la cotización {anulando?.Numero}")" TextoConfirmar="Anular cotización"
+<ModalMotivo Visible="@(anulando is not null)" Titulo="@($"Anular {anulando?.Numero}")" TextoConfirmar="Anular"
              Ocupado="@trabajando" Maximo="255" Ejemplo="Ejemplo: el cliente ya no requiere los productos."
              AlConfirmar="ConfirmarAnulacion" AlCancelar="() => anulando = null">
-    <p class="mb-2">La cotización <strong>@anulando?.Numero</strong> de @anulando?.Cliente:</p>
-    <ul class="small mb-0">
-        <li>Deja de valer: ya no se podrá enviar, aceptar ni convertir en orden.</li>
-        <li>Se conserva con su motivo; aparece en el filtro «Anuladas».</li>
-    </ul>
+    <p class="mb-0 text-muted">Ya no se podrá enviar, aceptar ni convertir en orden.</p>
 </ModalMotivo>
 
-<Confirmacion Visible="@(rechazando is not null)" Titulo="@($"Registrar rechazo de {rechazando?.Numero}")"
-              TextoConfirmar="El cliente la rechazó" AlConfirmar="ConfirmarRechazo" AlCancelar="() => rechazando = null">
-    <p class="mb-0">La cotización quedará <strong>rechazada</strong> y no se podrá aceptar después. Si el cliente pide otra propuesta,
-        registre una cotización nueva.</p>
-</Confirmacion>
-
-<div class="card card-body mb-3">
-    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
-        <Campo Etiqueta="Número o documento" Id="fTexto" Clase="col-sm-6 col-md-3">
-            <input id="fTexto" class="form-control" maxlength="80" @bind="textoElegido" />
-        </Campo>
-        <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md">
-            <select id="fCliente" class="form-select" @bind="clienteElegido">
-                <option value="0">Todos</option>
-                @foreach (var c in clientes)
-                {
-                    <option value="@c.Id">@c.NombreMostrado · @c.NumeroDocumento</option>
-                }
-            </select>
-        </Campo>
-        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-3">
-            <select id="fEstado" class="form-select" @bind="estadoElegido">
-                @foreach (var o in Chips)
-                {
-                    <option value="@o.Valor">@o.Texto</option>
-                }
-            </select>
-        </Campo>
-        <div class="col-auto d-flex gap-2">
-            <button type="submit" class="btn btn-dark">Buscar</button>
-            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
+@* Respuesta del cliente a una cotización enviada: Aceptó o Rechazó en una sola ventana *@
+@if (respondiendo is not null)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="tituloRespuesta">
+        <div class="modal-dialog modal-dialog-centered respuesta">
+            <div class="modal-content">
+                <div class="modal-body p-4">
+                    <div class="d-flex justify-content-between align-items-start gap-3">
+                        <div>
+                            <h2 class="h5 fw-bold mb-1" id="tituloRespuesta">Respuesta del cliente</h2>
+                            <div class="text-muted small">@respondiendo.Numero · @respondiendo.Cliente</div>
+                        </div>
+                        <button type="button" class="btn-close" aria-label="Cerrar" @onclick="() => respondiendo = null"></button>
+                    </div>
+                    <div class="monto-respuesta">S/ @respondiendo.Total.ToString("N2")</div>
+                    <div class="opciones-respuesta">
+                        <button type="button" class="opcion acepto" disabled="@trabajando" @onclick="Aceptar">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                            Aceptó
+                        </button>
+                        <button type="button" class="opcion rechazo" disabled="@trabajando" @onclick="Rechazar">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                            Rechazó
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-    </form>
-</div>
-
-@if (cotizaciones is null)
-{
-    <p class="text-muted">Cargando cotizaciones...</p>
+    </div>
 }
-else
-{
-    var filtradas = Filtradas;
-    <div class="card mb-3">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+
+<FiltrosLista @bind-Busqueda="busqueda" @bind-Busqueda:after="AlBuscar" Placeholder="Buscar por número, cliente o RUC/DNI"
+              Opciones="@Chips" Estado="@filtroEstado" EstadoChanged="CambiarEstado" HayFiltros="@HayFiltros" AlLimpiar="Limpiar">
+    <select class="form-select filtro" aria-label="Filtrar por cliente" value="@filtroCliente" @onchange="CambiarCliente">
+        <option value="0">Todos los clientes</option>
+        @foreach (var c in clientes)
+        {
+            <option value="@c.Id">@c.NombreMostrado</option>
+        }
+    </select>
+</FiltrosLista>
+
+<div class="card mb-3">
+    @if (cotizaciones is null)
+    {
+        <p class="text-muted p-3 mb-0">Cargando cotizaciones...</p>
+    }
+    else
+    {
+        var filtradas = Filtradas;
+        var pagina = Pagina(filtradas).ToList();
+        <div class="table-responsive tabla-lista-contenedor">
+            <table class="table table-hover align-middle mb-0 tabla-lista">
+                <thead>
                     <tr>
                         <th>Cotización</th>
                         <th>Cliente</th>
                         <th>Vigencia</th>
                         <th class="text-end">Total (S/)</th>
                         <th>Estado</th>
-                        <th class="text-end">Acciones</th>
+                        <th><span class="visually-hidden">Acciones</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -103,8 +106,7 @@ else
                             <td colspan="6">
                                 @if (HayFiltros)
                                 {
-                                    <ListaVacia Titulo="Ninguna cotización coincide con los filtros." Detalle="Pruebe con otro estado, cliente o texto."
-                                                AlQuitarFiltros="Limpiar" />
+                                    <ListaVacia Titulo="Ninguna cotización coincide con los filtros." AlQuitarFiltros="Limpiar" />
                                 }
                                 else
                                 {
@@ -114,20 +116,23 @@ else
                             </td>
                         </tr>
                     }
-                    @foreach (var c in Pagina(filtradas))
+                    @for (var i = 0; i < pagina.Count; i++)
                     {
+                        var c = pagina[i];
                         var dias = DiasParaVencer(c);
+                        // en las últimas filas el menú se abre hacia arriba para no salirse de la tabla
+                        var haciaArriba = pagina.Count > 3 && i >= pagina.Count - 2;
                         <tr @key="c.Id">
                             <td>
-                                <a class="fw-semibold text-decoration-none" href="@RutaCotizacion(c)">@c.Numero</a>
-                                <div class="small text-muted">Emitida el @TextosVentas.Fecha(c.FechaEmision)</div>
+                                <a class="numero" href="@RutaCotizacion(c)">@c.Numero</a>
+                                <div class="sub">@TextosVentas.Fecha(c.FechaEmision)</div>
                             </td>
-                            <td>@c.Cliente<div class="small text-muted">@c.DocumentoCliente</div></td>
+                            <td>@c.Cliente</td>
                             <td class="text-nowrap">
                                 @TextosVentas.Fecha(c.FechaVigencia)
                                 @if (dias is int d)
                                 {
-                                    <div class="small @(d <= 1 ? "text-danger fw-semibold" : "text-warning-emphasis")">
+                                    <div class="sub vence @(d <= 1 ? "urgente" : "")">
                                         @(d == 0 ? "Vence hoy" : d == 1 ? "Vence mañana" : $"Vence en {d} días")
                                     </div>
                                 }
@@ -137,35 +142,11 @@ else
                                 <Estado Texto="@TextosVentas.Texto(c.Estado)" />
                                 @if (c.Estado == "ACEPTADA" && conOrden.TryGetValue(c.Id, out var numOrden))
                                 {
-                                    <div class="small text-muted mt-1">Orden @numOrden</div>
+                                    <div class="sub">@numOrden</div>
                                 }
                             </td>
-                            <td class="text-end">
-                                <div class="d-inline-flex align-items-center justify-content-end gap-1 text-nowrap">
-                                    @if (EsVendedor && c.Estado == "REGISTRADA")
-                                    {
-                                        <button type="button" class="btn btn-sm btn-primary" disabled="@trabajando" @onclick="() => Enviar(c)">Enviar</button>
-                                        <a class="btn btn-sm btn-outline-secondary" href="@RutaCotizacion(c)">Editar</a>
-                                    }
-                                    else if (EsVendedor && c.Estado == "ENVIADA")
-                                    {
-                                        <button type="button" class="btn btn-sm btn-primary" disabled="@trabajando" @onclick="() => Aceptar(c)">Aceptó</button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@trabajando" @onclick="() => rechazando = c">Rechazó</button>
-                                    }
-                                    else if (EsVendedor && c.Estado == "ACEPTADA" && !conOrden.ContainsKey(c.Id))
-                                    {
-                                        @* RF007: la orden de compra del cliente sale de una cotización aceptada; una sola orden activa *@
-                                        <a class="btn btn-sm btn-primary" href="@($"/ordenes/nueva?cotizacion={c.Id}")">Generar orden</a>
-                                    }
-                                    else
-                                    {
-                                        <a class="btn btn-sm btn-outline-secondary" href="@RutaCotizacion(c)">Ver</a>
-                                    }
-                                    @if ((EsVendedor || Rol == "Administrador") && c.Estado is "REGISTRADA" or "ENVIADA" or "RECHAZADA" or "VENCIDA")
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => AbrirAnulacion(c)">Anular</button>
-                                    }
-                                </div>
+                            <td class="acciones">
+                                <AccionesFila Principal="@Principal(c)" Otras="@Secundarias(c)" Ocupado="@trabajando" HaciaArriba="@haciaArriba" AlElegir="Ejecutar" />
                             </td>
                         </tr>
                     }
@@ -174,12 +155,13 @@ else
         </div>
         <Paginacion TotalRegistros="@filtradas.Count" PaginaActual="@paginaActual" PaginaActualChanged="CambiarPagina"
                     @bind-TamanoPagina="tamanoPagina" />
-    </div>
-}
+    }
+</div>
 
 @code {
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
     private bool EsVendedor => Rol == "Vendedor";
+    private bool PuedeAnular => EsVendedor || Rol == "Administrador";
 
     // Filtros en la dirección: /cotizaciones?cliente=3&estado=ENVIADA&q=acme&pagina=2
     [SupplyParameterFromQuery(Name = "cliente")] public int? ClienteQ { get; set; }
@@ -203,18 +185,20 @@ else
     private string? urlPropia;
     private (int Cliente, string Estado)? cargado;
 
-    private string? error;
-    private string? exito;
-    private string? exitoDetalle;
-    private string? exitoAccion;
-    private string? exitoRuta;
+    // Notificación flotante (éxito o error)
+    private string? aviso;
+    private bool avisoError;
+    private string? avisoAccion;
+    private string? avisoRuta;
     private bool avisoLeido;
+
     private bool trabajando;
     private CotizacionDatos? anulando;
-    private CotizacionDatos? rechazando;
+    private CotizacionDatos? respondiendo;
 
     private string RutaActual => "/" + Nav.ToBaseRelativePath(Nav.Uri);
     private string RutaCotizacion(CotizacionDatos c) => $"/cotizaciones/editar/{c.Id}?volver={Volver.Parametro(RutaActual)}";
+    private string RutaDocumento(CotizacionDatos c) => $"/cotizaciones/{c.Id}/enviar?volver={Volver.Parametro(RutaActual)}";
     private bool HayFiltros => filtroCliente > 0 || filtroEstado != "" || !string.IsNullOrWhiteSpace(busqueda);
     private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.Today);
 
@@ -223,6 +207,39 @@ else
         c.Estado is "REGISTRADA" or "ENVIADA" && c.FechaVigencia is DateOnly f && f >= Hoy && f.DayNumber - Hoy.DayNumber <= 3
             ? f.DayNumber - Hoy.DayNumber
             : null;
+
+    // Botón principal: el siguiente paso del ciclo; si no hay, "Ver"
+    private AccionFila Principal(CotizacionDatos c)
+    {
+        if (EsVendedor && c.Estado == "REGISTRADA")
+            return new("Enviar", Ruta: RutaDocumento(c));   // documento para imprimir o PDF + marcar enviada
+        if (EsVendedor && c.Estado == "ENVIADA")
+            return new("Respuesta", Hacer: () => AbrirRespuesta(c));
+        // RF007: la orden de compra del cliente sale de una cotización aceptada; una sola orden activa
+        if (EsVendedor && c.Estado == "ACEPTADA" && !conOrden.ContainsKey(c.Id))
+            return new("Generar orden", Ruta: $"/ordenes/nueva?cotizacion={c.Id}");
+        return new("Ver", Ruta: RutaCotizacion(c), Destacada: false);
+    }
+
+    // Lo llama AccionesFila: la acción corre en esta pantalla para que se redibuje (ventanas de respuesta y anular)
+    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
+
+    // Menú «⋯»: lo que no es el siguiente paso
+    private List<AccionFila> Secundarias(CotizacionDatos c)
+    {
+        var lista = new List<AccionFila>();
+        var principal = Principal(c);
+        if (EsVendedor && c.Estado == "REGISTRADA")
+            lista.Add(new("Editar", Ruta: RutaCotizacion(c)));
+        else if (principal.Texto != "Ver")
+            lista.Add(new("Ver detalle", Ruta: RutaCotizacion(c)));
+        // volver a imprimirla o guardarla en PDF (las registradas lo hacen desde «Enviar»)
+        if (c.Estado is "ENVIADA" or "ACEPTADA" or "RECHAZADA" or "VENCIDA")
+            lista.Add(new("Imprimir o PDF", Ruta: RutaDocumento(c)));
+        if (PuedeAnular && c.Estado is "REGISTRADA" or "ENVIADA" or "RECHAZADA" or "VENCIDA")
+            lista.Add(new("Anular", Hacer: () => AbrirAnulacion(c), Peligro: true));
+        return lista;
+    }
 
     private List<CotizacionDatos> Filtradas => (cotizaciones ?? new())
         .Where(c => Busqueda.Coincide(busqueda, c.Numero, c.Cliente, c.DocumentoCliente))
@@ -264,7 +281,7 @@ else
         }
         catch (ErrorApi e)
         {
-            error = e.Message;
+            MostrarError(e.Message);
         }
     }
 
@@ -273,11 +290,8 @@ else
         if (!avisoLeido)
         {
             avisoLeido = true;
-            exito = AvisoGuardado.Texto(Guardado, "la cotización", Referencia);
-            if (exito is not null && Guardado is AvisoGuardado.Nuevo or AvisoGuardado.Editado)
-            {
-                exitoDetalle = null;
-            }
+            var texto = AvisoGuardado.Texto(Guardado, "la cotización", Referencia);
+            if (texto is not null) MostrarExito(texto);
         }
         if (urlPropia is not null && Nav.Uri == urlPropia)
         {
@@ -286,7 +300,6 @@ else
         filtroCliente = ClienteQ ?? 0;
         filtroEstado = EstadoQ ?? "";
         busqueda = BusquedaQ ?? "";
-        CopiarFiltrosAlFormulario();
         paginaActual = Math.Max(1, PaginaQ ?? 1);
         await Cargar();
     }
@@ -317,7 +330,7 @@ else
         }
         catch (ErrorApi e)
         {
-            error = e.Message;
+            MostrarError(e.Message);
             cotizaciones ??= new();
         }
     }
@@ -338,25 +351,25 @@ else
         Nav.NavigateTo(uri, replace: true);
     }
 
-    // Filtros estándar: lo elegido en el formulario se aplica al pulsar Buscar (igual que en el resto de la aplicación)
-    private string textoElegido = "";
-    private int clienteElegido;
-    private string estadoElegido = "";
-
-    private void CopiarFiltrosAlFormulario()
+    private async Task CambiarCliente(ChangeEventArgs e)
     {
-        textoElegido = busqueda;
-        clienteElegido = filtroCliente;
-        estadoElegido = filtroEstado;
-    }
-
-    private async Task Buscar()
-    {
-        busqueda = textoElegido.Trim();
-        filtroCliente = clienteElegido;
-        filtroEstado = estadoElegido;
+        filtroCliente = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
         paginaActual = 1;
         await Cargar();
+        SincronizarUrl();
+    }
+
+    private async Task CambiarEstado(string estado)
+    {
+        filtroEstado = estado;
+        paginaActual = 1;
+        await Cargar();
+        SincronizarUrl();
+    }
+
+    private void AlBuscar()
+    {
+        paginaActual = 1;
         SincronizarUrl();
     }
 
@@ -371,52 +384,62 @@ else
         filtroCliente = 0;
         filtroEstado = "";
         busqueda = "";
-        CopiarFiltrosAlFormulario();
         paginaActual = 1;
         await Cargar();
         SincronizarUrl();
     }
 
-    private void CerrarAviso()
+    // ---------------- Notificación (patrón RNF004: "Se + verbo + la cotización + número.") ----------------
+
+    private void MostrarExito(string texto, string? accion = null, string? ruta = null)
     {
-        exito = exitoDetalle = exitoAccion = exitoRuta = null;
+        aviso = texto;
+        avisoError = false;
+        avisoAccion = accion;
+        avisoRuta = ruta;
     }
+
+    private void MostrarError(string texto) => (aviso, avisoError, avisoAccion, avisoRuta) = (texto, true, null, null);
+
+    private void CerrarAviso() => (aviso, avisoError, avisoAccion, avisoRuta) = (null, false, null, null);
 
     // ---------------- Ciclo de la cotización ----------------
 
-    private Task Enviar(CotizacionDatos c) => Accion(c, "enviar", $"La cotización {c.Numero} quedó enviada.",
-        null);
-
-    private Task Aceptar(CotizacionDatos c) => Accion(c, "aceptar", $"La cotización {c.Numero} quedó aceptada.",
-        null,
-        "Generar orden", $"/ordenes/nueva?cotizacion={c.Id}");
-
-    private async Task ConfirmarRechazo()
+    private Task AbrirRespuesta(CotizacionDatos c)
     {
-        var c = rechazando;
-        rechazando = null;
-        if (c is null) return;
-        await Accion(c, "rechazar", $"La cotización {c.Numero} quedó rechazada.", null);
+        CerrarAviso();
+        respondiendo = c;
+        return Task.CompletedTask;
     }
 
-    // POST /api/cotizaciones/{id}/enviar | aceptar | rechazar
-    private async Task Accion(CotizacionDatos c, string accion, string mensaje, string? detalle, string? textoAccion = null, string? ruta = null)
+    private async Task Aceptar()
     {
-        error = null;
+        if (respondiendo is not { } c) return;
+        await Accion(c, "aceptar", $"Se aceptó la cotización {c.Numero}.", "Generar orden", $"/ordenes/nueva?cotizacion={c.Id}");
+        respondiendo = null;
+    }
+
+    private async Task Rechazar()
+    {
+        if (respondiendo is not { } c) return;
+        await Accion(c, "rechazar", $"Se rechazó la cotización {c.Numero}.");
+        respondiendo = null;
+    }
+
+    // POST /api/cotizaciones/{id}/aceptar | rechazar  (enviar se hace desde CotizacionEnviar.razor)
+    private async Task Accion(CotizacionDatos c, string accion, string mensaje, string? textoAccion = null, string? ruta = null)
+    {
         CerrarAviso();
         trabajando = true;
         try
         {
             await Api.Post<CotizacionDatos>($"cotizaciones/{c.Id}/{accion}", null);
-            exito = mensaje;
-            exitoDetalle = detalle;
-            exitoAccion = textoAccion;
-            exitoRuta = ruta;
+            MostrarExito(mensaje, textoAccion, ruta);
             await Cargar(forzar: true);
         }
         catch (ErrorApi e)
         {
-            error = e.Message;   // por ejemplo "La cotización venció el 2026-11-10"
+            MostrarError(e.Message);   // por ejemplo "La cotización venció el 2026-11-10"
         }
         finally
         {
@@ -424,11 +447,11 @@ else
         }
     }
 
-    private void AbrirAnulacion(CotizacionDatos c)
+    private Task AbrirAnulacion(CotizacionDatos c)
     {
-        error = null;
         CerrarAviso();
         anulando = c;
+        return Task.CompletedTask;
     }
 
     // POST /api/cotizaciones/{id}/anular {"motivo": ...}
@@ -439,15 +462,14 @@ else
         try
         {
             await Api.Post<object>($"cotizaciones/{anulando.Id}/anular", new AnulacionDatos { Motivo = motivo });
-            exito = $"Se anuló la cotización {anulando.Numero}.";
-            exitoDetalle = null;
+            MostrarExito($"Se anuló la cotización {anulando.Numero}.");
             anulando = null;
             await Cargar(forzar: true);
         }
         catch (ErrorApi e)
         {
             anulando = null;
-            error = e.Message;   // por ejemplo "No se puede anular una cotización aceptada"
+            MostrarError(e.Message);   // por ejemplo "No se puede anular una cotización aceptada"
         }
         finally
         {

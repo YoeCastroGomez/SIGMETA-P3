@@ -46,7 +46,6 @@ import java.util.Set;
 
 public class VentaBOImpl implements VentaBO {
 
-    private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
     // RF008: una venta se registra con la fecha del dia o, como mucho, con algunos dias de atraso (venta tomada
     // fuera del sistema). Nunca a futuro ni con mas atraso: la cuenta por cobrar naceria vencida y el comprobante,
     // que se emite con la fecha de hoy, no coincidiria con la venta.
@@ -121,6 +120,7 @@ public class VentaBOImpl implements VentaBO {
                 venta.setOrdenCompraCliente(oc);
             }
             enlazarLineasOrden(venta);
+            fijarPreciosYCantidades(venta.getDetalles());
 
             // Validar existencia de productos y stock disponible (RF008)
             verificarProductosYStock(venta.getDetalles(), 0);
@@ -235,6 +235,7 @@ public class VentaBOImpl implements VentaBO {
                 throw new IllegalStateException("No se puede cambiar el cliente de una venta al crédito con cuenta por cobrar generada");
             }
             enlazarLineasOrden(venta);
+            fijarPreciosYCantidades(venta.getDetalles());
 
             verificarProductosYStock(venta.getDetalles(), venta.getId());
             calcularTotales(venta);
@@ -358,6 +359,23 @@ public class VentaBOImpl implements VentaBO {
         }
     }
 
+    // RF005: el precio de lista lo fija el Administrador; la pantalla no decide el precio. Una linea que atiende una
+    // orden del cliente se vende al precio de esa orden (el de la cotizacion aceptada); las demas, al precio de venta
+    // vigente del producto. El Vendedor solo ajusta con descuento (ver verificarPrecios). Se llama despues de
+    // enlazarLineasOrden. Tambien exige cantidades enteras en los productos que se venden por unidad.
+    private void fijarPreciosYCantidades(List<DetalleVenta> detalles) throws SQLException {
+        for (DetalleVenta d : detalles) {
+            Producto producto = productoDAO.load(d.getProducto().getId());
+            if (producto == null || !producto.isEstado()) {
+                throw new IllegalArgumentException("El producto no existe o está inactivo: " + d.getProducto().getId());
+            }
+            UnidadesVenta.validarCantidad(producto, d.getCantidad(), d.getNumeroLinea());
+            d.setPrecioUnitario(d.getDetalleOrdenCompraCliente() != null
+                    ? d.getDetalleOrdenCompraCliente().getPrecioUnitario()
+                    : producto.getPrecioVenta());
+        }
+    }
+
     // RF008: se vende contra el stock DISPONIBLE = stock fisico - stock comprometido, donde el comprometido es
     // lo ya vendido y todavia no despachado en otras ventas vigentes. Asi dos ventas no prometen las mismas
     // unidades. idVentaExcluida: la venta que se esta modificando (0 al registrar).
@@ -396,11 +414,13 @@ public class VentaBOImpl implements VentaBO {
         String lineaBajoCosto = null;
         for (DetalleVenta d : detalles) {
             Producto producto = productoDAO.load(d.getProducto().getId());
+            // el precio incluye IGV y el costo no: se comparan ambos sin IGV (PreciosIgv)
             BigDecimal efectivo = BigDecimal.valueOf(d.getImporte())
-                    .divide(BigDecimal.valueOf(d.getCantidad()), 4, RoundingMode.HALF_UP);
+                    .divide(BigDecimal.valueOf(d.getCantidad()), 4, RoundingMode.HALF_UP)
+                    .divide(PreciosIgv.FACTOR, 4, RoundingMode.HALF_UP);
             if (efectivo.compareTo(BigDecimal.valueOf(producto.getCostoUnitario())) < 0) {
                 lineaBajoCosto = String.format(java.util.Locale.ROOT,
-                        "La línea %d (%s) queda en S/ %.2f por unidad, por debajo de su costo (S/ %.2f)",
+                        "La línea %d (%s) queda en S/ %.2f por unidad sin IGV, por debajo de su costo (S/ %.2f)",
                         d.getNumeroLinea(), producto.getNombre(), efectivo.doubleValue(), producto.getCostoUnitario());
                 break;
             }
@@ -431,10 +451,11 @@ public class VentaBOImpl implements VentaBO {
             d.setImporte(importe.doubleValue());
             subTotal = subTotal.add(importe);
         }
-        BigDecimal igv = subTotal.multiply(TASA_IGV).setScale(2, RoundingMode.HALF_UP);
-        venta.setSubTotal(subTotal.doubleValue());
-        venta.setIgv(igv.doubleValue());
-        venta.setTotal(subTotal.add(igv).doubleValue());
+        // los precios incluyen IGV: el total es la suma de los importes y se desglosa en valor de venta + IGV
+        BigDecimal total = subTotal;
+        venta.setSubTotal(PreciosIgv.valorVenta(total).doubleValue());
+        venta.setIgv(PreciosIgv.igv(total).doubleValue());
+        venta.setTotal(total.doubleValue());
     }
 
     private void guardarDetalles(Venta venta) throws SQLException {

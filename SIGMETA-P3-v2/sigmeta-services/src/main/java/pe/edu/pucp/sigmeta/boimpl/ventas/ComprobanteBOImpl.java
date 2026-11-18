@@ -56,7 +56,6 @@ import java.util.Set;
 
 public class ComprobanteBOImpl implements ComprobanteBO {
 
-    private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
 
     // RF013: tipo de la nota de credito segun el catalogo 09 de SUNAT. En SIGMETA toda nota es por devolucion de
     // mercaderia, asi que el tipo se deduce (no lo elige el usuario y no puede quedar mal):
@@ -256,8 +255,10 @@ public class ComprobanteBOImpl implements ComprobanteBO {
                 subTotalNC = subTotalNC.add(importe);
             }
 
-            BigDecimal igvNC = subTotalNC.multiply(TASA_IGV).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal totalNC = subTotalNC.add(igvNC);
+            // los importes ya incluyen IGV (precio cobrado): el total de la nota es su suma y el IGV se desglosa
+            BigDecimal totalNC = subTotalNC;
+            BigDecimal igvNC = PreciosIgv.igv(totalNC);
+            subTotalNC = PreciosIgv.valorVenta(totalNC);
 
             if (totalNC.doubleValue() > origen.getTotal() + 0.01) {
                 throw new IllegalArgumentException("El monto total de la nota de crédito no puede superar el total del comprobante origen");

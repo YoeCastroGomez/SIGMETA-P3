@@ -94,15 +94,14 @@ class VentaBOTest {
     // ------------------------------------------------------------------ H03 piso de costo promedio
 
     @Test
-    @DisplayName("H03: rechaza un precio por debajo del costo sin autorizacion")
-    void rechazaPrecioBajoCostoSinAutorizacion() throws Exception {
-        sinAutorizaciones(VENDEDOR, DESCUENTO);
+    @DisplayName("H03: el precio lo pone el sistema (precio de lista), no la pantalla")
+    void ignoraElPrecioQueMandaLaPantalla() throws Exception {
         Producto p = productoConDisponible(1);
         Cliente cliente = empresaNueva();
 
-        IllegalStateException e = assertThrows(IllegalStateException.class,
-                () -> registrar(venta(cliente, p, 1, p.getCostoUnitario() - 1, false)));
-        assertTrue(e.getMessage().contains("por debajo de su costo"), e.getMessage());
+        // la pantalla manda otro precio (5 soles mas): el BO lo reemplaza por el precio de lista
+        Venta v = registrar(venta(cliente, p, 1, p.getPrecioVenta() + 5, false));
+        assertEquals(p.getPrecioVenta(), v.getDetalles().get(0).getPrecioUnitario(), CENTAVO, "precio de lista");
     }
 
     @Test
@@ -181,8 +180,8 @@ class VentaBOTest {
     void creditoNoSuperaElLimite() throws Exception {
         Producto p = productoConDisponible(12);
         double precio = p.getPrecioVenta();
-        double diezUnidades = round2(precio * 10 * 1.18);
-        Cliente cliente = empresaConCredito(diezUnidades + 1);   // alcanza para 10 unidades con IGV
+        double diezUnidades = round2(precio * 10);                 // los precios ya incluyen IGV
+        Cliente cliente = empresaConCredito(diezUnidades + 1);   // alcanza para 10 unidades
 
         Venta seis = registrar(venta(cliente, p, 6, precio, true));
         assertEquals(seis.getTotal(), saldoCuenta(seis.getId()), CENTAVO, "la venta al credito genera su cuenta por cobrar");

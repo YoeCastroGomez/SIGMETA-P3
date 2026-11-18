@@ -11,6 +11,7 @@ public static class AvisoGuardado
     public const string Editado = "editado";
     public const string Anulado = "anulado";
     public const string Desactivado = "desactivado";
+    public const string Enviado = "enviado";   // RF007: la cotización se marcó como enviada al cliente
 
     // "/proveedores" + "nuevo" + "Aceros del Perú S.A." -> "/proveedores?guardado=nuevo&ref=Aceros%20del%20Per%C3%BA%20S.A."
     public static string Ruta(string ruta, string accion, string? referencia)
@@ -19,7 +20,7 @@ public static class AvisoGuardado
         return string.IsNullOrWhiteSpace(referencia) ? destino : $"{destino}&ref={Uri.EscapeDataString(referencia.Trim())}";
     }
 
-    // Devuelve null si la página no llegó desde un formulario (o si el parámetro no es uno de los cuatro).
+    // Devuelve null si la página no llegó desde un formulario (o si el parámetro no es uno de los conocidos).
     // "que" lleva su artículo: "el proveedor", "la cotización".
     public static string? Texto(string? accion, string que, string? referencia)
     {
@@ -29,6 +30,7 @@ public static class AvisoGuardado
             Editado => "Se modificó",
             Anulado => "Se anuló",
             Desactivado => "Se desactivó",
+            Enviado => "Se envió",
             _ => null
         };
         if (verbo is null) return null;

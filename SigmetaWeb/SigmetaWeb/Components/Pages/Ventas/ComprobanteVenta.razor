@@ -46,7 +46,7 @@
 </style>
 
 <Encabezado Rf="RF008" Titulo="@Titulo" Subtitulo="@Subtitulo">
-    <a class="btn btn-outline-secondary" href="@VolverA">Volver a ventas</a>
+    <a class="btn btn-outline-secondary" href="@VolverA">← Volver a ventas</a>
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
@@ -257,6 +257,14 @@ else if (venta is not null)
                     <dt class="col-5 fw-normal text-muted">Estado</dt>
                     <dd class="col-7 mb-1"><Estado Texto="@TextosVentas.Texto(venta.Estado)" /></dd>
                 </dl>
+                <div class="siguiente-paso mt-3">
+                    <div class="small text-muted text-uppercase">Siguiente paso</div>
+                    <div class="fw-semibold">@Siguiente.Que</div>
+                    @if (Siguiente.Quien is not null)
+                    {
+                        <div class="small">Le toca: <strong>@Siguiente.Quien</strong></div>
+                    }
+                </div>
             </div>
         </div>
     </div>
@@ -398,12 +406,12 @@ else if (venta is not null)
             if (Nueva)
             {
                 avisoNuevaMostrado = true;
-                Avisar($"Se registró la venta {venta.Numero}.", null);
+                Avisar($"Se registró la venta {venta.Numero}.", "Siguiente: emitir su factura o boleta aquí mismo.");
             }
             else if (AvisoGuardado.Texto(Guardado, "la venta", Referencia) is { } editada)
             {
                 avisoNuevaMostrado = true;
-                Avisar(editada, null);
+                Avisar(editada, "Siguiente: emitir su factura o boleta aquí mismo.");
             }
         }
     }
@@ -483,7 +491,10 @@ else if (venta is not null)
             var emitido = await Api.Post<ComprobanteDatos>("comprobantes",
                 new ComprobanteDatos { IdVenta = Id, Tipo = esFactura ? "FACTURA" : "BOLETA" });
             await Cargar();
-            Avisar($"Se emitió la {TextosVentas.Texto(emitido?.Tipo).ToLowerInvariant()} {emitido?.Comprobante}.", null,
+            var despues = venta?.CondicionPago == "CONTADO"
+                ? "Siguiente: entréguelo al cliente. Luego le toca al Cajero cobrar la venta en caja."
+                : "Siguiente: entréguelo al cliente. Luego el Almacenero despacha la mercadería.";
+            Avisar($"Se emitió la {TextosVentas.Texto(emitido?.Tipo).ToLowerInvariant()} {emitido?.Comprobante}.", despues,
                 "Imprimir o guardar PDF", imprimir: true);
         }
         catch (ErrorApi e)
@@ -547,7 +558,7 @@ else if (venta is not null)
             await Api.Post<ComprobanteDatos>($"comprobantes/{comprobante.Id}/envio",
                 new ComprobanteDatos { MedioEnvio = "IMPRESO" });
             await Cargar();
-            Avisar("Se registró la entrega en formato imprimible.", null);
+            Avisar("Se registró la entrega en formato imprimible.", Siguiente.Quien is null ? null : $"Siguiente: {Siguiente.Que.ToLowerInvariant()} ({Siguiente.Quien}).");
         }
         catch (ErrorApi e)
         {
@@ -587,7 +598,7 @@ else if (venta is not null)
                 new ComprobanteDatos { MedioEnvio = medioEnvio });
             await Cargar();
             Avisar($"Se registró el envío por {TextosVentas.Texto(medioEnvio).ToLowerInvariant()}.",
-                null);
+                Siguiente.Quien is null ? null : $"Siguiente: {Siguiente.Que.ToLowerInvariant()} ({Siguiente.Quien}).");
         }
         catch (ErrorApi e)
         {

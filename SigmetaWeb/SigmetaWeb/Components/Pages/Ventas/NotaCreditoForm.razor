@@ -16,12 +16,11 @@
    GET /api/solicitudes/vigente?operacion=EMITIR_NOTA_CREDITO · GET /api/solicitudes/mias · GET /api/notas-credito/comprobantes
    · GET /api/notas-credito/comprobantes/{id}/lineas · POST /api/notas-credito.
    Los importes de esta pantalla son una vista previa: el Java los vuelve a calcular. *@
-<Encabezado Rf="RF013" Titulo="Nueva nota de crédito"
-            Subtitulo="Nota de crédito sobre una factura o boleta.">
-
+<Encabezado Rf="RF013" Titulo="Nueva nota de crédito">
+    <a class="btn btn-outline-secondary" href="/notas-credito">← Volver</a>
 </Encabezado>
 
-<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+<Notificacion Mensaje="@error" Error="true" AlCerrar="() => error = null" />
 
 @if (!cargado)
 {
@@ -35,25 +34,23 @@ else
     @if (autorizacion is not null)
     {
         <div class="alert alert-success d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <span>Autorización vigente hasta las <strong>@Formato.FechaHora(autorizacion.FechaVencimiento)</strong>, aprobada por @autorizacion.Administrador.
-                Se usará en esta nota (sirve para una sola).</span>
+            <span>Autorización vigente hasta las <strong>@Formato.FechaHora(autorizacion.FechaVencimiento)</strong> · @autorizacion.Administrador</span>
         </div>
     }
     else if (solicitudPendiente)
     {
         <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <span>Su solicitud de autorización está <strong>pendiente</strong>. Cuando el Administrador la apruebe, pulse «Actualizar».</span>
+            <span>Autorización <strong>pendiente</strong> de aprobación.</span>
             <div class="d-flex gap-2">
                 <button type="button" class="btn btn-sm btn-dark" disabled="@consultando" @onclick="ConsultarAutorizacion">@(consultando ? "Consultando..." : "Actualizar")</button>
-                <a class="btn btn-sm btn-outline-secondary" href="/autorizaciones/mias">Mis solicitudes</a>
+                <a class="btn btn-sm btn-outline-dark" href="/autorizaciones/mias">Mis solicitudes</a>
             </div>
         </div>
     }
     else
     {
         <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <span>Para emitir una nota de crédito necesita una <strong>autorización vigente del Administrador</strong>. Cada autorización sirve para una nota.
-                Puede preparar la devolución mientras tanto.</span>
+            <span>Necesita la <strong>autorización del Administrador</strong> (una por nota).</span>
             <a class="btn btn-sm btn-dark" href="@($"/autorizaciones/nueva?operacion={TextosSeguridad.OperacionNotaCredito}&volver={Uri.EscapeDataString(RutaActual)}")">Solicitar autorización</a>
         </div>
     }
@@ -64,7 +61,7 @@ else
             <div class="card card-body mb-3">
                 <div class="row">
                     <Campo Etiqueta="Comprobante de origen" Id="comprobante" Obligatorio="true" Error="@E("comprobante")" Clase="col-md-7 mb-3"
-                           Ayuda="@(comprobantes.Count == 0 ? "No hay facturas ni boletas con mercadería entregada." : "Facturas y boletas vigentes que ya tienen mercadería entregada.")">
+                           Ayuda="@(comprobantes.Count == 0 ? "No hay facturas ni boletas con mercadería entregada." : null)">
                         <select id="comprobante" class="form-select @Invalido("comprobante")" @bind="idComprobante" @bind:after="AlElegirComprobante">
                             <option value="0">Elija el comprobante</option>
                             @foreach (var c in comprobantes)
@@ -114,7 +111,7 @@ else
                                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="DevolverTodo">Devolver todo lo entregado</button>
                                 @if (lineas.Any(l => l.Devolver > 0))
                                 {
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="LimpiarCantidades">Poner en 0</button>
+                                    <button type="button" class="btn btn-sm btn-link" @onclick="LimpiarCantidades">Poner en 0</button>
                                 }
                             </div>
                         }
@@ -170,52 +167,34 @@ else
 
         @* -------- 3. Resumen fijo: qué pasará y Registrar -------- *@
         <div class="col-lg-4">
-            <div class="card card-body resumen">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="small text-muted text-uppercase">Total de la nota</div>
-                    @if (Total > 0)
-                    {
-                        @* RF013: tipo de nota (catálogo 09 SUNAT), mismo criterio que ComprobanteBOImpl.tipoNotaCredito *@
-                        <span class="badge rounded-pill border @Tonos.Clase("azul")">@NotaCreditoDatos.TextoTipo(TipoNota)</span>
-                    }
-                </div>
-                <div class="display-6 fw-bold">@Formato.Soles(Total)</div>
-                <div class="d-flex justify-content-between small text-muted mt-1"><span>Subtotal</span><span>@Formato.Soles(SubTotal)</span></div>
-                <div class="d-flex justify-content-between small text-muted"><span>IGV (18 %)</span><span>@Formato.Soles(Igv)</span></div>
-
+            @* RF013: tipo de nota (catálogo 09 SUNAT), mismo criterio que ComprobanteBOImpl.tipoNotaCredito *@
+            <ResumenTotal Etiqueta="Total de la nota" Total="@((decimal)Total)" SubTotal="@((decimal)SubTotal)" Igv="@((decimal)Igv)"
+                          Detalle="@(Total > 0 ? NotaCreditoDatos.TextoTipo(TipoNota) : null)">
                 @if (Origen is not null && Total > 0)
                 {
-                    <div class="mt-3">
-                        <div class="small text-muted text-uppercase mb-1">Qué pasará al registrar</div>
-                        <ul class="small ps-3 mb-0">
-                            <li>La mercadería devuelta <strong>reingresa al stock</strong>.</li>
-                            @if (Origen.CondicionPago == "CREDITO")
-                            {
-                                <li>Al crédito: <strong>baja la deuda</strong> del cliente en @Formato.Soles(Total). Lo que pase de su saldo se le devuelve en efectivo desde su caja abierta.</li>
-                            }
-                            else
-                            {
-                                <li>Al contado: si ya se cobró, sale un <strong>egreso de @Formato.Soles(Total)</strong> de su caja abierta, por el mismo medio del cobro.</li>
-                            }
-                            <li>La autorización queda usada.</li>
-                        </ul>
-                    </div>
+                    @* qué pasará al registrar: mueve stock y dinero, por eso se dice antes *@
+                    <ul class="small text-muted ps-3 mb-0">
+                        <li>Reingresa al stock.</li>
+                        <li>@(Origen.CondicionPago == "CREDITO" ? "Baja la deuda del cliente." : "Si ya se cobró, sale un egreso de su caja.")</li>
+                    </ul>
                 }
-
-                <ul class="lista-pendientes list-unstyled small my-3" aria-label="Lo que falta para registrar">
-                    @foreach (var item in Pendientes)
-                    {
-                        <li class="@(item.Listo ? "listo" : "falta")">
-                            <span class="marca" aria-hidden="true">@(item.Listo ? "✓" : "•")</span>
-                            <span>@item.Texto</span>
-                        </li>
-                    }
-                </ul>
+                @if (Pendientes.Any(p => !p.Listo))
+                {
+                    <ul class="lista-pendientes list-unstyled small mb-0" aria-label="Lo que falta para registrar">
+                        @foreach (var item in Pendientes.Where(p => !p.Listo))
+                        {
+                            <li class="falta">
+                                <span class="marca" aria-hidden="true">•</span>
+                                <span>@item.Texto</span>
+                            </li>
+                        }
+                    </ul>
+                }
                 <BotonCondicionado Texto="Registrar nota de crédito" TextoOcupado="Registrando..." Bloque="true" Clase="btn-primary w-100"
                                    Ocupado="@guardando" AlHacerClic="Guardar"
-                                   Motivo="@(Pendientes.All(p => p.Listo) ? null : "Complete lo marcado con • para registrar.")" />
-                <a class="btn btn-outline-secondary w-100 mt-1" href="/notas-credito">Cancelar</a>
-            </div>
+                                   Motivo="@(Pendientes.All(p => p.Listo) ? null : "Falta completar lo indicado.")" MostrarMotivo="false" />
+                <a class="btn btn-outline-secondary w-100" href="/notas-credito">Cancelar</a>
+            </ResumenTotal>
         </div>
     </div>
 }
@@ -242,9 +221,10 @@ else
 
     private string RutaActual => "/" + Nav.ToBaseRelativePath(Nav.Uri);
     private ComprobanteParaNota? Origen => comprobantes.FirstOrDefault(c => c.Id == idComprobante);
-    private double SubTotal => Math.Round(lineas.Where(l => l.Devolver > 0).Sum(l => l.ImporteDevolucion), 2);
-    private double Igv => Math.Round(SubTotal * TasaIgv, 2, MidpointRounding.AwayFromZero);
-    private double Total => Math.Round(SubTotal + Igv, 2);
+    // el importe devuelto ya incluye IGV (precio cobrado): el total es su suma y el IGV se desglosa, igual que el BO
+    private double Total => Math.Round(lineas.Where(l => l.Devolver > 0).Sum(l => l.ImporteDevolucion), 2);
+    private double SubTotal => Math.Round(Total / (1 + TasaIgv), 2, MidpointRounding.AwayFromZero);
+    private double Igv => Math.Round(Total - SubTotal, 2);
     private string TipoNota => Origen is not null && Math.Abs(Total - Origen.Total) <= 0.01 ? "DEVOLUCION_TOTAL" : "DEVOLUCION_POR_ITEM";
 
     private bool CantidadesValidas => lineas.Any(l => l.Devolver > 0) && lineas.All(l => Problema(l) is null);

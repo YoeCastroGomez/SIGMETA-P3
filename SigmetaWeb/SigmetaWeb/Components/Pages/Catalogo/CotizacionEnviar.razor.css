@@ -1,0 +1,110 @@
+/* Documento: se ve como la hoja que recibe el cliente, en blanco también en modo oscuro */
+.cot-doc {
+    max-width: 52rem;
+    margin: 0 auto 2rem;
+    padding: 2.5rem 2.75rem;
+    border-radius: .5rem;
+    background: #fff;
+    color: #1f2328;
+    box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, .35);
+    font-size: .92rem;
+    line-height: 1.45;
+}
+
+.doc-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 2px solid #1f2328;
+}
+
+.empresa { font-size: 1.45rem; font-weight: 700; letter-spacing: .02em; }
+
+.tenue { color: #5f6670; font-size: .85em; }
+
+.recuadro {
+    min-width: 13rem;
+    padding: .6rem 1rem;
+    border: 2px solid #1f2328;
+    border-radius: .35rem;
+    text-align: center;
+}
+
+.recuadro .tipo { font-size: .8em; font-weight: 700; letter-spacing: .12em; }
+.recuadro .numero { font-size: 1.25rem; font-weight: 700; }
+
+.doc-datos {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: .55rem 2rem;
+    padding: 1.25rem 0;
+}
+
+.etiqueta {
+    display: block;
+    color: #5f6670;
+    font-size: .75em;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.doc-lineas {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.25rem;
+}
+
+.doc-lineas th {
+    padding: .5rem .6rem;
+    background: #f0f1f3;
+    border-bottom: 1px solid #c9ccd1;
+    font-size: .78em;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    text-align: left;
+}
+
+.doc-lineas td {
+    padding: .55rem .6rem;
+    border-bottom: 1px solid #e3e5e8;
+    vertical-align: top;
+}
+
+.col-n { width: 2.5rem; color: #5f6670; }
+.der { text-align: right !important; }
+.nowrap { white-space: nowrap; }
+
+.doc-pie {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+}
+
+.notas { flex: 1 1 auto; }
+
+.doc-totales {
+    flex: 0 0 16rem;
+    border-collapse: collapse;
+}
+
+.doc-totales td { padding: .3rem 0; }
+.doc-totales td.der { padding-left: 1.5rem; white-space: nowrap; }
+
+.doc-totales .total td {
+    padding-top: .55rem;
+    border-top: 2px solid #1f2328;
+    font-size: 1.1em;
+    font-weight: 700;
+}
+
+@media (max-width: 576px) {
+    .cot-doc { padding: 1.5rem 1.25rem; }
+    .doc-cabecera, .doc-pie { flex-direction: column; }
+    .doc-datos { grid-template-columns: 1fr; }
+    .doc-totales { flex-basis: auto; width: 100%; }
+}
