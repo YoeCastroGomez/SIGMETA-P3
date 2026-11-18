@@ -7,10 +7,18 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.sql.Date;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import pe.edu.pucp.sigmeta.dao.cobranza.CuentaPorCobrarDAO;
 import pe.edu.pucp.sigmeta.model.cobranza.CuentaPorCobrar;
+import pe.edu.pucp.sigmeta.model.cobranza.ResumenCuentasPorCobrar;
+import pe.edu.pucp.sigmeta.model.enums.EstadoComprobante;
+import pe.edu.pucp.sigmeta.model.enums.TipoComprobante;
+import pe.edu.pucp.sigmeta.model.ventas.Comprobante;
 import pe.edu.pucp.sigmeta.model.socio.Cliente;
 import pe.edu.pucp.sigmeta.model.ventas.Venta;
 import pe.edu.pucp.sigmeta.model.enums.EstadoCuentaPorCobrar;
@@ -210,5 +218,89 @@ public class CuentaPorCobrarDAOImpl implements CuentaPorCobrarDAO {
             }
         }
         return lista;
+    }
+
+    @Override
+    public List<CuentaPorCobrar> buscarPorComprobante(String texto) throws SQLException {
+        List<CuentaPorCobrar> lista = new ArrayList<>();
+        String sql = "{call sp_cuenta_por_cobrar_buscar_por_comprobante(?)}";
+        Connection con = transactionContext.getConnection();
+        try (CallableStatement cs = con.prepareCall(sql)) {
+            cs.setString(1, texto);
+            try (ResultSet rs = cs.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(mapearCuentaPorCobrar(rs));
+                }
+            }
+        }
+        return lista;
+    }
+
+    @Override
+    public List<CuentaPorCobrar> buscarPorRangoFechas(java.time.LocalDate fechaInicio, java.time.LocalDate fechaFin,
+                                                      boolean porVencimiento) throws SQLException {
+        List<CuentaPorCobrar> lista = new ArrayList<>();
+        String sql = "{call sp_cuenta_por_cobrar_buscar_por_fechas(?, ?, ?)}";
+        Connection con = transactionContext.getConnection();
+        try (CallableStatement cs = con.prepareCall(sql)) {
+            cs.setDate(1, Date.valueOf(fechaInicio));
+            cs.setDate(2, Date.valueOf(fechaFin));
+            cs.setBoolean(3, porVencimiento);
+            try (ResultSet rs = cs.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(mapearCuentaPorCobrar(rs));
+                }
+            }
+        }
+        return lista;
+    }
+
+    @Override
+    public ResumenCuentasPorCobrar obtenerResumen() throws SQLException {
+        ResumenCuentasPorCobrar resumen = new ResumenCuentasPorCobrar();
+        String sql = "{call sp_cuenta_por_cobrar_resumen()}";
+        Connection con = transactionContext.getConnection();
+        try (CallableStatement cs = con.prepareCall(sql);
+             ResultSet rs = cs.executeQuery()) {
+            if (rs.next()) {
+                resumen.setTotalSaldoPendiente(rs.getDouble("total_saldo_pendiente"));
+                resumen.setTotalSaldoVencido(rs.getDouble("total_saldo_vencido"));
+                resumen.setCuentasConSaldo(rs.getInt("cuentas_con_saldo"));
+                resumen.setCuentasVencidas(rs.getInt("cuentas_vencidas"));
+            }
+        }
+        return resumen;
+    }
+
+    @Override
+    public Map<Integer, List<Comprobante>> listarComprobantesVigentes(Collection<Integer> idsVenta) throws SQLException {
+        Map<Integer, List<Comprobante>> porVenta = new HashMap<>();
+        if (idsVenta != null && idsVenta.isEmpty()) {
+            return porVenta;
+        }
+        String sql = "{call sp_cuenta_por_cobrar_comprobantes_vigentes(?)}";
+        Connection con = transactionContext.getConnection();
+        try (CallableStatement cs = con.prepareCall(sql)) {
+            if (idsVenta == null) {
+                cs.setNull(1, Types.LONGVARCHAR);
+            } else {
+                cs.setString(1, idsVenta.stream().map(String::valueOf).collect(Collectors.joining(",")));
+            }
+            try (ResultSet rs = cs.executeQuery()) {
+                while (rs.next()) {
+                    Comprobante c = new Comprobante();
+                    c.setId(rs.getInt("comprobante_id"));
+                    c.setTipo(TipoComprobante.valueOf(rs.getString("tipo")));
+                    c.setSerie(rs.getString("serie"));
+                    c.setNumero(rs.getString("numero"));
+                    c.setEstado(EstadoComprobante.valueOf(rs.getString("estado")));
+                    Venta venta = new Venta();
+                    venta.setId(rs.getInt("venta_id"));
+                    c.setVenta(venta);
+                    porVenta.computeIfAbsent(venta.getId(), k -> new ArrayList<>()).add(c);
+                }
+            }
+        }
+        return porVenta;
     }
 }

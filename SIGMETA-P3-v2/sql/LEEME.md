@@ -46,6 +46,8 @@ En MySQL 8, quitar antes `ONLY_FULL_GROUP_BY` del `sql_mode` (ver el `README.md`
 | `06_migracion_textos_legibles.sql` | Nombres y descripciones de categorías y productos en mayúscula normal y con tildes ("Látex y esmaltes"); tildes de proveedores, clientes y usuarios de los datos demo. Va **después** de la 05 |
 | `07_migracion_unicidad_cotizacion.sql` | Agrega `UNIQUE(numero)` en cotizaciones (H09). Re-ejecutable: si hay números repetidos, los muestra y no cambia nada |
 | `08_actualizar_base_lab12.sql` | Solo lo nuevo del Lab 12 para la base compartida, sin recargar todo: UNIQUE de cotizaciones, comprobantes y órdenes; procedimientos nuevos de ventas y cotizaciones; reactivar productos y clientes. Re-ejecutable. Después, reiniciar GlassFish |
+| `09_migracion_indices_caja_cobranza.sql` | Índices de caja, cobranza y reportes (H10, Adriano). Solo agrega índices; se puede correr más de una vez |
+| `10_actualizar_base_adriano_h10.sql` | Solo lo nuevo de Adriano para la base compartida, sin recargar todo: los 7 procedimientos de búsqueda de caja y cobranza (H10) y sus índices (lo mismo que la 09). Re-ejecutable; al final lista los 7 procedimientos |
 
 Nota H09: `04_SP_sebastian.sql` termina con un bloque que agrega, si todavía no están, `UNIQUE(serie, numero)` en comprobantes, `UNIQUE(numero)` en órdenes de compra de clientes y el correlativo `OCC`. No hace falta una migración aparte: basta con recargar los procedimientos como siempre.
 

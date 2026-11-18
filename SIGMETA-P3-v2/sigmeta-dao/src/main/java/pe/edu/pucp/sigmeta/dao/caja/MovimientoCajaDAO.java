@@ -13,4 +13,6 @@ public interface MovimientoCajaDAO extends BaseDAO<MovimientoCaja, Integer> {
     Map<MedioPago, Double> obtenerTotalesPorMedioPago(int idCaja) throws SQLException;
     List<MovimientoCaja> buscarPorRangoFechas(int idCaja, LocalDateTime inicio, LocalDateTime fin) throws SQLException;
     List<MovimientoCaja> listarTodosConDetalle() throws SQLException;
+    // H10: movimientos de un documento (VENTA, COBRO, NOTA_CREDITO...), filtrados en la base
+    List<MovimientoCaja> buscarPorDocumento(String documentoOrigen, int idDocumentoOrigen) throws SQLException;
 }

@@ -75,7 +75,7 @@ porque esos dos archivos no tienen `USE sigmeta;`.
 En vez de `sql/1_base/sigmeta.sql` se pueden correr los de `sql/1_base/por_modulo/` (00 a 06) en orden.
 Una opcion o la otra, no las dos.
 
-Para revisar que quedo bien: 29 tablas y 233 procedimientos en el schema `sigmeta` (203 de los archivos 01 a 06 y 30 del 07).
+Para revisar que quedo bien: 29 tablas y 246 procedimientos en el schema `sigmeta` (215 de los archivos 01 a 06 y 32 del 07; el 07 reemplaza uno que ya existia).
 
 Los archivos `sql/5_pruebas/sql_prueba_*.sql` son consultas para probar a mano los procedimientos de cada integrante.
 
@@ -127,6 +127,19 @@ El `Main` corre 13 pruebas, todas a traves de la capa de negocio. Tiene que term
 | 13 | Busqueda de notas de credito por origen, cliente y fecha (RF013) |
 
 Las pruebas insertan datos en la base. Correrlas solo en la base del curso o en una de prueba.
+
+### Pruebas JUnit 5
+
+Estan en `sigmeta-ejecucion/src/test/java/pe/edu/pucp/sigmeta/pruebas`. `mvn test` corre siempre las que no usan
+la base; las de integracion escriben datos y solo corren con `-Dsigmeta.integracion=true` sobre una base local:
+
+```sh
+mvn -pl sigmeta-ejecucion -am test -Dsigmeta.integracion=true -Dsigmeta.db.host=localhost
+```
+
+Caja y cobranza (Adriano, H14): `CierreCajaBOTest` (RF010: monto calculado, diferencia, compensaciones, solo el
+Administrador reabre o corrige), `CobroBOTest` (RF009: saldo, ingreso en caja, anulacion, validaciones y permisos)
+y `CobranzaCalculosTest` (sin base). Dejan los saldos como estaban y se pueden correr varias veces.
 
 ## 4. Reportes en PDF (RF015)
 

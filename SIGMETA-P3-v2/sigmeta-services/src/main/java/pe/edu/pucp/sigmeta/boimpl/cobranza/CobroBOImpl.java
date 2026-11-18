@@ -4,7 +4,6 @@ import pe.edu.pucp.sigmeta.boimpl.Transaccion;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
 import pe.edu.pucp.sigmeta.bo.cobranza.CobroBO;
 import pe.edu.pucp.sigmeta.bo.usuario.UsuarioBO;
 import pe.edu.pucp.sigmeta.boimpl.Validador;
@@ -127,8 +126,8 @@ public class CobroBOImpl implements CobroBO {
             if (actual.isAnulado()) {
                 throw new IllegalStateException("El cobro " + actual.getId() + " ya está anulado");
             }
-            MovimientoCaja ingreso = movimientoCajaDAO.listarTodosConDetalle().stream()
-                    .filter(m -> DOCUMENTO_COBRO.equals(m.getDocumentoOrigen()) && m.getIdDocumentoOrigen() == actual.getId())
+            // H10: el ingreso del cobro se busca en la base por su documento de origen
+            MovimientoCaja ingreso = movimientoCajaDAO.buscarPorDocumento(DOCUMENTO_COBRO, actual.getId()).stream()
                     .findFirst().orElse(null);
             if (ingreso != null) {
                 Caja caja = cajaDAO.load(ingreso.getCaja().getId());
@@ -188,7 +187,7 @@ public class CobroBOImpl implements CobroBO {
         });
     }
 
-    // RF009: busqueda de cobros por rango de fechas de cobro. Se filtra aqui en el BO.
+    // RF009: busqueda de cobros por rango de fechas de cobro. H10: filtra la base (sp_cobro_buscar_por_fechas).
     @Override
     public List<Cobro> buscarPorRangoFechas(LocalDate fechaInicio, LocalDate fechaFin) throws SQLException {
         Validador.obligatorio(fechaInicio, "fecha de inicio");
@@ -197,10 +196,7 @@ public class CobroBOImpl implements CobroBO {
             throw new IllegalArgumentException("La fecha de inicio no puede ser posterior a la fecha de fin");
         }
         return Transaccion.ejecutar(() -> {
-            return cobroDAO.listarTodos().stream()
-                    .filter(c -> c.getFechaCobro() != null
-                            && !c.getFechaCobro().isBefore(fechaInicio) && !c.getFechaCobro().isAfter(fechaFin))
-                    .collect(Collectors.toList());
+            return cobroDAO.buscarPorRangoFechas(fechaInicio, fechaFin);
         });
     }
 
