@@ -19,6 +19,15 @@
     <div class="alert alert-success">@exito</div>
 }
 
+<Confirmacion Visible="@(porDesactivar is not null)"
+              Titulo="Desactivar proveedor"
+              TextoConfirmar="Desactivar"
+              AlConfirmar="ConfirmarDesactivar"
+              AlCancelar="() => porDesactivar = null">
+    <p class="mb-2">¿Seguro que desea desactivar al proveedor <strong>@porDesactivar?.RazonSocial</strong>?</p>
+    <p class="small text-muted mb-0">El proveedor conservará su historial, pero no podrá elegirse en compras nuevas.</p>
+</Confirmacion>
+
 <div class="card card-body mb-3">
     <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
         <Campo Etiqueta="RUC" Id="fRuc" Clase="col-sm-6 col-md-3">
@@ -78,18 +87,8 @@ else
                                         <a class="btn btn-sm btn-outline-secondary" href="@($"/proveedores/editar/{p.Id}")">Editar</a>
                                         @if (p.Estado)
                                         {
-                                            @if (confirmarId == p.Id)
-                                            {
-                                                <button type="button" class="btn btn-sm btn-danger" disabled="@cargando"
-                                                        @onclick="() => Desactivar(p)">Confirmar baja</button>
-                                                <button type="button" class="btn btn-sm btn-outline-secondary"
-                                                        @onclick="() => confirmarId = null">Cancelar</button>
-                                            }
-                                            else
-                                            {
-                                                <button type="button" class="btn btn-sm btn-outline-danger"
-                                                        @onclick="() => confirmarId = p.Id">Desactivar</button>
-                                            }
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    disabled="@cargando" @onclick="() => porDesactivar = p">Desactivar</button>
                                         }
                                     </div>
                                 </td>
@@ -132,7 +131,7 @@ else
         avisoLeido = true;
         exito = AvisoGuardado.Texto(Guardado, "el proveedor", Referencia) ?? exito;
     }
-    private int? confirmarId;
+    private Proveedor? porDesactivar;
     private bool cargando;
 
     protected override async Task OnInitializedAsync()
@@ -143,7 +142,7 @@ else
     private async Task Buscar()
     {
         exito = null;
-        confirmarId = null;
+        porDesactivar = null;
         paginaActual = 1;
         await Cargar();
     }
@@ -152,7 +151,7 @@ else
     {
         filtroRuc = filtroRazonSocial = filtroEstado = "";
         exito = null;
-        confirmarId = null;
+        porDesactivar = null;
         paginaActual = 1;
         await Cargar();
     }
@@ -189,6 +188,14 @@ else
         }
     }
 
+    private async Task ConfirmarDesactivar()
+    {
+        var proveedor = porDesactivar;
+        if (proveedor is null || cargando) return;
+        porDesactivar = null;
+        await Desactivar(proveedor);
+    }
+
     private async Task Desactivar(Proveedor proveedor)
     {
         error = null;
@@ -197,7 +204,7 @@ else
         try
         {
             await Api.Delete($"proveedores/{proveedor.Id}");
-            confirmarId = null;
+            porDesactivar = null;
             // Recargar la consulta para reflejar la baja lógica desde MySQL.
             proveedores = await Api.Get<List<Proveedor>>(RutaBusqueda()) ?? new();
             AjustarPagina();
