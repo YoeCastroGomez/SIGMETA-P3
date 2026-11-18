@@ -1074,3 +1074,93 @@ html[data-bs-theme="dark"] .form-switch .form-check-input:checked {
     font-weight: 700;
     letter-spacing: .035em;
 }
+
+/* ===================== CONFIRMACIONES SIGMETA =====================
+   Cuadros de confirmación de desactivación y acciones sensibles.
+   Se aplican solo al componente compartido, en ambos temas. */
+.sigmeta-confirmacion-fondo.modal-backdrop {
+    background-color: #100e10;
+    opacity: .7;
+}
+.sigmeta-confirmacion {
+    --sg-confirm-bg: #fffaf6;
+    --sg-confirm-head: #fff3e9;
+    --sg-confirm-text: #332c29;
+    --sg-confirm-border: #e5d4c6;
+    --sg-confirm-muted: #675951;
+    --sg-confirm-danger: #a62d25;
+    color: var(--sg-confirm-text);
+}
+.sigmeta-confirmacion .modal-dialog {
+    width: min(100% - 2rem, 34rem);
+    max-width: 34rem;
+    margin-inline: auto;
+}
+.sigmeta-confirmacion .modal-content {
+    background: var(--sg-confirm-bg);
+    color: var(--sg-confirm-text);
+    border: 1px solid var(--sg-confirm-border);
+    border-radius: 14px;
+    box-shadow: 0 20px 64px rgba(12, 9, 8, .38);
+    overflow: hidden;
+}
+.sigmeta-confirmacion .modal-header {
+    background: var(--sg-confirm-head);
+    border-bottom: 1px solid var(--sg-confirm-border);
+    padding: 1.1rem 1.4rem;
+}
+.sigmeta-confirmacion .modal-title {
+    font-size: 1.12rem;
+    font-weight: 750;
+    letter-spacing: -.015em;
+    line-height: 1.4;
+}
+.sigmeta-confirmacion .modal-body {
+    padding: 1.4rem;
+    font-size: .95rem;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+.sigmeta-confirmacion .modal-body > :last-child { margin-bottom: 0 !important; }
+.sigmeta-confirmacion .modal-body strong { color: var(--sg-confirm-text); font-weight: 750; }
+.sigmeta-confirmacion .modal-body .text-muted,
+.sigmeta-confirmacion .modal-body .text-secondary {
+    color: var(--sg-confirm-muted) !important;
+}
+.sigmeta-confirmacion .modal-body .text-danger { color: var(--sg-confirm-danger) !important; }
+.sigmeta-confirmacion .modal-footer {
+    background: var(--sg-confirm-head);
+    border-top: 1px solid var(--sg-confirm-border);
+    padding: .95rem 1.4rem;
+    gap: .65rem;
+}
+.sigmeta-confirmacion .modal-footer .btn {
+    min-height: 40px;
+    padding: .5rem 1.15rem;
+    border-radius: 8px;
+    margin: 0;
+}
+html[data-bs-theme="dark"] .sigmeta-confirmacion {
+    --sg-confirm-bg: #302b2b;
+    --sg-confirm-head: #37302d;
+    --sg-confirm-text: #f5ece5;
+    --sg-confirm-border: #625149;
+    --sg-confirm-muted: #d0bfb3;
+    --sg-confirm-danger: #ffaaa0;
+}
+html[data-bs-theme="dark"] .sigmeta-confirmacion .modal-content {
+    background: var(--sg-confirm-bg);
+    color: var(--sg-confirm-text);
+    border-color: var(--sg-confirm-border);
+}
+html[data-bs-theme="dark"] .sigmeta-confirmacion .modal-body .text-danger,
+html[data-bs-theme="dark"] .sigmeta-confirmacion .modal-body .small.text-danger {
+    color: var(--sg-confirm-danger) !important;
+}
+@media (max-width: 575.98px) {
+    .sigmeta-confirmacion .modal-dialog { width: calc(100% - 1.5rem); }
+    .sigmeta-confirmacion .modal-header,
+    .sigmeta-confirmacion .modal-body { padding: 1rem; }
+    .sigmeta-confirmacion .modal-footer { padding: .85rem 1rem; }
+    .sigmeta-confirmacion .modal-footer .btn { flex: 1 1 0; }
+}
