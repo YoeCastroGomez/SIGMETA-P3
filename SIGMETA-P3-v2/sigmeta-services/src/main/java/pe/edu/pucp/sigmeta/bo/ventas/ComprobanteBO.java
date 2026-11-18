@@ -15,5 +15,7 @@ public interface ComprobanteBO {
     Comprobante obtener(int id) throws SQLException;
     List<Comprobante> listarTodos() throws SQLException;
     Comprobante registrarEnvio(int idComprobante, String medioEnvio, int idResponsable) throws SQLException;
+    // RF008: representacion impresa (PDF con JasperReports) de una FACTURA o BOLETA vigente
+    byte[] pdf(int idComprobante, int idResponsable) throws SQLException;
     List<Comprobante> buscarNotasCredito(LocalDate fechaDesde, LocalDate fechaHasta, Integer idCliente, String serieNumeroOrigen) throws SQLException;
 }

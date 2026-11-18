@@ -32,6 +32,7 @@ import pe.edu.pucp.sigmeta.ws.caja.Utilidades;
 //
 //   GET    /api/comprobantes?venta=2      boletas y facturas de una venta (vigentes y anuladas)
 //   GET    /api/comprobantes/5            un comprobante con el cliente y las lineas de su venta
+//   GET    /api/comprobantes/5/pdf        su representacion impresa en PDF (JasperReports), para descargar
 //   POST   /api/comprobantes              emitir: {"idVenta": 2, "tipo": "BOLETA"} (la serie y el numero los pone el BO)
 //   POST   /api/comprobantes/5/envio      registrar el envio: {"medioEnvio": "CORREO" | "MENSAJERIA" | "IMPRESO"}
 //                                         (el BO guarda la fecha; IMPRESO lo manda el boton Imprimir de Blazor)
@@ -141,6 +142,23 @@ public class ComprobanteRS extends VentanillaBase {
             comprobanteBO.anular(idComprobante, motivo, id);
             return null; // 204 sin cuerpo
         });
+    }
+
+    // RF008: el comprobante en PDF (JasperReports). Responde application/pdf con Content-Disposition para que se
+    // descargue con su nombre (por ejemplo F001-00000074.pdf). Si algo falla responde JSON con el mensaje.
+    @GET
+    @Path("{id}/pdf")
+    @Produces({"application/pdf", MediaType.APPLICATION_JSON})
+    public Response pdf(@HeaderParam("ticket") String ticket, @PathParam("id") int idComprobante) {
+        Response respuesta = ejecutar(ticket, id -> comprobanteBO.pdf(idComprobante, id));
+        if (respuesta.getStatus() != Response.Status.OK.getStatusCode()) {
+            return Response.fromResponse(respuesta).type(MediaType.APPLICATION_JSON_TYPE).build();
+        }
+        return Response.fromResponse(respuesta)
+                .type("application/pdf")
+                .header("Content-Disposition", "attachment; filename=\"comprobante-" + idComprobante + ".pdf\"")
+                .header("Cache-Control", "no-store")
+                .build();
     }
 
     // ----- conversiones -----

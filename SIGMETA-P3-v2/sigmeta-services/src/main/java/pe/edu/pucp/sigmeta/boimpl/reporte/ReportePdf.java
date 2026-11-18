@@ -96,7 +96,9 @@ public final class ReportePdf {
         try {
             // la plantilla principal tiene una sola "fila": las tablas son subreportes con su propio data source
             JasperPrint impreso = JasperFillManager.fillReport(plantilla("reporte_" + tipo), parametros, new JREmptyDataSource(1));
-            return exportar(impreso, nombre, texto(parametros.get("PERIODO")), generadoPor);
+            String periodo = texto(parametros.get("PERIODO"));
+            return exportar(impreso, "SIGMETA - " + nombre + " - " + periodo,
+                    nombre + " del periodo " + periodo + " (RF015)", generadoPor);
         } catch (JRException e) {
             throw new RuntimeException("No se pudo generar el " + nombre.toLowerCase(PERU) + " en PDF: " + e.getMessage(), e);
         }
@@ -174,7 +176,7 @@ public final class ReportePdf {
      * Si el .jasper no existe (por ejemplo al probar desde el IDE sin pasar por Maven) compila el .jrxml; eso
      * funciona fuera del servidor, pero dentro de GlassFish solo se usan los .jasper.
      */
-    private static JasperReport plantilla(String nombre) {
+    static JasperReport plantilla(String nombre) {
         return COMPILADAS.computeIfAbsent(nombre, n -> {
             try (InputStream jasper = ReportePdf.class.getResourceAsStream("/reports/" + n + ".jasper")) {
                 if (jasper != null) {
@@ -213,17 +215,18 @@ public final class ReportePdf {
         p.put("IND" + n + "_DETALLE", detalle);
     }
 
-    private static byte[] exportar(JasperPrint impreso, String nombre, String periodo, String autor) throws JRException {
+    /** Exporta a PDF (byte[]) con sus metadatos. Lo usan los reportes (RF015) y el comprobante (RF008). */
+    static byte[] exportar(JasperPrint impreso, String titulo, String asunto, String autor) throws JRException {
         ByteArrayOutputStream pdf = new ByteArrayOutputStream();
         JRPdfExporter exportador = new JRPdfExporter();
         exportador.setExporterInput(new SimpleExporterInput(impreso));
         exportador.setExporterOutput(new SimpleOutputStreamExporterOutput(pdf));
         SimplePdfExporterConfiguration configuracion = new SimplePdfExporterConfiguration();
-        configuracion.setMetadataTitle("SIGMETA - " + nombre + " - " + periodo);
-        configuracion.setMetadataAuthor(autor == null ? "SIGMETA" : autor);
-        configuracion.setMetadataSubject(nombre + " del periodo " + periodo + " (RF015)");
+        configuracion.setMetadataTitle(titulo);
+        configuracion.setMetadataAuthor(autor == null || autor.isBlank() ? "SIGMETA" : autor);
+        configuracion.setMetadataSubject(asunto);
         configuracion.setMetadataCreator("SIGMETA · Grupo Meta");
-        configuracion.setMetadataKeywords("SIGMETA, Grupo Meta, reporte, " + nombre.toLowerCase(PERU));
+        configuracion.setMetadataKeywords("SIGMETA, Grupo Meta, " + asunto);
         exportador.setConfiguration(configuracion);
         exportador.exportReport();
         return pdf.toByteArray();
