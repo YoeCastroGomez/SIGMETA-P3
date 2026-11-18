@@ -120,12 +120,10 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
         String razon = Validador.textoObligatorio(motivo, "motivo de reversión", 255);
         usuarioBO.verificarRol(idAlmacenero, TipoRol.ALMACENERO);
         return Transaccion.ejecutar(() -> {
-            // RF014: la autorizacion es de un solo uso; se consume al final de esta misma transaccion
+            // RF014: la autorizacion aprobada de ESTA reversion (mismo movimiento); un solo uso, se consume al final
             pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion autorizacion =
-                    autorizacionBO.obtenerAutorizacionVigente(idAlmacenero, OPERACION_AJUSTE_INVENTARIO);
-            if (autorizacion == null) {
-                throw new IllegalStateException("La reversión del ajuste necesita una autorización vigente del Administrador");
-            }
+                    autorizacionBO.requerirAutorizacion(idAlmacenero, OPERACION_AJUSTE_INVENTARIO,
+                            huellaReversionAjuste(idMovimientoAjuste));
             MovimientoInventario original = movimientoDAO.bloquearMovimiento(idMovimientoAjuste);
             if (original == null || (original.getTipo() != TipoMovimientoInventario.AJUSTE_INGRESO
                     && original.getTipo() != TipoMovimientoInventario.AJUSTE_SALIDA)) {
@@ -273,12 +271,10 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
         String motivoValidado = Validador.textoObligatorio(motivo, "motivo", 255);
         usuarioBO.verificarRol(idUsuario, TipoRol.ALMACENERO);
         return Transaccion.ejecutar(() -> {
-            // RF014: la autorizacion es de un solo uso; se consume al final de esta misma transaccion
+            // RF014: la autorizacion aprobada de ESTE ajuste (mismo producto y misma cantidad contada); un solo uso
             pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion autorizacion =
-                    autorizacionBO.obtenerAutorizacionVigente(idUsuario, OPERACION_AJUSTE_INVENTARIO);
-            if (autorizacion == null) {
-                throw new IllegalStateException("El ajuste necesita una autorización vigente del Administrador");
-            }
+                    autorizacionBO.requerirAutorizacion(idUsuario, OPERACION_AJUSTE_INVENTARIO,
+                            huellaAjuste(idProducto, cantidadContada));
             double stockActual = stockDAO.obtenerStockParaActualizar(idProducto);
 
             double diferencia = cantidadContada - stockActual;
@@ -305,6 +301,82 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
             movimientoDAO.save(movimiento);
             autorizacionBO.consumir(autorizacion.getId());
             return movimiento;
+        });
+    }
+
+    // ================= RF014: el ajuste pide la autorizacion con sus datos =================
+
+    private static String huellaAjuste(int idProducto, double cantidadContada) {
+        return pe.edu.pucp.sigmeta.boimpl.seguridad.SolicitudAutorizacionBOImpl.huella(
+                "AJUSTE|" + idProducto + "|" + String.format(java.util.Locale.ROOT, "%.3f", cantidadContada));
+    }
+
+    private static String huellaReversionAjuste(int idMovimientoAjuste) {
+        return pe.edu.pucp.sigmeta.boimpl.seguridad.SolicitudAutorizacionBOImpl.huella("REVERTIR_AJUSTE|" + idMovimientoAjuste);
+    }
+
+    private static String cantidad(double valor) {
+        return java.math.BigDecimal.valueOf(valor).stripTrailingZeros().toPlainString();
+    }
+
+    // RF012/RF014: el Almacenero cuenta el producto y pide la autorizacion de ESE ajuste. No mueve el stock:
+    // el Administrador ve el producto, el stock del sistema, lo contado y la diferencia; al aprobar se registra.
+    @Override
+    public pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion solicitarAjuste(int idProducto, int idUsuario,
+            double cantidadContada, String motivo) throws SQLException {
+        validarId(idProducto);
+        validarId(idUsuario);
+        if (!Double.isFinite(cantidadContada) || cantidadContada < 0) {
+            throw new IllegalArgumentException("La cantidad contada debe ser válida y no negativa");
+        }
+        String motivoValidado = Validador.textoObligatorio(motivo, "motivo", 200);
+        usuarioBO.verificarRol(idUsuario, TipoRol.ALMACENERO);
+        return Transaccion.ejecutar(() -> {
+            Producto producto = new pe.edu.pucp.sigmeta.daoimpl.producto.ProductoDAOImpl().load(idProducto);
+            if (producto == null) {
+                throw new IllegalArgumentException("No existe el producto con id " + idProducto);
+            }
+            double diferencia = cantidadContada - producto.getStockActual();
+            if (Math.abs(diferencia) < EPSILON) {
+                throw new IllegalArgumentException("El stock contado coincide con el actual; no hay ajuste");
+            }
+            String detalle = "Producto: " + producto.getNombre()
+                    + "\nStock en el sistema: " + cantidad(producto.getStockActual())
+                    + "\nContado: " + cantidad(cantidadContada)
+                    + "\nDiferencia: " + (diferencia > 0 ? "+" : "−") + cantidad(Math.abs(diferencia))
+                    + (diferencia > 0 ? " (ingreso)" : " (salida)");
+            return autorizacionBO.solicitarOperacion(idUsuario, OPERACION_AJUSTE_INVENTARIO, motivoValidado,
+                    producto.getCodigoInterno() + " · " + producto.getNombre(), detalle,
+                    huellaAjuste(idProducto, cantidadContada));
+        });
+    }
+
+    // RF012/RF014: pedir la autorizacion para revertir UN ajuste concreto
+    @Override
+    public pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion solicitarReversionAjuste(int idMovimientoAjuste,
+            int idAlmacenero, String motivo) throws SQLException {
+        validarId(idMovimientoAjuste);
+        validarId(idAlmacenero);
+        String razon = Validador.textoObligatorio(motivo, "motivo de reversión", 200);
+        usuarioBO.verificarRol(idAlmacenero, TipoRol.ALMACENERO);
+        return Transaccion.ejecutar(() -> {
+            MovimientoInventario original = movimientoDAO.bloquearMovimiento(idMovimientoAjuste);
+            if (original == null || (original.getTipo() != TipoMovimientoInventario.AJUSTE_INGRESO
+                    && original.getTipo() != TipoMovimientoInventario.AJUSTE_SALIDA)) {
+                throw new IllegalArgumentException("El movimiento no es un ajuste original");
+            }
+            if (movimientoDAO.existeReversion(idMovimientoAjuste)) {
+                throw new IllegalStateException("El ajuste ya fue revertido");
+            }
+            Producto producto = new pe.edu.pucp.sigmeta.daoimpl.producto.ProductoDAOImpl().load(original.getProducto().getId());
+            String nombre = producto == null ? "producto" : producto.getNombre();
+            boolean ingreso = original.getTipo() == TipoMovimientoInventario.AJUSTE_INGRESO;
+            String detalle = "Revertir el ajuste #" + idMovimientoAjuste + " de " + nombre
+                    + "\nEl ajuste fue " + (ingreso ? "un ingreso" : "una salida") + " de " + cantidad(original.getCantidad())
+                    + "\nAl revertirlo, el stock " + (ingreso ? "baja" : "sube") + " en " + cantidad(original.getCantidad());
+            return autorizacionBO.solicitarOperacion(idAlmacenero, OPERACION_AJUSTE_INVENTARIO, razon,
+                    "Reversión del ajuste #" + idMovimientoAjuste + " · " + nombre, detalle,
+                    huellaReversionAjuste(idMovimientoAjuste));
         });
     }
 

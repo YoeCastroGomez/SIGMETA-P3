@@ -1,0 +1,2 @@
+/* El motivo puede ser largo: se limita el ancho para que la tabla no se estire */
+.motivo { max-width: 26rem; }

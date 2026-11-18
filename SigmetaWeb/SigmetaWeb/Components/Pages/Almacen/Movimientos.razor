@@ -26,7 +26,7 @@
     @if (accion == "revertir")
     {
         <p class="mb-2">Se registrará el movimiento contrario al ajuste de <strong>@Formato.Cantidad(enAccion?.Cantidad)</strong>
-            en <strong>@enAccion?.Producto</strong>. Necesita una autorización vigente del Administrador y la consume.</p>
+            en <strong>@enAccion?.Producto</strong>. Necesita la autorización del Administrador para este ajuste: si aún no la tienes, se le pide con estos datos.</p>
     }
     else
     {
@@ -221,8 +221,18 @@ else
         {
             if (accion == "revertir")
             {
-                await Api.Post<object>($"almacen/ajustes/{m.Id}/revertir", new { motivo = motivo.Trim() });
-                exito = $"Se revirtió el ajuste de {m.CodigoInterno} · {m.Producto}.";
+                try
+                {
+                    await Api.Post<object>($"almacen/ajustes/{m.Id}/revertir", new { motivo = motivo.Trim() });
+                    exito = $"Se revirtió el ajuste de {m.CodigoInterno} · {m.Producto}.";
+                }
+                catch (ErrorApi e) when (e.Message.Contains("requiere autorización del Administrador"))
+                {
+                    // RF014: se pide la autorización de ESTA reversión; el Administrador ve el producto y el ajuste
+                    await Api.Post<object>($"almacen/ajustes/{m.Id}/revertir/solicitar", new { motivo = motivo.Trim() });
+                    exito = $"Se pidió la autorización para revertir el ajuste de {m.CodigoInterno}. Cuando el Administrador la apruebe, vuelve a pulsar Revertir.";
+                    return;
+                }
             }
             else
             {

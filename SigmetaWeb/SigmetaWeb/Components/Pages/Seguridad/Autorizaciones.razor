@@ -10,7 +10,7 @@
    abre en "Pendientes" y siempre van primero, porque son lo único que el Administrador tiene que hacer aquí.
    GET /api/solicitudes (?estado=PENDIENTE) · POST /api/solicitudes/{id}/anular para revocar una aprobada. *@
 <Encabezado Rf="RF014" Titulo="Solicitudes de autorización"
-            Subtitulo="Operaciones restringidas que piden el Vendedor, el Cajero y el Almacenero. Cada autorización aprobada sirve para una sola operación." />
+            Subtitulo="Cada autorización sirve para la operación que se pidió y una sola vez." />
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 <SiguientePaso Mensaje="@exito" Detalle="@exitoDetalle" AlCerrar="() => exito = null" />
@@ -45,8 +45,8 @@
 
 <div class="card card-body mb-3">
     <div class="row g-3 align-items-end sigmeta-filtros">
-        <Campo Etiqueta="Solicitante u operación" Id="fTexto" Clase="col-sm-8 col-md">
-            <input id="fTexto" type="search" class="form-control" maxlength="60" placeholder="Ejemplo: mchavez, nota de crédito"
+        <Campo Etiqueta="Buscar" Id="fTexto" Clase="col-sm-8 col-md">
+            <input id="fTexto" type="search" class="form-control" maxlength="60" placeholder="Usuario, operación o comprobante"
                    @bind="filtroTexto" @bind:event="oninput" @bind:after="AlFiltrar" />
         </Campo>
         <div class="col-auto">
@@ -71,7 +71,7 @@ else
                     <tr>
                         <th>Solicitante</th>
                         <th>Operación</th>
-                        <th>Motivo</th>
+                        <th>Qué se autoriza</th>
                         <th>Fecha</th>
                         <th>Estado</th>
                         <th class="text-end">Acciones</th>
@@ -91,7 +91,13 @@ else
                         <tr>
                             <td><strong>@s.Solicitante</strong><div class="small text-muted">@TextosSeguridad.Texto(s.RolSolicitante)</div></td>
                             <td>@TextosSeguridad.Texto(s.Operacion)</td>
-                            <td style="max-width: 320px;">@s.Motivo</td>
+                            <td style="max-width: 320px;">
+                                @if (!string.IsNullOrEmpty(s.Referencia))
+                                {
+                                    <strong>@s.Referencia</strong>
+                                }
+                                <div class="small text-muted">@s.Motivo</div>
+                            </td>
                             <td class="text-nowrap">@Formato.FechaHora(s.FechaSolicitud)</td>
                             <td>
                                 <Estado Texto="@TextosSeguridad.Texto(s.Estado)" />
@@ -144,7 +150,7 @@ else
     private int Vigentes => solicitudes?.Count(s => s.Vigente) ?? 0;
 
     private List<SolicitudDatos> PorTexto => (solicitudes ?? new())
-        .Where(s => Busqueda.Coincide(filtroTexto, s.Solicitante, s.NombreSolicitante, TextosSeguridad.Texto(s.Operacion)))
+        .Where(s => Busqueda.Coincide(filtroTexto, s.Solicitante, s.NombreSolicitante, TextosSeguridad.Texto(s.Operacion), s.Referencia))
         .ToList();
 
     // las pendientes primero (son lo que hay que resolver), luego las más recientes
@@ -190,7 +196,7 @@ else
             "rechazada" => $"Se rechazó la solicitud de {Referencia}.",
             _ => null
         };
-        exitoDetalle = Guardado == "aprobada" ? "El solicitante ya puede hacer la operación (una sola vez, dentro de la vigencia)." : null;
+        exitoDetalle = Guardado == "aprobada" ? "El solicitante ya puede completar esa operación dentro de la vigencia." : null;
         // si hay algo por resolver, se abre directo en las pendientes
         if (Pendientes > 0)
         {

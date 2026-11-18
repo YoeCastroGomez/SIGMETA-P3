@@ -8,7 +8,7 @@
 
 @* RF014 · POST /api/solicitudes/{id}/aprobar {"vigenciaMinutos": 30} · POST /api/solicitudes/{id}/rechazar.
    Solo el Administrador y solo una solicitud PENDIENTE. *@
-<Encabezado Rf="RF014" Titulo="Resolver solicitud" Subtitulo="Solo el Administrador.">
+<Encabezado Rf="RF014" Titulo="Resolver solicitud">
     <a class="btn btn-outline-secondary" href="/autorizaciones">Volver a la lista</a>
 </Encabezado>
 
@@ -23,7 +23,7 @@
         {
             <hr />
             <Campo Etiqueta="Vigencia (minutos)" Id="vigencia" Obligatorio="true" Error="@ErrorVigencia"
-                   Ayuda="Tiempo que tendrá el solicitante para hacer la operación. La autorización sirve para una sola operación.">
+                   Ayuda="Tiempo para completar la operación después de aprobarla.">
                 <div class="d-flex flex-wrap align-items-center gap-2">
                     <input id="vigencia" type="number" min="1" max="1440" class="form-control @(ErrorVigencia is null ? "" : "is-invalid")"
                            style="max-width: 140px;" @bind="vigencia" @bind:event="oninput" />

@@ -1,0 +1,14 @@
+/* RF014: estado de la autorización encima del botón que completa la operación */
+.pedir-autorizacion { display: grid; gap: .5rem; }
+.estado {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .55rem .75rem;
+    border-radius: var(--bs-border-radius);
+    font-size: .85rem;
+    font-weight: 600;
+}
+.estado.aprobada { color: var(--bs-success-text-emphasis); background: var(--bs-success-bg-subtle); }
+.estado.espera { color: var(--bs-warning-text-emphasis); background: var(--bs-warning-bg-subtle); }
+.estado.rechazada { color: var(--bs-danger-text-emphasis); background: var(--bs-danger-bg-subtle); }

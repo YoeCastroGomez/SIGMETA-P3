@@ -4,6 +4,7 @@
 @attribute [Authorize(Roles = "Vendedor,Administrador")]
 @using SigmetaWeb.Components.Pages.Catalogo
 @using SigmetaWeb.Components.Pages.Clientes
+@using SigmetaWeb.Components.Pages.Seguridad
 @inject ApiJava Api
 @inject NavigationManager Nav
 
@@ -50,6 +51,8 @@ else
 
     <div class="row g-3">
         <div class="col-lg-8">
+            @* RF014: mientras la autorización del precio espera o está aprobada, la venta no se cambia (se autorizó lo que se mandó) *@
+            <fieldset disabled="@BloqueadaPorAutorizacion" style="min-width: 0;">
             @* -------- 1. Origen y cliente -------- *@
             <div class="card card-body mb-3">
                 <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-3">
@@ -272,6 +275,7 @@ else
                     </div>
                 }
             </div>
+            </fieldset>
         </div>
 
         @* -------- Resumen fijo: total, desglose, lo que falta y Guardar (ResumenTotal) -------- *@
@@ -290,9 +294,22 @@ else
                             }
                         </ul>
                     }
-                    <BotonCondicionado Texto="@(EsNuevo ? "Registrar venta" : "Guardar cambios")" TextoOcupado="Guardando..." Bloque="true"
-                                       Clase="btn-primary w-100" Ocupado="@guardando" AlHacerClic="Guardar"
-                                       Motivo="@(Pendientes.All(p => p.Listo) ? null : "Falta completar lo indicado.")" MostrarMotivo="false" />
+                    @if (requiereAutorizacion)
+                    {
+                        @* RF014: una línea queda bajo el costo. Se pide la autorización de ESTA venta (el Administrador ve
+                           el cliente, el total y las líneas bajo el costo) y, aprobada, se guarda la misma venta. *@
+                        <PedirAutorizacion Solicitar="SolicitarAutorizacion" Listo="@Pendientes.All(p => p.Listo)"
+                                           EstadoChanged="e => estadoAutorizacion = e" AlError="m => error = m">
+                            <BotonCondicionado Texto="@(EsNuevo ? "Registrar venta" : "Guardar cambios")" TextoOcupado="Guardando..." Bloque="true"
+                                               Clase="btn-primary w-100" Ocupado="@guardando" AlHacerClic="Guardar" />
+                        </PedirAutorizacion>
+                    }
+                    else
+                    {
+                        <BotonCondicionado Texto="@(EsNuevo ? "Registrar venta" : "Guardar cambios")" TextoOcupado="Guardando..." Bloque="true"
+                                           Clase="btn-primary w-100" Ocupado="@guardando" AlHacerClic="Guardar"
+                                           Motivo="@(Pendientes.All(p => p.Listo) ? null : "Falta completar lo indicado.")" MostrarMotivo="false" />
+                    }
                     <a class="btn btn-outline-secondary w-100" href="@VolverA">Cancelar</a>
                 }
                 else
@@ -321,6 +338,10 @@ else
     private string? error;
     private bool guardando;
     private string numeroPropuesto = "";
+    // RF014: el BO respondió que una línea queda bajo el costo y hace falta la autorización del Administrador
+    private bool requiereAutorizacion;
+    private string? estadoAutorizacion;
+    private bool BloqueadaPorAutorizacion => estadoAutorizacion is "PENDIENTE" or "APROBADA";
     // stock en almacén de los productos agregados con el buscador (referencial: el BO descuenta lo ya comprometido)
     private readonly Dictionary<int, decimal> stock = new();
 
@@ -645,10 +666,35 @@ else
         catch (ErrorApi e)
         {
             error = e.Message;   // por ejemplo "Stock insuficiente para ..." o "La venta supera el límite de crédito del cliente"
+            if (e.Message.Contains("requiere autorización del Administrador") || e.Message.Contains("en espera del Administrador"))
+            {
+                requiereAutorizacion = true;
+            }
         }
         finally
         {
             guardando = false;
+        }
+    }
+
+    // RF014: pide la autorización de ESTA venta con sus datos (mismo cuerpo que guardarla)
+    private async Task<SolicitudDatos?> SolicitarAutorizacion()
+    {
+        error = null;
+        for (var i = 0; i < venta!.Lineas.Count; i++)
+        {
+            venta.Lineas[i].NumeroLinea = i + 1;
+        }
+        try
+        {
+            return await Api.Post<SolicitudDatos>("ventas/solicitar-autorizacion", venta);
+        }
+        catch (ErrorApi e) when (e.Message.Contains("no hace falta autorización"))
+        {
+            // el Vendedor corrigió el descuento: ya puede guardar sin autorización
+            requiereAutorizacion = false;
+            error = "Ya ninguna línea queda bajo el costo: puede guardar.";
+            return null;
         }
     }
 }

@@ -1,0 +1,171 @@
+@implements IDisposable
+@inject ApiJava Api
+@using SigmetaWeb.Components.Pages.Seguridad
+
+@* RF014 · Autorización de ESTA operación. La pantalla que la usa manda los datos de la operación
+   (Solicitar: POST notas-credito/solicitar, ventas/solicitar-autorizacion, almacen/ajustes/solicitar...)
+   y el sistema arma lo que ve el Administrador. Aquí solo se sigue su estado (GET solicitudes/{id} cada 8 s)
+   y, cuando está aprobada, se muestra el botón de la pantalla (ChildContent) para completar la operación.
+   Pedirla otra vez con los mismos datos devuelve la misma solicitud (no se duplica). *@
+<div class="pedir-autorizacion">
+    @if (solicitud is null)
+    {
+        <BotonCondicionado Texto="@TextoSolicitar" TextoOcupado="Enviando..." Bloque="true" Clase="btn-primary w-100"
+                           Ocupado="@ocupado" AlHacerClic="Pedir" Motivo="@(Listo ? null : "Falta completar lo indicado.")" MostrarMotivo="false" />
+        <div class="small text-muted">El Administrador verá estos datos.</div>
+    }
+    else if (solicitud.Estado == "PENDIENTE")
+    {
+        <div class="estado espera" role="status">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            Esperando al Administrador
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary flex-fill" disabled="@ocupado" @onclick="Consultar">Actualizar</button>
+            <button type="button" class="btn btn-sm btn-outline-danger flex-fill" disabled="@ocupado" @onclick="CambiarDatos">Cambiar datos</button>
+        </div>
+    }
+    else if (solicitud.Estado == "APROBADA")
+    {
+        <div class="estado aprobada" role="status">
+            Autorizada hasta las @Formato.FechaHora(solicitud.FechaVencimiento)@(string.IsNullOrEmpty(solicitud.Administrador) ? "" : $" · {solicitud.Administrador}")
+        </div>
+        @ChildContent
+    }
+    else
+    {
+        <div class="estado rechazada" role="status">
+            @(solicitud.Estado == "RECHAZADA" ? $"Rechazada{(string.IsNullOrEmpty(solicitud.Administrador) ? "" : $" por {solicitud.Administrador}")}" : "La autorización venció o se usó")
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary w-100" disabled="@ocupado" @onclick="Reiniciar">Cambiar datos o volver a pedir</button>
+    }
+</div>
+
+@code {
+    /// <summary>Hace el POST de la operación (con sus datos) y devuelve la solicitud creada o la que ya existía.</summary>
+    [Parameter, EditorRequired] public Func<Task<SolicitudDatos?>> Solicitar { get; set; } = default!;
+    /// <summary>Los datos de la operación están completos (si no, el botón queda deshabilitado).</summary>
+    [Parameter] public bool Listo { get; set; } = true;
+    [Parameter] public string TextoSolicitar { get; set; } = "Solicitar autorización";
+    /// <summary>Botón para completar la operación; se muestra con la autorización aprobada.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    /// <summary>Avisa el estado (null, PENDIENTE, APROBADA, RECHAZADA, VENCIDA) para que la pantalla bloquee sus campos.</summary>
+    [Parameter] public EventCallback<string?> EstadoChanged { get; set; }
+    [Parameter] public EventCallback<string> AlError { get; set; }
+
+    private SolicitudDatos? solicitud;
+    private bool ocupado;
+    private CancellationTokenSource? consultaPeriodica;
+
+    /// <summary>Mientras espera o está aprobada, la operación no se cambia: se autorizó lo que se mandó.</summary>
+    public bool Bloquea => solicitud?.Estado is "PENDIENTE" or "APROBADA";
+
+    private async Task Pedir()
+    {
+        if (!Listo) return;
+        ocupado = true;
+        try
+        {
+            var creada = await Solicitar();
+            if (creada is not null && creada.Id > 0)
+            {
+                solicitud = await Api.Get<SolicitudDatos>($"solicitudes/{creada.Id}") ?? creada;
+                await Avisar();
+            }
+        }
+        catch (ErrorApi e)
+        {
+            await AlError.InvokeAsync(e.Message);
+        }
+        finally
+        {
+            ocupado = false;
+        }
+    }
+
+    private async Task Consultar()
+    {
+        if (solicitud is null) return;
+        ocupado = true;
+        try
+        {
+            var antes = solicitud.Estado;
+            solicitud = await Api.Get<SolicitudDatos>($"solicitudes/{solicitud.Id}") ?? solicitud;
+            if (solicitud.Estado != antes) await Avisar();
+        }
+        catch (ErrorApi e)
+        {
+            await AlError.InvokeAsync(e.Message);
+        }
+        finally
+        {
+            ocupado = false;
+        }
+    }
+
+    // anula la solicitud pendiente para poder cambiar la operación y pedirla de nuevo
+    private async Task CambiarDatos()
+    {
+        if (solicitud is null) return;
+        ocupado = true;
+        try
+        {
+            await Api.Post<object>($"solicitudes/{solicitud.Id}/anular", null);
+        }
+        catch (ErrorApi e)
+        {
+            await AlError.InvokeAsync(e.Message);
+        }
+        finally
+        {
+            ocupado = false;
+        }
+        await Reiniciar();
+    }
+
+    /// <summary>Vuelve al inicio (sin solicitud), por ejemplo al cambiar de documento.</summary>
+    public async Task Reiniciar()
+    {
+        consultaPeriodica?.Cancel();
+        solicitud = null;
+        await Avisar();
+    }
+
+    private async Task Avisar()
+    {
+        if (solicitud?.Estado == "PENDIENTE") IniciarConsultaPeriodica();
+        await EstadoChanged.InvokeAsync(solicitud?.Estado);
+    }
+
+    private void IniciarConsultaPeriodica()
+    {
+        if (consultaPeriodica is not null) return;
+        consultaPeriodica = new CancellationTokenSource();
+        _ = ConsultarCadaRato(consultaPeriodica.Token);
+    }
+
+    private async Task ConsultarCadaRato(CancellationToken token)
+    {
+        try
+        {
+            while (!token.IsCancellationRequested && solicitud?.Estado == "PENDIENTE")
+            {
+                await Task.Delay(TimeSpan.FromSeconds(8), token);
+                await InvokeAsync(async () =>
+                {
+                    await Consultar();
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (TaskCanceledException)
+        {
+        }
+        finally
+        {
+            consultaPeriodica = null;
+        }
+    }
+
+    public void Dispose() => consultaPeriodica?.Cancel();
+}

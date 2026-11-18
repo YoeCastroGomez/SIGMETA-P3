@@ -5,20 +5,23 @@
 
 <PageTitle>Mis solicitudes · SIGMETA</PageTitle>
 
-@* RF014 · Solicitudes del usuario conectado. GET /api/solicitudes/mias · POST /api/solicitudes/{id}/anular. *@
+@* RF014 · Solicitudes del usuario conectado. GET /api/solicitudes/mias · POST /api/solicitudes/{id}/anular.
+   Solo historial: la autorización se pide desde la operación (nota de crédito, venta bajo el costo, ajuste),
+   con sus datos. Mismo patrón de listas que ventas: FiltrosLista, AccionesFila y Notificacion. *@
 <Encabezado Rf="RF014" Titulo="Mis solicitudes de autorización"
-            Subtitulo="Operaciones restringidas que pediste al Administrador. Una autorización aprobada sirve para una sola operación.">
-    <a class="btn btn-primary" href="/autorizaciones/nueva">Nueva solicitud</a>
-</Encabezado>
+            Subtitulo="Se piden desde la operación que las necesita." />
 
-<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-<AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
+<Notificacion Mensaje="@error" Error="true" AlCerrar="() => error = null" />
+<Notificacion Mensaje="@exito" AlCerrar="() => exito = null" />
 
 <Confirmacion Visible="@(porAnular is not null)" Titulo="Anular solicitud" TextoConfirmar="Anular"
               AlConfirmar="ConfirmarAnular" AlCancelar="() => porAnular = null">
-    <p class="mb-0">¿Seguro que ya no necesita la autorización para
-        <strong>@TextosSeguridad.Texto(porAnular?.Operacion)</strong>?</p>
+    <p class="mb-0 text-muted">Ya no podrás usar esta autorización.</p>
 </Confirmacion>
+
+<FiltrosLista @bind-Busqueda="busqueda" @bind-Busqueda:after="AlBuscar" Placeholder="Buscar por comprobante, motivo u operación"
+              Opciones="@Chips" Estado="@filtroEstado" EstadoChanged="CambiarEstado"
+              HayFiltros="@(filtroEstado != "" || !string.IsNullOrWhiteSpace(busqueda))" AlLimpiar="Limpiar" />
 
 @if (solicitudes is null)
 {
@@ -26,47 +29,68 @@
 }
 else
 {
+    var filtradas = Filtradas;
+    var pagina = Pagina(filtradas).ToList();
     <div class="card mb-3">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+        <div class="table-responsive tabla-lista-contenedor">
+            <table class="table table-hover align-middle mb-0 tabla-lista">
+                <thead>
                     <tr>
                         <th>Operación</th>
                         <th>Motivo</th>
-                        <th>Fecha</th>
                         <th>Estado</th>
-                        <th>Vence</th>
-                        <th class="text-end">Acciones</th>
+                        <th><span class="visually-hidden">Acciones</span></th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (solicitudes.Count == 0)
-                    {
-                        <tr><td colspan="6" class="text-center text-muted py-4">Todavía no has pedido ninguna autorización.</td></tr>
-                    }
-                    @foreach (var s in Pagina)
+                    @if (filtradas.Count == 0)
                     {
                         <tr>
-                            <td>@TextosSeguridad.Texto(s.Operacion)</td>
-                            <td style="max-width: 340px;">@s.Motivo</td>
-                            <td class="text-nowrap">@Formato.FechaHora(s.FechaSolicitud)</td>
-                            <td><Estado Texto="@TextosSeguridad.Texto(s.Estado)" /></td>
-                            <td class="text-nowrap">@(s.VigenciaMinutos > 0 ? Formato.FechaHora(s.FechaVencimiento) : "—")</td>
-                            <td class="text-end">
-                                <div class="d-inline-flex gap-1 text-nowrap">
-                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/autorizaciones/detalle/{s.Id}")">Ver</a>
-                                    @if (s.Estado == "PENDIENTE" || s.Vigente)
+                            <td colspan="4">
+                                @if (solicitudes.Count == 0)
+                                {
+                                    <ListaVacia Titulo="Todavía no has pedido ninguna autorización." />
+                                }
+                                else
+                                {
+                                    <ListaVacia Titulo="Ninguna solicitud coincide con los filtros." AlQuitarFiltros="Limpiar" />
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @for (var i = 0; i < pagina.Count; i++)
+                    {
+                        var s = pagina[i];
+                        var haciaArriba = pagina.Count > 3 && i >= pagina.Count - 2;
+                        <tr @key="s.Id">
+                            <td>
+                                <span class="numero">@(string.IsNullOrEmpty(s.Referencia) ? TextosSeguridad.Texto(s.Operacion) : s.Referencia)</span>
+                                <div class="sub">
+                                    @if (!string.IsNullOrEmpty(s.Referencia))
                                     {
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => { error = exito = null; porAnular = s; }">Anular</button>
+                                        @(TextosSeguridad.Texto(s.Operacion) + " · ")
                                     }
+                                    @Formato.FechaHora(s.FechaSolicitud)
                                 </div>
+                            </td>
+                            <td class="motivo">@s.Motivo</td>
+                            <td>
+                                <Estado Texto="@TextosSeguridad.Texto(s.Estado)" />
+                                @if (s.Vigente)
+                                {
+                                    <div class="sub">Hasta @Formato.FechaHora(s.FechaVencimiento)</div>
+                                }
+                            </td>
+                            <td class="acciones">
+                                <AccionesFila Principal="@(new AccionFila("Ver", Ruta: $"/autorizaciones/detalle/{s.Id}", Destacada: false))"
+                                              Otras="@Secundarias(s)" HaciaArriba="@haciaArriba" AlElegir="Ejecutar" />
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
-        <Paginacion TotalRegistros="@solicitudes.Count" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
+        <Paginacion TotalRegistros="@filtradas.Count" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
 }
 
@@ -75,21 +99,83 @@ else
     private SolicitudDatos? porAnular;
     private string? error;
     private string? exito;
+    private string busqueda = "";
+    private string filtroEstado = "";
     private int paginaActual = 1;
     private int tamanoPagina = 10;
 
     [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
     [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
 
-    private IEnumerable<SolicitudDatos> Pagina => tamanoPagina == 0 ? solicitudes!
-        : solicitudes!.Skip((Math.Max(paginaActual, 1) - 1) * tamanoPagina).Take(tamanoPagina);
+    private List<SolicitudDatos> PorBusqueda => (solicitudes ?? new())
+        .Where(s => Busqueda.Coincide(busqueda, s.Motivo, TextosSeguridad.Texto(s.Operacion), s.Referencia))
+        .ToList();
+
+    private List<SolicitudDatos> Filtradas => PorBusqueda
+        .Where(s => filtroEstado == "" || s.Estado == filtroEstado)
+        .ToList();
+
+    private IReadOnlyList<OpcionChip> Chips
+    {
+        get
+        {
+            var base_ = PorBusqueda;
+            int Cuantas(string e) => base_.Count(s => s.Estado == e);
+            return new List<OpcionChip>
+            {
+                new("", "Todas", base_.Count),
+                new("PENDIENTE", "Pendientes", Cuantas("PENDIENTE"), "ambar"),
+                new("APROBADA", "Aprobadas", Cuantas("APROBADA"), "verde"),
+                new("RECHAZADA", "Rechazadas", Cuantas("RECHAZADA"), "rojo"),
+                new("VENCIDA", "Vencidas o usadas", Cuantas("VENCIDA"))
+            };
+        }
+    }
+
+    private IEnumerable<SolicitudDatos> Pagina(List<SolicitudDatos> lista)
+    {
+        if (tamanoPagina == 0) return lista;
+        var total = Math.Max(1, (int)Math.Ceiling((double)lista.Count / tamanoPagina));
+        return lista.Skip((Math.Clamp(paginaActual, 1, total) - 1) * tamanoPagina).Take(tamanoPagina);
+    }
+
+    // Menú «⋯»: anular mientras esté pendiente o aprobada sin usar
+    private List<AccionFila> Secundarias(SolicitudDatos s) =>
+        s.Estado == "PENDIENTE" || s.Vigente
+            ? new() { new("Anular", Hacer: () => PedirAnular(s), Peligro: true) }
+            : new();
+
+    // Lo llama AccionesFila: la acción corre en esta pantalla para que se redibuje (ventana de anular)
+    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
+
+    private Task PedirAnular(SolicitudDatos s)
+    {
+        error = exito = null;
+        porAnular = s;
+        return Task.CompletedTask;
+    }
+
+    private void AlBuscar() => paginaActual = 1;
+
+    private void CambiarEstado(string estado)
+    {
+        filtroEstado = estado;
+        paginaActual = 1;
+    }
+
+    private void Limpiar()
+    {
+        filtroEstado = "";
+        busqueda = "";
+        paginaActual = 1;
+    }
 
     protected override async Task OnInitializedAsync()
     {
         await Cargar();
         if (Guardado == AvisoGuardado.Nuevo)
         {
-            exito = $"Se registró la solicitud de {TextosSeguridad.Texto(Referencia).ToLower()}. El Administrador debe aprobarla.";
+            exito = $"Se envió la solicitud de {TextosSeguridad.Texto(Referencia).ToLower()}.";
         }
     }
 

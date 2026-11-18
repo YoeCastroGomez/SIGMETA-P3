@@ -18,6 +18,23 @@
         <div class="small text-muted text-uppercase">Estado</div>
         <div class="fw-semibold"><Estado Texto="@TextosSeguridad.Texto(Solicitud.Estado)" /></div>
     </div>
+    @if (!string.IsNullOrEmpty(Solicitud.Referencia) || !string.IsNullOrEmpty(Solicitud.Detalle))
+    {
+        @* RF014: lo que se autoriza, armado por el sistema desde la operacion (no lo escribe el solicitante) *@
+        <div class="col-12 mb-3">
+            <div class="small text-muted text-uppercase">Qué se autoriza</div>
+            <div class="border rounded p-2 bg-light">
+                @if (!string.IsNullOrEmpty(Solicitud.Referencia))
+                {
+                    <div class="fw-semibold">@Solicitud.Referencia</div>
+                }
+                @if (!string.IsNullOrEmpty(Solicitud.Detalle))
+                {
+                    <div class="small" style="white-space: pre-line;">@Solicitud.Detalle</div>
+                }
+            </div>
+        </div>
+    }
     <div class="col-12 mb-3">
         <div class="small text-muted text-uppercase">Motivo</div>
         <div>@Solicitud.Motivo</div>

@@ -39,12 +39,11 @@
 <FiltrosLista @bind-Busqueda="texto" @bind-Busqueda:after="BuscarAlEscribir" Placeholder="Buscar por cliente, documento o comprobante"
               Opciones="@Chips" Estado="@filtroEstado" EstadoChanged="CambiarEstado"
               HayFiltros="@(HayFiltros || filtroEstado != "")" AlLimpiar="Limpiar">
-    <div class="input-group filtro-fecha">
-        <span class="input-group-text">Desde</span>
+    @* rango de fechas en un solo campo: Fecha [desde] – [hasta] *@
+    <div class="input-group filtro-rango" title="@ValidacionEnVivo.ErrorRango(desde, hasta)">
+        <span class="input-group-text">Fecha</span>
         <input type="date" class="form-control" aria-label="Desde" @bind="desde" @bind:after="Buscar" />
-    </div>
-    <div class="input-group filtro-fecha" title="@ValidacionEnVivo.ErrorRango(desde, hasta)">
-        <span class="input-group-text">Hasta</span>
+        <span class="input-group-text">–</span>
         <input type="date" class="@ValidacionEnVivo.ClaseRango(desde, hasta)" aria-label="Hasta" @bind="hasta" @bind:after="Buscar" />
     </div>
 </FiltrosLista>

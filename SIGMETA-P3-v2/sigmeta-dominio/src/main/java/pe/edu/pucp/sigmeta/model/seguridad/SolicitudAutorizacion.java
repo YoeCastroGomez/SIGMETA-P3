@@ -18,6 +18,12 @@ public class SolicitudAutorizacion {
     private LocalDateTime fechaResolucion;
     private int vigenciaMinutos;
     private LocalDateTime fechaVencimiento;
+    // RF014: la operacion concreta que se autoriza. referencia = documento o producto ("F001-00000049");
+    // detalle = lo que el Administrador revisa antes de decidir; huella = SHA-256 de los datos de la operacion
+    // (la operacion solo se ejecuta con la autorizacion aprobada de esa misma huella)
+    private String referencia;
+    private String detalle;
+    private String huella;
 
     public SolicitudAutorizacion() {
     }
@@ -117,5 +123,29 @@ public class SolicitudAutorizacion {
 
     public void setFechaVencimiento(LocalDateTime fechaVencimiento) {
         this.fechaVencimiento = fechaVencimiento;
+    }
+
+    public String getReferencia() {
+        return referencia;
+    }
+
+    public void setReferencia(String referencia) {
+        this.referencia = referencia;
+    }
+
+    public String getDetalle() {
+        return detalle;
+    }
+
+    public void setDetalle(String detalle) {
+        this.detalle = detalle;
+    }
+
+    public String getHuella() {
+        return huella;
+    }
+
+    public void setHuella(String huella) {
+        this.huella = huella;
     }
 }

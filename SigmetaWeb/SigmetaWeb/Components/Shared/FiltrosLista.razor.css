@@ -24,6 +24,7 @@
 
 /* filtros extra que manda la pantalla (por ejemplo, el cliente) */
 .barra ::deep .filtro { flex: 0 1 16rem; width: auto; }
-.barra ::deep .filtro-fecha { flex: 0 0 13.5rem; width: 13.5rem; }
+.barra ::deep .filtro-rango { flex: 0 1 23rem; width: auto; flex-wrap: nowrap; }
+.barra ::deep .filtro-rango .form-control { min-width: 0; }
 
 .estados { padding: 0 1rem 1rem; }

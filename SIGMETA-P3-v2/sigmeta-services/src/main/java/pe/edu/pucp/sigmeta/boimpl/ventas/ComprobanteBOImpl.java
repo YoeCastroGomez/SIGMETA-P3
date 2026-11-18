@@ -173,12 +173,102 @@ public class ComprobanteBOImpl implements ComprobanteBO {
         }
 
         return Transaccion.ejecutar(() -> {
-            SolicitudAutorizacion autorizacion = autorizacionBO.obtenerAutorizacionVigente(idResponsable, OPERACION_NOTA_CREDITO);
-            if (autorizacion == null) {
-                throw new IllegalStateException("Para emitir la nota de crédito se necesita una autorización vigente del Administrador");
-            }
+            // RF013: validaciones y montos (comun con solicitarNotaCredito: se autoriza lo mismo que se registra)
+            NotaPreparada preparada = prepararNotaCredito(notaCredito);
+            Comprobante origen = preparada.origen();
+            Venta venta = preparada.venta();
+            BigDecimal subTotalNC = preparada.subTotal();
+            BigDecimal igvNC = preparada.igv();
+            BigDecimal totalNC = preparada.total();
+
+            // RF014: la autorizacion aprobada de ESTA nota (mismo comprobante y mismas cantidades)
+            SolicitudAutorizacion autorizacion = autorizacionBO.requerirAutorizacion(idResponsable, OPERACION_NOTA_CREDITO,
+                    huellaNotaCredito(notaCredito));
             Usuario admin = autorizacion.getAdministrador();
 
+            String serie = (origen.getTipo() == TipoComprobante.FACTURA) ? "FC01" : "BC01";
+            String correlativo = comprobanteDAO.siguienteCorrelativo(serie);
+
+            notaCredito.setVenta(venta);
+            notaCredito.setTipo(TipoComprobante.NOTA_CREDITO);
+            notaCredito.setSerie(serie);
+            notaCredito.setNumero(correlativo);
+            notaCredito.setFechaEmision(LocalDate.now());
+            notaCredito.setSubTotal(subTotalNC.doubleValue());
+            notaCredito.setIgv(igvNC.doubleValue());
+            notaCredito.setTotal(totalNC.doubleValue());
+            notaCredito.setEstado(EstadoComprobante.EMITIDO);
+            notaCredito.setComprobanteRelacionado(origen);
+            notaCredito.setAdministradorAutoriza(admin);
+            notaCredito.setFechaRegistro(LocalDateTime.now());
+
+            guardarConNumeroUnico(notaCredito);
+
+            // Guardar detalles de nota de credito
+            for (DetalleNotaCredito d : detalles) {
+                d.setComprobante(notaCredito);
+                detalleNotaCreditoDAO.save(d);
+
+                // Efecto 2: Reingreso de inventario (RF013); el producto es el de la linea de venta
+                int idProd = d.getDetalleVenta().getProducto().getId();
+                double stockActual = stockDAO.obtenerStockParaActualizar(idProd);
+                double nuevoStock = stockActual + d.getCantidad();
+                stockDAO.actualizarStock(idProd, nuevoStock);
+
+                MovimientoInventario mov = new MovimientoInventario();
+                Producto prod = new Producto();
+                prod.setId(idProd);
+                mov.setProducto(prod);
+                mov.setTipo(TipoMovimientoInventario.INGRESO_DEVOLUCION);
+                mov.setCantidad(d.getCantidad());
+                mov.setStockResultante(nuevoStock);
+                mov.setComprobante(notaCredito);
+                mov.setUsuarioRegistro(responsable);
+                mov.setMotivo("Devolución por NC " + serie + "-" + correlativo + ": " + motivoValidado);
+                movimientoDAO.save(mov);
+            }
+
+            // Efecto 1: Reversion de saldo de cuenta por cobrar si es a credito (RF013, RF010)
+            if (venta.getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CREDITO) {
+                // La nota rebaja primero la deuda que queda. Lo que exceda el saldo es dinero que el cliente
+                // ya pago: se le devuelve en efectivo por la caja abierta del cajero (igual que al contado).
+                pe.edu.pucp.sigmeta.model.cobranza.CuentaPorCobrar cuenta =
+                        new pe.edu.pucp.sigmeta.daoimpl.cobranza.CuentaPorCobrarDAOImpl().obtenerPorVenta(venta.getId());
+                BigDecimal totalNota = BigDecimal.valueOf(notaCredito.getTotal()).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal saldo = cuenta == null ? BigDecimal.ZERO
+                        : BigDecimal.valueOf(Math.max(cuenta.getSaldoPendiente(), 0)).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal aLaDeuda = totalNota.min(saldo);
+                BigDecimal aDevolver = totalNota.subtract(aLaDeuda);
+                if (aLaDeuda.signum() > 0) {
+                    comprobanteDAO.revertirSaldoCuentaPorCobrar(venta.getId(), aLaDeuda.doubleValue());
+                }
+                if (aDevolver.signum() > 0) {
+                    compensacionCaja.egresoEnCajaAbierta(responsable.getId(),
+                            pe.edu.pucp.sigmeta.model.enums.MedioPago.EFECTIVO, aDevolver.doubleValue(),
+                            "Devolución por NC " + serie + "-" + correlativo + " (venta al crédito ya pagada)",
+                            CompensacionCaja.DOCUMENTO_NOTA_CREDITO, notaCredito.getId(), responsable);
+                }
+            } else {
+                // Efecto 3 (RF010): venta al contado ya cobrada -> la devolucion sale como egreso de la caja
+                // del cajero, asi la nota de credito no queda contada como cobro valido en el cierre
+                List<MovimientoCaja> cobros = compensacionCaja.buscar(CompensacionCaja.DOCUMENTO_VENTA, venta.getId());
+                if (!cobros.isEmpty()) {
+                    compensacionCaja.egresoEnCajaAbierta(responsable.getId(), cobros.get(0).getMedioPago(),
+                            notaCredito.getTotal(), "Devolución por NC " + serie + "-" + correlativo,
+                            CompensacionCaja.DOCUMENTO_NOTA_CREDITO, notaCredito.getId(), responsable);
+                }
+            }
+
+            // RF014: la autorizacion es de un solo uso. Si algo falla antes, el rollback la deja APROBADA
+            autorizacionBO.consumir(autorizacion.getId());
+
+            return notaCredito;
+        });
+    }
+
+    // RF013: valida la nota y calcula sus montos SIN mover nada (stock, deuda, caja). La usan registrar y solicitar.
+    private NotaPreparada prepararNotaCredito(Comprobante notaCredito) throws SQLException {
+        List<DetalleNotaCredito> detalles = notaCredito.getDetalles();
             int idOrigen = notaCredito.getComprobanteRelacionado().getId();
             Comprobante origen = comprobanteDAO.load(idOrigen);
             if (origen == null) {
@@ -263,84 +353,52 @@ public class ComprobanteBOImpl implements ComprobanteBO {
             if (totalNC.doubleValue() > origen.getTotal() + 0.01) {
                 throw new IllegalArgumentException("El monto total de la nota de crédito no puede superar el total del comprobante origen");
             }
+        return new NotaPreparada(origen, venta, subTotalNC, igvNC, totalNC);
+    }
 
-            String serie = (origen.getTipo() == TipoComprobante.FACTURA) ? "FC01" : "BC01";
-            String correlativo = comprobanteDAO.siguienteCorrelativo(serie);
+    private record NotaPreparada(Comprobante origen, Venta venta, BigDecimal subTotal, BigDecimal igv, BigDecimal total) {
+    }
 
-            notaCredito.setVenta(venta);
-            notaCredito.setTipo(TipoComprobante.NOTA_CREDITO);
-            notaCredito.setSerie(serie);
-            notaCredito.setNumero(correlativo);
-            notaCredito.setFechaEmision(LocalDate.now());
-            notaCredito.setSubTotal(subTotalNC.doubleValue());
-            notaCredito.setIgv(igvNC.doubleValue());
-            notaCredito.setTotal(totalNC.doubleValue());
-            notaCredito.setEstado(EstadoComprobante.EMITIDO);
-            notaCredito.setComprobanteRelacionado(origen);
-            notaCredito.setAdministradorAutoriza(admin);
-            notaCredito.setFechaRegistro(LocalDateTime.now());
+    // RF014: huella de la nota = comprobante de origen + cada linea devuelta con su cantidad
+    private static String huellaNotaCredito(Comprobante notaCredito) {
+        StringBuilder datos = new StringBuilder("NC|").append(notaCredito.getComprobanteRelacionado().getId());
+        notaCredito.getDetalles().stream()
+                .sorted(java.util.Comparator.comparingInt(d -> d.getDetalleVenta().getId()))
+                .forEach(d -> datos.append('|').append(d.getDetalleVenta().getId()).append(':')
+                        .append(String.format(java.util.Locale.ROOT, "%.3f", d.getCantidad())));
+        return SolicitudAutorizacionBOImpl.huella(datos.toString());
+    }
 
-            guardarConNumeroUnico(notaCredito);
-
-            // Guardar detalles de nota de credito
-            for (DetalleNotaCredito d : detalles) {
-                d.setComprobante(notaCredito);
-                detalleNotaCreditoDAO.save(d);
-
-                // Efecto 2: Reingreso de inventario (RF013); el producto es el de la linea de venta
-                int idProd = d.getDetalleVenta().getProducto().getId();
-                double stockActual = stockDAO.obtenerStockParaActualizar(idProd);
-                double nuevoStock = stockActual + d.getCantidad();
-                stockDAO.actualizarStock(idProd, nuevoStock);
-
-                MovimientoInventario mov = new MovimientoInventario();
-                Producto prod = new Producto();
-                prod.setId(idProd);
-                mov.setProducto(prod);
-                mov.setTipo(TipoMovimientoInventario.INGRESO_DEVOLUCION);
-                mov.setCantidad(d.getCantidad());
-                mov.setStockResultante(nuevoStock);
-                mov.setComprobante(notaCredito);
-                mov.setUsuarioRegistro(responsable);
-                mov.setMotivo("Devolución por NC " + serie + "-" + correlativo + ": " + motivoValidado);
-                movimientoDAO.save(mov);
+    // RF013/RF014: el Cajero prepara la nota y pide la autorizacion de ESA nota. El Administrador ve el comprobante,
+    // el cliente, los productos y el total; al aprobar, el Cajero la registra (registrarNotaCredito).
+    @Override
+    public SolicitudAutorizacion solicitarNotaCredito(Comprobante notaCredito, int idResponsable) throws SQLException {
+        usuarioBO.verificarRol(idResponsable, TipoRol.CAJERO);
+        Validador.obligatorio(notaCredito, "nota de crédito");
+        Validador.obligatorio(notaCredito.getComprobanteRelacionado(), "comprobante origen");
+        String motivo = Validador.textoObligatorio(notaCredito.getMotivo(), "motivo de nota de crédito", 200);
+        if (notaCredito.getDetalles() == null || notaCredito.getDetalles().isEmpty()) {
+            throw new IllegalArgumentException("La nota de crédito debe tener al menos una línea de detalle");
+        }
+        return Transaccion.ejecutar(() -> {
+            NotaPreparada p = prepararNotaCredito(notaCredito);
+            Cliente cliente = clienteDAO.load(p.venta().getCliente().getId());
+            String comprobante = p.origen().getSerie() + "-" + p.origen().getNumero();
+            StringBuilder detalle = new StringBuilder()
+                    .append("Cliente: ").append(cliente == null ? "—" : cliente.getNombreMostrado()).append('\n')
+                    .append("Venta: ").append(p.venta().getNumero())
+                    .append(p.venta().getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CREDITO ? " (crédito)" : " (contado)").append('\n')
+                    .append("Devuelve:");
+            for (DetalleNotaCredito d : notaCredito.getDetalles()) {
+                Producto producto = productoDAO.load(d.getDetalleVenta().getProducto().getId());
+                detalle.append('\n').append("- ")
+                        .append(new BigDecimal(String.valueOf(d.getCantidad())).stripTrailingZeros().toPlainString()).append(' ')
+                        .append(producto == null ? "producto" : producto.getNombre())
+                        .append(String.format(java.util.Locale.ROOT, ": S/ %.2f", d.getImporte()));
             }
-
-            // Efecto 1: Reversion de saldo de cuenta por cobrar si es a credito (RF013, RF010)
-            if (venta.getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CREDITO) {
-                // La nota rebaja primero la deuda que queda. Lo que exceda el saldo es dinero que el cliente
-                // ya pago: se le devuelve en efectivo por la caja abierta del cajero (igual que al contado).
-                pe.edu.pucp.sigmeta.model.cobranza.CuentaPorCobrar cuenta =
-                        new pe.edu.pucp.sigmeta.daoimpl.cobranza.CuentaPorCobrarDAOImpl().obtenerPorVenta(venta.getId());
-                BigDecimal totalNota = BigDecimal.valueOf(notaCredito.getTotal()).setScale(2, RoundingMode.HALF_UP);
-                BigDecimal saldo = cuenta == null ? BigDecimal.ZERO
-                        : BigDecimal.valueOf(Math.max(cuenta.getSaldoPendiente(), 0)).setScale(2, RoundingMode.HALF_UP);
-                BigDecimal aLaDeuda = totalNota.min(saldo);
-                BigDecimal aDevolver = totalNota.subtract(aLaDeuda);
-                if (aLaDeuda.signum() > 0) {
-                    comprobanteDAO.revertirSaldoCuentaPorCobrar(venta.getId(), aLaDeuda.doubleValue());
-                }
-                if (aDevolver.signum() > 0) {
-                    compensacionCaja.egresoEnCajaAbierta(responsable.getId(),
-                            pe.edu.pucp.sigmeta.model.enums.MedioPago.EFECTIVO, aDevolver.doubleValue(),
-                            "Devolución por NC " + serie + "-" + correlativo + " (venta al crédito ya pagada)",
-                            CompensacionCaja.DOCUMENTO_NOTA_CREDITO, notaCredito.getId(), responsable);
-                }
-            } else {
-                // Efecto 3 (RF010): venta al contado ya cobrada -> la devolucion sale como egreso de la caja
-                // del cajero, asi la nota de credito no queda contada como cobro valido en el cierre
-                List<MovimientoCaja> cobros = compensacionCaja.buscar(CompensacionCaja.DOCUMENTO_VENTA, venta.getId());
-                if (!cobros.isEmpty()) {
-                    compensacionCaja.egresoEnCajaAbierta(responsable.getId(), cobros.get(0).getMedioPago(),
-                            notaCredito.getTotal(), "Devolución por NC " + serie + "-" + correlativo,
-                            CompensacionCaja.DOCUMENTO_NOTA_CREDITO, notaCredito.getId(), responsable);
-                }
-            }
-
-            // RF014: la autorizacion es de un solo uso. Si algo falla antes, el rollback la deja APROBADA
-            autorizacionBO.consumir(autorizacion.getId());
-
-            return notaCredito;
+            detalle.append('\n').append(String.format(java.util.Locale.ROOT, "Total de la nota: S/ %.2f", p.total()));
+            return autorizacionBO.solicitarOperacion(idResponsable, OPERACION_NOTA_CREDITO, motivo,
+                    comprobante, detalle.toString(), huellaNotaCredito(notaCredito));
         });
     }
 

@@ -95,6 +95,29 @@ public class NotaCreditoRS extends VentanillaBase {
             return error(Response.Status.BAD_REQUEST, "Elija el comprobante sobre el que se emite la nota de crédito");
         }
         return ejecutar(ticket, Response.Status.CREATED, id -> {
+            Comprobante nota = aNota(datos);
+            Comprobante guardada = comprobanteBO.registrarNotaCredito(nota, id);
+            Map<String, Object> respuesta = new LinkedHashMap<>();
+            respuesta.put("id", guardada.getId());
+            respuesta.put("nota", guardada.getSerie() + "-" + guardada.getNumero());
+            respuesta.put("total", guardada.getTotal());
+            return respuesta;
+        });
+    }
+
+    // RF013/RF014: pide la autorizacion de ESTA nota (mismo cuerpo que registrar); no mueve stock, deuda ni caja
+    @POST
+    @Path("solicitar")
+    public Response solicitar(@HeaderParam("ticket") String ticket, NotaDatos datos) {
+        if (datos == null || datos.idComprobanteOrigen <= 0) {
+            return error(Response.Status.BAD_REQUEST, "Elija el comprobante sobre el que se emite la nota de crédito");
+        }
+        return ejecutar(ticket, Response.Status.CREATED, id ->
+                pe.edu.pucp.sigmeta.ws.seguridad.SolicitudRS.resumen(comprobanteBO.solicitarNotaCredito(aNota(datos), id)));
+    }
+
+    private Comprobante aNota(NotaDatos datos) {
+        {
             Comprobante nota = new Comprobante();
             Comprobante origen = new Comprobante();
             origen.setId(datos.idComprobanteOrigen);
@@ -115,13 +138,8 @@ public class NotaCreditoRS extends VentanillaBase {
                 detalles.add(d);
             }
             nota.setDetalles(detalles);
-            Comprobante guardada = comprobanteBO.registrarNotaCredito(nota, id);
-            Map<String, Object> respuesta = new LinkedHashMap<>();
-            respuesta.put("id", guardada.getId());
-            respuesta.put("nota", guardada.getSerie() + "-" + guardada.getNumero());
-            respuesta.put("total", guardada.getTotal());
-            return respuesta;
-        });
+            return nota;
+        }
     }
 
     // RF013: modificar la nota de credito (Cajero o Administrador). Solo se edita el motivo: el detalle y los

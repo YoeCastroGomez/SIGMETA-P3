@@ -98,6 +98,12 @@ class NotaCreditoBOTest {
         return nota;
     }
 
+    /** RF014: el Cajero pide la autorizacion de ESTA nota (mismas lineas y cantidades) y el Administrador la aprueba. */
+    private SolicitudAutorizacion autorizarNota(double cantidad) throws Exception {
+        SolicitudAutorizacion s = comprobantes.solicitarNotaCredito(pedido(cantidad), CAJERO);
+        return autorizaciones.aprobar(s.getId(), ADMINISTRADOR, 30);
+    }
+
     /** Lo que deberia devolver la nota: importe de la linea (con descuento) por unidad devuelta; ya incluye IGV. */
     private double totalEsperado(double cantidad) {
         BigDecimal sub = BigDecimal.valueOf(linea.getImporte()).multiply(BigDecimal.valueOf(cantidad))
@@ -117,17 +123,29 @@ class NotaCreditoBOTest {
     @Test
     @DisplayName("RF014: la autorizacion sirve para una sola nota")
     void autorizacionDeUnSoloUso() throws Exception {
-        SolicitudAutorizacion autorizacion = autorizar(CAJERO, NOTA);
+        SolicitudAutorizacion autorizacion = autorizarNota(1);
         emitir(1);
         assertEquals(EstadoAutorizacion.VENCIDA, autorizaciones.obtener(autorizacion.getId()).getEstado());
         assertThrows(IllegalStateException.class, () -> emitir(1), "la segunda nota necesita otra autorizacion");
     }
 
     @Test
+    @DisplayName("RF014: la autorizacion es de ESA nota: otra cantidad necesita otra autorizacion")
+    void autorizacionSoloParaLaNotaPedida() throws Exception {
+        SolicitudAutorizacion autorizacion = autorizarNota(1);
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> emitir(2));
+        assertTrue(e.getMessage().contains("autorización"), e.getMessage());
+        assertEquals(EstadoAutorizacion.APROBADA, autorizaciones.obtener(autorizacion.getId()).getEstado(),
+                "la autorizacion de 1 unidad sigue sin usar");
+        assertEquals(autorizacion.getId(), comprobantes.solicitarNotaCredito(pedido(1), CAJERO).getId(),
+                "pedir otra vez la misma nota devuelve la misma solicitud");
+    }
+
+    @Test
     @DisplayName("RF014: la vigencia de una autorizacion va de 1 a 1440 minutos")
     void vigenciaDentroDelLimite() throws Exception {
         sinAutorizaciones(CAJERO, NOTA);
-        SolicitudAutorizacion s = autorizaciones.solicitar(CAJERO, NOTA, "Prueba de vigencia JUnit");
+        SolicitudAutorizacion s = comprobantes.solicitarNotaCredito(pedido(1), CAJERO);
         assertThrows(IllegalArgumentException.class, () -> autorizaciones.aprobar(s.getId(), ADMINISTRADOR, 0));
         assertThrows(IllegalArgumentException.class, () -> autorizaciones.aprobar(s.getId(), ADMINISTRADOR, 1441));
         assertEquals(EstadoAutorizacion.PENDIENTE, autorizaciones.obtener(s.getId()).getEstado(), "sigue pendiente");
@@ -139,7 +157,7 @@ class NotaCreditoBOTest {
     @Test
     @DisplayName("RF013: solo se devuelve lo entregado; si falla, la autorizacion no se gasta")
     void soloSeDevuelveLoEntregado() throws Exception {
-        SolicitudAutorizacion autorizacion = autorizar(CAJERO, NOTA);
+        SolicitudAutorizacion autorizacion = autorizarNota(1);
 
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> emitir(4),
                 "se vendieron 4 pero solo se entregaron 3");
@@ -151,10 +169,11 @@ class NotaCreditoBOTest {
     @Test
     @DisplayName("RF013: lo ya acreditado no se vuelve a devolver")
     void loAcreditadoNoSeDevuelveDosVeces() throws Exception {
-        autorizar(CAJERO, NOTA);
+        autorizarNota(2);
         emitir(2);
-        autorizar(CAJERO, NOTA);
+        // la cantidad se valida antes que la autorizacion: no hace falta pedirla para que se rechace
         assertThrows(IllegalArgumentException.class, () -> emitir(2), "entregadas 3, ya acreditadas 2: queda 1");
+        autorizarNota(1);
         Comprobante ultima = emitir(1);
         assertTrue(ultima.getId() > 0);
     }
@@ -162,7 +181,7 @@ class NotaCreditoBOTest {
     @Test
     @DisplayName("RF013: la nota calcula el monto, reingresa el stock y rebaja la deuda")
     void montoStockYDeuda() throws Exception {
-        autorizar(CAJERO, NOTA);
+        autorizarNota(2);
         double stockAntes = stockFisico(producto.getId());
         double saldoAntes = saldoCuenta(venta.getId());
 
@@ -180,7 +199,7 @@ class NotaCreditoBOTest {
     @Test
     @DisplayName("RF013: anular la nota devuelve el stock y la deuda a como estaban")
     void anularRevierteStockYDeuda() throws Exception {
-        autorizar(CAJERO, NOTA);
+        autorizarNota(2);
         double stockAntes = stockFisico(producto.getId());
         double saldoAntes = saldoCuenta(venta.getId());
         Comprobante nota = emitir(2);
@@ -197,7 +216,7 @@ class NotaCreditoBOTest {
     @Test
     @DisplayName("RF013: el Vendedor no anula notas de credito")
     void vendedorNoAnulaNotas() throws Exception {
-        autorizar(CAJERO, NOTA);
+        autorizarNota(1);
         Comprobante nota = emitir(1);
         IllegalStateException e = assertThrows(IllegalStateException.class,
                 () -> comprobantes.anular(nota.getId(), "Intento del vendedor", VENDEDOR));
@@ -208,7 +227,7 @@ class NotaCreditoBOTest {
     @Test
     @DisplayName("RF013: la factura con nota de credito vigente no se anula")
     void facturaConNotaNoSeAnula() throws Exception {
-        autorizar(CAJERO, NOTA);
+        autorizarNota(1);
         emitir(1);
         assertThrows(IllegalStateException.class,
                 () -> comprobantes.anular(factura.getId(), "Intento con nota vigente", CAJERO));
@@ -217,7 +236,7 @@ class NotaCreditoBOTest {
     @Test
     @DisplayName("RF013: modificar cambia solo el motivo y no se permite en una nota anulada")
     void modificarSoloCambiaElMotivo() throws Exception {
-        autorizar(CAJERO, NOTA);
+        autorizarNota(1);
         Comprobante nota = emitir(1);
         Comprobante antes = comprobantes.obtener(nota.getId());
 
