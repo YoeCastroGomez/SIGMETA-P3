@@ -1168,6 +1168,10 @@ html[data-bs-theme="dark"] .sigmeta-confirmacion .modal-body .small.text-danger 
 /* El main conserva un transform al terminar la animación de entrada.
    Ese transform contenía el backdrop fixed dentro del área de contenido.
    Se desactiva únicamente mientras haya una confirmación visible. */
+html:has(.sigmeta-confirmacion),
+html:has(.sigmeta-confirmacion) body {
+    overflow: hidden;
+}
 html:has(.sigmeta-confirmacion) .sigmeta-main {
     animation: none !important;
     transform: none !important;
