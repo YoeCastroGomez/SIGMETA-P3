@@ -8,10 +8,7 @@
 <Encabezado Rf="RF002" Titulo="Cambiar mi clave" Subtitulo="Tu clave es personal: no la compartas." />
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
 
 <div class="card card-body mb-3" style="max-width: 520px;">
     <Campo Etiqueta="Clave actual" Id="actual" Obligatorio="true" Error="@E("actual")">

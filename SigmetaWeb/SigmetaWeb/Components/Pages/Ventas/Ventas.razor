@@ -263,7 +263,7 @@ else
         {
             avisoLeido = true;
             exito = AvisoGuardado.Texto(Guardado, "la venta", Referencia);
-            if (exito is not null && Guardado == AvisoGuardado.Editado)
+            if (exito is not null && (Guardado == AvisoGuardado.Editado || Guardado == AvisoGuardado.Cobrado))
             {
                 exitoDetalle = null;
             }

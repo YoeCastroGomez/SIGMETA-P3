@@ -12,10 +12,7 @@
             Subtitulo="La mercadería sale con su comprobante emitido y, si la venta es al contado, ya cobrada en caja." />
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
 
 <Confirmacion Visible="@(porAnular is not null)" Titulo="Anular despacho" TextoConfirmar="Anular despacho"
               AlConfirmar="ConfirmarAnular" AlCancelar="() => porAnular = null">

@@ -20,10 +20,7 @@
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
 
 @if (cuenta is null)
 {
@@ -157,8 +154,18 @@ else
     private string? error;
     private string? exito;
 
+    // Aviso de éxito con el patrón único (AvisoGuardado): el formulario del cobro vuelve aquí con ?guardado=…&ref=…
+    [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
+    [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
+    private bool avisoLeido;
+
     protected override async Task OnParametersSetAsync()
     {
+        if (!avisoLeido)
+        {
+            avisoLeido = true;
+            exito = AvisoGuardado.Texto(Guardado, "el cobro", Referencia);
+        }
         await Cargar();
     }
 

@@ -1075,6 +1075,32 @@ html[data-bs-theme="dark"] .form-switch .form-check-input:checked {
     letter-spacing: .035em;
 }
 
+/* ===================== MENSAJES SIGMETA (MensajeModal) =====================
+   Feedback de cada acción en una ventana modal: éxito, error o aviso.
+   Usa el mismo marco que las confirmaciones (.sigmeta-confirmacion). */
+.sigmeta-mensaje .modal-header {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+}
+.sigmeta-mensaje .mensaje-icono {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: 1rem;
+    color: #fff;
+}
+.sigmeta-mensaje.mensaje-exito .mensaje-icono { background: #2e7d4f; }
+.sigmeta-mensaje.mensaje-error .mensaje-icono { background: #b42318; }
+.sigmeta-mensaje.mensaje-aviso .mensaje-icono { background: #b8641a; }
+.sigmeta-mensaje.mensaje-error .modal-header { background: #fdecea; }
+.sigmeta-mensaje .modal-body p { white-space: pre-line; }
+
 /* ===================== CONFIRMACIONES SIGMETA =====================
    Cuadros de confirmación de desactivación y acciones sensibles.
    Se aplican solo al componente compartido, en ambos temas. */
@@ -1208,3 +1234,6 @@ html:has(.sigmeta-confirmacion) .sigmeta-main {
     width: 100%;
     max-height: calc(100dvh - 3.5rem);
 }
+
+/* Mensajes SIGMETA en tema oscuro: el encabezado de error no usa el rosado claro */
+html[data-bs-theme="dark"] .sigmeta-mensaje.mensaje-error .modal-header { background: rgba(180, 35, 24, .22); }

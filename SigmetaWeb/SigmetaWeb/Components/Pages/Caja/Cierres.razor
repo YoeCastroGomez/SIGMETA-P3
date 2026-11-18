@@ -17,10 +17,7 @@
             Subtitulo="Un cierre reabierto queda como revertido; al cerrar de nuevo se registra un cierre nuevo. Corregir solo cambia el monto declarado." />
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
 
 @if (cierreAReabrir is not null)
 {

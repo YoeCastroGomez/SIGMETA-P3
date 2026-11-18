@@ -15,10 +15,7 @@
             Subtitulo="@(caja is not null ? "Resumen de la jornada de la caja abierta." : "No tienes una caja abierta. Ábrela para registrar cobros y movimientos.")" />
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
 
 @if (cargando)
 {
@@ -271,8 +268,13 @@ else
     private string? error;
     private string? exito;
 
+    // Aviso de éxito con el patrón único (AvisoGuardado): el cobro al contado vuelve aquí con ?guardado=cobrado&ref=…
+    [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
+    [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
+        exito = AvisoGuardado.Texto(Guardado, "la venta", Referencia);
         await Cargar();
         cargando = false;
     }

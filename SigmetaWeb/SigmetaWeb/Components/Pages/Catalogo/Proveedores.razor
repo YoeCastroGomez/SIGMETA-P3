@@ -14,10 +14,7 @@
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
 
 <Confirmacion Visible="@(porDesactivar is not null)"
               Titulo="Desactivar proveedor"

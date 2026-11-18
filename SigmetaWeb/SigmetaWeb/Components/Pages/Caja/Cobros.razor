@@ -16,10 +16,7 @@
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-@if (!string.IsNullOrEmpty(exito))
-{
-    <div class="alert alert-success">@exito</div>
-}
+<AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
 
 <div class="card card-body mb-3">
     <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
