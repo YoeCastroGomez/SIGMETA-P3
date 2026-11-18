@@ -11,6 +11,7 @@ public interface ProveedorBO {
     Proveedor registrar(Proveedor proveedor, int idAdministrador) throws SQLException;
     Proveedor modificar(Proveedor proveedor, int idAdministrador) throws SQLException;
     void desactivar(int idProveedor, int idAdministrador) throws SQLException;
+    void activar(int idProveedor, int idAdministrador) throws SQLException;
     Proveedor obtener(int idProveedor) throws SQLException;
     List<Proveedor> listarTodos() throws SQLException;
     Proveedor buscarPorRuc(String ruc) throws SQLException;
