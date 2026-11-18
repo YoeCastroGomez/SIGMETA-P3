@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 public interface ProveedorDAO extends BaseDAO<Proveedor, Integer> {
+    void activar(int idProveedor) throws SQLException;
     List<Proveedor> listarTodos() throws SQLException;
     Proveedor buscarPorRuc(String ruc) throws SQLException;
     List<Proveedor> buscarPorRazonSocial(String razonSocial) throws SQLException;
