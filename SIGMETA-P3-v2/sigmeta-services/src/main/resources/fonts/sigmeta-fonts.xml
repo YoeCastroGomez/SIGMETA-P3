@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- RF015: Liberation Sans (metrica de Arial, licencia SIL OFL). Los archivos .ttf vienen en la dependencia
+     com.github.librepdf:openpdf-fonts-extra. Se incrustan en el PDF (Identity-H: tildes, ñ y simbolos). -->
+<fontFamilies>
+	<fontFamily name="Liberation Sans">
+		<normal>liberation/LiberationSans-Regular.ttf</normal>
+		<bold>liberation/LiberationSans-Bold.ttf</bold>
+		<italic>liberation/LiberationSans-Italic.ttf</italic>
+		<boldItalic>liberation/LiberationSans-BoldItalic.ttf</boldItalic>
+		<pdfEncoding>Identity-H</pdfEncoding>
+		<pdfEmbedded>true</pdfEmbedded>
+		<exportFonts>
+			<export key="net.sf.jasperreports.html">'Liberation Sans', Arial, Helvetica, sans-serif</export>
+		</exportFonts>
+	</fontFamily>
+</fontFamilies>

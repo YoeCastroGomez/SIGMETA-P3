@@ -1,31 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- SIGMETA · RF015 · Reporte de caja: cierres de caja del periodo (subreporte). Datos: sp_reporte_caja_cierres. -->
 <jasperReport name="sub_cierres" language="java" pageWidth="535" pageHeight="842" whenNoDataType="NoDataSection" columnWidth="535" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
-	<style name="base" default="true" fontName="DejaVu Sans" fontSize="8.0" forecolor="#1D1D1F"/>
-	<style name="seccion" fontName="DejaVu Sans" fontSize="10.0" bold="true" forecolor="#1D1D1F" vTextAlign="Middle">
-		<box leftPadding="6"><leftPen lineWidth="3.0" lineColor="#D9822B"/></box>
+	<style name="base" default="true" fontName="Liberation Sans" fontSize="8.0" forecolor="#000000"/>
+	<style name="seccion" fontName="Liberation Sans" fontSize="9.0" bold="true" forecolor="#000000" vTextAlign="Bottom">
+		<box bottomPadding="2"><bottomPen lineWidth="0.75" lineColor="#000000"/></box>
 	</style>
-	<style name="nota" fontName="DejaVu Sans" fontSize="7.0" italic="true" forecolor="#7A7A7A"/>
-	<style name="th" mode="Opaque" backcolor="#F3EDE6" forecolor="#5A3A1A" fontName="DejaVu Sans" fontSize="7.5" bold="true" vTextAlign="Middle">
-		<box leftPadding="4" rightPadding="4"><bottomPen lineWidth="0.75" lineColor="#C9B8A6"/></box>
+	<style name="nota" fontName="Liberation Sans" fontSize="7.0" forecolor="#4D4D4D"/>
+	<style name="th" mode="Opaque" backcolor="#E6E6E6" forecolor="#000000" fontName="Liberation Sans" fontSize="7.5" bold="true" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><pen lineWidth="0.5" lineColor="#808080"/></box>
 	</style>
-	<style name="td" fontName="DejaVu Sans" fontSize="8.0" forecolor="#1D1D1F" vTextAlign="Middle">
-		<box leftPadding="4" rightPadding="4"><bottomPen lineWidth="0.5" lineColor="#E6E1DB"/></box>
-		<conditionalStyle mode="Opaque" backcolor="#FBF8F4">
-			<conditionExpression><![CDATA[$V{REPORT_COUNT} % 2 == 0]]></conditionExpression>
-		</conditionalStyle>
+	<style name="td" fontName="Liberation Sans" fontSize="8.0" forecolor="#000000" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><pen lineWidth="0.5" lineColor="#A6A6A6"/></box>
 	</style>
-	<style name="tdAlerta" fontName="DejaVu Sans" fontSize="8.0" forecolor="#1D1D1F" vTextAlign="Middle">
-		<box leftPadding="4" rightPadding="4"><bottomPen lineWidth="0.5" lineColor="#E6E1DB"/></box>
-		<conditionalStyle mode="Opaque" backcolor="#FBF8F4">
-			<conditionExpression><![CDATA[$V{REPORT_COUNT} % 2 == 0]]></conditionExpression>
-		</conditionalStyle>
-		<conditionalStyle forecolor="#B42318">
+	<style name="tdAlerta" fontName="Liberation Sans" fontSize="8.0" forecolor="#000000" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><pen lineWidth="0.5" lineColor="#A6A6A6"/></box>
+		<conditionalStyle forecolor="#A50000">
 			<conditionExpression><![CDATA[$F{diferencia} != null && $F{diferencia}.doubleValue() < -0.005]]></conditionExpression>
 		</conditionalStyle>
 	</style>
-	<style name="vacio" fontName="DejaVu Sans" fontSize="8.0" italic="true" forecolor="#7A7A7A" hTextAlign="Center" vTextAlign="Middle">
-		<box><pen lineWidth="0.5" lineColor="#E6E1DB"/></box>
+	<style name="vacio" fontName="Liberation Sans" fontSize="8.0" forecolor="#4D4D4D" hTextAlign="Center" vTextAlign="Middle">
+		<box><pen lineWidth="0.5" lineColor="#A6A6A6"/></box>
 	</style>
 	<field name="cajaTexto" class="java.lang.String"/>
 	<field name="cajero" class="java.lang.String"/>
@@ -38,8 +32,8 @@
 		<expression><![CDATA[1]]></expression>
 		<groupHeader>
 			<band height="48">
-				<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[Cierres de caja]]></text></element>
-				<element kind="staticText" x="9" y="17" width="526" height="11" style="nota"><text><![CDATA[Diferencia = monto declarado − monto calculado. En rojo, los cierres con faltante.]]></text></element>
+				<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[1. CIERRES DE CAJA]]></text></element>
+				<element kind="staticText" x="0" y="18" width="535" height="11" style="nota"><text><![CDATA[Diferencia = monto declarado − monto calculado. En rojo, los cierres con faltante.]]></text></element>
 				<element kind="staticText" x="0" y="32" width="45" height="16" style="th"><text><![CDATA[Caja]]></text></element>
 				<element kind="staticText" x="45" y="32" width="85" height="16" style="th"><text><![CDATA[Cajero]]></text></element>
 				<element kind="staticText" x="130" y="32" width="95" height="16" style="th"><text><![CDATA[Cierre]]></text></element>
@@ -62,7 +56,7 @@
 		</band>
 	</detail>
 	<noData height="42">
-		<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[Cierres de caja]]></text></element>
+		<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[1. CIERRES DE CAJA]]></text></element>
 		<element kind="staticText" x="0" y="22" width="535" height="18" style="vacio"><text><![CDATA[No hubo cierres en el periodo.]]></text></element>
 	</noData>
 </jasperReport>
