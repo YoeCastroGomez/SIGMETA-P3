@@ -19,6 +19,15 @@
     <div class="alert alert-success">@exito</div>
 }
 
+<Confirmacion Visible="@(porAnular is not null)"
+              Titulo="Anular compra"
+              TextoConfirmar="Anular compra"
+              AlConfirmar="ConfirmarAnular"
+              AlCancelar="() => porAnular = null">
+    <p class="mb-2">¿Seguro que desea anular la compra <strong>@porAnular?.Numero</strong>?</p>
+    <p class="small text-muted mb-0">Esta operación cambia el estado de la compra y conserva su historial. Verifique que sea la orden correcta.</p>
+</Confirmacion>
+
 <div class="card card-body mb-3">
     <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
         <Campo Etiqueta="Número de compra" Id="numeroCompraFiltro" Clase="col-sm-6 col-md-3">
@@ -73,15 +82,7 @@
                                 @if (c.Estado == "REGISTRADA" && !c.Anulado)
                                 {
                                     <a class="btn btn-sm btn-outline-secondary" href="@($"/compras/editar/{c.Id}")">Editar</a>
-                                    @if (confirmarId == c.Id)
-                                    {
-                                        <button type="button" class="btn btn-sm btn-danger" disabled="@cargando" @onclick="() => Anular(c)">Confirmar anulación</button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => confirmarId = null">Cancelar</button>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => confirmarId = c.Id">Anular</button>
-                                    }
+                                    <button type="button" class="btn btn-sm btn-outline-danger" disabled="@cargando" @onclick="() => porAnular = c">Anular</button>
                                 }
                             </div>
                         </td>
@@ -134,7 +135,7 @@
         avisoLeido = true;
         exito = AvisoGuardado.Texto(Guardado, "la compra", Referencia) ?? exito;
     }
-    private int? confirmarId;
+    private CompraRest? porAnular;
     private bool cargando;
     private bool cargaInicial = true;
     private Dictionary<int, string> nombresProveedores = new();
@@ -205,7 +206,7 @@
         error = null;
         exito = null;
         paginaActual = 1;
-        confirmarId = null;
+        porAnular = null;
 
         if (filtroDesde.HasValue && filtroHasta.HasValue && filtroDesde.Value.Date > filtroHasta.Value.Date)
         {
@@ -241,10 +242,18 @@
         filtroDesde = filtroHasta = null;
         exito = null;
         error = null;
-        confirmarId = null;
+        porAnular = null;
         paginaActual = 1;
         rutaConsulta = "compras";
         await Cargar();
+    }
+
+    private async Task ConfirmarAnular()
+    {
+        var compra = porAnular;
+        if (compra is null || cargando) return;
+        porAnular = null;
+        await Anular(compra);
     }
 
     private async Task Anular(CompraRest compra)
@@ -254,7 +263,7 @@
         try
         {
             await Api.Delete($"compras/{compra.Id}");
-            confirmarId = null;
+            porAnular = null;
         }
         catch (ErrorApi e) { error = e.Message; }
         finally { cargando = false; }
