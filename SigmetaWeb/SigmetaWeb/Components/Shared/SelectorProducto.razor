@@ -1,0 +1,223 @@
+@using SigmetaWeb.Components.Pages.Catalogo
+@inject ApiJava Api
+
+@* Componente de flujo · Selector de productos para cotización y venta (RF007, RF008).
+   Carga una sola vez el catálogo de productos activos (GET /api/productos?estado=true) y lo filtra aquí:
+     - por categoría (lista de la izquierda) y por texto (nombre, código interno, de fabricante o de proveedor);
+     - al entrar al cuadro se ven todos los productos, para el Vendedor que no recuerda el nombre.
+   Teclado: ↑ ↓ para moverse y Enter para elegir. Con un código exacto (o el lector de barras) Enter lo agrega solo.
+   El precio que se muestra es el de lista (incluye IGV); el BO lo vuelve a poner al guardar.
+   Uso:  <SelectorProducto Id="buscadorVenta" AlElegir="AgregarProducto" /> *@
+<Campo Etiqueta="@Etiqueta" Id="@Id" Clase="@Clase">
+    <div class="selector-producto position-relative">
+        <div class="input-group">
+            @* Botón de categoría con su propio menú (no la lista del navegador): muestra la categoría elegida
+               y cuántos productos tiene cada una *@
+            <button type="button" class="btn btn-categoria d-flex align-items-center gap-2 @(idCategoria > 0 ? "activa" : "")"
+                    aria-haspopup="listbox" aria-expanded="@(menuCategorias ? "true" : "false")"
+                    @onclick="AlternarCategorias" @onblur="() => menuCategorias = false">
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M1.5 2h13a.5.5 0 0 1 .4.8L10 8.6V13a.5.5 0 0 1-.3.5l-3 1.4A.5.5 0 0 1 6 14.4V8.6L1.1 2.8A.5.5 0 0 1 1.5 2Zm1.1 1 4.3 5.1a.5.5 0 0 1 .1.3v5.2l2-1V8.4a.5.5 0 0 1 .1-.3L13.4 3H2.6Z"/></svg>
+                <span class="text-truncate">@NombreCategoria</span>
+                <svg class="flecha" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M3.6 5.6a.75.75 0 0 1 1.06 0L8 8.94l3.34-3.34a.75.75 0 1 1 1.06 1.06L8.53 10.53a.75.75 0 0 1-1.06 0L3.6 6.66a.75.75 0 0 1 0-1.06Z"/></svg>
+            </button>
+            <input id="@Id" @ref="entrada" class="form-control" autocomplete="off" maxlength="150"
+                   placeholder="Nombre o código del producto"
+                   role="combobox" aria-autocomplete="list" aria-expanded="@(abierto ? "true" : "false")" aria-controls="@IdLista"
+                   @bind="texto" @bind:event="oninput" @bind:after="AlEscribir"
+                   onkeydown="if (['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) { event.preventDefault(); }"
+                   @onkeyup="Tecla" @onfocus="Abrir" @onclick="Abrir" @onblur="Cerrar" />
+        </div>
+
+        @if (menuCategorias)
+        {
+            <div class="list-group position-absolute shadow mt-1 menu-categorias" role="listbox" aria-label="Categoría">
+                @foreach (var (idc, nombre, cantidad) in OpcionesCategoria)
+                {
+                    @* mousedown con preventDefault: se elige antes de que el botón pierda el foco *@
+                    <button type="button" role="option" aria-selected="@(idc == idCategoria ? "true" : "false")"
+                            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center @(idc == idCategoria ? "active" : "")"
+                            @onmousedown="() => ElegirCategoria(idc)" @onmousedown:preventDefault>
+                        <span>@nombre</span>
+                        <span class="badge rounded-pill cantidad-categoria">@cantidad</span>
+                    </button>
+                }
+            </div>
+        }
+
+        @if (abierto)
+        {
+            <div id="@IdLista" class="list-group position-absolute w-100 shadow mt-1 sugerencias" role="listbox">
+                <div class="list-group-item cabecera small d-flex justify-content-between">
+                    <span>@(cargando ? "Cargando productos…" : $"{filtrados.Count} producto{(filtrados.Count == 1 ? "" : "s")}")</span>
+                    <span>Precio con IGV · Stock</span>
+                </div>
+                @if (!cargando && filtrados.Count == 0)
+                {
+                    <div class="list-group-item small text-muted">Ningún producto activo coincide.</div>
+                }
+                @for (var i = 0; i < filtrados.Count; i++)
+                {
+                    var p = filtrados[i];
+                    var indice = i;
+                    @* mousedown con preventDefault: se elige antes de que el cuadro pierda el foco *@
+                    <button type="button" role="option" aria-selected="@(indice == resaltado ? "true" : "false")"
+                            class="list-group-item list-group-item-action opcion @(indice == resaltado ? "active" : "")"
+                            @onmousedown="() => Elegir(p)" @onmousedown:preventDefault>
+                        <div class="d-flex justify-content-between align-items-center gap-3">
+                            <div class="text-truncate">
+                                <div class="fw-semibold text-truncate">@p.Nombre</div>
+                                <div class="small detalle">@p.CodigoInterno · @p.Categoria?.Nombre</div>
+                            </div>
+                            <div class="text-end text-nowrap">
+                                <div class="fw-semibold">S/ @p.PrecioVenta.ToString("N2")</div>
+                                <div class="small @(p.StockBajo ? "text-danger fw-semibold" : "detalle")">@p.StockTexto</div>
+                            </div>
+                        </div>
+                    </button>
+                }
+            </div>
+        }
+    </div>
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <div class="small text-danger mt-1">@error</div>
+    }
+</Campo>
+
+@code {
+    // Se llama con el producto elegido (clic, Enter o código exacto)
+    [Parameter] public EventCallback<Producto> AlElegir { get; set; }
+    [Parameter] public string Etiqueta { get; set; } = "Agregar producto";
+    [Parameter] public string Id { get; set; } = "selectorProducto";
+    [Parameter] public string? Clase { get; set; }
+
+    private ElementReference entrada;
+    private List<Producto> productos = new();
+    private List<Categoria> categorias = new();
+    private List<Producto> filtrados = new();
+    private string texto = "";
+    private int idCategoria;
+    private bool abierto;
+    private bool cargando = true;
+    private bool enfocar;
+    private int resaltado = -1;
+    private string? error;
+
+    private string IdLista => Id + "-lista";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            productos = (await Api.Get<List<Producto>>("productos?estado=true") ?? new())
+                .Where(p => p.Activo).OrderBy(p => p.Nombre).ToList();
+            categorias = productos.Where(p => p.Categoria is not null).Select(p => p.Categoria).Where(c => c.Id > 0)
+                .GroupBy(c => c.Id).Select(g => g.First()).OrderBy(c => c.Nombre).ToList();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        finally
+        {
+            cargando = false;
+            Filtrar();
+        }
+    }
+
+    private void Filtrar()
+    {
+        filtrados = productos
+            .Where(p => idCategoria == 0 || p.Categoria?.Id == idCategoria)
+            .Where(p => Busqueda.Coincide(texto, p.Nombre, p.CodigoInterno, p.CodigoFabricante, p.CodigoProveedor))
+            .ToList();
+        resaltado = filtrados.Count > 0 && !string.IsNullOrWhiteSpace(texto) ? 0 : -1;
+    }
+
+    private void AlEscribir()
+    {
+        abierto = true;
+        Filtrar();
+    }
+
+    private bool menuCategorias;
+
+    private string NombreCategoria => idCategoria == 0
+        ? "Todas las categorías"
+        : categorias.FirstOrDefault(c => c.Id == idCategoria)?.Nombre ?? "Categoría";
+
+    // "Todas" y cada categoría con cuántos productos activos tiene
+    private IEnumerable<(int Id, string Nombre, int Cantidad)> OpcionesCategoria =>
+        new[] { (0, "Todas las categorías", productos.Count) }
+            .Concat(categorias.Select(c => (c.Id, c.Nombre, productos.Count(p => p.Categoria?.Id == c.Id))));
+
+    private void AlternarCategorias()
+    {
+        menuCategorias = !menuCategorias;
+        abierto = false;
+    }
+
+    private void ElegirCategoria(int id)
+    {
+        menuCategorias = false;
+        idCategoria = id;
+        Filtrar();
+        abierto = true;
+        enfocar = true;   // el foco vuelve al cuadro con la lista ya abierta
+    }
+
+    // al entrar o hacer clic en el cuadro (también justo después de agregar un producto) se abre la lista
+    private void Abrir()
+    {
+        abierto = true;
+        Filtrar();
+    }
+
+    private void Cerrar() => abierto = false;
+
+    private async Task Elegir(Producto p)
+    {
+        abierto = false;
+        texto = "";
+        resaltado = -1;
+        enfocar = true;   // el cursor sigue en el cuadro: se escribe o se hace clic y se elige el siguiente
+        await AlElegir.InvokeAsync(p);
+    }
+
+    private async Task Tecla(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                if (!abierto) { abierto = true; Filtrar(); }
+                if (filtrados.Count > 0) resaltado = (resaltado + 1) % filtrados.Count;
+                break;
+            case "ArrowUp":
+                if (filtrados.Count > 0) resaltado = resaltado <= 0 ? filtrados.Count - 1 : resaltado - 1;
+                break;
+            case "Enter":
+            case "NumpadEnter":
+                var buscado = texto.Trim();
+                // código exacto (o lector de barras): se agrega aunque no esté resaltado
+                var exacto = buscado.Length == 0 ? null : productos.FirstOrDefault(p =>
+                    string.Equals(p.CodigoInterno, buscado, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(p.CodigoFabricante, buscado, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(p.CodigoProveedor, buscado, StringComparison.OrdinalIgnoreCase));
+                if (exacto is not null) await Elegir(exacto);
+                else if (abierto && resaltado >= 0 && resaltado < filtrados.Count) await Elegir(filtrados[resaltado]);
+                break;
+            case "Escape":
+                abierto = false;
+                break;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (enfocar)
+        {
+            enfocar = false;
+            try { await entrada.FocusAsync(); } catch (Exception) { /* el cuadro todavía no está en pantalla */ }
+        }
+    }
+}

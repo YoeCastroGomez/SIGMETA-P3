@@ -12,6 +12,8 @@ public class LineaDatos {
     public int idProducto;
     public String producto;
     public String codigoProducto;
+    // unidad de venta del producto (UNIDAD, METRO...): la pantalla pide cantidades enteras salvo en KILOGRAMO, METRO y LITRO
+    public String unidadVenta;
     public double cantidad;
     public double precioUnitario;
     public double descuento;

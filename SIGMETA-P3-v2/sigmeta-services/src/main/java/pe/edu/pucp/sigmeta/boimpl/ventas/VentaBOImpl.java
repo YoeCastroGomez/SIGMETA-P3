@@ -46,7 +46,6 @@ import java.util.Set;
 
 public class VentaBOImpl implements VentaBO {
 
-    private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
     // RF008: una venta se registra con la fecha del dia o, como mucho, con algunos dias de atraso (venta tomada
     // fuera del sistema). Nunca a futuro ni con mas atraso: la cuenta por cobrar naceria vencida y el comprobante,
     // que se emite con la fecha de hoy, no coincidiria con la venta.
@@ -121,6 +120,7 @@ public class VentaBOImpl implements VentaBO {
                 venta.setOrdenCompraCliente(oc);
             }
             enlazarLineasOrden(venta);
+            fijarPreciosYCantidades(venta.getDetalles());
 
             // Validar existencia de productos y stock disponible (RF008)
             verificarProductosYStock(venta.getDetalles(), 0);
@@ -129,7 +129,7 @@ public class VentaBOImpl implements VentaBO {
             calcularTotales(venta);
 
             // RF005/RF014: ninguna linea se vende bajo el costo sin autorizacion del Administrador
-            Integer idAutorizacionPrecio = verificarPrecios(venta.getDetalles(), idResponsable);
+            Integer idAutorizacionPrecio = verificarPrecios(venta, idResponsable);
 
             // Validar condiciones de credito (RF008, RF009)
             if (venta.getCondicionPago() == CondicionPago.CREDITO) {
@@ -235,10 +235,11 @@ public class VentaBOImpl implements VentaBO {
                 throw new IllegalStateException("No se puede cambiar el cliente de una venta al crédito con cuenta por cobrar generada");
             }
             enlazarLineasOrden(venta);
+            fijarPreciosYCantidades(venta.getDetalles());
 
             verificarProductosYStock(venta.getDetalles(), venta.getId());
             calcularTotales(venta);
-            Integer idAutorizacionPrecio = verificarPrecios(venta.getDetalles(), idResponsable);
+            Integer idAutorizacionPrecio = verificarPrecios(venta, idResponsable);
             if (venta.getCondicionPago() == CondicionPago.CREDITO) {
                 actualizarCuentaPorCobrar(venta, cliente);
             }
@@ -358,6 +359,23 @@ public class VentaBOImpl implements VentaBO {
         }
     }
 
+    // RF005: el precio de lista lo fija el Administrador; la pantalla no decide el precio. Una linea que atiende una
+    // orden del cliente se vende al precio de esa orden (el de la cotizacion aceptada); las demas, al precio de venta
+    // vigente del producto. El Vendedor solo ajusta con descuento (ver verificarPrecios). Se llama despues de
+    // enlazarLineasOrden. Tambien exige cantidades enteras en los productos que se venden por unidad.
+    private void fijarPreciosYCantidades(List<DetalleVenta> detalles) throws SQLException {
+        for (DetalleVenta d : detalles) {
+            Producto producto = productoDAO.load(d.getProducto().getId());
+            if (producto == null || !producto.isEstado()) {
+                throw new IllegalArgumentException("El producto no existe o está inactivo: " + d.getProducto().getId());
+            }
+            UnidadesVenta.validarCantidad(producto, d.getCantidad(), d.getNumeroLinea());
+            d.setPrecioUnitario(d.getDetalleOrdenCompraCliente() != null
+                    ? d.getDetalleOrdenCompraCliente().getPrecioUnitario()
+                    : producto.getPrecioVenta());
+        }
+    }
+
     // RF008: se vende contra el stock DISPONIBLE = stock fisico - stock comprometido, donde el comprometido es
     // lo ya vendido y todavia no despachado en otras ventas vigentes. Asi dos ventas no prometen las mismas
     // unidades. idVentaExcluida: la venta que se esta modificando (0 al registrar).
@@ -390,31 +408,106 @@ public class VentaBOImpl implements VentaBO {
     // RF005: el precio de lista lo fija el Administrador. El Vendedor puede dar descuento, pero el precio
     // efectivo de una linea (importe / cantidad, ya con su descuento) no puede quedar por debajo del costo
     // unitario del producto. RF014: con una autorizacion vigente DESCUENTO_ESPECIAL del Administrador si se
-    // permite; se devuelve su id para consumirla al final de la transaccion (null si no hizo falta).
-    // Se llama despues de calcularTotales, cuando cada linea ya tiene su importe.
-    private Integer verificarPrecios(List<DetalleVenta> detalles, int idResponsable) throws SQLException {
-        String lineaBajoCosto = null;
-        for (DetalleVenta d : detalles) {
-            Producto producto = productoDAO.load(d.getProducto().getId());
-            BigDecimal efectivo = BigDecimal.valueOf(d.getImporte())
-                    .divide(BigDecimal.valueOf(d.getCantidad()), 4, RoundingMode.HALF_UP);
-            if (efectivo.compareTo(BigDecimal.valueOf(producto.getCostoUnitario())) < 0) {
-                lineaBajoCosto = String.format(java.util.Locale.ROOT,
-                        "La línea %d (%s) queda en S/ %.2f por unidad, por debajo de su costo (S/ %.2f)",
-                        d.getNumeroLinea(), producto.getNombre(), efectivo.doubleValue(), producto.getCostoUnitario());
-                break;
-            }
-        }
-        if (lineaBajoCosto == null) {
+    // permite: la autorizacion aprobada de ESTA venta (misma huella); se devuelve su id para consumirla al final
+    // de la transaccion (null si no hizo falta). Se llama despues de calcularTotales, cuando cada linea tiene su importe.
+    private Integer verificarPrecios(Venta venta, int idResponsable) throws SQLException {
+        List<String> bajoCosto = lineasBajoCosto(venta.getDetalles());
+        if (bajoCosto.isEmpty()) {
             return null;
         }
-        pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion autorizacion = autorizacionBO.obtenerAutorizacionVigente(
-                idResponsable, pe.edu.pucp.sigmeta.boimpl.seguridad.SolicitudAutorizacionBOImpl.OPERACION_DESCUENTO_ESPECIAL);
-        if (autorizacion == null) {
-            throw new IllegalStateException(lineaBajoCosto
-                    + ". Reduzca el descuento o solicite al Administrador una autorización de descuento especial");
+        try {
+            return autorizacionBO.requerirAutorizacion(idResponsable,
+                    pe.edu.pucp.sigmeta.boimpl.seguridad.SolicitudAutorizacionBOImpl.OPERACION_DESCUENTO_ESPECIAL,
+                    huellaVenta(venta)).getId();
+        } catch (IllegalStateException e) {
+            // se dice que linea queda bajo el costo y lo que falta (solicitar o esperar al Administrador)
+            throw new IllegalStateException(bajoCosto.get(0) + ". " + e.getMessage());
         }
-        return autorizacion.getId();
+    }
+
+    // RF005: lineas cuyo precio efectivo sin IGV queda por debajo del costo (texto para el mensaje y para el Administrador)
+    private List<String> lineasBajoCosto(List<DetalleVenta> detalles) throws SQLException {
+        List<String> lineas = new java.util.ArrayList<>();
+        for (DetalleVenta d : detalles) {
+            Producto producto = productoDAO.load(d.getProducto().getId());
+            // el precio incluye IGV y el costo no: se comparan ambos sin IGV (PreciosIgv)
+            BigDecimal efectivo = BigDecimal.valueOf(d.getImporte())
+                    .divide(BigDecimal.valueOf(d.getCantidad()), 4, RoundingMode.HALF_UP)
+                    .divide(PreciosIgv.FACTOR, 4, RoundingMode.HALF_UP);
+            if (efectivo.compareTo(BigDecimal.valueOf(producto.getCostoUnitario())) < 0) {
+                lineas.add(String.format(java.util.Locale.ROOT,
+                        "La línea %d (%s) queda en S/ %.2f por unidad sin IGV, por debajo de su costo (S/ %.2f)",
+                        d.getNumeroLinea(), producto.getNombre(), efectivo.doubleValue(), producto.getCostoUnitario()));
+            }
+        }
+        return lineas;
+    }
+
+    // RF014: huella de la venta = venta (0 si es nueva), cliente, condicion de pago y cada linea
+    // (producto, cantidad e importe). Si el Vendedor cambia algo despues de la aprobacion, hay que volver a pedirla.
+    private static String huellaVenta(Venta venta) {
+        StringBuilder datos = new StringBuilder("VENTA|").append(venta.getId())
+                .append('|').append(venta.getCliente().getId())
+                .append('|').append(venta.getCondicionPago());
+        venta.getDetalles().stream()
+                .sorted(java.util.Comparator.comparingInt((DetalleVenta d) -> d.getProducto().getId())
+                        .thenComparingInt(DetalleVenta::getNumeroLinea))
+                .forEach(d -> datos.append('|').append(d.getProducto().getId())
+                        .append(':').append(String.format(java.util.Locale.ROOT, "%.3f", d.getCantidad()))
+                        .append(':').append(String.format(java.util.Locale.ROOT, "%.2f", d.getImporte())));
+        return pe.edu.pucp.sigmeta.boimpl.seguridad.SolicitudAutorizacionBOImpl.huella(datos.toString());
+    }
+
+    // RF005/RF014: el Vendedor arma la venta y, si una linea queda bajo el costo, pide la autorizacion de ESA venta.
+    // No registra nada: el Administrador ve el cliente, el total y las lineas bajo el costo; al aprobar, el Vendedor
+    // registra (o guarda) la misma venta.
+    @Override
+    public pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion solicitarDescuentoEspecial(Venta venta, int idResponsable)
+            throws SQLException {
+        usuarioBO.verificarRol(idResponsable, TipoRol.VENDEDOR);
+        validarCabecera(venta);
+        validarDetalles(venta.getDetalles());
+        return Transaccion.ejecutar(() -> {
+            Cliente cliente = clienteDAO.load(venta.getCliente().getId());
+            if (cliente == null || !cliente.isEstado()) {
+                throw new IllegalArgumentException("El cliente no existe o está inactivo");
+            }
+            venta.setCliente(cliente);
+            String referencia = "Venta nueva";
+            if (venta.getId() > 0) {
+                Venta actual = ventaDAO.load(venta.getId());
+                if (actual == null) {
+                    throw new IllegalArgumentException("No existe la venta con id " + venta.getId());
+                }
+                referencia = actual.getNumero();
+                venta.setCondicionPago(actual.getCondicionPago());
+                venta.setOrdenCompraCliente(actual.getOrdenCompraCliente());
+            }
+            if (venta.getOrdenCompraCliente() != null && venta.getOrdenCompraCliente().getId() > 0) {
+                venta.setOrdenCompraCliente(ordenCompraClienteDAO.load(venta.getOrdenCompraCliente().getId()));
+            } else {
+                venta.setOrdenCompraCliente(null);
+            }
+            enlazarLineasOrden(venta);
+            fijarPreciosYCantidades(venta.getDetalles());
+            calcularTotales(venta);
+
+            List<String> bajoCosto = lineasBajoCosto(venta.getDetalles());
+            if (bajoCosto.isEmpty()) {
+                throw new IllegalStateException("Ninguna línea queda por debajo del costo: no hace falta autorización");
+            }
+            StringBuilder detalle = new StringBuilder()
+                    .append("Cliente: ").append(cliente.getNombreMostrado()).append('\n')
+                    .append(String.format(java.util.Locale.ROOT, "Total: S/ %.2f (%s)", venta.getTotal(),
+                            venta.getCondicionPago() == CondicionPago.CREDITO ? "crédito" : "contado"));
+            for (String linea : bajoCosto) {
+                detalle.append('\n').append("- ").append(linea);
+            }
+            return autorizacionBO.solicitarOperacion(idResponsable,
+                    pe.edu.pucp.sigmeta.boimpl.seguridad.SolicitudAutorizacionBOImpl.OPERACION_DESCUENTO_ESPECIAL,
+                    "Venta con descuento bajo el costo para " + cliente.getNombreMostrado(),
+                    referencia + " · " + cliente.getNombreMostrado(), detalle.toString(), huellaVenta(venta));
+        });
     }
 
     private void calcularTotales(Venta venta) {
@@ -431,10 +524,11 @@ public class VentaBOImpl implements VentaBO {
             d.setImporte(importe.doubleValue());
             subTotal = subTotal.add(importe);
         }
-        BigDecimal igv = subTotal.multiply(TASA_IGV).setScale(2, RoundingMode.HALF_UP);
-        venta.setSubTotal(subTotal.doubleValue());
-        venta.setIgv(igv.doubleValue());
-        venta.setTotal(subTotal.add(igv).doubleValue());
+        // los precios incluyen IGV: el total es la suma de los importes y se desglosa en valor de venta + IGV
+        BigDecimal total = subTotal;
+        venta.setSubTotal(PreciosIgv.valorVenta(total).doubleValue());
+        venta.setIgv(PreciosIgv.igv(total).doubleValue());
+        venta.setTotal(total.doubleValue());
     }
 
     private void guardarDetalles(Venta venta) throws SQLException {

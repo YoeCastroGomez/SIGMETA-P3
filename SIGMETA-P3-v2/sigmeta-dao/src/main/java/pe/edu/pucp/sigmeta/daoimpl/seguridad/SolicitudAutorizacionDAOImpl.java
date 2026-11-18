@@ -43,6 +43,16 @@ public class SolicitudAutorizacionDAOImpl implements SolicitudAutorizacionDAO {
             cs.executeUpdate();
             solicitud.setId(cs.getInt(1));
         }
+        // RF014: datos de la operacion que se pide autorizar (las solicitudes antiguas no los tienen)
+        if (solicitud.getHuella() != null) {
+            try(CallableStatement cs = connection.prepareCall("{call sp_solicitud_autorizacion_datos_operacion(?, ?, ?, ?)}");){
+                cs.setInt(1, solicitud.getId());
+                cs.setString(2, solicitud.getReferencia());
+                cs.setString(3, solicitud.getDetalle());
+                cs.setString(4, solicitud.getHuella());
+                cs.executeUpdate();
+            }
+        }
         return solicitud;
     }
 
@@ -131,6 +141,25 @@ public class SolicitudAutorizacionDAOImpl implements SolicitudAutorizacionDAO {
         return null;
     }
 
+    // RF014
+    @Override
+    public SolicitudAutorizacion buscarPorHuella(int idSolicitante, String operacionRestringida, String huella,
+                                                 EstadoAutorizacion estado) throws SQLException {
+        Connection connection = transactionContext.getConnection();
+        try(CallableStatement cs = connection.prepareCall("{call sp_solicitud_autorizacion_buscar_por_huella(?, ?, ?, ?)}");){
+            cs.setInt(1, idSolicitante);
+            cs.setString(2, operacionRestringida);
+            cs.setString(3, huella);
+            cs.setString(4, estado.name());
+            try(ResultSet rs = cs.executeQuery();){
+                if(rs.next()){
+                    return mapear(rs);
+                }
+            }
+        }
+        return null;
+    }
+
     // el parametro 1 es el id (OUT en insertar, IN en modificar)
     private void asignarParametros(CallableStatement cs, SolicitudAutorizacion solicitud) throws SQLException {
         cs.setInt(2, solicitud.getSolicitante().getId());
@@ -172,7 +201,19 @@ public class SolicitudAutorizacionDAOImpl implements SolicitudAutorizacionDAO {
         solicitud.setFechaResolucion(aLocalDateTime(rs.getTimestamp("fecha_resolucion")));
         solicitud.setVigenciaMinutos(rs.getInt("vigencia_minutos"));
         solicitud.setFechaVencimiento(aLocalDateTime(rs.getTimestamp("fecha_vencimiento")));
+        // RF014: columnas de la migracion 11; si la base todavia no la tiene, quedan en null
+        solicitud.setReferencia(columnaOpcional(rs, "referencia"));
+        solicitud.setDetalle(columnaOpcional(rs, "detalle"));
+        solicitud.setHuella(columnaOpcional(rs, "huella"));
         return solicitud;
+    }
+
+    private String columnaOpcional(ResultSet rs, String columna) {
+        try {
+            return rs.getString(columna);
+        } catch (SQLException e) {
+            return null;
+        }
     }
 
     private Timestamp aTimestamp(LocalDateTime fecha) {

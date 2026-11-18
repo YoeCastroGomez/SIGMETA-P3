@@ -555,8 +555,9 @@ public class PruebaCrud {
         }
         ok("SinAutorizacion", sinAutorizacion, "sin solicitud aprobada el Cajero no puede emitir la nota de credito");
 
-        // b. el Cajero pide y el Administrador aprueba, cada uno en su sesion
-        SolicitudAutorizacion autorizacion = autorizar(sesionCajero, sesionAdmin, "Devolucion de mercaderia del cliente");
+        // b. el Cajero pide la autorizacion de ESTA nota (1 unidad de la linea 2) y el Administrador la aprueba
+        Comprobante pedidoNc = notaCredito(comprobante, linea2, 1, "Devolucion de una unidad con descuento");
+        SolicitudAutorizacion autorizacion = autorizar(sesionCajero, sesionAdmin, pedidoNc);
 
         // c. la linea 1 se vendio pero no se despacho: no hay nada entregado que devolver
         boolean noEntregado = false;
@@ -586,8 +587,7 @@ public class PruebaCrud {
         EstadoAutorizacion estado = solicitudBO.obtener(autorizacion.getId()).getEstado();
         ok("Consumida", estado == EstadoAutorizacion.VENCIDA, "la autorizacion se uso una vez y quedo " + estado);
 
-        // f. la linea 2 entrego 2 y ya se devolvio 1: devolver 2 mas debe rechazarse (con una autorizacion nueva)
-        SolicitudAutorizacion segunda = autorizar(sesionCajero, sesionAdmin, "Segunda devolucion del cliente");
+        // f. la linea 2 entrego 2 y ya se devolvio 1: devolver 2 mas se rechaza (la cantidad se valida antes que la autorizacion)
         boolean rechazado = false;
         try {
             sesionCajero.ejecutar(id -> comprobanteBO.registrarNotaCredito(notaCredito(comprobante, linea2, 2, "Devolucion excesiva"), id));
@@ -596,11 +596,6 @@ public class PruebaCrud {
             System.out.println("   Rechazado como se esperaba: " + e.getMessage());
         }
         ok("Exceso", rechazado, "no se devuelve mas de lo entregado en la linea");
-        // la segunda autorizacion no se uso: el Cajero la anula para no dejarla abierta
-        sesionCajero.ejecutar(id -> {
-            solicitudBO.anular(segunda.getId(), id);
-            return null;
-        });
 
         // g. anular el despacho dejaria la linea 2 con menos entregado que lo devuelto
         boolean despachoProtegido = false;
@@ -633,10 +628,9 @@ public class PruebaCrud {
         sesionAlmacenero.cerrar();
     }
 
-    // RF014: el Cajero solicita en su sesion y el Administrador aprueba en la suya
-    private static SolicitudAutorizacion autorizar(SesionServicio sesionCajero, SesionServicio sesionAdmin, String motivo) throws SQLException {
-        SolicitudAutorizacion solicitud = sesionCajero.ejecutar(id ->
-                solicitudBO.solicitar(id, ComprobanteBOImpl.OPERACION_NOTA_CREDITO, motivo));
+    // RF014: el Cajero solicita en su sesion la autorizacion de la nota (con sus datos) y el Administrador aprueba en la suya
+    private static SolicitudAutorizacion autorizar(SesionServicio sesionCajero, SesionServicio sesionAdmin, Comprobante nota) throws SQLException {
+        SolicitudAutorizacion solicitud = sesionCajero.ejecutar(id -> comprobanteBO.solicitarNotaCredito(nota, id));
         SolicitudAutorizacion aprobada = sesionAdmin.ejecutar(id -> solicitudBO.aprobar(solicitud.getId(), id, 15));
         ok("Autorizacion", aprobada.getEstado() == EstadoAutorizacion.APROBADA,
                 "solicitud " + solicitud.getId() + " del Cajero aprobada por " + admin.getNombreUsuario() + " por 15 minutos");

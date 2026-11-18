@@ -1,0 +1,48 @@
+/* Lista de sugerencias encima del resto del formulario */
+.sugerencias {
+    z-index: 1050;
+    max-height: 22rem;
+    overflow-y: auto;
+}
+
+/* Cliente elegido: tarjeta con iniciales, nombre, documento y condición de pago */
+.cliente-elegido {
+    padding: .5rem .75rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    background-color: var(--bs-body-bg);
+}
+
+.cliente-elegido.deshabilitado {
+    background-color: var(--bs-secondary-bg);
+}
+
+.avatar {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    font-size: .8rem;
+    font-weight: 700;
+    background: rgba(var(--bs-primary-rgb), .15);
+    color: var(--bs-primary);
+}
+
+.min-w-0 { min-width: 0; }
+
+.btn-cambiar {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    border: 1px solid var(--bs-border-color);
+    color: var(--bs-body-color);
+}
+
+.btn-cambiar:hover,
+.btn-cambiar:focus-visible {
+    border-color: var(--bs-primary);
+    color: var(--bs-primary);
+}

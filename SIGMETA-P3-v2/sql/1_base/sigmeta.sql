@@ -84,6 +84,10 @@ CREATE TABLE solicitud_autorizacion (
                                         fecha_resolucion          DATETIME,
                                         vigencia_minutos          INT NOT NULL DEFAULT 0,
                                         fecha_vencimiento         DATETIME,
+                                        -- RF014: la operacion que se autoriza (documento, detalle para el Administrador y huella de sus datos)
+                                        referencia                VARCHAR(80),
+                                        detalle                   VARCHAR(1000),
+                                        huella                    CHAR(64),
                                         CONSTRAINT fk_solicitud_autorizacion_solicitante
                                             FOREIGN KEY (id_solicitante)   REFERENCES usuario(id),
                                         CONSTRAINT fk_solicitud_autorizacion_administrador

@@ -25,7 +25,8 @@ import pe.edu.pucp.sigmeta.model.ventas.DetalleCotizacion;
 
 /**
  * H14 - RF007: reglas de la cotizacion (CotizacionBOImpl).
- *   calculo: importe de linea = cantidad x precio - descuento (2 decimales, HALF_UP); IGV 18 % del subtotal
+ *   calculo: importe de linea = cantidad x precio - descuento (2 decimales, HALF_UP); los precios incluyen IGV:
+ *   total = suma de importes, valor de venta = total / 1.18 e IGV = total - valor de venta
  *   numero COT-AAAA-NNNN generado por el sistema y distinto en cada cotizacion
  *   fechas: no se emite con fecha pasada; la vigencia no es anterior a la emision
  *   ninguna linea por debajo del costo; cliente activo; al menos una linea
@@ -40,7 +41,7 @@ import pe.edu.pucp.sigmeta.model.ventas.DetalleCotizacion;
 class CotizacionBOTest {
 
     private static final CotizacionBOImpl cotizaciones = new CotizacionBOImpl();
-    private static final BigDecimal IGV = new BigDecimal("0.18");
+    private static final BigDecimal FACTOR_IGV = new BigDecimal("1.18");
 
     /** cotizaciones registradas por cada prueba: se anulan al final si todavia se puede */
     private final List<Cotizacion> creadas = new ArrayList<>();
@@ -103,12 +104,12 @@ class CotizacionBOTest {
     // ------------------------------------------------------------------ calculo
 
     @Test
-    @DisplayName("Subtotal, IGV (18 % del subtotal) y total los calcula el sistema, no la pantalla")
+    @DisplayName("Total (suma de importes con IGV), valor de venta e IGV los calcula el sistema, no la pantalla")
     void calculaTotales() throws Exception {
         Producto p = productoConDisponible(1);
         double precio = p.getPrecioVenta();
-        // descuento permitido en una unidad: la mitad del margen, sin bajar del costo
-        double descuento = BigDecimal.valueOf((precio - p.getCostoUnitario()) / 2)
+        // descuento permitido en una unidad: la mitad del margen sobre el costo con IGV, sin bajar del costo
+        double descuento = BigDecimal.valueOf(Math.max(0, (precio - p.getCostoUnitario() * 1.18) / 2))
                 .setScale(2, RoundingMode.DOWN).doubleValue();
         LocalDate hoy = LocalDate.now();
         Cotizacion c = cotizacion(empresaNueva(), hoy, hoy.plusDays(10),
@@ -120,11 +121,11 @@ class CotizacionBOTest {
 
         Cotizacion guardada = registrar(c);
 
-        BigDecimal subTotal = importe(3, precio, 0).add(importe(1, precio, descuento));
-        BigDecimal igv = subTotal.multiply(IGV).setScale(2, RoundingMode.HALF_UP);
-        assertEquals(subTotal.doubleValue(), guardada.getSubTotal(), CENTAVO);
-        assertEquals(igv.doubleValue(), guardada.getIgv(), CENTAVO);
-        assertEquals(subTotal.add(igv).doubleValue(), guardada.getTotal(), CENTAVO);
+        BigDecimal total = importe(3, precio, 0).add(importe(1, precio, descuento));
+        BigDecimal valorVenta = total.divide(FACTOR_IGV, 2, RoundingMode.HALF_UP);
+        assertEquals(valorVenta.doubleValue(), guardada.getSubTotal(), CENTAVO);
+        assertEquals(total.subtract(valorVenta).doubleValue(), guardada.getIgv(), CENTAVO);
+        assertEquals(total.doubleValue(), guardada.getTotal(), CENTAVO);
         assertEquals(EstadoCotizacion.REGISTRADA, guardada.getEstado());
     }
 
@@ -183,8 +184,9 @@ class CotizacionBOTest {
     void lineaBajoElCosto() throws Exception {
         Producto p = productoConDisponible(1);
         LocalDate hoy = LocalDate.now();
-        double bajoCosto = BigDecimal.valueOf(p.getCostoUnitario() - 0.50).setScale(2, RoundingMode.HALF_UP).doubleValue();
-        Cotizacion c = cotizacion(empresaNueva(), hoy, hoy.plusDays(15), linea(1, p, 1, bajoCosto, 0));
+        // el precio lo pone el BO (precio de lista); lo que deja la linea bajo el costo es el descuento
+        double descuento = BigDecimal.valueOf(p.getPrecioVenta() - p.getCostoUnitario() + 0.50).setScale(2, RoundingMode.HALF_UP).doubleValue();
+        Cotizacion c = cotizacion(empresaNueva(), hoy, hoy.plusDays(15), linea(1, p, 1, p.getPrecioVenta(), descuento));
 
         assertThrows(IllegalArgumentException.class, () -> cotizaciones.registrar(c, VENDEDOR));
     }

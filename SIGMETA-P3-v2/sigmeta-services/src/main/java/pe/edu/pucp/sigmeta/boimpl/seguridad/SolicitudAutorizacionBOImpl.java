@@ -91,11 +91,14 @@ public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
             }
             String motivoValidado = Validador.textoObligatorio(motivo, "motivo", 200);
 
-            boolean yaHayPendiente = solicitudDAO.listarPorSolicitante(idSolicitante).stream()
+            // RF014: se pueden tener varias pendientes de la misma operacion (por ejemplo, notas de credito de
+            // comprobantes distintos: el motivo dice cual). Solo se rechaza la MISMA solicitud repetida (doble envio).
+            boolean repetida = solicitudDAO.listarPorSolicitante(idSolicitante).stream()
                     .anyMatch(s -> s.getEstado() == EstadoAutorizacion.PENDIENTE
-                            && s.getOperacionRestringida().equals(operacion));
-            if(yaHayPendiente){
-                throw new IllegalStateException("Ya existe una solicitud pendiente para esta operación");
+                            && s.getOperacionRestringida().equals(operacion)
+                            && motivoValidado.equalsIgnoreCase(s.getMotivo() == null ? "" : s.getMotivo().trim()));
+            if(repetida){
+                throw new IllegalStateException("Ya enviaste esta misma solicitud; espera la respuesta del Administrador");
             }
 
             SolicitudAutorizacion solicitud = new SolicitudAutorizacion();
@@ -240,6 +243,95 @@ public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
             solicitudDAO.remove(solicitud);
             return null;
         });
+    }
+
+    // ================= RF014 opcion B: la solicitud lleva la operacion =================
+
+    // Mensaje que marca un error que se resuelve pidiendo autorizacion: la pantalla lo reconoce y ofrece
+    // el boton "Solicitar autorizacion" con los mismos datos de la operacion.
+    public static final String MARCA_REQUIERE_AUTORIZACION = "requiere autorización del Administrador";
+
+    // SHA-256 (hex) de los datos de una operacion. Cada BO arma el texto con los datos que importan
+    // (por ejemplo, el comprobante y las cantidades devueltas): si cambian, la huella cambia.
+    public static String huella(String datos) {
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(datos.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(64);
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 no disponible", e);
+        }
+    }
+
+    @Override
+    public SolicitudAutorizacion solicitarOperacion(int idSolicitante, String operacionRestringida, String motivo,
+                                                    String referencia, String detalle, String huella) throws SQLException {
+        Validador.obligatorio(huella, "datos de la operación");
+        return Transaccion.ejecutar(() -> {
+            Usuario solicitante = usuarioBO.obtener(idSolicitante);
+            if (solicitante == null || !solicitante.isEstado()) {
+                throw new IllegalArgumentException("El solicitante no existe o está desactivado");
+            }
+            String operacion = operacionRestringida.toUpperCase(java.util.Locale.ROOT);
+            TipoRol rolDeLaOperacion = ROL_POR_OPERACION.get(operacion);
+            if (rolDeLaOperacion == null) {
+                throw new IllegalArgumentException("La operación restringida no existe");
+            }
+            if (rolDeLaOperacion != solicitante.getRol().getTipo()) {
+                throw new IllegalStateException("El rol " + solicitante.getRol().getTipo()
+                        + " no realiza la operación " + operacion);
+            }
+            // la misma operacion ya pedida: no se duplica (doble clic o se volvio a la pantalla)
+            SolicitudAutorizacion existente = solicitudDAO.buscarPorHuella(idSolicitante, operacion, huella, EstadoAutorizacion.APROBADA);
+            if (existente == null) {
+                existente = solicitudDAO.buscarPorHuella(idSolicitante, operacion, huella, EstadoAutorizacion.PENDIENTE);
+            }
+            if (existente != null) {
+                return existente;
+            }
+            SolicitudAutorizacion solicitud = new SolicitudAutorizacion();
+            solicitud.setSolicitante(solicitante);
+            solicitud.setOperacionRestringida(operacion);
+            solicitud.setMotivo(Validador.textoObligatorio(motivo, "motivo", 200));
+            solicitud.setFechaSolicitud(LocalDateTime.now());
+            solicitud.setEstado(EstadoAutorizacion.PENDIENTE);
+            solicitud.setVigenciaMinutos(0);
+            solicitud.setReferencia(Validador.textoOpcional(recortar(referencia, 80), "referencia", 80));
+            solicitud.setDetalle(recortar(detalle, 1000));
+            solicitud.setHuella(huella);
+            return solicitudDAO.save(solicitud);
+        });
+    }
+
+    @Override
+    public SolicitudAutorizacion requerirAutorizacion(int idUsuario, String operacionRestringida, String huella) throws SQLException {
+        return Transaccion.ejecutar(() -> {
+            SolicitudAutorizacion aprobada = solicitudDAO.buscarPorHuella(idUsuario, operacionRestringida, huella, EstadoAutorizacion.APROBADA);
+            if (aprobada != null && aprobada.getAdministrador() != null) {
+                Usuario administrador = usuarioBO.obtener(aprobada.getAdministrador().getId());
+                if (administrador != null && administrador.isEstado() && administrador.getRol().isEstado()
+                        && administrador.getRol().getTipo() == TipoRol.ADMINISTRADOR) {
+                    aprobada.setAdministrador(administrador);
+                    aprobada.setSolicitante(usuarioBO.obtener(idUsuario));
+                    return aprobada;
+                }
+            }
+            if (solicitudDAO.buscarPorHuella(idUsuario, operacionRestringida, huella, EstadoAutorizacion.PENDIENTE) != null) {
+                throw new IllegalStateException("La solicitud de autorización de esta operación está en espera del Administrador");
+            }
+            throw new IllegalStateException("Esta operación " + MARCA_REQUIERE_AUTORIZACION
+                    + ". Use «Solicitar autorización»: el Administrador verá estos mismos datos");
+        });
+    }
+
+    private static String recortar(String texto, int maximo) {
+        if (texto == null) return null;
+        String t = texto.trim();
+        return t.length() <= maximo ? t : t.substring(0, maximo - 1) + "…";
     }
 
     private SolicitudAutorizacion obtenerExistente(int idSolicitud) throws SQLException {

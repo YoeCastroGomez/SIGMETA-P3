@@ -22,6 +22,9 @@ public class SolicitudDatos {
     public String fechaResolucion;
     public int vigenciaMinutos;
     public String fechaVencimiento;
+    // RF014: la operacion que se autoriza (documento o producto y lo que revisa el Administrador)
+    public String referencia;
+    public String detalle;
 
     public SolicitudDatos() {
     }

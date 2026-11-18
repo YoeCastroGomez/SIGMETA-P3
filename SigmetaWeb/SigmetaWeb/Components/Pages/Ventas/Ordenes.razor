@@ -17,38 +17,18 @@
 <Encabezado Rf="RF007" Titulo="Órdenes de compra de clientes"
             Subtitulo="Órdenes de compra recibidas de los clientes." />
 
-<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-<SiguientePaso Mensaje="@exito" Detalle="@exitoDetalle" AlCerrar="() => exito = null" />
+<Notificacion Mensaje="@error" Error="true" AlCerrar="() => error = null" />
+<Notificacion Mensaje="@exito" AlCerrar="() => exito = null" />
 
-<ModalMotivo Visible="@(anulando is not null)" Titulo="@($"Anular la orden {anulando?.Numero}")" TextoConfirmar="Anular orden"
+<ModalMotivo Visible="@(anulando is not null)" Titulo="@($"Anular {anulando?.Numero}")" TextoConfirmar="Anular"
              Ocupado="@trabajando" Ejemplo="Ejemplo: el cliente canceló su pedido."
              AlConfirmar="ConfirmarAnulacion" AlCancelar="() => anulando = null">
-    <p class="mb-2">La orden <strong>@anulando?.Numero</strong> de @anulando?.Cliente:</p>
-    <ul class="small mb-0">
-        <li>Deja de valer y ya no se podrán registrar ventas con ella.</li>
-        <li>Su cotización @anulando?.NumeroCotizacion queda libre para generar otra orden.</li>
-    </ul>
+    <p class="mb-0 text-muted">Ya no se podrán registrar ventas con ella y su cotización queda libre.</p>
 </ModalMotivo>
 
-<div class="card card-body mb-3">
-    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
-        <Campo Etiqueta="Número, cliente o cotización" Id="fTexto" Clase="col-sm-6 col-md">
-            <input id="fTexto" class="form-control" maxlength="80" @bind="textoElegido" />
-        </Campo>
-        <Campo Etiqueta="Estado" Id="fEstado" Clase="col-sm-6 col-md-3">
-            <select id="fEstado" class="form-select" @bind="estadoElegido">
-                @foreach (var o in Chips)
-                {
-                    <option value="@o.Valor">@o.Texto</option>
-                }
-            </select>
-        </Campo>
-        <div class="col-auto d-flex gap-2">
-            <button type="submit" class="btn btn-dark">Buscar</button>
-            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
-        </div>
-    </form>
-</div>
+<FiltrosLista @bind-Busqueda="busqueda" @bind-Busqueda:after="AlBuscar" Placeholder="Buscar por número, cliente o cotización"
+              Opciones="@Chips" Estado="@filtroEstado" EstadoChanged="CambiarEstado" EtiquetaChips="Filtrar por estado de atención"
+              HayFiltros="@HayFiltros" AlLimpiar="Limpiar" />
 
 @if (ordenes is null)
 {
@@ -57,17 +37,18 @@
 else
 {
     var filtradas = Filtradas;
+    var pagina = Pagina(filtradas).ToList();
     <div class="card mb-3">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+        <div class="table-responsive tabla-lista-contenedor">
+            <table class="table table-hover align-middle mb-0 tabla-lista">
+                <thead>
                     <tr>
                         <th>Orden</th>
                         <th>Cliente</th>
                         <th>Cotización</th>
                         <th class="text-end">Total (S/)</th>
                         <th>Atención</th>
-                        <th class="text-end">Acciones</th>
+                        <th><span class="visually-hidden">Acciones</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -81,22 +62,22 @@ else
                                 }
                                 else
                                 {
-                                    <ListaVacia Titulo="Todavía no hay órdenes de clientes." Detalle="Se generan desde una cotización aceptada."
+                                    <ListaVacia Titulo="Todavía no hay órdenes de clientes."
                                                 TextoAccion="@(EsVendedor ? "Ver cotizaciones aceptadas" : null)" Ruta="/cotizaciones?estado=ACEPTADA" />
                                 }
                             </td>
                         </tr>
                     }
-                    @foreach (var o in Pagina(filtradas))
+                    @for (var i = 0; i < pagina.Count; i++)
                     {
+                        var o = pagina[i];
+                        var haciaArriba = pagina.Count > 3 && i >= pagina.Count - 2;
                         <tr @key="o.Id">
                             <td>
-                                <a class="fw-semibold text-decoration-none" href="@RutaOrden(o)">@o.Numero</a>
-                                <div class="small text-muted">
-                                    @(string.IsNullOrEmpty(o.NumeroOrdenCliente) ? "Sin Nº del cliente" : $"OC del cliente {o.NumeroOrdenCliente}") · @TextosVentas.Fecha(o.FechaEmision)
-                                </div>
+                                <a class="numero" href="@RutaOrden(o)">@o.Numero</a>
+                                <div class="sub">@TextosVentas.Fecha(o.FechaEmision)@(string.IsNullOrEmpty(o.NumeroOrdenCliente) ? "" : $" · {o.NumeroOrdenCliente}")</div>
                             </td>
-                            <td>@o.Cliente<div class="small text-muted">@o.DocumentoCliente</div></td>
+                            <td>@o.Cliente</td>
                             <td>
                                 @if (o.IdCotizacion > 0)
                                 {
@@ -108,34 +89,9 @@ else
                                 }
                             </td>
                             <td class="text-end fw-semibold">@o.Total.ToString("N2")</td>
-                            <td>
-                                <Estado Texto="@TextosVentas.Texto(o.Estado)" />
-                                @if (o.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL")
-                                {
-                                    <div class="small mt-1">@(o.Estado == "PENDIENTE" ? "Registrar venta" : "Vender o despachar lo que falta") · <span class="text-muted">@(o.Estado == "PENDIENTE" ? "Vendedor" : "Vendedor / Almacenero")</span></div>
-                                }
-                            </td>
-                            <td class="text-end">
-                                <div class="d-inline-flex align-items-center justify-content-end gap-1 text-nowrap">
-                                    @if (EsVendedor && o.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL")
-                                    {
-                                        @* RF008: la venta se registra a partir de una orden pendiente o atendida parcialmente *@
-                                        <a class="btn btn-sm btn-primary" href="@($"/ventas/nueva?orden={o.Id}")">Registrar venta</a>
-                                    }
-                                    else
-                                    {
-                                        <a class="btn btn-sm btn-outline-secondary" href="@RutaOrden(o)">Ver</a>
-                                    }
-                                    @if (EsVendedor && o.Estado == "PENDIENTE")
-                                    {
-                                        <a class="btn btn-sm btn-outline-secondary" href="@RutaOrden(o)">Editar</a>
-                                    }
-                                    @* RF007: anulan el Vendedor y el Administrador (OrdenCompraClienteBOImpl.anular) *@
-                                    @if ((EsVendedor || Rol == "Administrador") && o.Estado == "PENDIENTE")
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => AbrirAnulacion(o)">Anular</button>
-                                    }
-                                </div>
+                            <td><Estado Texto="@TextosVentas.Texto(EstadoDe(o))" /></td>
+                            <td class="acciones">
+                                <AccionesFila Principal="@Principal(o)" Otras="@Secundarias(o)" Ocupado="@trabajando" HaciaArriba="@haciaArriba" AlElegir="Ejecutar" />
                             </td>
                         </tr>
                     }
@@ -167,7 +123,6 @@ else
 
     private string? error;
     private string? exito;
-    private string? exitoDetalle;
     private bool avisoLeido;
     private bool trabajando;
     private OrdenDatos? anulando;
@@ -176,6 +131,27 @@ else
     private string RutaOrden(OrdenDatos o) => $"/ordenes/editar/{o.Id}?volver={Volver.Parametro(RutaActual)}";
     private bool HayFiltros => filtroEstado != "" || !string.IsNullOrWhiteSpace(busqueda);
     private static string EstadoDe(OrdenDatos o) => o.Anulado ? "ANULADA" : o.Estado ?? "";
+
+    // Botón principal: registrar la venta mientras falte vender; si no, "Ver"
+    private AccionFila Principal(OrdenDatos o) =>
+        EsVendedor && EstadoDe(o) is "PENDIENTE" or "ATENDIDA_PARCIAL"
+            ? new("Registrar venta", Ruta: $"/ventas/nueva?orden={o.Id}")   // RF008: venta desde la orden
+            : new("Ver", Ruta: RutaOrden(o), Destacada: false);
+
+    // Lo llama AccionesFila: la acción corre en esta pantalla para que se redibuje (ventana de anular)
+    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
+
+    // Menú «⋯»
+    private List<AccionFila> Secundarias(OrdenDatos o)
+    {
+        var lista = new List<AccionFila>();
+        if (Principal(o).Texto != "Ver")
+            lista.Add(new(EsVendedor && EstadoDe(o) == "PENDIENTE" ? "Editar" : "Ver detalle", Ruta: RutaOrden(o)));
+        // RF007: anulan el Vendedor y el Administrador (OrdenCompraClienteBOImpl.anular)
+        if ((EsVendedor || Rol == "Administrador") && EstadoDe(o) == "PENDIENTE")
+            lista.Add(new("Anular", Hacer: () => AbrirAnulacion(o), Peligro: true));
+        return lista;
+    }
 
     private List<OrdenDatos> PorBusqueda => (ordenes ?? new())
         .Where(o => Busqueda.Coincide(busqueda, o.Numero, o.NumeroOrdenCliente, o.Cliente, o.DocumentoCliente, o.NumeroCotizacion))
@@ -223,8 +199,6 @@ else
         }
         filtroEstado = EstadoQ ?? "";
         busqueda = BusquedaQ ?? "";
-        textoElegido = busqueda;
-        estadoElegido = filtroEstado;
         paginaActual = Math.Max(1, PaginaQ ?? 1);
         if (ordenes is null) await Cargar();
     }
@@ -257,14 +231,15 @@ else
         Nav.NavigateTo(uri, replace: true);
     }
 
-    // Filtros estándar: lo elegido en el formulario se aplica al pulsar Buscar (igual que en el resto de la aplicación)
-    private string textoElegido = "";
-    private string estadoElegido = "";
-
-    private void Buscar()
+    private void CambiarEstado(string estado)
     {
-        busqueda = textoElegido.Trim();
-        filtroEstado = estadoElegido;
+        filtroEstado = estado;
+        paginaActual = 1;
+        SincronizarUrl();
+    }
+
+    private void AlBuscar()
+    {
         paginaActual = 1;
         SincronizarUrl();
     }
@@ -277,17 +252,18 @@ else
 
     private void Limpiar()
     {
-        filtroEstado = estadoElegido = "";
-        busqueda = textoElegido = "";
+        filtroEstado = "";
+        busqueda = "";
         paginaActual = 1;
         SincronizarUrl();
     }
 
-    private void AbrirAnulacion(OrdenDatos o)
+    private Task AbrirAnulacion(OrdenDatos o)
     {
         error = null;
         exito = null;
         anulando = o;
+        return Task.CompletedTask;
     }
 
     // POST /api/ordenes/{id}/anular {"motivo": ...}
@@ -299,7 +275,6 @@ else
         {
             await Api.Post<object>($"ordenes/{anulando.Id}/anular", new AnulacionDatos { Motivo = motivo });
             exito = $"Se anuló la orden {anulando.Numero}.";
-            exitoDetalle = $"La cotización {anulando.NumeroCotizacion} queda libre para generar otra orden.";
             anulando = null;
             await Cargar();
         }

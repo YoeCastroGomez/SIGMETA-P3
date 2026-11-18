@@ -1,0 +1,68 @@
+@* PATRÓN UX · Notificación flotante (arriba a la derecha) para el resultado de una acción.
+   No empuja ni cambia la pantalla: aparece encima y, si es de éxito, se cierra sola.
+   Uso:
+       <Notificacion Mensaje="@aviso" Error="@avisoError" TextoAccion="Generar orden" Ruta="/ordenes/nueva?cotizacion=5"
+                     AlCerrar="() => aviso = null" />
+   Los errores se quedan hasta que el usuario los cierra. *@
+@implements IDisposable
+
+@if (!string.IsNullOrWhiteSpace(Mensaje))
+{
+    <div class="notificacion @(Error ? "error" : "exito")" role="@(Error ? "alert" : "status")" aria-live="polite">
+        <span class="icono" aria-hidden="true">@(Error ? "!" : "✓")</span>
+        <span class="texto">@Mensaje</span>
+        @if (!string.IsNullOrWhiteSpace(TextoAccion) && !string.IsNullOrWhiteSpace(Ruta))
+        {
+            <a class="accion" href="@Ruta">@TextoAccion</a>
+        }
+        <button type="button" class="btn-close" aria-label="Cerrar" @onclick="Cerrar"></button>
+    </div>
+}
+
+@code {
+    [Parameter] public string? Mensaje { get; set; }
+    [Parameter] public bool Error { get; set; }
+    [Parameter] public string? TextoAccion { get; set; }
+    [Parameter] public string? Ruta { get; set; }
+    [Parameter] public int Segundos { get; set; } = 4;
+    [Parameter] public EventCallback AlCerrar { get; set; }
+
+    private CancellationTokenSource? temporizador;
+    private string? mostrado;
+
+    protected override void OnParametersSet()
+    {
+        if (Mensaje == mostrado) return;
+        mostrado = Mensaje;
+        temporizador?.Cancel();
+        temporizador = null;
+        if (!string.IsNullOrWhiteSpace(Mensaje) && !Error)
+        {
+            temporizador = new CancellationTokenSource();
+            // con botón de acción se deja más tiempo para alcanzar a usarlo
+            var segundos = string.IsNullOrWhiteSpace(TextoAccion) ? Segundos : Segundos * 2;
+            _ = OcultarLuego(TimeSpan.FromSeconds(segundos), temporizador.Token);
+        }
+    }
+
+    private async Task OcultarLuego(TimeSpan espera, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(espera, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+        await InvokeAsync(Cerrar);
+    }
+
+    private async Task Cerrar()
+    {
+        temporizador?.Cancel();
+        await AlCerrar.InvokeAsync();
+    }
+
+    public void Dispose() => temporizador?.Cancel();
+}

@@ -1,0 +1,79 @@
+@* PATRÓN UX · Acciones de una fila: un botón principal del mismo ancho en todas las filas (el siguiente paso, o «Ver»)
+   y el menú «⋯» con lo demás. Si no hay nada más, el espacio del «⋯» se conserva para que todo quede alineado.
+   Uso (en la última celda de la fila):
+       <td class="acciones"><AccionesFila Principal="@principal" Otras="@otras" Ocupado="@trabajando" HaciaArriba="@ultimas"
+                                            AlElegir="Ejecutar" /></td>
+       private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;   // en la pantalla
+   AlElegir es obligatorio para las acciones con Hacer: el clic tiene que llegar a la PANTALLA para que ella se vuelva
+   a dibujar (abrir su ventana de anular, de respuesta...). Si la acción se ejecutara aquí, solo se redibujaría esta fila.
+       principal = new("Enviar", Ruta: "/cotizaciones/5/enviar");
+       otras = new() { new("Editar", Ruta: "..."), new("Anular", Hacer: () => Anular(c), Peligro: true) }; *@
+<div class="acciones-fila">
+    @if (Principal is not null)
+    {
+        @if (Principal.Ruta is not null)
+        {
+            <a class="btn btn-sm principal @ClasePrincipal" href="@Principal.Ruta">@Principal.Texto</a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-sm principal @ClasePrincipal" disabled="@Ocupado" @onclick="() => Ejecutar(Principal)">@Principal.Texto</button>
+        }
+    }
+    <div class="menu-fila">
+        @if (Otras.Count > 0)
+        {
+            <button type="button" class="btn-mas" aria-label="Más acciones" aria-haspopup="menu"
+                    aria-expanded="@(abierto ? "true" : "false")" @onclick="() => abierto = !abierto">⋯</button>
+            @if (abierto)
+            {
+                @* clic fuera del menú lo cierra *@
+                <div class="cerrar-menu" @onclick="() => abierto = false"></div>
+                <div class="menu @(HaciaArriba ? "arriba" : "")" role="menu">
+                    @foreach (var a in Otras)
+                    {
+                        @if (a.Ruta is not null)
+                        {
+                            <a class="item @(a.Peligro ? "peligro" : "")" role="menuitem" href="@a.Ruta">@a.Texto</a>
+                        }
+                        else
+                        {
+                            <button type="button" class="item @(a.Peligro ? "peligro" : "")" role="menuitem" disabled="@Ocupado"
+                                    @onclick="() => Ejecutar(a)">@a.Texto</button>
+                        }
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <span class="btn-mas vacio" aria-hidden="true"></span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public AccionFila? Principal { get; set; }
+    [Parameter] public IReadOnlyList<AccionFila> Otras { get; set; } = Array.Empty<AccionFila>();
+    [Parameter] public bool Ocupado { get; set; }
+    // en las últimas filas de la página el menú se abre hacia arriba para no salirse de la tabla
+    [Parameter] public bool HaciaArriba { get; set; }
+    // la pantalla ejecuta la acción (así se redibuja ella y aparecen sus ventanas)
+    [Parameter] public EventCallback<AccionFila> AlElegir { get; set; }
+
+    private bool abierto;
+    private string ClasePrincipal => Principal?.Destacada == true ? "btn-primary" : "btn-outline-secondary";
+
+    private async Task Ejecutar(AccionFila a)
+    {
+        abierto = false;
+        if (AlElegir.HasDelegate)
+        {
+            await AlElegir.InvokeAsync(a);
+        }
+        else if (a.Hacer is not null)
+        {
+            await a.Hacer();
+        }
+    }
+}

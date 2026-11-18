@@ -282,6 +282,27 @@ public class AlmacenRS extends VentanillaBase {
                 movimiento(movimientoBO.registrarAjuste(datos.idProducto, id, datos.cantidadContada, datos.motivo)));
     }
 
+    // RF012/RF014: pide la autorizacion de ESTE ajuste (mismo cuerpo que registrarlo); no mueve el stock
+    @POST
+    @Path("ajustes/solicitar")
+    public Response solicitarAjuste(@HeaderParam("ticket") String ticket, DocumentoAlmacen datos) {
+        if (datos == null || datos.cantidadContada == null) {
+            return error(Response.Status.BAD_REQUEST, "Indique el producto y la cantidad contada");
+        }
+        return ejecutar(ticket, Response.Status.CREATED, id -> pe.edu.pucp.sigmeta.ws.seguridad.SolicitudRS.resumen(
+                movimientoBO.solicitarAjuste(datos.idProducto, id, datos.cantidadContada, datos.motivo)));
+    }
+
+    // RF012/RF014: pide la autorizacion para revertir ESTE ajuste
+    @POST
+    @Path("ajustes/{id}/revertir/solicitar")
+    public Response solicitarReversionAjuste(@HeaderParam("ticket") String ticket, @PathParam("id") int idMovimiento,
+                                             DocumentoAlmacen datos) {
+        String motivo = datos == null ? null : datos.motivo;
+        return ejecutar(ticket, Response.Status.CREATED, id -> pe.edu.pucp.sigmeta.ws.seguridad.SolicitudRS.resumen(
+                movimientoBO.solicitarReversionAjuste(idMovimiento, id, motivo)));
+    }
+
     @POST
     @Path("ajustes/{id}/revertir")
     public Response revertirAjuste(@HeaderParam("ticket") String ticket, @PathParam("id") int idMovimiento,

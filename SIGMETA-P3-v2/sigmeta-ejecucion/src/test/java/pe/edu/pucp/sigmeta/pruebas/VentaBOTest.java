@@ -50,6 +50,13 @@ class VentaBOTest {
         sinAutorizaciones(VENDEDOR, DESCUENTO);
     }
 
+    /** Venta de 1 unidad a precio de lista con un descuento que deja la unidad bajo el costo (sin IGV). */
+    private static Venta ventaBajoCosto(Cliente cliente, Producto p) {
+        Venta v = venta(cliente, p, 1, p.getPrecioVenta(), false);
+        v.getDetalles().get(0).setDescuento(round2(p.getPrecioVenta() - p.getCostoUnitario() + 0.50));
+        return v;
+    }
+
     private Venta registrar(Venta v) throws Exception {
         Venta guardada = ventas.registrar(v, VENDEDOR);
         creadas.add(guardada);
@@ -94,15 +101,14 @@ class VentaBOTest {
     // ------------------------------------------------------------------ H03 piso de costo promedio
 
     @Test
-    @DisplayName("H03: rechaza un precio por debajo del costo sin autorizacion")
-    void rechazaPrecioBajoCostoSinAutorizacion() throws Exception {
-        sinAutorizaciones(VENDEDOR, DESCUENTO);
+    @DisplayName("H03: el precio lo pone el sistema (precio de lista), no la pantalla")
+    void ignoraElPrecioQueMandaLaPantalla() throws Exception {
         Producto p = productoConDisponible(1);
         Cliente cliente = empresaNueva();
 
-        IllegalStateException e = assertThrows(IllegalStateException.class,
-                () -> registrar(venta(cliente, p, 1, p.getCostoUnitario() - 1, false)));
-        assertTrue(e.getMessage().contains("por debajo de su costo"), e.getMessage());
+        // la pantalla manda otro precio (5 soles mas): el BO lo reemplaza por el precio de lista
+        Venta v = registrar(venta(cliente, p, 1, p.getPrecioVenta() + 5, false));
+        assertEquals(p.getPrecioVenta(), v.getDetalles().get(0).getPrecioUnitario(), CENTAVO, "precio de lista");
     }
 
     @Test
@@ -132,15 +138,23 @@ class VentaBOTest {
     void autorizacionDeDescuentoEsDeUnSoloUso() throws Exception {
         Producto p = productoConDisponible(2);
         Cliente cliente = empresaNueva();
-        SolicitudAutorizacion autorizacion = autorizar(VENDEDOR, DESCUENTO);
+        sinAutorizaciones(VENDEDOR, DESCUENTO);
+        // sin autorizacion la venta bajo el costo se rechaza
+        assertThrows(IllegalStateException.class, () -> registrar(ventaBajoCosto(cliente, p)));
 
-        Venta conPermiso = registrar(venta(cliente, p, 1, p.getCostoUnitario() - 1, false));
+        // el Vendedor pide la autorizacion de ESTA venta y el Administrador la aprueba
+        SolicitudAutorizacion autorizacion = ventas.solicitarDescuentoEspecial(ventaBajoCosto(cliente, p), VENDEDOR);
+        assertTrue(autorizacion.getDetalle() != null && autorizacion.getDetalle().contains("costo"),
+                "el Administrador ve las lineas bajo el costo: " + autorizacion.getDetalle());
+        autorizaciones.aprobar(autorizacion.getId(), ADMINISTRADOR, 30);
+
+        Venta conPermiso = registrar(ventaBajoCosto(cliente, p));
         assertTrue(conPermiso.getId() > 0, "con la autorizacion vigente se registra");
         assertEquals(EstadoAutorizacion.VENCIDA, autorizaciones.obtener(autorizacion.getId()).getEstado(),
                 "la autorizacion queda consumida");
 
         assertThrows(IllegalStateException.class,
-                () -> registrar(venta(cliente, p, 1, p.getCostoUnitario() - 1, false)),
+                () -> registrar(ventaBajoCosto(cliente, p)),
                 "la misma autorizacion no sirve para otra venta");
     }
 
@@ -181,8 +195,8 @@ class VentaBOTest {
     void creditoNoSuperaElLimite() throws Exception {
         Producto p = productoConDisponible(12);
         double precio = p.getPrecioVenta();
-        double diezUnidades = round2(precio * 10 * 1.18);
-        Cliente cliente = empresaConCredito(diezUnidades + 1);   // alcanza para 10 unidades con IGV
+        double diezUnidades = round2(precio * 10);                 // los precios ya incluyen IGV
+        Cliente cliente = empresaConCredito(diezUnidades + 1);   // alcanza para 10 unidades
 
         Venta seis = registrar(venta(cliente, p, 6, precio, true));
         assertEquals(seis.getTotal(), saldoCuenta(seis.getId()), CENTAVO, "la venta al credito genera su cuenta por cobrar");

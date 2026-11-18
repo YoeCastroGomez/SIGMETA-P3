@@ -1,0 +1,168 @@
+@using SigmetaWeb.Components.Pages.Clientes
+
+@* Componente de flujo · Buscador de clientes (RF007, RF008). Se escribe cualquier dato del cliente (razón social,
+   nombres, RUC/DNI, correo, teléfono o contacto) y las coincidencias aparecen mientras se escribe. Filtra la lista
+   que ya cargó la pantalla (GET /api/clientes?estado=true), sin volver a llamar al Java.
+   Uso:
+       <BuscadorCliente Id="cliente" Clientes="clientes" IdCliente="venta.IdCliente" IdClienteChanged="ElegirCliente"
+                        ClaseCaja="@(v.Clase("cliente", Errores(), "form-control"))" Deshabilitado="@(!Editable)" />
+   Teclado: ↑ y ↓ para moverse, Enter para elegir, Esc para cerrar. *@
+<div class="buscador-cliente position-relative">
+    @if (Elegido is { } elegido && !cambiando)
+    {
+        @* el documento se muestra porque distingue clientes de nombre parecido y dice si se le puede emitir factura (RUC) *@
+        <div class="cliente-elegido d-flex align-items-center gap-3 @(Deshabilitado ? "deshabilitado" : "")">
+            <span class="avatar" aria-hidden="true">@Iniciales(elegido)</span>
+            <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-truncate">@elegido.NombreMostrado</div>
+                <div class="small text-muted text-truncate">
+                    @Cliente.Texto(elegido.TipoDocumento) @elegido.NumeroDocumento · @Condicion(elegido)
+                </div>
+            </div>
+            @if (!Deshabilitado)
+            {
+                <button type="button" class="btn btn-sm btn-cambiar" @onclick="Cambiar">
+                    <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M12.1 1.6a1.5 1.5 0 0 1 2.1 0l.2.2a1.5 1.5 0 0 1 0 2.1L6.1 12.2a1 1 0 0 1-.5.3l-3 .8a.5.5 0 0 1-.6-.6l.8-3a1 1 0 0 1 .3-.5l9-8.6Zm1.4.7a.5.5 0 0 0-.7 0l-.9.9.9.9.9-.9a.5.5 0 0 0 0-.7l-.2-.2ZM11.2 3.9 3.7 11l-.4 1.6 1.6-.4 7.2-7.4-.9-.9Z"/></svg>
+                    Cambiar
+                </button>
+            }
+        </div>
+    }
+    else
+    {
+        <input id="@Id" @ref="entrada" class="@ClaseCaja" autocomplete="off" maxlength="100" placeholder="@Placeholder"
+               role="combobox" aria-autocomplete="list" aria-expanded="@(abierto ? "true" : "false")" aria-controls="@IdLista"
+               disabled="@Deshabilitado"
+               @bind="texto" @bind:event="oninput" @bind:after="AlEscribir"
+               onkeydown="if (['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) { event.preventDefault(); }"
+               @onkeyup="Tecla" @onfocus="Abrir" @onclick="Abrir" @onblur="Cerrar" />
+        @if (abierto)
+        {
+            <div id="@IdLista" class="list-group position-absolute w-100 shadow mt-1 sugerencias" role="listbox">
+                @if (coincidencias.Count == 0)
+                {
+                    <div class="list-group-item small text-muted">Ningún cliente activo coincide.</div>
+                }
+                @for (var i = 0; i < coincidencias.Count; i++)
+                {
+                    var c = coincidencias[i];
+                    var indice = i;
+                    @* mousedown con preventDefault: se elige antes de que el cuadro pierda el foco *@
+                    <button type="button" role="option" aria-selected="@(indice == resaltado ? "true" : "false")"
+                            class="list-group-item list-group-item-action @(indice == resaltado ? "active" : "")"
+                            @onmousedown="() => Elegir(c)" @onmousedown:preventDefault>
+                        <div class="d-flex justify-content-between gap-3">
+                            <span class="fw-semibold">@c.NombreMostrado</span>
+                            <span class="small text-nowrap">@Cliente.Texto(c.CondicionPago)</span>
+                        </div>
+                        <div class="small opacity-75">@Cliente.Texto(c.TipoDocumento) @c.NumeroDocumento@(string.IsNullOrEmpty(c.Contacto?.Correo) ? "" : " · " + c.Contacto.Correo)</div>
+                    </button>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public List<Cliente> Clientes { get; set; } = new();
+    [Parameter] public int IdCliente { get; set; }
+    [Parameter] public EventCallback<int> IdClienteChanged { get; set; }
+    [Parameter] public string Id { get; set; } = "cliente";
+    [Parameter] public string ClaseCaja { get; set; } = "form-control";
+    [Parameter] public string Placeholder { get; set; } = "Nombre, RUC/DNI, correo o teléfono";
+    [Parameter] public bool Deshabilitado { get; set; }
+
+    private ElementReference entrada;
+    private string texto = "";
+    private bool abierto;
+    private bool cambiando;
+    private bool enfocar;
+    private int resaltado = -1;
+    private List<Cliente> coincidencias = new();
+
+    private string IdLista => Id + "-lista";
+
+    // dos letras: "Usuario Empresa 1" -> "UE"
+    private static string Iniciales(Cliente c) =>
+        string.Concat(c.NombreMostrado.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(p => char.IsLetter(p[0])).Take(2).Select(p => char.ToUpperInvariant(p[0])));
+
+    private static string Condicion(Cliente c) => c.CondicionPago == "CREDITO" && c.LimiteCredito > 0
+        ? $"Crédito hasta S/ {c.LimiteCredito:N2} a {c.PlazoCreditoDias} días"
+        : "Contado";
+    private Cliente? Elegido => IdCliente > 0 ? Clientes.FirstOrDefault(c => c.Id == IdCliente) : null;
+
+    private void Filtrar()
+    {
+        coincidencias = Clientes
+            .Where(c => Busqueda.Coincide(texto, c.NombreMostrado, c.NumeroDocumento, c.Contacto?.Correo,
+                                          c.Contacto?.Telefono, c.Contacto?.NombreContacto))
+            .OrderBy(c => c.NombreMostrado)
+            .ToList();   // todos: al entrar se ven todos los clientes, para el Vendedor que no recuerda el nombre
+        resaltado = coincidencias.Count > 0 && !string.IsNullOrWhiteSpace(texto) ? 0 : -1;
+    }
+
+    private void AlEscribir()
+    {
+        abierto = true;
+        Filtrar();
+    }
+
+    private void Abrir()
+    {
+        if (Deshabilitado) return;
+        abierto = true;
+        Filtrar();
+    }
+
+    private void Cerrar()
+    {
+        abierto = false;
+        cambiando = false;   // si no eligió otro, vuelve a mostrarse el que estaba
+    }
+
+    private void Cambiar()
+    {
+        cambiando = true;
+        texto = "";
+        enfocar = true;
+    }
+
+    private async Task Elegir(Cliente c)
+    {
+        abierto = false;
+        cambiando = false;
+        texto = "";
+        await IdClienteChanged.InvokeAsync(c.Id);
+    }
+
+    private async Task Tecla(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                if (!abierto) Abrir();
+                if (coincidencias.Count > 0) resaltado = (resaltado + 1) % coincidencias.Count;
+                break;
+            case "ArrowUp":
+                if (coincidencias.Count > 0) resaltado = resaltado <= 0 ? coincidencias.Count - 1 : resaltado - 1;
+                break;
+            case "Enter":
+            case "NumpadEnter":
+                if (abierto && resaltado >= 0 && resaltado < coincidencias.Count) await Elegir(coincidencias[resaltado]);
+                break;
+            case "Escape":
+                abierto = false;
+                break;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool primeraVez)
+    {
+        if (enfocar)
+        {
+            enfocar = false;
+            try { await entrada.FocusAsync(); } catch (Exception) { /* el cuadro todavía no está en pantalla */ }
+        }
+    }
+}

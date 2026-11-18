@@ -56,7 +56,6 @@ import java.util.Set;
 
 public class ComprobanteBOImpl implements ComprobanteBO {
 
-    private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
 
     // RF013: tipo de la nota de credito segun el catalogo 09 de SUNAT. En SIGMETA toda nota es por devolucion de
     // mercaderia, asi que el tipo se deduce (no lo elige el usuario y no puede quedar mal):
@@ -174,94 +173,18 @@ public class ComprobanteBOImpl implements ComprobanteBO {
         }
 
         return Transaccion.ejecutar(() -> {
-            SolicitudAutorizacion autorizacion = autorizacionBO.obtenerAutorizacionVigente(idResponsable, OPERACION_NOTA_CREDITO);
-            if (autorizacion == null) {
-                throw new IllegalStateException("Para emitir la nota de crédito se necesita una autorización vigente del Administrador");
-            }
+            // RF013: validaciones y montos (comun con solicitarNotaCredito: se autoriza lo mismo que se registra)
+            NotaPreparada preparada = prepararNotaCredito(notaCredito);
+            Comprobante origen = preparada.origen();
+            Venta venta = preparada.venta();
+            BigDecimal subTotalNC = preparada.subTotal();
+            BigDecimal igvNC = preparada.igv();
+            BigDecimal totalNC = preparada.total();
+
+            // RF014: la autorizacion aprobada de ESTA nota (mismo comprobante y mismas cantidades)
+            SolicitudAutorizacion autorizacion = autorizacionBO.requerirAutorizacion(idResponsable, OPERACION_NOTA_CREDITO,
+                    huellaNotaCredito(notaCredito));
             Usuario admin = autorizacion.getAdministrador();
-
-            int idOrigen = notaCredito.getComprobanteRelacionado().getId();
-            Comprobante origen = comprobanteDAO.load(idOrigen);
-            if (origen == null) {
-                throw new IllegalArgumentException("No existe el comprobante origen con id " + idOrigen);
-            }
-            if (origen.getTipo() != TipoComprobante.FACTURA && origen.getTipo() != TipoComprobante.BOLETA) {
-                throw new IllegalArgumentException("La nota de crédito solo puede emitirse sobre una FACTURA o BOLETA");
-            }
-            if (origen.getEstado() != EstadoComprobante.EMITIDO && origen.getEstado() != EstadoComprobante.ACEPTADO) {
-                throw new IllegalStateException("El comprobante origen debe estar en estado EMITIDO o ACEPTADO");
-            }
-
-            Venta venta = ventaDAO.load(origen.getVenta().getId());
-            if (venta == null || venta.isAnulado()) {
-                throw new IllegalStateException("La venta asociada al comprobante origen no existe o está anulada");
-            }
-
-            // RF013: cada linea de la nota apunta a la linea de venta concreta que se devuelve
-            List<DetalleVenta> detallesVenta = detalleVentaDAO.listarPorVenta(venta.getId());
-            Map<Integer, DetalleVenta> mapaDetallesVenta = new HashMap<>();
-            for (DetalleVenta dv : detallesVenta) {
-                mapaDetallesVenta.put(dv.getId(), dv);
-            }
-
-            // Cantidades ya acreditadas por linea de venta en notas de credito vigentes
-            List<Comprobante> ncsExistentes = comprobanteDAO.listarNotasCreditoPorComprobante(idOrigen);
-            Map<Integer, Double> yaAcreditadoPorLinea = new HashMap<>();
-            for (Comprobante ncExistente : ncsExistentes) {
-                List<DetalleNotaCredito> lineasExistentes = detalleNotaCreditoDAO.listarPorComprobante(ncExistente.getId());
-                for (DetalleNotaCredito dnc : lineasExistentes) {
-                    yaAcreditadoPorLinea.merge(dnc.getDetalleVenta().getId(), dnc.getCantidad(), Double::sum);
-                }
-            }
-
-            Set<Integer> lineasEnNC = new HashSet<>();
-            BigDecimal subTotalNC = BigDecimal.ZERO;
-
-            for (DetalleNotaCredito d : detalles) {
-                Validador.obligatorio(d.getDetalleVenta(), "línea de venta");
-                int idLinea = d.getDetalleVenta().getId();
-                if (!lineasEnNC.add(idLinea)) {
-                    throw new IllegalArgumentException("No se puede repetir la misma línea de venta en la nota de crédito");
-                }
-                DetalleVenta lineaVenta = mapaDetallesVenta.get(idLinea);
-                if (lineaVenta == null) {
-                    throw new IllegalArgumentException("La línea " + idLinea + " no pertenece a la venta origen");
-                }
-                if (!Double.isFinite(d.getCantidad()) || d.getCantidad() <= 0) {
-                    throw new IllegalArgumentException("La cantidad devuelta debe ser mayor a 0");
-                }
-
-                // solo se devuelve lo ENTREGADO al cliente (despachado), descontando lo ya acreditado:
-                // asi el reingreso al stock siempre tiene una salida previa (SALIDA_DESPACHO)
-                double yaAcreditado = yaAcreditadoPorLinea.getOrDefault(idLinea, 0.0);
-                double entregado = lineaVenta.getCantidadDespachada();
-                if (yaAcreditado + d.getCantidad() > entregado + 0.0001) {
-                    throw new IllegalArgumentException("Solo se puede devolver lo entregado al cliente en la línea "
-                            + lineaVenta.getNumeroLinea() + " (Entregado: " + entregado + ", Ya acreditado: "
-                            + yaAcreditado + ", Devuelto: " + d.getCantidad() + ")");
-                }
-
-                // se devuelve el precio efectivamente cobrado: importe de la linea (ya con descuento) por unidad.
-                // El descuento de la nota es la parte proporcional del descuento de la linea.
-                BigDecimal bruto = BigDecimal.valueOf(d.getCantidad())
-                        .multiply(BigDecimal.valueOf(lineaVenta.getPrecioUnitario()))
-                        .setScale(2, RoundingMode.HALF_UP);
-                BigDecimal importe = BigDecimal.valueOf(lineaVenta.getImporte())
-                        .multiply(BigDecimal.valueOf(d.getCantidad()))
-                        .divide(BigDecimal.valueOf(lineaVenta.getCantidad()), 2, RoundingMode.HALF_UP);
-                d.setDetalleVenta(lineaVenta);
-                d.setPrecioUnitario(lineaVenta.getPrecioUnitario());
-                d.setDescuento(bruto.subtract(importe).doubleValue());
-                d.setImporte(importe.doubleValue());
-                subTotalNC = subTotalNC.add(importe);
-            }
-
-            BigDecimal igvNC = subTotalNC.multiply(TASA_IGV).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal totalNC = subTotalNC.add(igvNC);
-
-            if (totalNC.doubleValue() > origen.getTotal() + 0.01) {
-                throw new IllegalArgumentException("El monto total de la nota de crédito no puede superar el total del comprobante origen");
-            }
 
             String serie = (origen.getTipo() == TipoComprobante.FACTURA) ? "FC01" : "BC01";
             String correlativo = comprobanteDAO.siguienteCorrelativo(serie);
@@ -340,6 +263,142 @@ public class ComprobanteBOImpl implements ComprobanteBO {
             autorizacionBO.consumir(autorizacion.getId());
 
             return notaCredito;
+        });
+    }
+
+    // RF013: valida la nota y calcula sus montos SIN mover nada (stock, deuda, caja). La usan registrar y solicitar.
+    private NotaPreparada prepararNotaCredito(Comprobante notaCredito) throws SQLException {
+        List<DetalleNotaCredito> detalles = notaCredito.getDetalles();
+            int idOrigen = notaCredito.getComprobanteRelacionado().getId();
+            Comprobante origen = comprobanteDAO.load(idOrigen);
+            if (origen == null) {
+                throw new IllegalArgumentException("No existe el comprobante origen con id " + idOrigen);
+            }
+            if (origen.getTipo() != TipoComprobante.FACTURA && origen.getTipo() != TipoComprobante.BOLETA) {
+                throw new IllegalArgumentException("La nota de crédito solo puede emitirse sobre una FACTURA o BOLETA");
+            }
+            if (origen.getEstado() != EstadoComprobante.EMITIDO && origen.getEstado() != EstadoComprobante.ACEPTADO) {
+                throw new IllegalStateException("El comprobante origen debe estar en estado EMITIDO o ACEPTADO");
+            }
+
+            Venta venta = ventaDAO.load(origen.getVenta().getId());
+            if (venta == null || venta.isAnulado()) {
+                throw new IllegalStateException("La venta asociada al comprobante origen no existe o está anulada");
+            }
+
+            // RF013: cada linea de la nota apunta a la linea de venta concreta que se devuelve
+            List<DetalleVenta> detallesVenta = detalleVentaDAO.listarPorVenta(venta.getId());
+            Map<Integer, DetalleVenta> mapaDetallesVenta = new HashMap<>();
+            for (DetalleVenta dv : detallesVenta) {
+                mapaDetallesVenta.put(dv.getId(), dv);
+            }
+
+            // Cantidades ya acreditadas por linea de venta en notas de credito vigentes
+            List<Comprobante> ncsExistentes = comprobanteDAO.listarNotasCreditoPorComprobante(idOrigen);
+            Map<Integer, Double> yaAcreditadoPorLinea = new HashMap<>();
+            for (Comprobante ncExistente : ncsExistentes) {
+                List<DetalleNotaCredito> lineasExistentes = detalleNotaCreditoDAO.listarPorComprobante(ncExistente.getId());
+                for (DetalleNotaCredito dnc : lineasExistentes) {
+                    yaAcreditadoPorLinea.merge(dnc.getDetalleVenta().getId(), dnc.getCantidad(), Double::sum);
+                }
+            }
+
+            Set<Integer> lineasEnNC = new HashSet<>();
+            BigDecimal subTotalNC = BigDecimal.ZERO;
+
+            for (DetalleNotaCredito d : detalles) {
+                Validador.obligatorio(d.getDetalleVenta(), "línea de venta");
+                int idLinea = d.getDetalleVenta().getId();
+                if (!lineasEnNC.add(idLinea)) {
+                    throw new IllegalArgumentException("No se puede repetir la misma línea de venta en la nota de crédito");
+                }
+                DetalleVenta lineaVenta = mapaDetallesVenta.get(idLinea);
+                if (lineaVenta == null) {
+                    throw new IllegalArgumentException("La línea " + idLinea + " no pertenece a la venta origen");
+                }
+                if (!Double.isFinite(d.getCantidad()) || d.getCantidad() <= 0) {
+                    throw new IllegalArgumentException("La cantidad devuelta debe ser mayor a 0");
+                }
+
+                // solo se devuelve lo ENTREGADO al cliente (despachado), descontando lo ya acreditado:
+                // asi el reingreso al stock siempre tiene una salida previa (SALIDA_DESPACHO)
+                double yaAcreditado = yaAcreditadoPorLinea.getOrDefault(idLinea, 0.0);
+                double entregado = lineaVenta.getCantidadDespachada();
+                if (yaAcreditado + d.getCantidad() > entregado + 0.0001) {
+                    throw new IllegalArgumentException("Solo se puede devolver lo entregado al cliente en la línea "
+                            + lineaVenta.getNumeroLinea() + " (Entregado: " + entregado + ", Ya acreditado: "
+                            + yaAcreditado + ", Devuelto: " + d.getCantidad() + ")");
+                }
+
+                // se devuelve el precio efectivamente cobrado: importe de la linea (ya con descuento) por unidad.
+                // El descuento de la nota es la parte proporcional del descuento de la linea.
+                BigDecimal bruto = BigDecimal.valueOf(d.getCantidad())
+                        .multiply(BigDecimal.valueOf(lineaVenta.getPrecioUnitario()))
+                        .setScale(2, RoundingMode.HALF_UP);
+                BigDecimal importe = BigDecimal.valueOf(lineaVenta.getImporte())
+                        .multiply(BigDecimal.valueOf(d.getCantidad()))
+                        .divide(BigDecimal.valueOf(lineaVenta.getCantidad()), 2, RoundingMode.HALF_UP);
+                d.setDetalleVenta(lineaVenta);
+                d.setPrecioUnitario(lineaVenta.getPrecioUnitario());
+                d.setDescuento(bruto.subtract(importe).doubleValue());
+                d.setImporte(importe.doubleValue());
+                subTotalNC = subTotalNC.add(importe);
+            }
+
+            // los importes ya incluyen IGV (precio cobrado): el total de la nota es su suma y el IGV se desglosa
+            BigDecimal totalNC = subTotalNC;
+            BigDecimal igvNC = PreciosIgv.igv(totalNC);
+            subTotalNC = PreciosIgv.valorVenta(totalNC);
+
+            if (totalNC.doubleValue() > origen.getTotal() + 0.01) {
+                throw new IllegalArgumentException("El monto total de la nota de crédito no puede superar el total del comprobante origen");
+            }
+        return new NotaPreparada(origen, venta, subTotalNC, igvNC, totalNC);
+    }
+
+    private record NotaPreparada(Comprobante origen, Venta venta, BigDecimal subTotal, BigDecimal igv, BigDecimal total) {
+    }
+
+    // RF014: huella de la nota = comprobante de origen + cada linea devuelta con su cantidad
+    private static String huellaNotaCredito(Comprobante notaCredito) {
+        StringBuilder datos = new StringBuilder("NC|").append(notaCredito.getComprobanteRelacionado().getId());
+        notaCredito.getDetalles().stream()
+                .sorted(java.util.Comparator.comparingInt(d -> d.getDetalleVenta().getId()))
+                .forEach(d -> datos.append('|').append(d.getDetalleVenta().getId()).append(':')
+                        .append(String.format(java.util.Locale.ROOT, "%.3f", d.getCantidad())));
+        return SolicitudAutorizacionBOImpl.huella(datos.toString());
+    }
+
+    // RF013/RF014: el Cajero prepara la nota y pide la autorizacion de ESA nota. El Administrador ve el comprobante,
+    // el cliente, los productos y el total; al aprobar, el Cajero la registra (registrarNotaCredito).
+    @Override
+    public SolicitudAutorizacion solicitarNotaCredito(Comprobante notaCredito, int idResponsable) throws SQLException {
+        usuarioBO.verificarRol(idResponsable, TipoRol.CAJERO);
+        Validador.obligatorio(notaCredito, "nota de crédito");
+        Validador.obligatorio(notaCredito.getComprobanteRelacionado(), "comprobante origen");
+        String motivo = Validador.textoObligatorio(notaCredito.getMotivo(), "motivo de nota de crédito", 200);
+        if (notaCredito.getDetalles() == null || notaCredito.getDetalles().isEmpty()) {
+            throw new IllegalArgumentException("La nota de crédito debe tener al menos una línea de detalle");
+        }
+        return Transaccion.ejecutar(() -> {
+            NotaPreparada p = prepararNotaCredito(notaCredito);
+            Cliente cliente = clienteDAO.load(p.venta().getCliente().getId());
+            String comprobante = p.origen().getSerie() + "-" + p.origen().getNumero();
+            StringBuilder detalle = new StringBuilder()
+                    .append("Cliente: ").append(cliente == null ? "—" : cliente.getNombreMostrado()).append('\n')
+                    .append("Venta: ").append(p.venta().getNumero())
+                    .append(p.venta().getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CREDITO ? " (crédito)" : " (contado)").append('\n')
+                    .append("Devuelve:");
+            for (DetalleNotaCredito d : notaCredito.getDetalles()) {
+                Producto producto = productoDAO.load(d.getDetalleVenta().getProducto().getId());
+                detalle.append('\n').append("- ")
+                        .append(new BigDecimal(String.valueOf(d.getCantidad())).stripTrailingZeros().toPlainString()).append(' ')
+                        .append(producto == null ? "producto" : producto.getNombre())
+                        .append(String.format(java.util.Locale.ROOT, ": S/ %.2f", d.getImporte()));
+            }
+            detalle.append('\n').append(String.format(java.util.Locale.ROOT, "Total de la nota: S/ %.2f", p.total()));
+            return autorizacionBO.solicitarOperacion(idResponsable, OPERACION_NOTA_CREDITO, motivo,
+                    comprobante, detalle.toString(), huellaNotaCredito(notaCredito));
         });
     }
 

@@ -39,6 +39,9 @@ public class SolicitudDatos
     public string Operacion { get; set; } = "";
     public string? DescripcionOperacion { get; set; }
     public string? Motivo { get; set; }
+    // RF014: datos de la operacion que se autoriza (comprobante, venta o producto y su detalle)
+    public string? Referencia { get; set; }
+    public string? Detalle { get; set; }
     public string? FechaSolicitud { get; set; }
     public string Estado { get; set; } = "";
     public bool Vigente { get; set; }

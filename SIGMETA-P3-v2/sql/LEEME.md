@@ -48,6 +48,7 @@ En MySQL 8, quitar antes `ONLY_FULL_GROUP_BY` del `sql_mode` (ver el `README.md`
 | `08_actualizar_base_lab12.sql` | Solo lo nuevo del Lab 12 para la base compartida, sin recargar todo: UNIQUE de cotizaciones, comprobantes y órdenes; procedimientos nuevos de ventas y cotizaciones; reactivar productos y clientes. Re-ejecutable. Después, reiniciar GlassFish |
 | `09_migracion_indices_caja_cobranza.sql` | Índices de caja, cobranza y reportes (H10, Adriano). Solo agrega índices; se puede correr más de una vez |
 | `10_actualizar_base_adriano_h10.sql` | Solo lo nuevo de Adriano para la base compartida, sin recargar todo: los 7 procedimientos de búsqueda de caja y cobranza (H10) y sus índices (lo mismo que la 09). Re-ejecutable; al final lista los 7 procedimientos |
+| `11_autorizacion_con_datos_de_operacion.sql` | RF014 (Sebastián): la solicitud de autorización guarda la operación que se pide (referencia, detalle y huella) y 2 procedimientos nuevos. Re-ejecutable |
 
 Nota H09: `04_SP_sebastian.sql` termina con un bloque que agrega, si todavía no están, `UNIQUE(serie, numero)` en comprobantes, `UNIQUE(numero)` en órdenes de compra de clientes y el correlativo `OCC`. No hace falta una migración aparte: basta con recargar los procedimientos como siempre.
 

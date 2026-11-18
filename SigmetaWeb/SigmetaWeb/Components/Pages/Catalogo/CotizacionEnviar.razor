@@ -1,0 +1,211 @@
+@page "/cotizaciones/{Id:int}/enviar"
+@* RF001: solo estos roles abren esta pantalla *@
+@attribute [Authorize(Roles = "Vendedor,Administrador")]
+@using SigmetaWeb.Components.Pages.Ventas
+@inject ApiJava Api
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+@* El título de la pestaña es el nombre que el navegador propone al guardar el PDF *@
+<PageTitle>@(cotizacion?.Numero ?? "Cotización")</PageTitle>
+
+@* RF007 · Enviar la cotización al cliente: se ve como el documento que recibirá, se imprime o se guarda en PDF
+   (diálogo del navegador) y se marca como enviada. Para las ya enviadas sirve para volver a imprimirla.
+   Datos reales del Java:
+   - GET  /api/cotizaciones/{Id}           la cotización con sus líneas y totales (los calcula el BO)
+   - POST /api/cotizaciones/{Id}/enviar    REGISTRADA -> ENVIADA (CotizacionBO.enviar); después ya no se edita *@
+
+<style>
+    @@media print {
+        @@page { size: A4; margin: 14mm; }
+        /* solo se imprime el documento: se oculta todo lo que no lo contiene (menú, barra, botones) */
+        body *:not(:has(.cot-doc)):not(.cot-doc):not(.cot-doc *) { display: none !important; }
+        body, body *:has(.cot-doc) {
+            display: block !important; position: static !important; margin: 0 !important; padding: 0 !important;
+            border: 0 !important; box-shadow: none !important; background: #fff !important;
+            width: auto !important; max-width: none !important; min-height: 0 !important; overflow: visible !important;
+        }
+        .cot-doc { padding: 0 !important; border: 0 !important; box-shadow: none !important; max-width: none !important; font-size: 10.5pt !important; }
+        .cot-doc * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+</style>
+
+<Encabezado Rf="RF007" Titulo="@(cotizacion is null ? "Cotización" : $"Cotización {cotizacion.Numero}")">
+    <a class="btn btn-outline-secondary" href="@VolverA">← Volver</a>
+    @if (cotizacion is not null && cotizacion.Estado != "ANULADA" && !cotizacion.Anulado)
+    {
+        <button type="button" class="btn @(PuedeMarcar ? "btn-outline-secondary" : "btn-primary")" disabled="@trabajando" @onclick="Imprimir">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round" aria-hidden="true" class="me-1"><path d="M6 9V3h12v6" /><rect x="6" y="14" width="12" height="7" /><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" /></svg>
+            Imprimir o PDF
+        </button>
+    }
+    @if (PuedeMarcar)
+    {
+        <button type="button" class="btn btn-primary" disabled="@trabajando" @onclick="MarcarEnviada">
+            @(trabajando ? "Guardando..." : "Marcar como enviada")
+        </button>
+    }
+</Encabezado>
+
+<Notificacion Mensaje="@error" Error="true" AlCerrar="() => error = null" />
+
+@if (cargando)
+{
+    <p class="text-muted">Cargando cotización...</p>
+}
+else if (cotizacion is not null)
+{
+    var conDescuento = cotizacion.Lineas.Any(l => l.Descuento > 0);
+    @* Documento que recibe el cliente: es lo mismo que se ve en pantalla y lo único que sale al imprimir *@
+    <article class="cot-doc">
+        <header class="doc-cabecera">
+            <div>
+                <div class="empresa">GRUPO META</div>
+                <div class="tenue">Ferretería industrial · herramientas y suministros</div>
+            </div>
+            <div class="recuadro">
+                <div class="tipo">COTIZACIÓN</div>
+                <div class="numero">@cotizacion.Numero</div>
+            </div>
+        </header>
+
+        <section class="doc-datos">
+            <div><span class="etiqueta">Cliente</span>@cotizacion.Cliente</div>
+            <div><span class="etiqueta">Fecha de emisión</span>@TextosVentas.Fecha(cotizacion.FechaEmision)</div>
+            <div><span class="etiqueta">@TipoDocumento</span>@cotizacion.DocumentoCliente</div>
+            <div><span class="etiqueta">Válida hasta</span>@TextosVentas.Fecha(cotizacion.FechaVigencia)</div>
+            @if (!string.IsNullOrWhiteSpace(cotizacion.UsuarioRegistro))
+            {
+                <div><span class="etiqueta">Atendido por</span>@cotizacion.UsuarioRegistro</div>
+            }
+        </section>
+
+        <table class="doc-lineas">
+            <thead>
+                <tr>
+                    <th class="col-n">#</th>
+                    <th>Descripción</th>
+                    <th class="der">Cantidad</th>
+                    <th class="der">P. unit. (S/)</th>
+                    @if (conDescuento)
+                    {
+                        <th class="der">Dscto. (S/)</th>
+                    }
+                    <th class="der">Importe (S/)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var l in cotizacion.Lineas.OrderBy(l => l.NumeroLinea))
+                {
+                    <tr>
+                        <td class="col-n">@l.NumeroLinea</td>
+                        <td>@l.Producto</td>
+                        <td class="der nowrap">@l.Cantidad.ToString("0.###") @l.UnidadCorta</td>
+                        <td class="der">@l.PrecioUnitario.ToString("N2")</td>
+                        @if (conDescuento)
+                        {
+                            <td class="der">@(l.Descuento > 0 ? l.Descuento.ToString("N2") : "—")</td>
+                        }
+                        <td class="der">@l.Importe.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="doc-pie">
+            <div class="notas">
+                @if (!string.IsNullOrWhiteSpace(cotizacion.Observaciones))
+                {
+                    <div class="mb-2"><span class="etiqueta">Observaciones</span>@cotizacion.Observaciones</div>
+                }
+                <div class="tenue">Precios en soles con IGV incluido.</div>
+            </div>
+            <table class="doc-totales">
+                <tr><td>Valor de venta</td><td class="der">S/ @cotizacion.SubTotal.ToString("N2")</td></tr>
+                <tr><td>IGV (18 %)</td><td class="der">S/ @cotizacion.Igv.ToString("N2")</td></tr>
+                <tr class="total"><td>Total</td><td class="der">S/ @cotizacion.Total.ToString("N2")</td></tr>
+            </table>
+        </div>
+
+    </article>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
+    // de dónde se vino (la lista de cotizaciones con sus filtros)
+    [SupplyParameterFromQuery(Name = "volver")] public string? VolverQ { get; set; }
+
+    private CotizacionDatos? cotizacion;
+    private bool cargando = true;
+    private bool trabajando;
+    private string? error;
+
+    private string VolverA => Volver.A(VolverQ, "/cotizaciones");
+    // RF007: solo el Vendedor envía y solo una cotización REGISTRADA (CotizacionBO.enviar)
+    private bool PuedeMarcar => Rol == "Vendedor" && cotizacion is { Estado: "REGISTRADA", Anulado: false };
+
+    // 11 dígitos = RUC, 8 = DNI (el tipo real lo guarda el cliente; aquí solo se rotula)
+    private string TipoDocumento => cotizacion?.DocumentoCliente?.Length switch
+    {
+        11 => "RUC",
+        8 => "DNI",
+        _ => "Documento"
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        try
+        {
+            cotizacion = await Api.Get<CotizacionDatos>($"cotizaciones/{Id}");   // GET /api/cotizaciones/{Id}
+            if (cotizacion is null) error = "No se encontró la cotización.";
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    // Abre el diálogo de impresión del navegador (ahí mismo se elige «Guardar como PDF»)
+    private async Task Imprimir()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("print");
+        }
+        catch (TaskCanceledException)
+        {
+            // el diálogo quedó abierto más que el tiempo de espera de Blazor: no es un error
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    // POST /api/cotizaciones/{Id}/enviar y vuelve a la lista con el aviso "Se envió la cotización ..."
+    private async Task MarcarEnviada()
+    {
+        if (cotizacion is null) return;
+        error = null;
+        trabajando = true;
+        try
+        {
+            await Api.Post<CotizacionDatos>($"cotizaciones/{cotizacion.Id}/enviar", null);
+            Nav.NavigateTo(Volver.ConAviso(VolverA, AvisoGuardado.Enviado, cotizacion.Numero));
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;   // por ejemplo "La cotización debe estar REGISTRADA para pasar a ENVIADA"
+        }
+        finally
+        {
+            trabajando = false;
+        }
+    }
+}

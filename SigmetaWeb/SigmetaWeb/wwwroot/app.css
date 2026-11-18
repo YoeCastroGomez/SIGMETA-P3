@@ -1075,6 +1075,35 @@ html[data-bs-theme="dark"] .form-switch .form-check-input:checked {
     letter-spacing: .035em;
 }
 
+
+/* PATRÓN UX · Tablas de listas de documentos (Cotizaciones, Órdenes, Ventas, Notas de crédito).
+   Con <FiltrosLista> arriba y <AccionesFila> en la última columna. */
+.tabla-lista thead th {
+    padding-top: .65rem;
+    padding-bottom: .65rem;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+    background: transparent;
+    white-space: nowrap;
+}
+
+.tabla-lista tbody td { padding-top: .7rem; padding-bottom: .7rem; }
+
+.tabla-lista .numero { font-weight: 600; text-decoration: none; white-space: nowrap; }
+.tabla-lista .numero:hover { text-decoration: underline; }
+
+.tabla-lista .sub { margin-top: .15rem; font-size: .78rem; color: var(--bs-secondary-color); }
+
+.tabla-lista td.acciones { width: 1%; white-space: nowrap; text-align: right; }
+
+/* en pantallas grandes la tabla entra completa: el menú «⋯» puede salir del borde de la tabla */
+@media (min-width: 992px) {
+    .tabla-lista-contenedor.table-responsive { overflow: visible; }
+}
+
 /* ===================== MENSAJES SIGMETA (MensajeModal) =====================
    Feedback de cada acción en una ventana modal: éxito, error o aviso.
    Usa el mismo marco que las confirmaciones (.sigmeta-confirmacion). */

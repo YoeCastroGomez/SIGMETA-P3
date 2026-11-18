@@ -37,3 +37,51 @@
 .lista-pendientes .listo .marca { color: var(--bs-success); }
 .lista-pendientes .falta { color: var(--bs-body-color); font-weight: 600; }
 .lista-pendientes .falta .marca { color: var(--bs-warning); }
+
+/* Tabla de productos: nombre sin código, cantidad con su unidad, descuento en soles y quitar con ícono */
+.producto-nombre { font-weight: 500; line-height: 1.25; }
+.cantidad { width: 8.75rem; }
+.descuento { width: 7.25rem; }
+.cantidad .input-group-text,
+.descuento .input-group-text {
+    min-width: 2.6rem;
+    justify-content: center;
+    color: var(--bs-secondary-color);
+}
+.btn-quitar {
+    padding: .3rem .45rem;
+    line-height: 1;
+    color: var(--bs-secondary-color);
+    border: 1px solid transparent;
+}
+.btn-quitar:hover,
+.btn-quitar:focus-visible {
+    color: var(--bs-danger);
+    border-color: rgba(var(--bs-danger-rgb), .45);
+    background: rgba(var(--bs-danger-rgb), .08);
+}
+
+/* Observaciones: área corta que se puede agrandar */
+.observaciones { resize: vertical; min-height: 3.5rem; }
+
+/* Toque general de la tabla de productos */
+.tabla-lineas thead th {
+    font-size: .76rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+.tabla-lineas > tbody > tr > td { padding-top: .65rem; padding-bottom: .65rem; }
+
+/* Fila de avisos de una línea: a todo lo ancho, sin mover las columnas */
+.tabla-lineas > tbody > tr.con-aviso > td { border-bottom-width: 0; padding-bottom: .3rem; }
+.tabla-lineas > tbody > tr.fila-aviso > td { padding-top: 0; padding-bottom: .55rem; }
+.fila-aviso .aviso {
+    display: inline-block;
+    padding: .2rem .55rem;
+    border-radius: .35rem;
+    font-size: .8rem;
+    color: var(--bs-danger-text-emphasis);
+    background: var(--bs-danger-bg-subtle);
+}

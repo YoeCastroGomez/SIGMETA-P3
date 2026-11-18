@@ -31,6 +31,15 @@ public sealed record OpcionChip(
     int? Cantidad = null,         // cuántos registros hay con ese estado (null = no se muestra)
     string Tono = "");            // "verde", "ambar", "rojo", "azul" o "" (gris): mismo estándar que <Estado>
 
+// Una acción de una fila de lista (<AccionesFila>): navega (Ruta) o ejecuta algo (Hacer).
+// Destacada = botón de color (el siguiente paso); si no, con borde ("Ver"). Peligro = en rojo dentro del menú «⋯».
+public sealed record AccionFila(
+    string Texto,
+    string? Ruta = null,
+    Func<Task>? Hacer = null,
+    bool Destacada = true,
+    bool Peligro = false);
+
 // Colores de una etiqueta según su tono: el mismo estándar que <Estado>, para textos propios de una pantalla
 // ("Por cobrar", "Sin comprobante"...) que <Estado> no conoce.
 //   <span class="badge rounded-pill border @Tonos.Clase("ambar")">Por cobrar</span>

@@ -37,4 +37,9 @@ public interface MovimientoInventarioBO {
 
     List<MovimientoInventario> listarPorProducto(int idProducto) throws SQLException;
     List<Producto> listarEnStockMinimo() throws SQLException;
+    // RF012/RF014: piden la autorizacion de UN ajuste (o de su reversion) con sus datos; no mueven el stock
+    pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion solicitarAjuste(int idProducto, int idUsuario,
+            double cantidadContada, String motivo) throws SQLException;
+    pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion solicitarReversionAjuste(int idMovimientoAjuste,
+            int idAlmacenero, String motivo) throws SQLException;
 }

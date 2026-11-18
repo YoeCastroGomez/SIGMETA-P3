@@ -110,13 +110,22 @@ public class SolicitudRS extends VentanillaBase {
         return respuesta;
     }
 
+    // RF014: la autorizacion ya no se pide suelta: se pide desde la operacion, con sus datos
+    // (POST /api/notas-credito/solicitar, /api/ventas/solicitar-autorizacion, /api/almacen/ajustes/solicitar)
     @POST
     public Response solicitar(@HeaderParam("ticket") String ticket, SolicitudDatos datos) {
-        if (datos == null) {
-            return error(Response.Status.BAD_REQUEST, "Faltan los datos de la solicitud");
-        }
-        return ejecutar(ticket, Response.Status.CREATED, id ->
-                convertir(solicitudBO.solicitar(id, datos.operacion, datos.motivo), new HashMap<>()));
+        return error(Response.Status.BAD_REQUEST,
+                "La autorización se pide desde la operación (nota de crédito, venta o ajuste), con sus datos");
+    }
+
+    // Lo que responden los POST .../solicitar de cada operacion
+    public static Map<String, Object> resumen(SolicitudAutorizacion s) {
+        Map<String, Object> r = new HashMap<>();
+        r.put("id", s.getId());
+        r.put("estado", s.getEstado() == null ? null : s.getEstado().name());
+        r.put("referencia", s.getReferencia());
+        r.put("operacion", s.getOperacionRestringida());
+        return r;
     }
 
     @POST
@@ -169,6 +178,8 @@ public class SolicitudRS extends VentanillaBase {
         d.fechaResolucion = Utilidades.fechaHora(s.getFechaResolucion());
         d.fechaVencimiento = Utilidades.fechaHora(s.getFechaVencimiento());
         d.vigenciaMinutos = s.getVigenciaMinutos();
+        d.referencia = s.getReferencia();
+        d.detalle = s.getDetalle();
         Usuario solicitante = usuario(s.getSolicitante(), usuarios);
         if (solicitante != null) {
             d.idSolicitante = solicitante.getId();

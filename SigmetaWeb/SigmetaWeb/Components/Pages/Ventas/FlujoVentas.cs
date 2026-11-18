@@ -106,13 +106,13 @@ public static class FlujoVentas
 
         var conComprobante = v.Comprobante is not null;
         pasos.Add(new("Comprobante", conComprobante ? EstadoPaso.Hecho : EstadoPaso.Actual,
-            conComprobante ? v.Comprobante : "Por emitir", "Vendedor o Cajero", $"/ventas/{v.Id}/comprobante"));
+            conComprobante ? v.Comprobante : null, "Vendedor o Cajero", $"/ventas/{v.Id}/comprobante"));
 
         bool cobroListo;
         if (v.CondicionPago == "CREDITO")
         {
             // al crédito el cobro no frena el despacho: se cobra después en Cuentas por cobrar
-            pasos.Add(new("Cobro", EstadoPaso.Omitido, "Al crédito: en cuentas por cobrar"));
+            pasos.Add(new("Cobro", EstadoPaso.Omitido, "Al crédito"));
             cobroListo = true;
         }
         else
@@ -120,7 +120,7 @@ public static class FlujoVentas
             cobroListo = v.CobradaContado;
             pasos.Add(new("Cobro en caja",
                 v.CobradaContado ? EstadoPaso.Hecho : conComprobante ? EstadoPaso.Actual : EstadoPaso.Pendiente,
-                v.CobradaContado ? "Cobrada" : "Por cobrar", "Cajero"));
+                null, "Cajero"));
         }
 
         var despachada = v.Estado == "DESPACHADA";
@@ -128,7 +128,7 @@ public static class FlujoVentas
         var puedeDespacharse = conComprobante && cobroListo;
         pasos.Add(new("Despacho",
             despachada ? EstadoPaso.Hecho : puedeDespacharse ? EstadoPaso.Actual : EstadoPaso.Pendiente,
-            despachada ? "Entregada" : parcial ? "Entrega parcial" : "Por entregar", "Almacenero"));
+            parcial ? "Parcial" : null, "Almacenero"));
         return pasos;
     }
 
@@ -147,12 +147,10 @@ public static class FlujoVentas
             return pasos;
         }
         pasos.Add(new("Orden del cliente", EstadoPaso.Hecho, o.Numero));
-        pasos.Add(new("Venta", o.Estado == "PENDIENTE" ? EstadoPaso.Actual : EstadoPaso.Hecho,
-            o.Estado == "PENDIENTE" ? "Por registrar" : "Registrada", "Vendedor"));
+        pasos.Add(new("Venta", o.Estado == "PENDIENTE" ? EstadoPaso.Actual : EstadoPaso.Hecho, null, "Vendedor"));
         pasos.Add(new("Entrega al cliente",
             o.Estado == "ATENDIDA" ? EstadoPaso.Hecho : o.Estado == "ATENDIDA_PARCIAL" ? EstadoPaso.Actual : EstadoPaso.Pendiente,
-            o.Estado == "ATENDIDA" ? "Atendida" : o.Estado == "ATENDIDA_PARCIAL" ? "Atendida en parte" : "Por despachar",
-            "Almacenero"));
+            o.Estado == "ATENDIDA_PARCIAL" ? "Parcial" : null, "Almacenero"));
         return pasos;
     }
 
@@ -162,37 +160,36 @@ public static class FlujoVentas
     public static List<PasoDocumento> PasosCotizacion(CotizacionDatos c, OrdenDatos? orden = null)
     {
         var estado = c.Anulado ? "ANULADA" : c.Estado ?? "REGISTRADA";
+        // Títulos cortos: el paso hecho dice lo que pasó ("Enviada") y el que toca, lo que hay que hacer ("Enviar")
         var pasos = new List<PasoDocumento>
         {
-            new("Registrada", EstadoPaso.Hecho, c.Numero)
+            new("Registrada", EstadoPaso.Hecho)
         };
         if (estado == "ANULADA")
         {
-            pasos.Add(new("Cotización", EstadoPaso.Anulado, "Anulada"));
+            pasos.Add(new("Anulada", EstadoPaso.Anulado));
             return pasos;
         }
         if (estado == "VENCIDA")
         {
             // el Java no guarda si venció estando registrada o enviada: solo se dice que venció
-            pasos.Add(new("Vigencia", EstadoPaso.Anulado, $"Venció el {TextosVentas.Fecha(c.FechaVigencia)}"));
+            pasos.Add(new("Vencida", EstadoPaso.Anulado, TextosVentas.Fecha(c.FechaVigencia)));
             return pasos;
         }
         var enviada = estado is "ENVIADA" or "ACEPTADA" or "RECHAZADA";
-        pasos.Add(new("Envío al cliente", enviada ? EstadoPaso.Hecho : EstadoPaso.Actual,
-            enviada ? "Enviada" : "Por enviar", "Vendedor"));
-        pasos.Add(new("Respuesta del cliente",
+        pasos.Add(new(enviada ? "Enviada" : "Enviar", enviada ? EstadoPaso.Hecho : EstadoPaso.Actual, Responsable: "Vendedor"));
+        pasos.Add(new(estado switch { "ACEPTADA" => "Aceptada", "RECHAZADA" => "Rechazada", _ => "Respuesta del cliente" },
             estado == "ACEPTADA" ? EstadoPaso.Hecho
             : estado == "RECHAZADA" ? EstadoPaso.Anulado
             : estado == "ENVIADA" ? EstadoPaso.Actual : EstadoPaso.Pendiente,
-            estado switch { "ACEPTADA" => "Aceptada", "RECHAZADA" => "Rechazada", _ => "Acepta o rechaza" },
-            "Vendedor registra la respuesta"));
+            Responsable: "Vendedor"));
         if (estado == "RECHAZADA")
         {
             return pasos;
         }
-        pasos.Add(new("Orden del cliente",
+        pasos.Add(new(orden is not null ? "Orden" : "Generar orden",
             orden is not null ? EstadoPaso.Hecho : estado == "ACEPTADA" ? EstadoPaso.Actual : EstadoPaso.Pendiente,
-            orden?.Numero ?? "Por generar", "Vendedor",
+            orden?.Numero, "Vendedor",
             orden is not null ? $"/ordenes/editar/{orden.Id}" : null));
         return pasos;
     }

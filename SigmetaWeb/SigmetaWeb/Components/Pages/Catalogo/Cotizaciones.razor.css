@@ -1,0 +1,51 @@
+/* Filtros, tabla y acciones: componentes compartidos (FiltrosLista, AccionesFila) y .tabla-lista de app.css */
+
+.vence { font-weight: 600; color: var(--bs-warning-text-emphasis); }
+.vence.urgente { color: var(--bs-danger-text-emphasis); }
+
+/* Ventana «Respuesta del cliente»: dos opciones grandes del mismo tamaño */
+.respuesta { max-width: 26rem; }
+
+.monto-respuesta {
+    margin: 1rem 0 1.25rem;
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.opciones-respuesta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .75rem;
+}
+
+.opcion {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .35rem;
+    padding: 1rem .5rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-lg);
+    background: transparent;
+    color: var(--bs-body-color);
+    font-weight: 600;
+    transition: border-color .15s, background-color .15s, color .15s;
+}
+
+.opcion:disabled { opacity: .6; cursor: wait; }
+
+.opcion.acepto { color: var(--bs-success-text-emphasis); }
+.opcion.acepto:hover:not(:disabled),
+.opcion.acepto:focus-visible {
+    border-color: var(--bs-success);
+    background: var(--bs-success-bg-subtle);
+}
+
+.opcion.rechazo { color: var(--bs-danger-text-emphasis); }
+.opcion.rechazo:hover:not(:disabled),
+.opcion.rechazo:focus-visible {
+    border-color: var(--bs-danger);
+    background: var(--bs-danger-bg-subtle);
+}

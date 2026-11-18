@@ -250,6 +250,7 @@ public class CotizacionRS extends VentanillaBase {
             if (completo != null) {
                 l.producto = completo.getNombre();
                 l.codigoProducto = completo.getCodigoInterno();
+                l.unidadVenta = completo.getUnidadVenta() == null ? null : completo.getUnidadVenta().name();
             }
         }
         l.cantidad = cantidad;

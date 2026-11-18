@@ -20,4 +20,13 @@ public interface SolicitudAutorizacionBO {
     SolicitudAutorizacion obtenerAutorizacionVigente(int idUsuario, String operacionRestringida) throws SQLException;
     // RF014: una autorizacion de un solo uso queda VENCIDA despues de usarse
     void consumir(int idSolicitud) throws SQLException;
+
+    // RF014 (opcion B): la solicitud nace en la operacion restringida y lleva sus datos.
+    // referencia = documento o producto; detalle = lo que revisa el Administrador; huella = SHA-256 de los datos.
+    // Si ya hay una pendiente o aprobada de esa misma operacion, la devuelve en vez de crear otra.
+    SolicitudAutorizacion solicitarOperacion(int idSolicitante, String operacionRestringida, String motivo,
+                                             String referencia, String detalle, String huella) throws SQLException;
+    // RF014: la autorizacion aprobada y vigente de ESA operacion (misma huella). Si no la hay, lanza el mensaje
+    // que corresponde: en espera del Administrador, o que hay que solicitarla.
+    SolicitudAutorizacion requerirAutorizacion(int idUsuario, String operacionRestringida, String huella) throws SQLException;
 }

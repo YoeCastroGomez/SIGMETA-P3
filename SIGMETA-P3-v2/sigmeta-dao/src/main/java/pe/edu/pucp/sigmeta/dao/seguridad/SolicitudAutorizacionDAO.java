@@ -12,4 +12,7 @@ public interface SolicitudAutorizacionDAO extends BaseDAO<SolicitudAutorizacion,
     List<SolicitudAutorizacion> listarPorEstado(EstadoAutorizacion estado) throws SQLException;
     List<SolicitudAutorizacion> listarPorSolicitante(int idSolicitante) throws SQLException;
     SolicitudAutorizacion buscarVigente(int idSolicitante, String operacionRestringida) throws SQLException;
+    // RF014: la solicitud de una operacion concreta (su huella) en un estado; APROBADA solo si no vencio
+    SolicitudAutorizacion buscarPorHuella(int idSolicitante, String operacionRestringida, String huella,
+                                          EstadoAutorizacion estado) throws SQLException;
 }
