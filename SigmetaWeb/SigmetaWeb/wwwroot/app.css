@@ -1164,3 +1164,43 @@ html[data-bs-theme="dark"] .sigmeta-confirmacion .modal-body .small.text-danger 
     .sigmeta-confirmacion .modal-footer { padding: .85rem 1rem; }
     .sigmeta-confirmacion .modal-footer .btn { flex: 1 1 0; }
 }
+
+/* El main conserva un transform al terminar la animación de entrada.
+   Ese transform contenía el backdrop fixed dentro del área de contenido.
+   Se desactiva únicamente mientras haya una confirmación visible. */
+html:has(.sigmeta-confirmacion) .sigmeta-main {
+    animation: none !important;
+    transform: none !important;
+}
+
+/* Capa de pantalla completa: cubre también el menú lateral y la barra superior. */
+.sigmeta-confirmacion-fondo.modal-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 2000 !important;
+    background: #090809;
+    opacity: .91;
+}
+.sigmeta-confirmacion.modal {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 2010 !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+.sigmeta-confirmacion .modal-dialog {
+    min-height: calc(100% - 3.5rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sigmeta-confirmacion .modal-content {
+    width: 100%;
+    max-height: calc(100dvh - 3.5rem);
+}
