@@ -126,6 +126,7 @@ public class CuentaPorCobrarRS extends VentanillaBase {
         d.fechaEmision = Utilidades.fecha(cxc.getFechaEmision());
         d.fechaVencimiento = Utilidades.fecha(cxc.getFechaVencimiento());
         d.montoOriginal = cxc.getMontoOriginal();
+        d.montoAcreditado = cxc.getMontoAcreditado();
         d.montoPagado = cxc.getMontoPagado();
         d.saldoPendiente = cxc.getSaldoPendiente();
         d.estado = cxc.getEstado() != null ? cxc.getEstado().name() : null;

@@ -179,8 +179,11 @@ public class OrdenCompraClienteBOImpl implements OrdenCompraClienteBO {
             OrdenCompraCliente oc = ordenCompraClienteDAO.load(id);
             if (oc != null) {
                 List<DetalleOrdenCompraCliente> detalles = detalleOrdenCompraClienteDAO.listarPorOrden(id);
+                pe.edu.pucp.sigmeta.dao.ventas.VentaDAO ventaDAO = new pe.edu.pucp.sigmeta.daoimpl.ventas.VentaDAOImpl();
                 for (DetalleOrdenCompraCliente d : detalles) {
                     d.setOrdenCompraCliente(oc);
+                    // lo ya vendido en ventas vigentes: la pantalla de venta muestra lo pendiente antes de que se pase
+                    d.setCantidadVendida(ventaDAO.cantidadComprometida(d.getId(), 0));
                 }
                 oc.setDetalles(detalles);
             }

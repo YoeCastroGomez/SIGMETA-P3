@@ -40,12 +40,12 @@ BEGIN
         id_cliente, id_cotizacion, numero_orden_cliente,
         estado, numero, fecha_emision,
         sub_total, igv, total, observaciones,
-        fecha_registro, id_usuario_registro, anulado
+        fecha_registro, id_usuario_registro
     ) VALUES (
         p_id_cliente, p_id_cotizacion, p_numero_orden_cliente,
         p_estado, p_numero, p_fecha_emision,
         p_sub_total, p_igv, p_total, p_observaciones,
-        NOW(), p_id_usuario_registro, FALSE
+        NOW(), p_id_usuario_registro
     );
     SET p_id = LAST_INSERT_ID();
 END$$
@@ -86,8 +86,7 @@ CREATE PROCEDURE sp_orden_compra_cliente_eliminar(
 )
 BEGIN
     UPDATE orden_compra_cliente
-    SET anulado = TRUE,
-        estado = 'ANULADA',
+    SET estado = 'ANULADA',
         motivo_anulacion = p_motivo,
         fecha_anulacion = NOW()
     WHERE id = p_id AND anulado = FALSE;
@@ -260,12 +259,12 @@ BEGIN
         id_cliente, id_orden_compra_cliente, condicion_pago,
         plazo_credito_dias, estado, numero, fecha_emision,
         sub_total, igv, total, observaciones,
-        fecha_registro, id_usuario_registro, anulado
+        fecha_registro, id_usuario_registro
     ) VALUES (
         p_id_cliente, p_id_orden_compra_cliente, p_condicion_pago,
         p_plazo_credito_dias, p_estado, p_numero, p_fecha_emision,
         p_sub_total, p_igv, p_total, p_observaciones,
-        NOW(), p_id_usuario_registro, FALSE
+        NOW(), p_id_usuario_registro
     );
     SET p_id = LAST_INSERT_ID();
 END$$
@@ -326,8 +325,7 @@ BEGIN
     END IF;
 
     UPDATE venta
-    SET anulado = TRUE,
-        estado = 'ANULADA',
+    SET estado = 'ANULADA',
         motivo_anulacion = p_motivo,
         fecha_anulacion = NOW()
     WHERE id = p_id AND anulado = FALSE;
@@ -646,9 +644,10 @@ BEGIN
     SET p_correlativo = LPAD(v_max + 1, 8, '0');
 END$$
 
--- RF013: la nota de credito rebaja la deuda (monto_original). El saldo siempre es
--- monto_original - monto_pagado, el mismo criterio que usan los cobros (CobroBOImpl).
--- MySQL asigna de izquierda a derecha: saldo_pendiente y estado ya ven el monto_original nuevo.
+-- RF013: la nota de credito rebaja la deuda. monto_original (el total de la venta) NO cambia: lo acreditado
+-- se acumula en monto_acreditado, sin pasar del saldo que quedaba. El saldo siempre es
+-- monto_original - monto_acreditado - monto_pagado, el mismo criterio que usan los cobros (CobroBOImpl).
+-- MySQL asigna de izquierda a derecha: saldo_pendiente y estado ya ven el monto_acreditado nuevo.
 DROP PROCEDURE IF EXISTS sp_comprobante_revertir_saldo_cpc$$
 CREATE PROCEDURE sp_comprobante_revertir_saldo_cpc(
     IN p_id_venta INT,
@@ -656,12 +655,13 @@ CREATE PROCEDURE sp_comprobante_revertir_saldo_cpc(
 )
 BEGIN
     IF EXISTS (
-        SELECT 1 FROM information_schema.tables 
+        SELECT 1 FROM information_schema.tables
         WHERE table_schema = DATABASE() AND table_name = 'cuenta_por_cobrar'
     ) THEN
         UPDATE cuenta_por_cobrar
-        SET monto_original = GREATEST(monto_pagado, monto_original - p_monto_reversion),
-            saldo_pendiente = monto_original - monto_pagado,
+        SET monto_acreditado = monto_acreditado
+                + LEAST(p_monto_reversion, GREATEST(monto_original - monto_acreditado - monto_pagado, 0)),
+            saldo_pendiente = monto_original - monto_acreditado - monto_pagado,
             estado = CASE
                         WHEN saldo_pendiente <= 0.00 THEN 'PAGADA'
                         WHEN fecha_vencimiento < CURDATE() THEN 'VENCIDA'
@@ -672,7 +672,57 @@ BEGIN
     END IF;
 END$$
 
--- RF013: al anular una nota de credito la deuda vuelve a su monto anterior
+-- RF008: foto de lo que se imprime en una factura o boleta, tomada al emitirla. El cliente (nombre, documento y
+-- direccion) y cada linea (codigo, descripcion y unidad del producto, cantidad y montos) quedan copiados en el
+-- comprobante: si despues se renombra el producto o el cliente cambia de direccion, la reimpresion sale igual.
+-- Solo copia lo que falta (se puede llamar de nuevo sin duplicar). La usa ComprobanteBOImpl.emitir.
+DROP PROCEDURE IF EXISTS sp_comprobante_congelar$$
+CREATE PROCEDURE sp_comprobante_congelar(IN p_id INT)
+BEGIN
+    UPDATE comprobante c
+    INNER JOIN venta v ON v.id = c.id_venta
+    INNER JOIN cliente cl ON cl.id = v.id_cliente
+    SET c.cliente_nombre = CASE WHEN cl.tipo_persona = 'JURIDICA' THEN cl.razon_social
+                                ELSE CONCAT(cl.nombres, ' ', cl.apellidos) END,
+        c.cliente_tipo_documento = cl.tipo_documento,
+        c.cliente_numero_documento = cl.numero_documento,
+        c.cliente_direccion = cl.direccion
+    WHERE c.id = p_id AND c.tipo IN ('FACTURA', 'BOLETA') AND c.cliente_nombre IS NULL;
+
+    INSERT INTO detalle_comprobante (
+        id_comprobante, numero_linea, codigo, descripcion, unidad,
+        cantidad, precio_unitario, descuento, importe
+    )
+    SELECT c.id, d.numero_linea, p.codigo_interno, p.nombre, p.unidad_venta,
+           d.cantidad, d.precio_unitario, d.descuento, d.importe
+    FROM comprobante c
+    INNER JOIN detalle_venta d ON d.id_venta = c.id_venta
+    INNER JOIN producto p ON p.id = d.id_producto
+    WHERE c.id = p_id AND c.tipo IN ('FACTURA', 'BOLETA')
+      AND NOT EXISTS (SELECT 1 FROM detalle_comprobante x WHERE x.id_comprobante = c.id)
+    ORDER BY d.numero_linea;
+END$$
+
+-- RF008: cliente tal como se imprimio (columnas NULL si el comprobante no tiene foto)
+DROP PROCEDURE IF EXISTS sp_comprobante_impreso$$
+CREATE PROCEDURE sp_comprobante_impreso(IN p_id INT)
+BEGIN
+    SELECT cliente_nombre, cliente_tipo_documento, cliente_numero_documento, cliente_direccion
+    FROM comprobante
+    WHERE id = p_id;
+END$$
+
+-- RF008: lineas tal como se imprimieron
+DROP PROCEDURE IF EXISTS sp_comprobante_impreso_lineas$$
+CREATE PROCEDURE sp_comprobante_impreso_lineas(IN p_id INT)
+BEGIN
+    SELECT numero_linea, codigo, descripcion, unidad, cantidad, precio_unitario, descuento, importe
+    FROM detalle_comprobante
+    WHERE id_comprobante = p_id
+    ORDER BY numero_linea;
+END$$
+
+-- RF013: al anular una nota de credito la deuda vuelve a su monto anterior: se resta de lo acreditado
 DROP PROCEDURE IF EXISTS sp_comprobante_restaurar_saldo_cpc$$
 CREATE PROCEDURE sp_comprobante_restaurar_saldo_cpc(
     IN p_id_venta INT,
@@ -680,12 +730,12 @@ CREATE PROCEDURE sp_comprobante_restaurar_saldo_cpc(
 )
 BEGIN
     IF EXISTS (
-        SELECT 1 FROM information_schema.tables 
+        SELECT 1 FROM information_schema.tables
         WHERE table_schema = DATABASE() AND table_name = 'cuenta_por_cobrar'
     ) THEN
         UPDATE cuenta_por_cobrar
-        SET monto_original = monto_original + p_monto,
-            saldo_pendiente = monto_original - monto_pagado,
+        SET monto_acreditado = GREATEST(monto_acreditado - p_monto, 0),
+            saldo_pendiente = monto_original - monto_acreditado - monto_pagado,
             estado = CASE
                         WHEN saldo_pendiente <= 0.00 THEN 'PAGADA'
                         WHEN fecha_vencimiento < CURDATE() THEN 'VENCIDA'

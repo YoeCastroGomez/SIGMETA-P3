@@ -66,10 +66,8 @@
 
 /* Toque general de la tabla de productos */
 .tabla-lineas thead th {
-    font-size: .76rem;
+    font-size: var(--text-sm);
     font-weight: 600;
-    letter-spacing: .04em;
-    text-transform: uppercase;
     color: var(--bs-secondary-color);
 }
 .tabla-lineas > tbody > tr > td { padding-top: .65rem; padding-bottom: .65rem; }

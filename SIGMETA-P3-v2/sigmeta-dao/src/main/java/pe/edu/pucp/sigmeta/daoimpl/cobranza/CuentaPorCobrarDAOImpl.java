@@ -63,6 +63,7 @@ public class CuentaPorCobrarDAOImpl implements CuentaPorCobrarDAO {
 
 
         cxc.setMontoOriginal(rs.getDouble("monto_original"));
+        cxc.setMontoAcreditado(rs.getDouble("monto_acreditado"));
         cxc.setMontoPagado(rs.getDouble("monto_pagado"));
         cxc.setSaldoPendiente(rs.getDouble("saldo_pendiente"));
 

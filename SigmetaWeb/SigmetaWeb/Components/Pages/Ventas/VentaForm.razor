@@ -1,6 +1,7 @@
 @page "/ventas/nueva"
 @page "/ventas/editar/{Id:int}"
-@* RF001: solo estos roles abren esta pantalla *@
+@* RF001/RF008: registrar o editar una venta es solo del Vendedor. El Administrador entra únicamente a VER una
+   venta existente (solo lectura, por ejemplo desde el recorrido del comprobante); si abre /ventas/nueva, vuelve a la lista. *@
 @attribute [Authorize(Roles = "Vendedor,Administrador")]
 @using SigmetaWeb.Components.Pages.Catalogo
 @using SigmetaWeb.Components.Pages.Clientes
@@ -26,7 +27,7 @@
 <Encabezado Rf="RF008" Titulo="@Titulo" Subtitulo="@Subtitulo">
     @if (venta is not null && !Editable)
     {
-    <a class="btn btn-outline-secondary" href="@VolverA">← Volver</a>
+    <a class="btn btn-outline-secondary" href="@VolverA">Volver</a>
     }
 </Encabezado>
 
@@ -62,7 +63,7 @@ else
                     </span>
                 </div>
 
-                @if (EsNuevo)
+                @if (EsNuevo && !OrdenFija)
                 {
                     <div class="row g-2 mb-3" role="radiogroup" aria-label="Origen de la venta">
                         <div class="col-sm-6">
@@ -90,7 +91,15 @@ else
                                los del BO (stock insuficiente, límite de crédito...) en el aviso rojo de arriba. *@
                             <Campo Etiqueta="Orden de compra del cliente" Id="orden" Obligatorio="true" Error="@(v.Error("orden", Errores()))"
                                    Ayuda="@(ordenesAbiertas.Count == 0 && EsNuevo ? "No hay órdenes por vender." : null)">
-                                @if (EsNuevo)
+                                @if (OrdenFija)
+                                {
+                                    @* viene de "Registrar venta" en la orden: la venta se crea con referencia a ESA orden
+                                       (como en Odoo o SAP). No se cambia de orden ni se pasa a venta directa: si es otra,
+                                       se cancela y se entra desde la orden correcta. *@
+                                    <input id="orden" class="form-control" disabled
+                                           value="@(ordenElegida!.Numero + (string.IsNullOrEmpty(ordenElegida.NumeroOrdenCliente) ? "" : " · OC " + ordenElegida.NumeroOrdenCliente))" />
+                                }
+                                else if (EsNuevo)
                                 {
                                     <select id="orden" class="@(v.Clase("orden", Errores(), "form-select"))" value="@venta.IdOrden" @onchange="CambiarOrden">
                                         <option value="0">Seleccione…</option>
@@ -142,7 +151,7 @@ else
                                 <th>Producto</th>
                                 @if (desdeOrden)
                                 {
-                                    <th class="text-end">En la orden</th>
+                                    <th class="text-end">@(EsNuevo ? "Pendiente" : "En la orden")</th>
                                 }
                                 <th style="width: 9.5rem;">Cantidad</th>
                                 <th class="text-end" style="width: 7rem;">Precio unit.</th>
@@ -154,7 +163,9 @@ else
                         <tbody>
                             @if (venta.Lineas.Count == 0)
                             {
-                                <tr><td colspan="8" class="text-center text-muted py-4">@(desdeOrden ? "Elija la orden del cliente." : "Aún no hay productos: búsquelos arriba por nombre, código o categoría.")</td></tr>
+                                <tr><td colspan="8" class="text-center text-muted py-4">@(!desdeOrden ? "Aún no hay productos: búsquelos arriba por nombre, código o categoría."
+                                    : ordenElegida is null ? "Elija la orden del cliente."
+                                    : $"Todo lo pedido en la orden {ordenElegida.Numero} ya está en ventas registradas: no queda nada por vender. Si aún no se entregó, falta despacharlo en almacén.")</td></tr>
                             }
                             @for (var i = 0; i < venta.Lineas.Count; i++)
                             {
@@ -174,7 +185,18 @@ else
                                     </td>
                                     @if (desdeOrden)
                                     {
-                                        <td class="text-end">@CantidadEnOrden(l).ToString("0.###")</td>
+                                        @* RF007/RF008: en una venta nueva se ve lo que falta vender de la orden ANTES de escribir *@
+                                        <td class="text-end">
+                                            @if (EsNuevo)
+                                            {
+                                                <div class="fw-semibold">@PendienteEnOrden(l).ToString("0.###")</div>
+                                                <div class="small text-muted text-nowrap">de @CantidadEnOrden(l).ToString("0.###") pedidos</div>
+                                            }
+                                            else
+                                            {
+                                                @CantidadEnOrden(l).ToString("0.###")
+                                            }
+                                        </td>
                                     }
                                     @if (Editable)
                                     {
@@ -183,6 +205,7 @@ else
                                             <div class="input-group input-group-sm cantidad">
                                                 @* el valor no válido (0, negativo, más de 3 decimales) no se deja escribir: LineaDatos.Validar *@
                                                 <input type="number" step="1" min="@l.MinimoCantidad" data-positivo="1"
+                                                       max="@(EsNuevo && desdeOrden ? PendienteEnOrden(l).ToString(System.Globalization.CultureInfo.InvariantCulture) : null)"
                                                        class="@(v.Clase(n + "cantidad", Errores(), "form-control text-end"))" aria-label="Cantidad"
                                                        onkeydown="@l.TeclasCantidad" oninput="@LineaDatos.Validar" onfocusout="@LineaDatos.Restaurar"
                                                        @bind="l.Cantidad" @bind:after="@(() => v.Tocado(n + "cantidad"))" @onblur="l.Ajustar" />
@@ -335,6 +358,9 @@ else
     private List<OrdenDatos> ordenesAbiertas = new();
     private OrdenDatos? ordenElegida;
     private bool desdeOrden;
+    // RF007/RF008: se llegó con "Registrar venta" desde la orden: la orden queda fija (sin elegir origen ni orden)
+    private bool OrdenFija => EsNuevo && IdOrdenInicial is not null && ordenElegida is not null
+                              && ordenElegida.Id == IdOrdenInicial;
     private string? error;
     private bool guardando;
     private string numeroPropuesto = "";
@@ -395,6 +421,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // RF008: solo el Vendedor registra ventas; el Administrador no tiene "nueva venta"
+        if (EsNuevo && Rol != "Vendedor")
+        {
+            Nav.NavigateTo("/ventas", replace: true);
+            return;
+        }
         try
         {
             clientes = await Api.Get<List<Cliente>>("clientes?estado=true") ?? new();   // solo clientes activos
@@ -404,11 +436,21 @@ else
                 var propuesto = await Api.Get<NumeroPropuesto>("ventas/siguiente-numero");
                 numeroPropuesto = propuesto?.Numero ?? "";
                 var ordenes = await Api.Get<List<OrdenDatos>>("ordenes") ?? new();
-                ordenesAbiertas = ordenes.Where(o => o.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL").ToList();
+                ordenesAbiertas = ordenes.Where(o => o.Estado is "PENDIENTE" or "ATENDIDA_PARCIAL" && o.PorVender).ToList();
                 desdeOrden = IdOrdenInicial is not null;
-                if (IdOrdenInicial is int inicial && ordenesAbiertas.Any(o => o.Id == inicial))
+                if (IdOrdenInicial is int inicial)
                 {
+                    // viene de "Registrar venta" en una orden: se carga esa orden aunque no esté en la lista
+                    // (el Java valida que admita ventas y, si no, lo dice al registrar)
                     await ElegirOrden(inicial);
+                    if (ordenElegida is null)
+                    {
+                        error = $"No se pudo cargar la orden {inicial}. Elíjala de la lista.";
+                    }
+                    else if (ordenesAbiertas.All(o => o.Id != inicial))
+                    {
+                        ordenesAbiertas.Add(ordenElegida);   // para que también aparezca si se elige otra y se vuelve
+                    }
                 }
             }
             else
@@ -502,8 +544,8 @@ else
             venta.NumeroOrden = ordenElegida.Numero;
             foreach (var lo in ordenElegida.Lineas)
             {
-                // se propone lo que falta entregar; el BO valida contra lo ya vendido de la orden
-                var cantidad = lo.Cantidad - lo.CantidadAtendida;
+                // se propone lo que falta VENDER (pedido - ya vendido en ventas vigentes), el mismo limite del BO
+                var cantidad = lo.Cantidad - lo.CantidadVendida;
                 if (cantidad <= 0) continue;
                 venta.Lineas.Add(new LineaDatos
                 {
@@ -568,10 +610,11 @@ else
     // Mismas reglas que VentaBOImpl. Lo que solo sabe el BO (stock disponible, deuda del cliente) sale en el aviso rojo.
     private readonly ValidacionEnVivo v = new();
 
-    // Lo que falta entregar de la línea de la orden (no se puede vender más)
+    // Lo que falta VENDER de la línea de la orden (pedido - ya vendido en ventas vigentes): no se puede vender más.
+    // Es el mismo límite que aplica VentaBOImpl (cantidadComprometida), no lo despachado.
     private decimal PendienteEnOrden(LineaDatos l) =>
         ordenElegida?.Lineas.FirstOrDefault(o => o.IdLinea == l.IdDetalleOrden) is { } lo
-            ? lo.Cantidad - lo.CantidadAtendida
+            ? Math.Max(0, lo.Cantidad - lo.CantidadVendida)
             : decimal.MaxValue;
 
     private Dictionary<string, string> Errores()

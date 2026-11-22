@@ -11,6 +11,17 @@ public class DetalleOrdenCompraCliente extends LineaDocumento {
     private int id;
     private OrdenCompraCliente ordenCompraCliente;
     private double cantidadAtendida;
+    // RF007/RF008: cuanto de esta linea ya esta en ventas vigentes (no se guarda: lo calcula el BO al leer la orden).
+    // Lo que falta vender = cantidad - cantidadVendida. Es el mismo limite que aplica VentaBOImpl al registrar.
+    private double cantidadVendida;
+
+    public double getCantidadVendida() {
+        return cantidadVendida;
+    }
+
+    public void setCantidadVendida(double cantidadVendida) {
+        this.cantidadVendida = cantidadVendida;
+    }
 
     public DetalleOrdenCompraCliente() {
         super();

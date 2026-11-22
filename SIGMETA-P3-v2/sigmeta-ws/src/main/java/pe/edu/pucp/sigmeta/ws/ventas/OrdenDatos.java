@@ -29,6 +29,8 @@ public class OrdenDatos {
     public String usuarioRegistro;
     public String fechaRegistro;
     public boolean anulado;
+    // solo en la lista: true si alguna linea tiene pedido > ya vendido (se puede registrar otra venta)
+    public boolean porVender;
     public String motivoAnulacion;
     public String fechaAnulacion;
     public List<LineaDatos> lineas = new ArrayList<>();

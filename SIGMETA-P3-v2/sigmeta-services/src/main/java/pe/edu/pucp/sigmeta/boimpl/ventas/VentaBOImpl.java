@@ -618,11 +618,13 @@ public class VentaBOImpl implements VentaBO {
         if (cxc == null) {
             throw new IllegalStateException("La venta al crédito no tiene cuenta por cobrar; repare la integridad antes de modificar");
         }
-        if (venta.getTotal() + 0.005 < cxc.getMontoPagado()) {
+        // RF013: lo que acreditaron las notas de credito sigue descontandose del nuevo total
+        double deudaNeta = venta.getTotal() - cxc.getMontoAcreditado();
+        if (deudaNeta + 0.005 < cxc.getMontoPagado()) {
             throw new IllegalStateException("El nuevo total (S/ " + venta.getTotal() + ") es menor que lo ya cobrado (S/ "
                     + cxc.getMontoPagado() + ")");
         }
-        double nuevoSaldo = CuentaPorCobrarBOImpl.redondear(venta.getTotal() - cxc.getMontoPagado());
+        double nuevoSaldo = CuentaPorCobrarBOImpl.redondear(deudaNeta - cxc.getMontoPagado());
         BigDecimal deudaCliente = ventaDAO.obtenerSaldoPendienteCliente(cliente.getId());
         if (deudaCliente.subtract(BigDecimal.valueOf(cxc.getSaldoPendiente())).add(BigDecimal.valueOf(nuevoSaldo)).compareTo(cliente.getLimiteCredito()) > 0) {
             throw new IllegalStateException("La venta modificada supera el límite de crédito del cliente (Límite: "
@@ -635,8 +637,9 @@ public class VentaBOImpl implements VentaBO {
         cuentaPorCobrarDAO.update(cxc);
     }
 
-    // RF009: una venta al credito anulada deja de generar deuda. Con cobros vigentes no se puede anular;
-    // sin ningun cobro su cuenta se elimina, y si solo tiene cobros anulados se conserva con deuda cero.
+    // RF009, RNF002: una venta al credito anulada deja de generar deuda. Con cobros vigentes no se puede anular.
+    // Su cuenta NO se borra (antes se borraba si no tenia cobros y, si los tenia anulados, quedaba "PAGADA" sin
+    // que nadie pagara): queda ANULADA, con su monto original (lo que fue la venta) y saldo 0. Igual en los dos casos.
     private void cerrarCuentaPorCobrar(int idVenta) throws SQLException {
         CuentaPorCobrar cxc = cuentaPorCobrarDAO.obtenerPorVenta(idVenta);
         if (cxc == null) {
@@ -645,14 +648,9 @@ public class VentaBOImpl implements VentaBO {
         if (cxc.getMontoPagado() > 0.005) {
             throw new IllegalStateException("La venta tiene cobros registrados; anule primero los cobros de su cuenta por cobrar");
         }
-        if (cobroDAO.listarPorCuentaPorCobrar(cxc.getId()).isEmpty()) {
-            cuentaPorCobrarDAO.remove(cxc);
-        } else {
-            cxc.setMontoOriginal(0);
-            cxc.setSaldoPendiente(0);
-            cxc.setEstado(CuentaPorCobrarBOImpl.calcularEstado(cxc));
-            cuentaPorCobrarDAO.update(cxc);
-        }
+        cxc.setSaldoPendiente(0);
+        cxc.setEstado(pe.edu.pucp.sigmeta.model.enums.EstadoCuentaPorCobrar.ANULADA);
+        cuentaPorCobrarDAO.update(cxc);
     }
     @Override
     public List<Venta> listarPorCliente(int idCliente) throws SQLException {

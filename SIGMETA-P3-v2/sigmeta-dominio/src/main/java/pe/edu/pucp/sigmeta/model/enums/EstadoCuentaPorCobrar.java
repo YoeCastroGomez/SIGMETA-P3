@@ -7,5 +7,7 @@ public enum EstadoCuentaPorCobrar {
     PENDIENTE,
     PAGADA_PARCIAL,
     PAGADA,
-    VENCIDA
+    VENCIDA,
+    // RF009: la venta se anulo; la cuenta se conserva (RNF002) con su monto original y saldo 0, y no se cobra
+    ANULADA
 }

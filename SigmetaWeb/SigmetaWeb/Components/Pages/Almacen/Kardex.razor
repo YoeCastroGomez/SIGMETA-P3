@@ -40,33 +40,33 @@
     <div class="row g-3 mb-3">
         <div class="col-6 col-lg">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">En almacén</div>
+                <div class="small text-muted">En almacén</div>
                 <div class="h4 fw-bold mb-0">@Formato.Cantidad(Producto.StockActual) <span class="small text-muted fw-normal">@TextosAlmacen.Unidad(Producto.UnidadVenta)</span></div>
             </div>
         </div>
         <div class="col-6 col-lg">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Comprometido</div>
+                <div class="small text-muted">Comprometido</div>
                 <div class="h4 fw-bold mb-0">@Formato.Cantidad(Producto.Comprometido)</div>
                 <div class="small text-muted">vendido sin despachar</div>
             </div>
         </div>
         <div class="col-6 col-lg">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Disponible para vender</div>
+                <div class="small text-muted">Disponible para vender</div>
                 <div class="h4 fw-bold mb-0 @(Producto.Disponible <= 0 ? "text-danger" : "")">@Formato.Cantidad(Producto.Disponible)</div>
             </div>
         </div>
         <div class="col-6 col-lg">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Stock mínimo</div>
+                <div class="small text-muted">Stock mínimo</div>
                 <div class="h4 fw-bold mb-0">@Formato.Cantidad(Producto.StockMinimo)</div>
                 <div><Estado Texto="@Producto.Situacion" /></div>
             </div>
         </div>
         <div class="col-12 col-lg">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Costo promedio</div>
+                <div class="small text-muted">Costo promedio</div>
                 <div class="h4 fw-bold mb-0">@Formato.Soles(Producto.CostoUnitario)</div>
                 <div class="small text-muted">valor en almacén @Formato.Soles(Producto.StockActual * Producto.CostoUnitario)</div>
             </div>

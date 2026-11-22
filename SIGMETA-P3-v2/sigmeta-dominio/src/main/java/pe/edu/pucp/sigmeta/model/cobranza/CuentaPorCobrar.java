@@ -17,7 +17,10 @@ public class CuentaPorCobrar {
     private Cliente cliente;
     private LocalDate fechaEmision;
     private LocalDate fechaVencimiento;
+    // RF009/RF013: el monto original es el total de la venta y no cambia. Las notas de credito que rebajan la
+    // deuda se acumulan aparte en montoAcreditado: saldo = original - acreditado - pagado.
     private double montoOriginal;
+    private double montoAcreditado;
     private double montoPagado;
     private double saldoPendiente;
     private EstadoCuentaPorCobrar estado;
@@ -87,6 +90,19 @@ public class CuentaPorCobrar {
 
     public void setMontoOriginal(double montoOriginal) {
         this.montoOriginal = montoOriginal;
+    }
+
+    public double getMontoAcreditado() {
+        return montoAcreditado;
+    }
+
+    public void setMontoAcreditado(double montoAcreditado) {
+        this.montoAcreditado = montoAcreditado;
+    }
+
+    // lo que el cliente debe en total: la venta menos lo que rebajaron las notas de credito
+    public double getDeudaNeta() {
+        return montoOriginal - montoAcreditado;
     }
 
     public double getMontoPagado() {

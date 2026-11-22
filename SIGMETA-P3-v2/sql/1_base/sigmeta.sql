@@ -177,7 +177,8 @@ CREATE TABLE cotizacion (
   observaciones VARCHAR(255),
   fecha_registro DATETIME NOT NULL,
   id_usuario_registro INT,
-  anulado BOOLEAN NOT NULL DEFAULT FALSE,
+  -- un solo estado: anulado se calcula de estado (no se escribe); asi nunca se contradicen
+  anulado BOOLEAN GENERATED ALWAYS AS (estado = 'ANULADA') STORED NOT NULL,
   motivo_anulacion VARCHAR(255),
   fecha_anulacion DATETIME,
   id_cliente INT NOT NULL,
@@ -224,8 +225,8 @@ INSERT INTO producto (codigo_interno, codigo_fabricante, codigo_proveedor, nombr
 ('INT-006', 'FAB-106', 'PROV-66', 'Fierro corrugado', 3, 'UNIDAD', 'UNIDAD', 1.000, 32.00, 26.00, 150.000, 30.000, TRUE, 34.00);
 
 -- 1 Cotización
-INSERT INTO cotizacion (numero, fecha_emision, sub_total, igv, total, fecha_registro, id_usuario_registro, anulado, id_cliente, estado) VALUES
-('COT-2026-0001', '2026-09-01', 1300.00, 234.00, 1534.00, '2026-09-01 15:00:00', 1, FALSE, 2, 'ACEPTADA');
+INSERT INTO cotizacion (numero, fecha_emision, sub_total, igv, total, fecha_registro, id_usuario_registro, id_cliente, estado) VALUES
+('COT-2026-0001', '2026-09-01', 1300.00, 234.00, 1534.00, '2026-09-01 15:00:00', 1, 2, 'ACEPTADA');
 
 -- 3 Líneas de Detalle
 INSERT INTO detalle_cotizacion (id_cotizacion, numero_linea, id_producto, cantidad, precio_unitario, descuento, importe) VALUES
@@ -252,7 +253,8 @@ CREATE TABLE compra (
     fecha_registro DATETIME NOT NULL,
     id_usuario_registro INT NOT NULL,
 
-    anulado BOOLEAN NOT NULL DEFAULT FALSE,
+    -- un solo estado: anulado se calcula de estado (no se escribe); asi nunca se contradicen
+    anulado BOOLEAN GENERATED ALWAYS AS (estado = 'ANULADA') STORED NOT NULL,
     motivo_anulacion VARCHAR(200),
     fecha_anulacion DATETIME,
 
@@ -405,12 +407,12 @@ CREATE TABLE movimiento_inventario (
 INSERT INTO compra (
     id, id_proveedor, numero, fecha_emision,
     sub_total, igv, total, observaciones, fecha_registro,
-    id_usuario_registro, anulado, motivo_anulacion, fecha_anulacion,
+    id_usuario_registro, motivo_anulacion, fecha_anulacion,
     estado, fecha_recepcion_estimada
 ) VALUES (
     1, 1, 'OC-DELTA-0087', '2026-08-25',
     1250.00, 225.00, 1475.00, 'Reposicion de stock de martillos', '2026-08-25 10:00:00',
-    4, FALSE, NULL, NULL,
+    4, NULL, NULL,
     'RECIBIDA', '2026-08-28'
 );
 
@@ -469,7 +471,8 @@ CREATE TABLE orden_compra_cliente (
     observaciones           VARCHAR(300) NULL,
     fecha_registro          DATETIME NOT NULL,
     id_usuario_registro     INT NOT NULL,
-    anulado                 BOOLEAN NOT NULL DEFAULT FALSE,
+    -- un solo estado: anulado se calcula de estado (no se escribe); asi nunca se contradicen
+    anulado BOOLEAN GENERATED ALWAYS AS (estado = 'ANULADA') STORED NOT NULL,
     motivo_anulacion        VARCHAR(200) NULL,
     fecha_anulacion         DATETIME NULL,
     CONSTRAINT fk_orden_compra_cliente_cliente
@@ -515,7 +518,8 @@ CREATE TABLE venta (
     observaciones           VARCHAR(300) NULL,
     fecha_registro          DATETIME NOT NULL,
     id_usuario_registro     INT NOT NULL,
-    anulado                 BOOLEAN NOT NULL DEFAULT FALSE,
+    -- un solo estado: anulado se calcula de estado (no se escribe); asi nunca se contradicen
+    anulado BOOLEAN GENERATED ALWAYS AS (estado = 'ANULADA') STORED NOT NULL,
     motivo_anulacion        VARCHAR(200) NULL,
     fecha_anulacion         DATETIME NULL,
     CONSTRAINT fk_venta_cliente
@@ -567,6 +571,11 @@ CREATE TABLE comprobante (
     fecha_envio                DATETIME NULL,
     id_administrador_autoriza  INT NULL,
     fecha_registro             DATETIME NOT NULL,
+    -- RF008: foto del cliente tal como salio impreso al emitir la factura o boleta (NULL en notas de credito)
+    cliente_nombre             VARCHAR(200) NULL,
+    cliente_tipo_documento     VARCHAR(30) NULL,
+    cliente_numero_documento   VARCHAR(20) NULL,
+    cliente_direccion          VARCHAR(200) NULL,
     CONSTRAINT fk_comprobante_venta
         FOREIGN KEY (id_venta) REFERENCES venta(id),
     CONSTRAINT fk_comprobante_comprobante
@@ -592,6 +601,25 @@ CREATE TABLE detalle_nota_credito (
     CONSTRAINT fk_detalle_nota_credito_detalle_venta
         FOREIGN KEY (id_detalle_venta) REFERENCES detalle_venta(id),
     UNIQUE KEY uq_detalle_nota_credito_linea (id_comprobante, id_detalle_venta)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: detalle_comprobante
+-- RF008: lineas de la factura o boleta tal como se imprimieron (codigo y nombre del producto, cantidad y montos).
+-- Se copian al emitir: si despues se renombra el producto, la reimpresion sale igual.
+CREATE TABLE detalle_comprobante (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_comprobante          INT NOT NULL,
+    numero_linea            INT NOT NULL,
+    codigo                  VARCHAR(50) NOT NULL,
+    descripcion             VARCHAR(150) NOT NULL,
+    unidad                  VARCHAR(20) NULL,
+    cantidad                DECIMAL(12,3) NOT NULL,
+    precio_unitario         DECIMAL(12,2) NOT NULL,
+    descuento               DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    importe                 DECIMAL(12,2) NOT NULL,
+    CONSTRAINT fk_detalle_comprobante_comprobante
+        FOREIGN KEY (id_comprobante) REFERENCES comprobante(id),
+    UNIQUE KEY uq_detalle_comprobante_linea (id_comprobante, numero_linea)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: despacho
@@ -636,11 +664,11 @@ CREATE TABLE detalle_despacho (
 INSERT INTO orden_compra_cliente (
     id, id_cliente, id_cotizacion, numero_orden_cliente,
     estado, numero, fecha_emision, sub_total, igv, total,
-    observaciones, fecha_registro, id_usuario_registro, anulado, motivo_anulacion, fecha_anulacion
+    observaciones, fecha_registro, id_usuario_registro, motivo_anulacion, fecha_anulacion
 ) VALUES (
     1, 2, 1, 'OC-ANDINA-4521',
     'ATENDIDA', 'OCC-2026-0001', '2026-09-02', 1300.00, 234.00, 1534.00,
-    'Orden de compra generada a partir de Cotizacion COT-2026-0001', '2026-09-02 09:30:00', 1, FALSE, NULL, NULL
+    'Orden de compra generada a partir de Cotizacion COT-2026-0001', '2026-09-02 09:30:00', 1, NULL, NULL
 );
 
 -- 2. Detalle de orden de compra del cliente (3 lineas copiadas de la cotizacion)
@@ -657,12 +685,12 @@ INSERT INTO venta (
     id, id_cliente, id_orden_compra_cliente, condicion_pago,
     plazo_credito_dias, estado, numero, fecha_emision,
     sub_total, igv, total, observaciones, fecha_registro,
-    id_usuario_registro, anulado, motivo_anulacion, fecha_anulacion
+    id_usuario_registro, motivo_anulacion, fecha_anulacion
 ) VALUES (
     1, 2, 1, 'CREDITO',
     30, 'DESPACHADA_PARCIAL', 'VTA-2026-0001', '2026-09-02',
     1300.00, 234.00, 1534.00, 'Venta al credito a 30 dias segun OC-ANDINA-4521', '2026-09-02 10:15:00',
-    1, FALSE, NULL, NULL
+    1, NULL, NULL
 );
 
 -- 4. Detalle de venta (mismas 3 lineas, con despacho parcial registrado)
@@ -689,6 +717,28 @@ INSERT INTO comprobante (
      90.00, 16.20, 106.20, 'EMITIDO',
      1, 'Devolucion de producto por defecto de fabrica', 'CORREO', '2026-09-04 11:30:00',
      1, '2026-09-04 11:25:00');
+
+-- RF008: foto de lo impreso en cada factura y boleta (cliente y lineas), igual que sp_comprobante_congelar
+UPDATE comprobante c
+INNER JOIN venta v ON v.id = c.id_venta
+INNER JOIN cliente cl ON cl.id = v.id_cliente
+SET c.cliente_nombre = CASE WHEN cl.tipo_persona = 'JURIDICA' THEN cl.razon_social
+                            ELSE CONCAT(cl.nombres, ' ', cl.apellidos) END,
+    c.cliente_tipo_documento = cl.tipo_documento,
+    c.cliente_numero_documento = cl.numero_documento,
+    c.cliente_direccion = cl.direccion
+WHERE c.tipo IN ('FACTURA', 'BOLETA') AND c.cliente_nombre IS NULL;
+
+INSERT INTO detalle_comprobante (id_comprobante, numero_linea, codigo, descripcion, unidad,
+                                 cantidad, precio_unitario, descuento, importe)
+SELECT c.id, d.numero_linea, p.codigo_interno, p.nombre, p.unidad_venta,
+       d.cantidad, d.precio_unitario, d.descuento, d.importe
+FROM comprobante c
+INNER JOIN detalle_venta d ON d.id_venta = c.id_venta
+INNER JOIN producto p ON p.id = d.id_producto
+WHERE c.tipo IN ('FACTURA', 'BOLETA')
+  AND NOT EXISTS (SELECT 1 FROM detalle_comprobante x WHERE x.id_comprobante = c.id)
+ORDER BY c.id, d.numero_linea;
 
 -- 6. Detalle de nota de credito (linea de producto devuelto asociada al comprobante 2)
 INSERT INTO detalle_nota_credito (
@@ -751,9 +801,11 @@ CREATE TABLE cuenta_por_cobrar (
     fecha_emision        DATE NOT NULL,
     fecha_vencimiento    DATE NOT NULL,
     monto_original       DECIMAL(12,2) NOT NULL,
+    -- RF013: lo que rebajaron las notas de credito; monto_original (el total de la venta) no cambia
+    monto_acreditado     DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     monto_pagado         DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     saldo_pendiente      DECIMAL(12,2) NOT NULL,
-    estado               ENUM('PENDIENTE', 'PAGADA_PARCIAL', 'PAGADA', 'VENCIDA') NOT NULL,
+    estado               ENUM('PENDIENTE', 'PAGADA_PARCIAL', 'PAGADA', 'VENCIDA', 'ANULADA') NOT NULL,
     CONSTRAINT uk_cxc_venta UNIQUE(id_venta),
     CONSTRAINT fk_cuenta_por_cobrar_venta
         FOREIGN KEY (id_venta) REFERENCES venta(id),
@@ -854,14 +906,14 @@ INSERT INTO caja (
 --    (venta id_venta = 1, total 1534.00, plazo_credito_dias = 30 -> vence 2026-10-02)
 --    RF013: la nota de credito FC01-00000012 (106.20) revierte parte del saldo.
 --    Tras el cobro parcial del paso 3: monto_pagado = 800.00 y
---    la nota de credito rebaja la deuda: monto_original = 1534.00 - 106.20 = 1427.80,
---    saldo_pendiente = 1427.80 - 800.00 = 627.80, estado PAGADA_PARCIAL.
+--    la nota de credito rebaja la deuda sin tocar el monto original: monto_acreditado = 106.20,
+--    saldo_pendiente = 1534.00 - 106.20 - 800.00 = 627.80, estado PAGADA_PARCIAL.
 INSERT INTO cuenta_por_cobrar (
     id, id_venta, id_cliente, fecha_emision, fecha_vencimiento,
-    monto_original, monto_pagado, saldo_pendiente, estado
+    monto_original, monto_acreditado, monto_pagado, saldo_pendiente, estado
 ) VALUES (
     1, 1, 2, '2026-09-02', '2026-10-02',
-    1427.80, 800.00, 627.80, 'PAGADA_PARCIAL'
+    1534.00, 106.20, 800.00, 627.80, 'PAGADA_PARCIAL'
 );
 
 -- 3. Cobro parcial de la cuenta por cobrar (sin Caja directa en el modelo Java;

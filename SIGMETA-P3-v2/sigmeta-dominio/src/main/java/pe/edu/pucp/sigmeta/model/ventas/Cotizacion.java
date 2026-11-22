@@ -58,6 +58,13 @@ public class Cotizacion extends DocumentoComercial {
         this.fechaVigencia = fechaVigencia;
     }
 
+    // Un solo estado: anulado no es un dato aparte, se deriva del estado (en la base es una columna
+    // calculada: anulado = (estado = 'ANULADA')). Asi "anulado" y el estado nunca se contradicen.
+    @Override
+    public boolean isAnulado() {
+        return estado == EstadoCotizacion.ANULADA;
+    }
+
     public EstadoCotizacion getEstado() {
         return estado;
     }

@@ -13,10 +13,12 @@ public interface MovimientoCajaBO {
     // idResponsable: el Cajero que abrio la caja
     MovimientoCaja registrarMovimiento(MovimientoCaja movimiento, int idResponsable) throws SQLException;
 
-    // solo ingresos y egresos manuales, con la caja abierta
+    // solo ingresos y egresos manuales, con la caja abierta, y solo el concepto: el dinero no se reescribe
     MovimientoCaja modificar(MovimientoCaja movimiento, int idResponsable) throws SQLException;
 
-    void eliminar(MovimientoCaja movimiento, int idResponsable) throws SQLException;
+    // RF010, RNF002: un ingreso o egreso manual no se borra; se anula registrando el movimiento contrario en la
+    // misma caja. Devuelve el movimiento contrario.
+    MovimientoCaja anular(int idMovimiento, int idResponsable) throws SQLException;
 
     MovimientoCaja obtenerPorId(int id) throws SQLException;
 

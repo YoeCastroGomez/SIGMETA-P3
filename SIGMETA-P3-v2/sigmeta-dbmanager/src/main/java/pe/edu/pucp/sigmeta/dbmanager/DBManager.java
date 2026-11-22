@@ -54,6 +54,20 @@ public class DBManager {
         config.setMaxLifetime(600_000);        // renueva cada conexion a los 10 minutos
         // si la base no responde al arrancar, no se cae la aplicacion: se reintenta en el primer pedido
         config.setInitializationFailTimeout(-1);
+        // Zona horaria: Java guarda horas con LocalDateTime.now() (hora de la maquina, Lima UTC-5) y los
+        // procedimientos usan NOW() y CURDATE() de MySQL. La base de AWS (RDS) trabaja en UTC: una autorizacion
+        // aprobada por 30 minutos ya nacia vencida (NOW() iba 5 horas adelante) y las fechas de caja salian
+        // corridas. Cada conexion usa la misma zona que Java, asi las dos horas coinciden. Se puede fijar otra
+        // con -Dsigmeta.db.zona=-05:00 (Peru no tiene horario de verano).
+        String zona = System.getProperty("sigmeta.db.zona", java.time.ZoneId.systemDefault().getRules()
+                .getOffset(java.time.Instant.now()).getId()).trim();
+        if (zona.equals("Z")) {
+            zona = "+00:00";
+        }
+        if (!zona.matches("^[+-]\\d{2}:\\d{2}$")) {
+            throw new IllegalStateException("Zona horaria de la base no valida: " + zona + " (use el formato -05:00)");
+        }
+        config.setConnectionInitSql("SET time_zone = '" + zona + "'");
         pool = new HikariDataSource(config);
     }
 

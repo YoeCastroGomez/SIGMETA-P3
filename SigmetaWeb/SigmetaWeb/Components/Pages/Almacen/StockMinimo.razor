@@ -19,19 +19,19 @@ else
     <div class="row g-3 mb-3">
         <div class="col-sm-4">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Sin stock</div>
+                <div class="small text-muted">Sin stock</div>
                 <div class="h4 fw-bold mb-0 @(existencias.Any(p => p.SinStock) ? "text-danger" : "")">@existencias.Count(p => p.SinStock)</div>
             </div>
         </div>
         <div class="col-sm-4">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Bajo el mínimo</div>
+                <div class="small text-muted">Bajo el mínimo</div>
                 <div class="h4 fw-bold mb-0">@existencias.Count(p => !p.SinStock && p.BajoMinimo)</div>
             </div>
         </div>
         <div class="col-sm-4">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Justo en el mínimo</div>
+                <div class="small text-muted">Justo en el mínimo</div>
                 <div class="h4 fw-bold mb-0">@existencias.Count(p => !p.BajoMinimo && p.EnMinimo && !p.SinStock)</div>
             </div>
         </div>

@@ -1,5 +1,5 @@
 /* Queda a la vista al bajar por la página */
-.resumen-total { position: sticky; top: 1rem; }
+.resumen-total { position: sticky; top: 76px; border-top: 3px double var(--color-rule-2) !important; }
 
 .cabecera {
     display: flex;
@@ -9,21 +9,19 @@
 }
 
 .etiqueta {
-    font-size: .75rem;
+    font-size: var(--text-sm);
     font-weight: 600;
-    letter-spacing: .06em;
-    text-transform: uppercase;
     color: var(--bs-secondary-color);
 }
 
-.numero { margin-top: .15rem; font-weight: 700; }
+.numero { margin-top: .15rem; font-family: var(--font-figures); font-weight: 600; }
 
 .monto {
     margin-top: .2rem;
-    font-size: 2rem;
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
     font-weight: 700;
-    line-height: 1.15;
-    letter-spacing: -.01em;
+    line-height: 1.1;
     font-variant-numeric: tabular-nums;
 }
 
@@ -32,8 +30,8 @@
 .desglose {
     margin: .85rem 0 0;
     padding-top: .65rem;
-    border-top: 1px solid var(--bs-border-color);
-    font-size: .86rem;
+    border-top: 1px solid var(--color-rule-2);
+    font-size: .9375rem;
 }
 
 .desglose div {
@@ -43,7 +41,7 @@
 }
 
 .desglose dt { font-weight: 400; color: var(--bs-secondary-color); }
-.desglose dd { margin: 0; font-variant-numeric: tabular-nums; }
+.desglose dd { margin: 0; font-family: var(--font-figures); font-variant-numeric: tabular-nums; }
 
 .acciones {
     display: grid;

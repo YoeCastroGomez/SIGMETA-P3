@@ -19,7 +19,7 @@
     <p class="mb-0 text-muted">Ya no podrás usar esta autorización.</p>
 </Confirmacion>
 
-<FiltrosLista @bind-Busqueda="busqueda" @bind-Busqueda:after="AlBuscar" Placeholder="Buscar por comprobante, motivo u operación"
+<FiltrosLista @bind-Busqueda="busqueda" @bind-Busqueda:after="AlBuscar" Placeholder="Comprobante, motivo u operación"
               Opciones="@Chips" Estado="@filtroEstado" EstadoChanged="CambiarEstado"
               HayFiltros="@(filtroEstado != "" || !string.IsNullOrWhiteSpace(busqueda))" AlLimpiar="Limpiar" />
 

@@ -67,15 +67,17 @@
     </div>
 }
 
-<FiltrosLista @bind-Busqueda="busqueda" @bind-Busqueda:after="AlBuscar" Placeholder="Buscar por número, cliente o RUC/DNI"
+<FiltrosLista @bind-Busqueda="busqueda" @bind-Busqueda:after="AlBuscar" Placeholder="Número, cliente o RUC/DNI"
               Opciones="@Chips" Estado="@filtroEstado" EstadoChanged="CambiarEstado" HayFiltros="@HayFiltros" AlLimpiar="Limpiar">
-    <select class="form-select filtro" aria-label="Filtrar por cliente" value="@filtroCliente" @onchange="CambiarCliente">
-        <option value="0">Todos los clientes</option>
-        @foreach (var c in clientes)
-        {
-            <option value="@c.Id">@c.NombreMostrado</option>
-        }
-    </select>
+    <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md-3">
+        <select id="fCliente" class="form-select" value="@filtroCliente" @onchange="CambiarCliente">
+            <option value="0">Todos</option>
+            @foreach (var c in clientes)
+            {
+                <option value="@c.Id">@c.NombreMostrado</option>
+            }
+        </select>
+    </Campo>
 </FiltrosLista>
 
 <div class="card mb-3">

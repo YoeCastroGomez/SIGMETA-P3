@@ -26,8 +26,8 @@
     <p class="mb-0 text-muted">Ya no se podrán registrar ventas con ella y su cotización queda libre.</p>
 </ModalMotivo>
 
-<FiltrosLista @bind-Busqueda="busqueda" @bind-Busqueda:after="AlBuscar" Placeholder="Buscar por número, cliente o cotización"
-              Opciones="@Chips" Estado="@filtroEstado" EstadoChanged="CambiarEstado" EtiquetaChips="Filtrar por estado de atención"
+<FiltrosLista @bind-Busqueda="busqueda" @bind-Busqueda:after="AlBuscar" Placeholder="Número, cliente o cotización"
+              Opciones="@Chips" Estado="@filtroEstado" EstadoChanged="CambiarEstado" EtiquetaEstado="Estado de atención"
               HayFiltros="@HayFiltros" AlLimpiar="Limpiar" />
 
 @if (ordenes is null)
@@ -89,7 +89,15 @@ else
                                 }
                             </td>
                             <td class="text-end fw-semibold">@o.Total.ToString("N2")</td>
-                            <td><Estado Texto="@TextosVentas.Texto(EstadoDe(o))" /></td>
+                            @* la atención sigue a lo ENTREGADO: si ya se vendió todo pero falta despachar, se dice así *@
+                            <td>
+                                <Estado Texto="@TextosVentas.Texto(EstadoDe(o))" />
+                                @if (EstadoDe(o) is "PENDIENTE" or "ATENDIDA_PARCIAL")
+                                {
+                                    @* qué falta: vender (botón Registrar venta) o solo entregar (lo despacha el almacén) *@
+                                    <div class="small text-muted mt-1">@(o.PorVender ? "Falta vender" : "Vendida, falta entregar")</div>
+                                }
+                            </td>
                             <td class="acciones">
                                 <AccionesFila Principal="@Principal(o)" Otras="@Secundarias(o)" Ocupado="@trabajando" HaciaArriba="@haciaArriba" AlElegir="Ejecutar" />
                             </td>
@@ -134,7 +142,8 @@ else
 
     // Botón principal: registrar la venta mientras falte vender; si no, "Ver"
     private AccionFila Principal(OrdenDatos o) =>
-        EsVendedor && EstadoDe(o) is "PENDIENTE" or "ATENDIDA_PARCIAL"
+        // solo si queda algo por VENDER: una orden ya vendida entera pero sin despachar sigue "Pendiente"
+        EsVendedor && EstadoDe(o) is "PENDIENTE" or "ATENDIDA_PARCIAL" && o.PorVender
             ? new("Registrar venta", Ruta: $"/ventas/nueva?orden={o.Id}")   // RF008: venta desde la orden
             : new("Ver", Ruta: RutaOrden(o), Destacada: false);
 

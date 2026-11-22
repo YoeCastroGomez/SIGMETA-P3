@@ -26,12 +26,12 @@ BEGIN
     INSERT INTO compra (
         id_proveedor, numero, fecha_emision,
         sub_total, igv, total, observaciones,
-        fecha_registro, id_usuario_registro, anulado,
+        fecha_registro, id_usuario_registro,
         estado, fecha_recepcion_estimada
     ) VALUES (
         p_id_proveedor, p_numero, p_fecha_emision,
         p_sub_total, p_igv, p_total, p_observaciones,
-        NOW(), p_id_usuario_registro, FALSE,
+        NOW(), p_id_usuario_registro,
         p_estado, p_fecha_recepcion_estimada
     );
 
@@ -87,8 +87,7 @@ BEGIN
     END IF;
 
     UPDATE compra
-    SET anulado = TRUE,
-        estado = 'ANULADA',
+    SET estado = 'ANULADA',
         motivo_anulacion = 'Anulacion desde el sistema',
         fecha_anulacion = NOW()
     WHERE id = p_id AND anulado = FALSE;

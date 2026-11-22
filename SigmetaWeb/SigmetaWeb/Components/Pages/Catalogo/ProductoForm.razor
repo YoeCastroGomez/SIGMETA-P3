@@ -192,15 +192,15 @@ else
                    El estado no se cambia aquí: se usa el botón Desactivar de la lista. *@
                 <div class="row border-top pt-3">
                     <div class="col-sm-4 mb-3">
-                        <div class="small text-muted text-uppercase">Stock actual</div>
+                        <div class="small text-muted">Stock actual</div>
                         <div class="fw-semibold">@producto.StockTexto</div>
                     </div>
                     <div class="col-sm-4 mb-3">
-                        <div class="small text-muted text-uppercase">Última modificación</div>
+                        <div class="small text-muted">Última modificación</div>
                         <div class="fw-semibold">@(producto.UltimaModificacion ?? "Sin modificaciones")</div>
                     </div>
                     <div class="col-sm-4 mb-3">
-                        <div class="small text-muted text-uppercase">Estado</div>
+                        <div class="small text-muted">Estado</div>
                         <div class="fw-semibold"><Estado Texto="@(producto.Activo ? "Activo" : "Inactivo")" /></div>
                     </div>
                 </div>

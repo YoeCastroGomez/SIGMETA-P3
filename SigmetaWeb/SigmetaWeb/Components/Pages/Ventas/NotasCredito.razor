@@ -36,16 +36,15 @@
 </ModalMotivo>
 
 @* La búsqueda la hace el Java (sp_nota_credito_buscar): se consulta al dejar de escribir o al cambiar una fecha *@
-<FiltrosLista @bind-Busqueda="texto" @bind-Busqueda:after="BuscarAlEscribir" Placeholder="Buscar por cliente, documento o comprobante"
+<FiltrosLista @bind-Busqueda="texto" @bind-Busqueda:after="BuscarAlEscribir" Placeholder="Cliente, documento o comprobante"
               Opciones="@Chips" Estado="@filtroEstado" EstadoChanged="CambiarEstado"
               HayFiltros="@(HayFiltros || filtroEstado != "")" AlLimpiar="Limpiar">
-    @* rango de fechas en un solo campo: Fecha [desde] – [hasta] *@
-    <div class="input-group filtro-rango" title="@ValidacionEnVivo.ErrorRango(desde, hasta)">
-        <span class="input-group-text">Fecha</span>
-        <input type="date" class="form-control" aria-label="Desde" @bind="desde" @bind:after="Buscar" />
-        <span class="input-group-text">–</span>
-        <input type="date" class="@ValidacionEnVivo.ClaseRango(desde, hasta)" aria-label="Hasta" @bind="hasta" @bind:after="Buscar" />
-    </div>
+    <Campo Etiqueta="Emitida desde" Id="fDesde" Clase="col-sm-6 col-md-2">
+        <input id="fDesde" type="date" class="form-control" @bind="desde" @bind:after="Buscar" />
+    </Campo>
+    <Campo Etiqueta="Emitida hasta" Id="fHasta" Error="@(ValidacionEnVivo.ErrorRango(desde, hasta))" Clase="col-sm-6 col-md-2">
+        <input id="fHasta" type="date" class="@ValidacionEnVivo.ClaseRango(desde, hasta)" @bind="hasta" @bind:after="Buscar" />
+    </Campo>
 </FiltrosLista>
 
 @if (notas is null)

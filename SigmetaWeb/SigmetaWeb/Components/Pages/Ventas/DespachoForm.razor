@@ -36,20 +36,20 @@ else
                 </div>
                 <div class="col-12"></div>
                 <div class="col-sm-6 col-md-4 mb-2">
-                    <div class="small text-muted text-uppercase">Cliente</div>
+                    <div class="small text-muted">Cliente</div>
                     <div class="fw-semibold">@venta.Cliente</div>
                     <div class="small text-muted">@venta.NumeroDocumento</div>
                 </div>
                 <div class="col-sm-6 col-md-3 mb-2">
-                    <div class="small text-muted text-uppercase">Comprobante</div>
+                    <div class="small text-muted">Comprobante</div>
                     <div class="fw-semibold">@(venta.Comprobante ?? "Sin emitir")</div>
                 </div>
                 <div class="col-sm-6 col-md-3 mb-2">
-                    <div class="small text-muted text-uppercase">Condición de pago</div>
+                    <div class="small text-muted">Condición de pago</div>
                     <div class="fw-semibold">@Formato.Legible(venta.CondicionPago) @(venta.SinCobro ? "(sin cobrar)" : "")</div>
                 </div>
                 <div class="col-sm-6 col-md-2 mb-2">
-                    <div class="small text-muted text-uppercase">Estado</div>
+                    <div class="small text-muted">Estado</div>
                     <div class="fw-semibold"><Estado Texto="@Formato.Legible(venta.Estado)" /></div>
                 </div>
             </div>
