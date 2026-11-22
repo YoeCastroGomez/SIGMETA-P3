@@ -134,4 +134,37 @@ CREATE PROCEDURE sp_venta_listar_por_cliente(IN p_id_cliente INT)
 BEGIN
     SELECT * FROM venta WHERE id_cliente = p_id_cliente ORDER BY fecha_emision DESC, id DESC;
 END$$
+
+-- RNF003 / RF007-RF008: órdenes vigentes a las que les queda algo por VENDER (pedido > ya vendido en ventas
+-- vigentes), en UNA consulta. Antes se cargaba cada orden y cada línea por separado (4 s con la base en AWS).
+DROP PROCEDURE IF EXISTS sp_orden_compra_cliente_ids_por_vender$$
+CREATE PROCEDURE sp_orden_compra_cliente_ids_por_vender()
+BEGIN
+    SELECT d.id_orden_compra_cliente AS id_orden
+    FROM detalle_orden_compra_cliente d
+    INNER JOIN orden_compra_cliente o ON o.id = d.id_orden_compra_cliente
+    LEFT JOIN (SELECT dv.id_detalle_orden_compra_cliente AS linea, SUM(dv.cantidad) AS vendido
+               FROM detalle_venta dv INNER JOIN venta v ON v.id = dv.id_venta
+               WHERE v.anulado = FALSE AND dv.id_detalle_orden_compra_cliente IS NOT NULL
+               GROUP BY dv.id_detalle_orden_compra_cliente) s ON s.linea = d.id
+    WHERE o.anulado = FALSE AND o.estado IN ('PENDIENTE', 'ATENDIDA_PARCIAL')
+      AND d.cantidad - COALESCE(s.vendido, 0) > 0.0001
+    GROUP BY d.id_orden_compra_cliente;
+END$$
+
+-- RNF003 / panel de inicio: productos con mayor importe en las últimas p_ventas ventas vigentes, en UNA consulta
+-- (antes se pedía el detalle de cada venta por separado).
+DROP PROCEDURE IF EXISTS sp_panel_top_productos$$
+CREATE PROCEDURE sp_panel_top_productos(IN p_ventas INT, IN p_limite INT)
+BEGIN
+    SELECT p.nombre AS producto, SUM(d.importe) AS importe
+    FROM detalle_venta d
+    INNER JOIN (SELECT id FROM venta WHERE anulado = FALSE
+                ORDER BY fecha_emision DESC, id DESC LIMIT p_ventas) u ON u.id = d.id_venta
+    INNER JOIN producto p ON p.id = d.id_producto
+    GROUP BY p.id, p.nombre
+    ORDER BY importe DESC
+    LIMIT p_limite;
+END$$
+
 DELIMITER ;
