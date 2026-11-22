@@ -1,60 +1,85 @@
-@* Bloque de solo lectura con los datos de una solicitud de autorización. Lo usan Resolver y Detalle. *@
-<div class="row">
-    <div class="col-sm-6 mb-3">
-        <div class="small text-muted">Solicitante</div>
-        <div class="fw-semibold">@Solicitud.NombreSolicitante</div>
-        <div class="small text-muted">@Solicitud.Solicitante · @TextosSeguridad.Texto(Solicitud.RolSolicitante)</div>
+@* Bloque de solo lectura con los datos de una solicitud de autorización. Lo usan Resolver y Detalle.
+   RF014: primero QUÉ se autoriza (lo arma el sistema desde la operación: el solicitante no lo escribe) y el motivo;
+   después quién la pidió, cuándo y cómo va. *@
+<div class="datos-solicitud">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+            <div class="small text-muted">Operación restringida</div>
+            <div class="fs-5 fw-semibold">@TextosSeguridad.Texto(Solicitud.Operacion)</div>
+            <div class="small text-muted">@Solicitud.DescripcionOperacion</div>
+        </div>
+        <Estado Texto="@TextosSeguridad.TextoEstado(Solicitud)" />
     </div>
-    <div class="col-sm-6 mb-3">
-        <div class="small text-muted">Fecha y hora de solicitud</div>
-        <div class="fw-semibold">@Formato.FechaHora(Solicitud.FechaSolicitud)</div>
-    </div>
-    <div class="col-sm-6 mb-3">
-        <div class="small text-muted">Operación restringida</div>
-        <div class="fw-semibold">@TextosSeguridad.Texto(Solicitud.Operacion)</div>
-        <div class="small text-muted">@Solicitud.DescripcionOperacion</div>
-    </div>
-    <div class="col-sm-6 mb-3">
-        <div class="small text-muted">Estado</div>
-        <div class="fw-semibold"><Estado Texto="@TextosSeguridad.Texto(Solicitud.Estado)" /></div>
-    </div>
-    @if (!string.IsNullOrEmpty(Solicitud.Referencia) || !string.IsNullOrEmpty(Solicitud.Detalle))
+
+    @if (!string.IsNullOrEmpty(Solicitud.Referencia) || Detalle.Count > 0)
     {
-        @* RF014: lo que se autoriza, armado por el sistema desde la operacion (no lo escribe el solicitante) *@
-        <div class="col-12 mb-3">
-            <div class="small text-muted">Qué se autoriza</div>
-            <div class="border rounded p-2 bg-light">
-                @if (!string.IsNullOrEmpty(Solicitud.Referencia))
-                {
-                    <div class="fw-semibold">@Solicitud.Referencia</div>
-                }
-                @if (!string.IsNullOrEmpty(Solicitud.Detalle))
-                {
-                    <div class="small" style="white-space: pre-line;">@Solicitud.Detalle</div>
-                }
-            </div>
+        <div class="que-se-autoriza mb-3">
+            <div class="small text-muted mb-1">Qué se autoriza</div>
+            @if (!string.IsNullOrEmpty(Solicitud.Referencia))
+            {
+                <div class="referencia">@Solicitud.Referencia</div>
+            }
+            @if (Detalle.Count > 0)
+            {
+                <dl class="detalle mb-0">
+                    @foreach (var d in Detalle)
+                    {
+                        if (d.EsItem)
+                        {
+                            <div class="item"><dd>@d.Valor</dd></div>
+                        }
+                        else if (d.Clave is not null)
+                        {
+                            <div class="@(d.Clave.StartsWith("Total") ? "total" : "")"><dt>@d.Clave</dt><dd>@d.Valor</dd></div>
+                        }
+                        else
+                        {
+                            <div><dd>@d.Valor</dd></div>
+                        }
+                    }
+                </dl>
+            }
         </div>
     }
-    <div class="col-12 mb-3">
+    else
+    {
+        <div class="alert alert-secondary small mb-3">Sin datos de la operación.</div>
+    }
+
+    <div class="motivo mb-3">
         <div class="small text-muted">Motivo</div>
         <div>@Solicitud.Motivo</div>
     </div>
-    @if (!string.IsNullOrEmpty(Solicitud.Administrador))
-    {
+
+    <div class="row">
         <div class="col-sm-6 mb-3">
-            <div class="small text-muted">Resuelta por</div>
-            <div class="fw-semibold">@Solicitud.Administrador · @Formato.FechaHora(Solicitud.FechaResolucion)</div>
+            <div class="small text-muted">Solicitante</div>
+            <div class="fw-semibold">@Solicitud.NombreSolicitante</div>
+            <div class="small text-muted">@Solicitud.Solicitante · @TextosSeguridad.Texto(Solicitud.RolSolicitante)</div>
         </div>
-    }
-    @if (Solicitud.VigenciaMinutos > 0)
-    {
         <div class="col-sm-6 mb-3">
-            <div class="small text-muted">Vigencia</div>
-            <div class="fw-semibold">@Solicitud.VigenciaMinutos min · vence @Formato.FechaHora(Solicitud.FechaVencimiento)</div>
+            <div class="small text-muted">Pedida</div>
+            <div class="fw-semibold">@Formato.FechaHora(Solicitud.FechaSolicitud)</div>
         </div>
-    }
+        @if (!string.IsNullOrEmpty(Solicitud.Administrador))
+        {
+            <div class="col-sm-6 mb-3">
+                <div class="small text-muted">Resuelta por</div>
+                <div class="fw-semibold">@Solicitud.Administrador · @Formato.FechaHora(Solicitud.FechaResolucion)</div>
+            </div>
+        }
+        @if (Solicitud.VigenciaMinutos > 0)
+        {
+            <div class="col-sm-6 mb-3">
+                <div class="small text-muted">Vigencia</div>
+                <div class="fw-semibold">@Solicitud.VigenciaMinutos min · vence @Formato.FechaHora(Solicitud.FechaVencimiento)</div>
+            </div>
+        }
+    </div>
 </div>
 
 @code {
     [Parameter, EditorRequired] public SolicitudDatos Solicitud { get; set; } = default!;
+
+    private List<LineaDetalle> Detalle => TextosSeguridad.LeerDetalle(Solicitud.Detalle);
 }

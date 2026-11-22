@@ -1,0 +1,28 @@
+/* RF014: lo que se autoriza va primero y destacado; el motivo, en un recuadro aparte */
+.que-se-autoriza {
+    padding: .85rem 1rem;
+    border: var(--rule-hair, 1px) solid var(--color-rule);
+    border-radius: var(--radius-card, 8px);
+    background: rgba(var(--paper-rgb), .6);
+}
+.que-se-autoriza .referencia {
+    font-family: var(--font-figures);
+    font-weight: 600;
+    font-size: var(--text-md);
+    color: var(--color-accent);
+    margin-bottom: .35rem;
+}
+.detalle { display: grid; gap: .2rem; }
+.detalle > div { display: flex; gap: .5rem; align-items: baseline; font-size: var(--text-sm); }
+.detalle dt { min-width: 7.5rem; font-weight: 400; color: var(--color-muted); }
+.detalle dd { margin: 0; }
+.detalle .item { padding-left: 1rem; }
+.detalle .item dd::before { content: "•"; margin-right: .45rem; color: var(--color-accent); }
+.detalle .total { margin-top: .35rem; padding-top: .35rem; border-top: var(--rule-hair, 1px) solid var(--color-rule); }
+.detalle .total dt, .detalle .total dd { font-weight: 700; color: var(--color-ink); }
+.motivo {
+    padding: .6rem .85rem;
+    border-left: 3px solid var(--color-accent);
+    background: var(--color-accent-wash);
+    border-radius: 0 var(--radius, 6px) var(--radius, 6px) 0;
+}

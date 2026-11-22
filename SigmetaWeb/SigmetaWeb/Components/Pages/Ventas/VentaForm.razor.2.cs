@@ -109,6 +109,9 @@ public partial class VentaForm
             error = e.Message;   // por ejemplo "Stock insuficiente para ..." o "La venta supera el límite de crédito del cliente"
             if (e.Message.Contains("requiere autorización del Administrador") || e.Message.Contains("en espera del Administrador"))
             {
+                // RF014: no es un error: la línea se marca y el botón pasa a «Solicitar autorización»
+                error = null;
+                await RevisarCosto();
                 requiereAutorizacion = true;
             }
         }
@@ -128,6 +131,10 @@ public partial class VentaForm
         }
         try
         {
+            // RF014: se guarda también la venta tal como está en pantalla, para retomarla sin pedir otra autorización
+            venta.DatosOperacion = null;
+            venta.DatosOperacion = System.Text.Json.JsonSerializer.Serialize(venta,
+                new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
             return await Api.Post<SolicitudDatos>("ventas/solicitar-autorizacion", venta);
         }
         catch (ErrorApi e) when (e.Message.Contains("no hace falta autorización"))
@@ -136,6 +143,10 @@ public partial class VentaForm
             requiereAutorizacion = false;
             error = "Ya ninguna línea queda bajo el costo: puede guardar.";
             return null;
+        }
+        finally
+        {
+            venta.DatosOperacion = null;   // no viaja al registrar la venta
         }
     }
 }

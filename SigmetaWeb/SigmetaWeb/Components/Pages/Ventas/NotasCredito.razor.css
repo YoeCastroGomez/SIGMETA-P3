@@ -1,0 +1,2 @@
+/* RF014: una nota en trámite todavía no tiene número: se distingue de las emitidas */
+.por-emitir { font-weight: 600; font-style: italic; color: var(--color-muted); white-space: nowrap; }

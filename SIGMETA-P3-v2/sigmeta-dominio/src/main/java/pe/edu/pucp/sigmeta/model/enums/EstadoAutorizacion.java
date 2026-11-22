@@ -7,5 +7,8 @@ public enum EstadoAutorizacion {
     PENDIENTE,
     APROBADA,
     RECHAZADA,
-    VENCIDA
+    // paso su vigencia o el Administrador la revoco sin usarse
+    VENCIDA,
+    // se consumio en la operacion que autorizaba (un solo uso)
+    USADA
 }

@@ -3,9 +3,6 @@ package pe.edu.pucp.sigmeta.boimpl.reporte;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -49,9 +46,9 @@ public final class ReportePdf {
     public static final String ABASTECIMIENTO = "abastecimiento";
     public static final String CAJA = "caja";
 
-    private static final Locale PERU = Locale.forLanguageTag("es-PE");
-    private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final DateTimeFormatter FECHA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    static final Locale PERU = Locale.forLanguageTag("es-PE");
+    static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    static final DateTimeFormatter FECHA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     /** Plantillas ya compiladas: compilar un .jrxml es lento y basta hacerlo una vez (buena practica de la sesion 25). */
     private static final Map<String, JasperReport> COMPILADAS = new ConcurrentHashMap<>();
@@ -83,7 +80,7 @@ public final class ReportePdf {
         Map<String, Object> parametros = new HashMap<>();
         parametros.put(JRParameter.REPORT_LOCALE, PERU);
         parametros.put("NOMBRE_REPORTE", nombre);
-        parametros.put("PERIODO", fecha(texto(datos.get("desde"))) + " al " + fecha(texto(datos.get("hasta"))));
+        parametros.put("PERIODO", ReporteFormato.fecha(ReporteFormato.texto(datos.get("desde"))) + " al " + ReporteFormato.fecha(ReporteFormato.texto(datos.get("hasta"))));
         parametros.put("EMITIDO", emitido.format(FECHA_HORA));
         parametros.put("GENERADO_POR", generadoPor == null || generadoPor.isBlank() ? "—" : generadoPor);
 
@@ -96,7 +93,7 @@ public final class ReportePdf {
         try {
             // la plantilla principal tiene una sola "fila": las tablas son subreportes con su propio data source
             JasperPrint impreso = JasperFillManager.fillReport(plantilla("reporte_" + tipo), parametros, new JREmptyDataSource(1));
-            String periodo = texto(parametros.get("PERIODO"));
+            String periodo = ReporteFormato.texto(parametros.get("PERIODO"));
             return exportar(impreso, "SIGMETA - " + nombre + " - " + periodo,
                     nombre + " del periodo " + periodo + " (RF015)", generadoPor);
         } catch (JRException e) {
@@ -107,65 +104,65 @@ public final class ReportePdf {
     // ------------------------------------------------------------------ cada reporte
 
     private static void comercial(Map<String, Object> datos, Map<String, Object> p) {
-        Map<String, Object> t = mapa(datos.get("totales"));
-        double contado = numero(t.get("montoContado"));
-        double credito = numero(t.get("montoCredito"));
-        double notas = numero(t.get("montoNotasCredito"));
-        indicador(p, 1, "VENTAS AL CONTADO", soles(contado), entero(numero(t.get("ventasContado"))) + " ventas");
-        indicador(p, 2, "VENTAS AL CRÉDITO", soles(credito), entero(numero(t.get("ventasCredito"))) + " ventas");
-        indicador(p, 3, "VENTA NETA DEL PERIODO", soles(contado + credito - notas),
-                "Notas de crédito: " + soles(notas));
-        indicador(p, 4, "POR COBRAR A LA FECHA", soles(numero(t.get("saldoPorCobrar"))),
-                soles(numero(t.get("saldoVencido"))) + " vencido");
+        Map<String, Object> t = ReporteFormato.mapa(datos.get("totales"));
+        double contado = ReporteFormato.numero(t.get("montoContado"));
+        double credito = ReporteFormato.numero(t.get("montoCredito"));
+        double notas = ReporteFormato.numero(t.get("montoNotasCredito"));
+        indicador(p, 1, "VENTAS AL CONTADO", ReporteFormato.soles(contado), ReporteFormato.entero(ReporteFormato.numero(t.get("ventasContado"))) + " ventas");
+        indicador(p, 2, "VENTAS AL CRÉDITO", ReporteFormato.soles(credito), ReporteFormato.entero(ReporteFormato.numero(t.get("ventasCredito"))) + " ventas");
+        indicador(p, 3, "VENTA NETA DEL PERIODO", ReporteFormato.soles(contado + credito - notas),
+                "Notas de crédito: " + ReporteFormato.soles(notas));
+        indicador(p, 4, "POR COBRAR A LA FECHA", ReporteFormato.soles(ReporteFormato.numero(t.get("saldoPorCobrar"))),
+                ReporteFormato.soles(ReporteFormato.numero(t.get("saldoVencido"))) + " vencido");
 
-        tabla(p, "VENTAS_DIA", datos.get("porDia"), f -> f.put("fechaTexto", fecha(texto(f.get("fecha")))));
+        tabla(p, "VENTAS_DIA", datos.get("porDia"), f -> f.put("fechaTexto", ReporteFormato.fecha(ReporteFormato.texto(f.get("fecha")))));
         tabla(p, "VENTAS_VENDEDOR", datos.get("porVendedor"), f -> { });
         tabla(p, "VENTAS_CLIENTE", datos.get("porCliente"), f -> { });
         tabla(p, "CREDITO", datos.get("credito"), f -> {
-            String calificacion = texto(f.get("calificacionCrediticia"));
+            String calificacion = ReporteFormato.texto(f.get("calificacionCrediticia"));
             f.put("calificacionTexto", calificacion.isEmpty() || calificacion.equals("SIN_EVALUAR") ? "—" : calificacion);
-            double dias = numero(f.get("diasAtraso"));
-            f.put("diasAtrasoTexto", dias > 0 ? entero(dias) + " d" : "—");
+            double dias = ReporteFormato.numero(f.get("diasAtraso"));
+            f.put("diasAtrasoTexto", dias > 0 ? ReporteFormato.entero(dias) + " d" : "—");
         });
     }
 
     private static void abastecimiento(Map<String, Object> datos, Map<String, Object> p) {
-        List<Map<String, Object>> compras = filas(datos.get("compras"));
-        List<Map<String, Object>> inventario = filas(datos.get("inventario"));
-        indicador(p, 1, "COMPRADO EN EL PERIODO", soles(suma(compras, "total")), entero(suma(compras, "compras")) + " compras");
-        indicador(p, 2, "COMPRAS POR RECIBIR", entero(suma(compras, "porRecibir")), "registradas o recibidas en parte");
-        indicador(p, 3, "INVENTARIO AL COSTO", soles(suma(inventario, "valorCosto")),
-                "a precio de venta " + soles(suma(inventario, "valorVenta")));
-        indicador(p, 4, "PRODUCTOS EN SU MÍNIMO", entero(suma(inventario, "enMinimo")), "requieren reposición");
+        List<Map<String, Object>> compras = ReporteFormato.filas(datos.get("compras"));
+        List<Map<String, Object>> inventario = ReporteFormato.filas(datos.get("inventario"));
+        indicador(p, 1, "COMPRADO EN EL PERIODO", ReporteFormato.soles(ReporteFormato.suma(compras, "total")), ReporteFormato.entero(ReporteFormato.suma(compras, "compras")) + " compras");
+        indicador(p, 2, "COMPRAS POR RECIBIR", ReporteFormato.entero(ReporteFormato.suma(compras, "porRecibir")), "registradas o recibidas en parte");
+        indicador(p, 3, "INVENTARIO AL COSTO", ReporteFormato.soles(ReporteFormato.suma(inventario, "valorCosto")),
+                "a precio de venta " + ReporteFormato.soles(ReporteFormato.suma(inventario, "valorVenta")));
+        indicador(p, 4, "PRODUCTOS EN SU MÍNIMO", ReporteFormato.entero(ReporteFormato.suma(inventario, "enMinimo")), "requieren reposición");
 
         tabla(p, "COMPRAS", compras, f -> { });
         tabla(p, "MAYOR_MOVIMIENTO", datos.get("mayorMovimiento"),
-                f -> f.put("salieronTexto", cantidad(numero(f.get("unidades"))) + " " + unidad(texto(f.get("unidadVenta")))));
+                f -> f.put("salieronTexto", ReporteFormato.cantidad(ReporteFormato.numero(f.get("unidades"))) + " " + ReporteFormato.unidad(ReporteFormato.texto(f.get("unidadVenta")))));
         tabla(p, "SIN_MOVIMIENTO", datos.get("sinMovimiento"), f -> {
-            String ultima = texto(f.get("ultimaSalida"));
-            f.put("ultimaSalidaTexto", ultima.isEmpty() ? "Nunca" : fecha(ultima));
+            String ultima = ReporteFormato.texto(f.get("ultimaSalida"));
+            f.put("ultimaSalidaTexto", ultima.isEmpty() ? "Nunca" : ReporteFormato.fecha(ultima));
         });
         tabla(p, "INVENTARIO", inventario, f -> { });
     }
 
     private static void caja(Map<String, Object> datos, Map<String, Object> p) {
-        List<Map<String, Object>> cierres = filas(datos.get("cierres"));
-        List<Map<String, Object>> vigentes = cierres.stream().filter(c -> "VIGENTE".equals(texto(c.get("estado")))).toList();
-        double diferencia = suma(vigentes, "diferencia");
-        indicador(p, 1, "CIERRES VIGENTES", entero(vigentes.size()), "en el periodo");
-        indicador(p, 2, "CIERRES REVERTIDOS", entero(cierres.size() - vigentes.size()), "reabiertos por el Administrador");
-        indicador(p, 3, "DIFERENCIA NETA", soles(diferencia), diferencia < -0.005 ? "faltó dinero" : "negativa = faltó dinero");
-        indicador(p, 4, "INGRESO NETO EN CAJAS", soles(suma(filas(datos.get("porMedioPago")), "neto")), "todos los medios de pago");
+        List<Map<String, Object>> cierres = ReporteFormato.filas(datos.get("cierres"));
+        List<Map<String, Object>> vigentes = cierres.stream().filter(c -> "VIGENTE".equals(ReporteFormato.texto(c.get("estado")))).toList();
+        double diferencia = ReporteFormato.suma(vigentes, "diferencia");
+        indicador(p, 1, "CIERRES VIGENTES", ReporteFormato.entero(vigentes.size()), "en el periodo");
+        indicador(p, 2, "CIERRES REVERTIDOS", ReporteFormato.entero(cierres.size() - vigentes.size()), "reabiertos por el Administrador");
+        indicador(p, 3, "DIFERENCIA NETA", ReporteFormato.soles(diferencia), diferencia < -0.005 ? "faltó dinero" : "negativa = faltó dinero");
+        indicador(p, 4, "INGRESO NETO EN CAJAS", ReporteFormato.soles(ReporteFormato.suma(ReporteFormato.filas(datos.get("porMedioPago")), "neto")), "todos los medios de pago");
 
         tabla(p, "CIERRES", cierres, f -> {
-            f.put("cajaTexto", "N.º " + entero(numero(f.get("idCaja"))));
-            f.put("fechaCierreTexto", fechaHora(texto(f.get("fechaCierre"))));
-            String estado = legible(texto(f.get("estado")));
-            String reabrio = texto(f.get("usuarioReapertura"));
+            f.put("cajaTexto", "N.º " + ReporteFormato.entero(ReporteFormato.numero(f.get("idCaja"))));
+            f.put("fechaCierreTexto", ReporteFormato.fechaHora(ReporteFormato.texto(f.get("fechaCierre"))));
+            String estado = ReporteFormato.legible(ReporteFormato.texto(f.get("estado")));
+            String reabrio = ReporteFormato.texto(f.get("usuarioReapertura"));
             f.put("estadoTexto", reabrio.isEmpty() ? estado
-                    : estado + " (reabrió " + reabrio + ": " + texto(f.get("motivoReapertura")) + ")");
+                    : estado + " (reabrió " + reabrio + ": " + ReporteFormato.texto(f.get("motivoReapertura")) + ")");
         });
-        tabla(p, "MEDIO_PAGO", datos.get("porMedioPago"), f -> f.put("medioTexto", legible(texto(f.get("medioPago")))));
+        tabla(p, "MEDIO_PAGO", datos.get("porMedioPago"), f -> f.put("medioTexto", ReporteFormato.legible(ReporteFormato.texto(f.get("medioPago")))));
         tabla(p, "CAJERO", datos.get("porCajero"), f -> { });
     }
 
@@ -230,7 +227,7 @@ public final class ReportePdf {
     /** Agrega el subreporte compilado y su data source (una copia de cada fila con los textos de presentacion). */
     private static void tabla(Map<String, Object> p, String clave, Object filas, Consumer<Map<String, Object>> formato) {
         List<Map<String, ?>> preparadas = new ArrayList<>();
-        for (Map<String, Object> fila : filas(filas)) {
+        for (Map<String, Object> fila : ReporteFormato.filas(filas)) {
             Map<String, Object> copia = new LinkedHashMap<>(fila);
             formato.accept(copia);
             preparadas.add(copia);
@@ -262,99 +259,4 @@ public final class ReportePdf {
         return pdf.toByteArray();
     }
 
-    // ------------------------------------------------------------------ formato de presentacion
-
-    @SuppressWarnings("unchecked")
-    private static List<Map<String, Object>> filas(Object valor) {
-        if (!(valor instanceof List<?> lista)) {
-            return List.of();
-        }
-        List<Map<String, Object>> resultado = new ArrayList<>();
-        for (Object fila : lista) {
-            if (fila instanceof Map<?, ?> m) {
-                resultado.add((Map<String, Object>) m);
-            }
-        }
-        return resultado;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> mapa(Object valor) {
-        return valor instanceof Map<?, ?> m ? (Map<String, Object>) m : Map.of();
-    }
-
-    private static double numero(Object valor) {
-        return valor instanceof Number n ? n.doubleValue() : 0;
-    }
-
-    private static double suma(List<Map<String, Object>> filas, String campo) {
-        return filas.stream().mapToDouble(f -> numero(f.get(campo))).sum();
-    }
-
-    private static String texto(Object valor) {
-        return valor == null ? "" : valor.toString().trim();
-    }
-
-    private static DecimalFormat formato(String patron) {
-        return new DecimalFormat(patron, DecimalFormatSymbols.getInstance(PERU));
-    }
-
-    /** 1234.5 -> "S/ 1,234.50"; -20 -> "-S/ 20.00" (el signo va antes del simbolo de moneda). */
-    private static String soles(double monto) {
-        String texto = "S/ " + formato("#,##0.00").format(Math.abs(monto));
-        return monto < -0.005 ? "-" + texto : texto;
-    }
-
-    private static String entero(double valor) {
-        return formato("#,##0").format(valor);
-    }
-
-    private static String cantidad(double valor) {
-        return formato("#,##0.###").format(valor);
-    }
-
-    /** "2026-11-05" -> "05/11/2026"; si no es una fecha, se deja como vino. */
-    private static String fecha(String iso) {
-        if (iso.length() < 10) {
-            return iso;
-        }
-        try {
-            return LocalDate.parse(iso.substring(0, 10)).format(FECHA);
-        } catch (RuntimeException e) {
-            return iso;
-        }
-    }
-
-    /** "2026-11-05T18:30:00" -> "05/11/2026 18:30". */
-    private static String fechaHora(String iso) {
-        try {
-            return LocalDateTime.parse(iso.length() > 19 ? iso.substring(0, 19) : iso).format(FECHA_HORA);
-        } catch (RuntimeException e) {
-            return fecha(iso);
-        }
-    }
-
-    /** "TARJETA_CREDITO" -> "Tarjeta crédito" (mismo criterio que la pantalla, con tildes de los valores conocidos). */
-    private static String legible(String codigo) {
-        if (codigo.isEmpty()) {
-            return "—";
-        }
-        String texto = codigo.replace('_', ' ').toLowerCase(PERU)
-                .replace("credito", "crédito").replace("debito", "débito");
-        return Character.toUpperCase(texto.charAt(0)) + texto.substring(1);
-    }
-
-    private static String unidad(String codigo) {
-        return switch (codigo) {
-            case "UNIDAD" -> "und";
-            case "CAJA" -> "cajas";
-            case "KILOGRAMO" -> "kg";
-            case "METRO" -> "m";
-            case "LITRO" -> "L";
-            case "MILLAR" -> "millares";
-            case "GALON" -> "gal";
-            case "JUEGO" -> "juegos";
-            default -> codigo.toLowerCase(PERU);
-        };
-    }
 }

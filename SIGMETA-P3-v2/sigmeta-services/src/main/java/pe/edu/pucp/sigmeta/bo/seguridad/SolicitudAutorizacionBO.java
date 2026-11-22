@@ -18,8 +18,16 @@ public interface SolicitudAutorizacionBO {
     boolean tieneAutorizacionVigente(int idUsuario, String operacionRestringida) throws SQLException;
     // RF013/RF014: la autorizacion aprobada y vigente, con el administrador que la aprobo (null si no hay)
     SolicitudAutorizacion obtenerAutorizacionVigente(int idUsuario, String operacionRestringida) throws SQLException;
-    // RF014: una autorizacion de un solo uso queda VENCIDA despues de usarse
+    // RF014: una autorizacion de un solo uso queda USADA despues de usarse
     void consumir(int idSolicitud) throws SQLException;
+
+    // RF014: guarda lo que el solicitante preparo en la pantalla (JSON) para retomar la operacion
+    void guardarDatosOperacion(int idSolicitud, int idSolicitante, String datosOperacion) throws SQLException;
+    // RF014: solicitudes que se pueden retomar (tienen datos y no se usaron). idSolicitante = 0: de todos
+    // (solo el Administrador). operacion = null: de cualquier operacion
+    List<SolicitudAutorizacion> listarEnCurso(int idSolicitante, String operacionRestringida) throws SQLException;
+    // RF014: el solicitante ya no la va a retomar: si estaba pendiente o aprobada se anula, y deja de listarse
+    void descartar(int idSolicitud, int idResponsable) throws SQLException;
 
     // RF014 (opcion B): la solicitud nace en la operacion restringida y lleva sus datos.
     // referencia = documento o producto; detalle = lo que revisa el Administrador; huella = SHA-256 de los datos.

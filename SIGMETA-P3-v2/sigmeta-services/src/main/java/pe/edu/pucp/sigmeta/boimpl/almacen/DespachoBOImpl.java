@@ -20,16 +20,12 @@ import pe.edu.pucp.sigmeta.daoimpl.ventas.*;
 import pe.edu.pucp.sigmeta.model.almacen.Despacho;
 import pe.edu.pucp.sigmeta.model.almacen.DetalleDespacho;
 import pe.edu.pucp.sigmeta.model.almacen.MovimientoInventario;
-import pe.edu.pucp.sigmeta.model.enums.EstadoComprobante;
 import pe.edu.pucp.sigmeta.model.enums.EstadoOrdenCompraCliente;
-import pe.edu.pucp.sigmeta.model.enums.TipoComprobante;
 import pe.edu.pucp.sigmeta.model.enums.EstadoVenta;
 import pe.edu.pucp.sigmeta.model.enums.TipoMovimientoInventario;
 import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.model.producto.Producto;
 import pe.edu.pucp.sigmeta.model.usuario.Usuario;
-import pe.edu.pucp.sigmeta.model.ventas.Comprobante;
-import pe.edu.pucp.sigmeta.model.ventas.DetalleNotaCredito;
 import pe.edu.pucp.sigmeta.model.ventas.DetalleOrdenCompraCliente;
 import pe.edu.pucp.sigmeta.model.ventas.DetalleVenta;
 import pe.edu.pucp.sigmeta.model.ventas.Venta;
@@ -38,14 +34,12 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class DespachoBOImpl implements DespachoBO {
 
-    private static final double EPSILON = 0.000001;
+    static final double EPSILON = 0.000001;
 
     private final DespachoDAO despachoDAO;
     private final DetalleDespachoDAO detalleDespachoDAO;
@@ -59,6 +53,8 @@ public class DespachoBOImpl implements DespachoBO {
     private final UsuarioBO usuarioBO;
     private final ComprobanteDAO comprobanteDAO;
     private final DetalleNotaCreditoDAO detalleNotaCreditoDAO;
+    // partes de esta clase (mismo paquete)
+    private final DespachoAnulacion anulacionDespacho;
 
     public DespachoBOImpl() {
         this.despachoDAO = new DespachoDAOImpl();
@@ -73,6 +69,7 @@ public class DespachoBOImpl implements DespachoBO {
         this.usuarioBO = new UsuarioBOImpl();
         this.comprobanteDAO = new ComprobanteDAOImpl();
         this.detalleNotaCreditoDAO = new DetalleNotaCreditoDAOImpl();
+        this.anulacionDespacho = new DespachoAnulacion(despachoDAO, detalleDespachoDAO, ventaDAO, detalleVentaDAO, ordenCompraClienteDAO, detalleOrdenCompraClienteDAO, movimientoDAO, movimientoBO, usuarioBO, comprobanteDAO, detalleNotaCreditoDAO);
     }
 
     // RF012: Despacho parcial o total con SALIDA_DESPACHO y actualizacion de stock
@@ -101,51 +98,9 @@ public class DespachoBOImpl implements DespachoBO {
             if (venta.getEstado() != EstadoVenta.REGISTRADA && venta.getEstado() != EstadoVenta.DESPACHADA_PARCIAL) {
                 throw new IllegalStateException("La venta no admite nuevos despachos (estado actual: " + venta.getEstado() + ")");
             }
-            // RF012: la mercaderia sale del almacen con su comprobante emitido y, si la venta es al contado,
-            // ya cobrada en caja. Al credito basta el comprobante: la deuda esta en la cuenta por cobrar.
-            boolean tieneComprobante = comprobanteDAO.listarPorVenta(idVenta).stream()
-                    .anyMatch(c -> c.getTipo() != pe.edu.pucp.sigmeta.model.enums.TipoComprobante.NOTA_CREDITO
-                            && c.getEstado() != pe.edu.pucp.sigmeta.model.enums.EstadoComprobante.ANULADO);
-            if (!tieneComprobante) {
-                throw new IllegalStateException("La venta " + venta.getNumero()
-                        + " todavía no tiene factura ni boleta emitida; emita el comprobante antes de despachar");
-            }
-            if (venta.getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CONTADO
-                    && new pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl()
-                            .numero("sp_venta_contar_cobros_contado", idVenta).signum() == 0) {
-                throw new IllegalStateException("La venta " + venta.getNumero()
-                        + " es al contado y todavía no se cobró en caja; se despacha después del cobro");
-            }
-
-            // RF012: cada linea del despacho apunta a una linea de venta concreta (no a un producto),
-            // asi una venta con varias lineas del mismo producto se controla linea por linea
-            List<DetalleVenta> lineasVenta = detalleVentaDAO.listarPorVenta(idVenta);
-            Map<Integer, DetalleVenta> mapaLineasVenta = new HashMap<>();
-            for (DetalleVenta dv : lineasVenta) {
-                mapaLineasVenta.put(dv.getId(), dv);
-            }
-
-            Set<Integer> lineasEnDespacho = new HashSet<>();
-            for (DetalleDespacho d : detalles) {
-                Validador.obligatorio(d.getDetalleVenta(), "línea de venta");
-                int idLinea = d.getDetalleVenta().getId();
-                if (!lineasEnDespacho.add(idLinea)) {
-                    throw new IllegalArgumentException("No se puede repetir la misma línea de venta en una guía de despacho");
-                }
-                DetalleVenta lineaVenta = mapaLineasVenta.get(idLinea);
-                if (lineaVenta == null) {
-                    throw new IllegalArgumentException("La línea " + idLinea + " no pertenece a la venta");
-                }
-                double cant = d.getCantidadDespachada();
-                if (!Double.isFinite(cant) || cant <= 0) {
-                    throw new IllegalArgumentException("La cantidad a despachar debe ser mayor a 0");
-                }
-                if (lineaVenta.getCantidadDespachada() + cant > lineaVenta.getCantidad() + EPSILON) {
-                    throw new IllegalArgumentException("La cantidad excede lo pendiente de despachar en la línea " + lineaVenta.getNumeroLinea()
-                            + " (Vendido: " + lineaVenta.getCantidad() + ", Despachado: " + lineaVenta.getCantidadDespachada() + ", Solicitado: " + cant + ")");
-                }
-                d.setDetalleVenta(lineaVenta);
-            }
+            // RF012: comprobante emitido y, al contado, cobro en caja; cantidades por linea (DespachoValidacion)
+            DespachoValidacion.exigirComprobanteYCobro(comprobanteDAO, venta, idVenta);
+            List<DetalleVenta> lineasVenta = DespachoValidacion.validarLineas(detalleVentaDAO, idVenta, detalles);
 
             String serie = "T001";
             String correlativo = despachoDAO.siguienteCorrelativo(serie);
@@ -273,143 +228,9 @@ public class DespachoBOImpl implements DespachoBO {
         });
     }
 
-    // RF012 / §4.4 / §6.4: Anular despacho y revertir stock atómicamente
     @Override
     public void anular(int idDespacho, String motivo, int idAlmacenero) throws SQLException {
-        usuarioBO.verificarRol(idAlmacenero, TipoRol.ALMACENERO, TipoRol.ADMINISTRADOR);
-        String motivoValidado = Validador.textoObligatorio(motivo, "motivo de anulación", 255);
-
-        Transaccion.ejecutar(() -> {
-            Despacho despacho = despachoDAO.load(idDespacho);
-            if (despacho == null) {
-                throw new IllegalArgumentException("No existe el despacho con id " + idDespacho);
-            }
-            if (despacho.isAnulado()) {
-                throw new IllegalStateException("El despacho ya se encuentra anulado");
-            }
-
-            int idVenta = despacho.getVenta().getId();
-            ventaDAO.bloquearVenta(idVenta);
-
-            // RF013: si una linea ya tiene devoluciones por nota de credito, al anular el despacho
-            // no puede quedar menos entregado que lo ya devuelto (el stock se contaria dos veces)
-            validarSinDevolucionesPendientes(idDespacho, idVenta);
-
-            // 1. Revertir cada movimiento SALIDA_DESPACHO asociado a este despacho
-            List<MovimientoInventario> todosMovimientos = movimientoDAO.listAll();
-            for (MovimientoInventario m : todosMovimientos) {
-                if (m.getDespacho() != null && m.getDespacho().getId() == idDespacho
-                        && m.getTipo() == TipoMovimientoInventario.SALIDA_DESPACHO) {
-                    movimientoBO.revertirSalidaDespacho(m.getId(), idDespacho, idAlmacenero, motivoValidado);
-                }
-            }
-
-            // 2. Marcar despacho anulado (baja logica)
-            despachoDAO.remove(despacho);
-
-            // 3. Descontar lo devuelto de detalle_venta.cantidad_despachada
-            List<DetalleDespacho> detallesDespacho = detalleDespachoDAO.listarPorDespacho(idDespacho);
-            List<DetalleVenta> lineasVenta = detalleVentaDAO.listarPorVenta(idVenta);
-            Map<Integer, DetalleVenta> mapaLineasVenta = new HashMap<>();
-            for (DetalleVenta dv : lineasVenta) {
-                mapaLineasVenta.put(dv.getId(), dv);
-            }
-
-            Venta venta = ventaDAO.load(idVenta);
-            Integer idOc = (venta != null && venta.getOrdenCompraCliente() != null && venta.getOrdenCompraCliente().getId() > 0)
-                    ? venta.getOrdenCompraCliente().getId() : null;
-            Map<Integer, DetalleOrdenCompraCliente> mapaDetallesOc = new HashMap<>();
-            if (idOc != null) {
-                for (DetalleOrdenCompraCliente doc : detalleOrdenCompraClienteDAO.listarPorOrden(idOc)) {
-                    mapaDetallesOc.put(doc.getId(), doc);
-                }
-            }
-
-            // la linea de despacho apunta a su linea de venta, y esta a su linea de orden
-            for (DetalleDespacho dd : detallesDespacho) {
-                DetalleVenta dv = mapaLineasVenta.get(dd.getDetalleVenta().getId());
-                if (dv == null) {
-                    continue;
-                }
-                double restanteDesp = Math.max(0.0, dv.getCantidadDespachada() - dd.getCantidadDespachada());
-                dv.setCantidadDespachada(restanteDesp);
-                detalleVentaDAO.actualizarCantidadDespachada(dv.getId(), restanteDesp);
-
-                DetalleOrdenCompraCliente lineaOrden = dv.getDetalleOrdenCompraCliente();
-                if (idOc != null && lineaOrden != null && mapaDetallesOc.containsKey(lineaOrden.getId())) {
-                    DetalleOrdenCompraCliente doc = mapaDetallesOc.get(lineaOrden.getId());
-                    double restanteAtendida = Math.max(0.0, doc.getCantidadAtendida() - dd.getCantidadDespachada());
-                    doc.setCantidadAtendida(restanteAtendida);
-                    detalleOrdenCompraClienteDAO.actualizarCantidadAtendida(doc.getId(), restanteAtendida);
-                }
-            }
-
-            // 4. Recalcular estado de la venta
-            boolean tieneDespachos = false;
-            boolean todoDespachado = true;
-            for (DetalleVenta dv : lineasVenta) {
-                if (dv.getCantidadDespachada() > EPSILON) {
-                    tieneDespachos = true;
-                }
-                if (dv.getCantidadDespachada() + EPSILON < dv.getCantidad()) {
-                    todoDespachado = false;
-                }
-            }
-            EstadoVenta nuevoEstadoVenta = todoDespachado ? EstadoVenta.DESPACHADA
-                    : (tieneDespachos ? EstadoVenta.DESPACHADA_PARCIAL : EstadoVenta.REGISTRADA);
-            ventaDAO.actualizarEstado(idVenta, nuevoEstadoVenta);
-
-            // 5. Recalcular estado de orden de compra si aplica
-            if (idOc != null) {
-                boolean tieneAtencion = false;
-                boolean todoAtendido = true;
-                for (DetalleOrdenCompraCliente doc : mapaDetallesOc.values()) {
-                    if (doc.getCantidadAtendida() > EPSILON) {
-                        tieneAtencion = true;
-                    }
-                    if (doc.getCantidadAtendida() + EPSILON < doc.getCantidad()) {
-                        todoAtendido = false;
-                    }
-                }
-                EstadoOrdenCompraCliente nuevoEstadoOc = todoAtendido ? EstadoOrdenCompraCliente.ATENDIDA
-                        : (tieneAtencion ? EstadoOrdenCompraCliente.ATENDIDA_PARCIAL : EstadoOrdenCompraCliente.PENDIENTE);
-                ordenCompraClienteDAO.actualizarEstado(idOc, nuevoEstadoOc);
-            }
-            return null;
-        });
-    }
-
-    private void validarSinDevolucionesPendientes(int idDespacho, int idVenta) throws SQLException {
-        // lo ya acreditado por linea de venta en notas de credito vigentes de los comprobantes de la venta
-        Map<Integer, Double> acreditado = new HashMap<>();
-        for (Comprobante c : comprobanteDAO.listarPorVenta(idVenta)) {
-            if (c.getTipo() == TipoComprobante.NOTA_CREDITO || c.getEstado() == EstadoComprobante.ANULADO) {
-                continue;
-            }
-            for (Comprobante nc : comprobanteDAO.listarNotasCreditoPorComprobante(c.getId())) {
-                for (DetalleNotaCredito dnc : detalleNotaCreditoDAO.listarPorComprobante(nc.getId())) {
-                    acreditado.merge(dnc.getDetalleVenta().getId(), dnc.getCantidad(), Double::sum);
-                }
-            }
-        }
-        if (acreditado.isEmpty()) {
-            return;
-        }
-        Map<Integer, DetalleVenta> lineas = new HashMap<>();
-        for (DetalleVenta dv : detalleVentaDAO.listarPorVenta(idVenta)) {
-            lineas.put(dv.getId(), dv);
-        }
-        for (DetalleDespacho dd : detalleDespachoDAO.listarPorDespacho(idDespacho)) {
-            DetalleVenta dv = lineas.get(dd.getDetalleVenta().getId());
-            if (dv == null) {
-                continue;
-            }
-            double quedaEntregado = dv.getCantidadDespachada() - dd.getCantidadDespachada();
-            if (quedaEntregado + EPSILON < acreditado.getOrDefault(dv.getId(), 0.0)) {
-                throw new IllegalStateException("No se puede anular el despacho: la línea " + dv.getNumeroLinea()
-                        + " ya tiene devoluciones por nota de crédito. Primero anule la nota de crédito");
-            }
-        }
+        anulacionDespacho.anular(idDespacho, motivo, idAlmacenero);
     }
 
     @Override

@@ -28,6 +28,9 @@ public partial class VentaForm
     [SupplyParameterFromQuery(Name = "orden")] public int? IdOrdenInicial { get; set; }
     // a dónde volver (la lista con sus filtros o la página de la venta)
     [SupplyParameterFromQuery(Name = "volver")] public string? VolverQ { get; set; }
+    // RF014: retoma la venta con la autorización de descuento ya pedida (desde Mis solicitudes): ?solicitud=ID
+    [SupplyParameterFromQuery(Name = "solicitud")] public int? IdSolicitud { get; set; }
+    private SolicitudDatos? retomada;
 
     internal VentaDatos? venta;
     private List<Cliente> clientes = new();
@@ -148,6 +151,49 @@ public partial class VentaForm
             error = e.Message;
             venta ??= new VentaDatos { FechaEmision = DateOnly.FromDateTime(DateTime.Today) };
         }
+        if (IdSolicitud is int idSolicitud && venta is not null)
+        {
+            await RetomarAutorizacion(idSolicitud);
+        }
+    }
+
+    // RF014: vuelve a armar la venta tal como se pidió el descuento y sigue su autorización (no se pide otra vez)
+    private async Task RetomarAutorizacion(int idSolicitud)
+    {
+        try
+        {
+            var s = await Api.Get<SolicitudDatos>($"solicitudes/{idSolicitud}");
+            if (s is null || s.Operacion != TextosSeguridad.OperacionDescuento || string.IsNullOrEmpty(s.DatosOperacion) || s.Estado == "USADA")
+            {
+                error = "No se pudo retomar esa solicitud: prepare la venta otra vez.";
+                return;
+            }
+            var guardada = System.Text.Json.JsonSerializer.Deserialize<VentaDatos>(s.DatosOperacion,
+                new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+            if (guardada is null) return;
+            guardada.DatosOperacion = null;
+            venta = guardada;
+            desdeOrden = venta.IdOrden > 0;
+            if (desdeOrden)
+            {
+                ordenElegida = await Api.Get<OrdenDatos>($"ordenes/{venta.IdOrden}");
+                if (ordenElegida is not null && ordenesAbiertas.All(o => o.Id != ordenElegida.Id))
+                {
+                    ordenesAbiertas.Add(ordenElegida);
+                }
+            }
+            else if (clientes.All(c => c.Id != venta.IdCliente))
+            {
+                clientes.Add(new Cliente { Id = venta.IdCliente, TipoPersona = "JURIDICA", RazonSocial = venta.Cliente, NumeroDocumento = venta.DocumentoCliente ?? "" });
+            }
+            requiereAutorizacion = true;
+            retomada = s;
+            estadoAutorizacion = s.Estado;
+        }
+        catch (Exception e) when (e is ErrorApi or System.Text.Json.JsonException)
+        {
+            error = e.Message;
+        }
     }
 
     private void UsarOrden()
@@ -202,87 +248,4 @@ public partial class VentaForm
         var id = int.TryParse(e.Value?.ToString(), out var valor) ? valor : 0;
         await ElegirOrden(id);
     }
-
-    // GET /api/ordenes/{id}: el cliente y las líneas de la venta salen de la orden
-    private async Task ElegirOrden(int id)
-    {
-        venta!.IdOrden = id;
-        venta.Lineas.Clear();
-        ordenElegida = null;
-        if (id <= 0) return;
-        try
-        {
-            ordenElegida = await Api.Get<OrdenDatos>($"ordenes/{id}");
-            if (ordenElegida is null) return;
-            venta.IdCliente = ordenElegida.IdCliente;
-            venta.Cliente = ordenElegida.Cliente;
-            venta.DocumentoCliente = ordenElegida.DocumentoCliente;
-            venta.NumeroOrden = ordenElegida.Numero;
-            foreach (var lo in ordenElegida.Lineas)
-            {
-                // se propone lo que falta VENDER (pedido - ya vendido en ventas vigentes), el mismo limite del BO
-                var cantidad = lo.Cantidad - lo.CantidadVendida;
-                if (cantidad <= 0) continue;
-                venta.Lineas.Add(new LineaDatos
-                {
-                    IdProducto = lo.IdProducto,
-                    Producto = lo.Producto,
-                    CodigoProducto = lo.CodigoProducto,
-                    UnidadVenta = lo.UnidadVenta,
-                    Cantidad = cantidad,
-                    PrecioUnitario = lo.PrecioUnitario,
-                    // el descuento de la línea de la orden en proporción a la cantidad propuesta
-                    Descuento = lo.Cantidad > 0 ? Math.Round(lo.Descuento * cantidad / lo.Cantidad, 2) : 0,
-                    IdDetalleOrden = lo.IdLinea
-                });
-            }
-            AjustarCondicion();
-        }
-        catch (ErrorApi e)
-        {
-            error = e.Message;
-        }
-    }
-
-    private decimal CantidadEnOrden(LineaDatos l) =>
-        ordenElegida?.Lineas.FirstOrDefault(o => o.IdLinea == l.IdDetalleOrden)?.Cantidad ?? 0;
-
-    // Lo llama el BuscadorProducto con el producto elegido (venta directa). Si ya estaba, suma 1 a su cantidad.
-    private void AgregarProducto(Producto p)
-    {
-        stock[p.Id] = p.StockActual;
-        var existente = venta!.Lineas.FirstOrDefault(l => l.IdProducto == p.Id && l.IdDetalleOrden == 0);
-        if (existente is not null)
-        {
-            existente.Cantidad += 1;
-            return;
-        }
-        venta.Lineas.Add(new LineaDatos
-        {
-            IdProducto = p.Id,
-            Producto = p.Nombre,
-            CodigoProducto = p.CodigoInterno,
-            UnidadVenta = p.UnidadVenta,
-            Cantidad = 1,
-            PrecioUnitario = p.PrecioVenta,
-            Descuento = 0
-        });
-    }
-
-    private void Quitar(LineaDatos l) => venta!.Lineas.Remove(l);
-
-    // Avisos de una línea (cantidad y descuento) en una sola frase, para la fila de avisos de la tabla
-    private string? AvisoLinea(LineaDatos l)
-    {
-        var e = Errores();
-        var n = v.Clave(l);
-        var partes = new List<string>();
-        if (v.Error(n + "cantidad", e) is { } c) partes.Add("Cantidad: " + c);
-        if (v.Error(n + "descuento", e, n + "cantidad", n + "precio") is { } d) partes.Add("Descuento: " + d);
-        return partes.Count == 0 ? null : string.Join("  ·  ", partes);
-    }
-
-    // ---------------- Validación en pantalla (RNF004) ----------------
-    // Mismas reglas que VentaBOImpl. Lo que solo sabe el BO (stock disponible, deuda del cliente) sale en el aviso rojo.
-    internal readonly ValidacionEnVivo v = new();
 }

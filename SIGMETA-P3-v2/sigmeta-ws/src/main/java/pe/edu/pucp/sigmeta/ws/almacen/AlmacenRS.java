@@ -11,10 +11,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import pe.edu.pucp.sigmeta.bo.almacen.AlmacenConsultaBO;
 import pe.edu.pucp.sigmeta.bo.almacen.DespachoBO;
@@ -25,15 +22,7 @@ import pe.edu.pucp.sigmeta.boimpl.almacen.DespachoBOImpl;
 import pe.edu.pucp.sigmeta.boimpl.almacen.MovimientoInventarioBOImpl;
 import pe.edu.pucp.sigmeta.boimpl.almacen.RecepcionCompraBOImpl;
 import pe.edu.pucp.sigmeta.model.almacen.Despacho;
-import pe.edu.pucp.sigmeta.model.almacen.DetalleDespacho;
-import pe.edu.pucp.sigmeta.model.almacen.DetalleRecepcionCompra;
-import pe.edu.pucp.sigmeta.model.almacen.MovimientoInventario;
 import pe.edu.pucp.sigmeta.model.almacen.RecepcionCompra;
-import pe.edu.pucp.sigmeta.model.compras.Compra;
-import pe.edu.pucp.sigmeta.model.compras.DetalleCompra;
-import pe.edu.pucp.sigmeta.model.usuario.Usuario;
-import pe.edu.pucp.sigmeta.model.ventas.DetalleVenta;
-import pe.edu.pucp.sigmeta.model.ventas.Venta;
 import pe.edu.pucp.sigmeta.bo.usuario.UsuarioBO;
 import pe.edu.pucp.sigmeta.boimpl.usuario.UsuarioBOImpl;
 import pe.edu.pucp.sigmeta.model.enums.TipoRol;
@@ -111,30 +100,8 @@ public class AlmacenRS extends VentanillaBase {
             return error(Response.Status.BAD_REQUEST, "Faltan los datos de la recepción");
         }
         return ejecutar(ticket, Response.Status.CREATED, id -> {
-            RecepcionCompra recepcion = new RecepcionCompra();
-            Compra compra = new Compra();
-            compra.setId(datos.idCompra);
-            recepcion.setCompra(compra);
-            LocalDate fecha = Utilidades.leerFecha(datos.fecha, "fecha de recepción");
-            recepcion.setFechaRecepcion(fecha != null ? fecha : LocalDate.now());
-            recepcion.setObservaciones(datos.observaciones);
-            Usuario usuario = new Usuario();
-            usuario.setId(id); // el usuario de la sesion
-            recepcion.setUsuarioRegistro(usuario);
-            List<DetalleRecepcionCompra> detalles = new ArrayList<>();
-            for (LineaAlmacen l : datos.lineas) {
-                if (l == null || l.cantidad <= 0) {
-                    continue; // una linea en 0 significa "no llego nada de este producto"
-                }
-                DetalleRecepcionCompra d = new DetalleRecepcionCompra();
-                DetalleCompra linea = new DetalleCompra();
-                linea.setId(l.idLinea);
-                d.setDetalleCompra(linea);
-                d.setCantidadRecibida(l.cantidad);
-                detalles.add(d);
-            }
-            recepcion.setDetalles(detalles);
-            return resumen(recepcionBO.registrar(recepcion).getId());
+            RecepcionCompra recepcion = AlmacenConversion.aRecepcion(datos, id);
+            return AlmacenConversion.resumen(recepcionBO.registrar(recepcion).getId());
         });
     }
 
@@ -153,7 +120,7 @@ public class AlmacenRS extends VentanillaBase {
             // solo se corrigen las observaciones: el BO rechaza cualquier otro cambio
             actual.setObservaciones(datos.observaciones);
             recepcionBO.modificar(actual, id);
-            return resumen(idRecepcion);
+            return AlmacenConversion.resumen(idRecepcion);
         });
     }
 
@@ -216,26 +183,7 @@ public class AlmacenRS extends VentanillaBase {
             return error(Response.Status.BAD_REQUEST, "Faltan los datos del despacho");
         }
         return ejecutar(ticket, Response.Status.CREATED, id -> {
-            Despacho despacho = new Despacho();
-            Venta venta = new Venta();
-            venta.setId(datos.idVenta);
-            despacho.setVenta(venta);
-            despacho.setFechaDespacho(Utilidades.leerFecha(datos.fecha, "fecha de despacho"));
-            despacho.setDireccionEntrega(datos.direccionEntrega);
-            despacho.setTransportista(datos.transportista);
-            List<DetalleDespacho> detalles = new ArrayList<>();
-            for (LineaAlmacen l : datos.lineas) {
-                if (l == null || l.cantidad <= 0) {
-                    continue; // una linea en 0 no se despacha en esta guia
-                }
-                DetalleDespacho d = new DetalleDespacho();
-                DetalleVenta linea = new DetalleVenta();
-                linea.setId(l.idLinea);
-                d.setDetalleVenta(linea);
-                d.setCantidadDespachada(l.cantidad);
-                detalles.add(d);
-            }
-            despacho.setDetalles(detalles);
+            Despacho despacho = AlmacenConversion.aDespacho(datos);
             Despacho guardado = despachoBO.registrar(despacho, id);
             Map<String, Object> respuesta = new LinkedHashMap<>();
             respuesta.put("id", guardado.getId());
@@ -279,7 +227,7 @@ public class AlmacenRS extends VentanillaBase {
             return error(Response.Status.BAD_REQUEST, "Indique el producto y la cantidad contada");
         }
         return ejecutar(ticket, Response.Status.CREATED, id ->
-                movimiento(movimientoBO.registrarAjuste(datos.idProducto, id, datos.cantidadContada, datos.motivo)));
+                AlmacenConversion.movimiento(movimientoBO.registrarAjuste(datos.idProducto, id, datos.cantidadContada, datos.motivo)));
     }
 
     // RF012/RF014: pide la autorizacion de ESTE ajuste (mismo cuerpo que registrarlo); no mueve el stock
@@ -290,7 +238,8 @@ public class AlmacenRS extends VentanillaBase {
             return error(Response.Status.BAD_REQUEST, "Indique el producto y la cantidad contada");
         }
         return ejecutar(ticket, Response.Status.CREATED, id -> pe.edu.pucp.sigmeta.ws.seguridad.SolicitudRS.resumen(
-                movimientoBO.solicitarAjuste(datos.idProducto, id, datos.cantidadContada, datos.motivo)));
+                movimientoBO.solicitarAjuste(datos.idProducto, id, datos.cantidadContada, datos.motivo),
+                id, datos.datosOperacion));
     }
 
     // RF012/RF014: pide la autorizacion para revertir ESTE ajuste
@@ -308,7 +257,7 @@ public class AlmacenRS extends VentanillaBase {
     public Response revertirAjuste(@HeaderParam("ticket") String ticket, @PathParam("id") int idMovimiento,
                                    DocumentoAlmacen datos) {
         String motivo = datos == null ? null : datos.motivo;
-        return ejecutar(ticket, id -> movimiento(movimientoBO.revertirAjuste(idMovimiento, id, motivo)));
+        return ejecutar(ticket, id -> AlmacenConversion.movimiento(movimientoBO.revertirAjuste(idMovimiento, id, motivo)));
     }
 
     @PUT
@@ -316,50 +265,6 @@ public class AlmacenRS extends VentanillaBase {
     public Response modificarMotivo(@HeaderParam("ticket") String ticket, @PathParam("id") int idMovimiento,
                                     DocumentoAlmacen datos) {
         String motivo = datos == null ? null : datos.motivo;
-        return ejecutar(ticket, id -> movimiento(movimientoBO.modificarMotivo(idMovimiento, motivo, id)));
-    }
-
-    // ----- conversiones -----
-
-    private static Map<String, Object> resumen(int idRecepcion) {
-        Map<String, Object> respuesta = new LinkedHashMap<>();
-        respuesta.put("id", idRecepcion);
-        return respuesta;
-    }
-
-    private static Map<String, Object> movimiento(MovimientoInventario m) {
-        Map<String, Object> respuesta = new LinkedHashMap<>();
-        respuesta.put("id", m.getId());
-        respuesta.put("tipo", m.getTipo() != null ? m.getTipo().name() : null);
-        respuesta.put("cantidad", m.getCantidad());
-        respuesta.put("stockResultante", m.getStockResultante());
-        respuesta.put("motivo", m.getMotivo());
-        return respuesta;
-    }
-
-    // Recepcion, despacho o ajuste tal como lo manda Blazor. Cada operacion usa solo sus campos.
-    public static class DocumentoAlmacen {
-        public int idCompra;
-        public int idVenta;
-        public int idProducto;
-        public String fecha;                // AAAA-MM-DD; vacio = hoy
-        public String observaciones;
-        public String direccionEntrega;
-        public String transportista;
-        public String motivo;
-        public Double cantidadContada;      // ajuste por conteo fisico
-        public List<LineaAlmacen> lineas = new ArrayList<>();
-
-        public DocumentoAlmacen() {
-        }
-    }
-
-    // idLinea: id de la linea de compra (recepcion) o de la linea de venta (despacho)
-    public static class LineaAlmacen {
-        public int idLinea;
-        public double cantidad;
-
-        public LineaAlmacen() {
-        }
+        return ejecutar(ticket, id -> AlmacenConversion.movimiento(movimientoBO.modificarMotivo(idMovimiento, motivo, id)));
     }
 }

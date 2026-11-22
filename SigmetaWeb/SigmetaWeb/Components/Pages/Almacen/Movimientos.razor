@@ -2,6 +2,7 @@
 @* RF001: solo estos roles abren esta pantalla *@
 @attribute [Authorize(Roles = "Almacenero,Administrador")]
 @inject ApiJava Api
+@using SigmetaWeb.Components.Pages.Seguridad
 
 <PageTitle>Movimientos de almacén · SIGMETA</PageTitle>
 
@@ -62,6 +63,56 @@
         </div>
     </form>
 </div>
+
+@* RF014: ajustes por conteo que esperan (o ya tienen) la autorización del Administrador. Todavía no son
+   movimientos: se registran desde aquí con la misma autorización. GET /api/solicitudes/en-curso *@
+@if (porRegistrar.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-body pb-0">
+            <h2 class="h6 fw-semibold mb-0">Ajustes por registrar</h2>
+        </div>
+        <div class="table-responsive tabla-lista-contenedor">
+            <table class="table align-middle mb-0 tabla-lista">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th class="text-end">Contado</th>
+                        <th>Diferencia</th>
+                        <th>Motivo</th>
+                        <th>Autorización</th>
+                        <th><span class="visually-hidden">Acciones</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in porRegistrar)
+                    {
+                        <tr @key="s.Id">
+                            <td>
+                                <span class="fw-semibold">@s.Referencia</span>
+                                <div class="sub">Pedido @TextosSeguridad.Hace(s.FechaSolicitud)</div>
+                            </td>
+                            <td class="text-end text-nowrap">@Contado(s)</td>
+                            <td class="text-nowrap">@Diferencia(s)</td>
+                            <td class="small" style="max-width: 240px;">@s.Motivo</td>
+                            <td>
+                                <Estado Texto="@Ajuste.EstadoAjuste(s)" />
+                                @if (s.Vigente)
+                                {
+                                    <div class="sub">Hasta @Formato.FechaHora(s.FechaVencimiento)</div>
+                                }
+                            </td>
+                            <td class="acciones">
+                                <AccionesFila Principal="@PrincipalPorRegistrar(s)" Otras="@SecundariasPorRegistrar(s)"
+                                              Ocupado="@trabajando" AlElegir="Ejecutar" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
 
 @if (movimientos is null)
 {
@@ -126,130 +177,3 @@ else
     }
 }
 
-@code {
-    // UI/UX: una acción visible por fila y el resto en «⋯» (mismo patrón en todas las listas)
-    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
-    private List<AccionFila> AccionesMovimiento(MovimientoFila m)
-    {
-        var lista = new List<AccionFila>();
-        if (EsAdministrador) lista.Add(new("Corregir motivo", Hacer: () => { Pedir(m, "motivo"); return Task.CompletedTask; }));
-        if (EsAlmacenero && m.EsAjusteOriginal && m.Revertido == 0) lista.Add(new("Revertir", Hacer: () => { Pedir(m, "revertir"); return Task.CompletedTask; }, Peligro: true));
-        return lista;
-    }
-
-    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
-    private bool EsAlmacenero => Rol == "Almacenero";
-    private bool EsAdministrador => Rol == "Administrador";
-
-    [SupplyParameterFromQuery(Name = "guardado")] public string? Guardado { get; set; }
-    [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
-
-    private List<MovimientoFila>? movimientos;
-    private string tipo = "";
-    private string texto = "";
-    private DateTime? desde;
-    private DateTime? hasta;
-    private MovimientoFila? enAccion;
-    private string accion = "";
-    private string motivo = "";
-    private string? errorMotivo;
-    private bool cargando;
-    private string? error;
-    private string? exito;
-    private int paginaActual = 1;
-    private int tamanoPagina = 25;
-
-    private List<MovimientoFila> Filtrados => (movimientos ?? new())
-        .Where(m => string.IsNullOrWhiteSpace(texto)
-                    || m.CodigoInterno.Contains(texto.Trim(), StringComparison.OrdinalIgnoreCase)
-                    || m.Producto.Contains(texto.Trim(), StringComparison.OrdinalIgnoreCase))
-        .ToList();
-
-    private IEnumerable<MovimientoFila> Pagina => tamanoPagina == 0 ? Filtrados
-        : Filtrados.Skip((Math.Max(paginaActual, 1) - 1) * tamanoPagina).Take(tamanoPagina);
-
-    protected override async Task OnInitializedAsync()
-    {
-        await Buscar();
-        if (Guardado == "ajuste")
-        {
-            exito = $"Se registró el ajuste de inventario de {Referencia}.";
-        }
-    }
-
-    private async Task Buscar()
-    {
-        error = null;
-        if (desde is not null && hasta is not null && desde > hasta)
-        {
-            error = "La fecha de inicio no puede ser posterior a la fecha de fin.";
-            return;
-        }
-        cargando = true;
-        try
-        {
-            movimientos = await Api.Get<List<MovimientoFila>>(
-                $"almacen/kardex?desde={Formato.Iso(desde)}&hasta={Formato.Iso(hasta)}&tipo={tipo}") ?? new();
-            paginaActual = 1;
-        }
-        catch (ErrorApi e)
-        {
-            error = e.Message;
-            movimientos ??= new();
-        }
-        finally
-        {
-            cargando = false;
-        }
-    }
-
-    private void Pedir(MovimientoFila m, string cual)
-    {
-        error = exito = errorMotivo = null;
-        accion = cual;
-        motivo = cual == "motivo" ? (m.Motivo ?? "") : "";
-        enAccion = m;
-    }
-
-    private async Task Confirmar()
-    {
-        if (string.IsNullOrWhiteSpace(motivo))
-        {
-            errorMotivo = "El motivo es obligatorio.";
-            return;
-        }
-        var m = enAccion;
-        enAccion = null;
-        if (m is null) return;
-        try
-        {
-            if (accion == "revertir")
-            {
-                try
-                {
-                    await Api.Post<object>($"almacen/ajustes/{m.Id}/revertir", new { motivo = motivo.Trim() });
-                    exito = $"Se revirtió el ajuste de {m.CodigoInterno} · {m.Producto}.";
-                }
-                catch (ErrorApi e) when (e.Message.Contains("requiere autorización del Administrador"))
-                {
-                    // RF014: se pide la autorización de ESTA reversión; el Administrador ve el producto y el ajuste
-                    await Api.Post<object>($"almacen/ajustes/{m.Id}/revertir/solicitar", new { motivo = motivo.Trim() });
-                    exito = $"Se pidió la autorización para revertir el ajuste de {m.CodigoInterno}. Cuando el Administrador la apruebe, vuelve a pulsar Revertir.";
-                    return;
-                }
-            }
-            else
-            {
-                await Api.Put<object>($"almacen/movimientos/{m.Id}/motivo", new { motivo = motivo.Trim() });
-                exito = $"Se modificó el motivo del movimiento de {m.CodigoInterno} · {m.Producto}.";
-            }
-            var aviso = exito;
-            await Buscar();
-            exito = aviso;
-        }
-        catch (ErrorApi e)
-        {
-            error = e.Message;   // por ejemplo "La reversión del ajuste necesita una autorización vigente del Administrador"
-        }
-    }
-}

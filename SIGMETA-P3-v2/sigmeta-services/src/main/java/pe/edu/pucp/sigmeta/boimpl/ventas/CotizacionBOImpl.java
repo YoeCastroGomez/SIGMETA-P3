@@ -15,32 +15,25 @@ import pe.edu.pucp.sigmeta.daoimpl.ventas.CotizacionDAOImpl;
 import pe.edu.pucp.sigmeta.daoimpl.ventas.DetalleCotizacionDAOImpl;
 import pe.edu.pucp.sigmeta.model.enums.EstadoCotizacion;
 import pe.edu.pucp.sigmeta.model.enums.TipoRol;
-import pe.edu.pucp.sigmeta.model.producto.Producto;
-import pe.edu.pucp.sigmeta.model.socio.Cliente;
 import pe.edu.pucp.sigmeta.model.usuario.Usuario;
 import pe.edu.pucp.sigmeta.model.ventas.Cotizacion;
 import pe.edu.pucp.sigmeta.model.ventas.DetalleCotizacion;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
 
 public class CotizacionBOImpl implements CotizacionBO {
-
 
     private final CotizacionDAO cotizacionDAO;
     private final DetalleCotizacionDAO detalleCotizacionDAO;
     private final ProductoDAO productoDAO;
     private final ClienteDAO clienteDAO;
     private final UsuarioBO usuarioBO;
+    // partes de esta clase (mismo paquete)
+    private final CotizacionValidacion validacionCotizacion;
 
     public CotizacionBOImpl() {
         this.cotizacionDAO = new CotizacionDAOImpl();
@@ -48,6 +41,7 @@ public class CotizacionBOImpl implements CotizacionBO {
         this.productoDAO = new ProductoDAOImpl();
         this.clienteDAO = new ClienteDAOImpl();
         this.usuarioBO = new UsuarioBOImpl();
+        this.validacionCotizacion = new CotizacionValidacion(detalleCotizacionDAO, productoDAO, clienteDAO);
     }
 
     @Override
@@ -79,11 +73,11 @@ public class CotizacionBOImpl implements CotizacionBO {
     @Override
     public Cotizacion registrar(Cotizacion cotizacion, int idResponsable) throws SQLException {
         Usuario responsable = verificarPermiso(idResponsable);
-        validarCabecera(cotizacion);
+        validacionCotizacion.validarCabecera(cotizacion);
         // RF007: una cotizacion nueva no se emite con fecha pasada (la vigencia ya no puede ser anterior a hoy)
-        validarEmisionNoPasada(cotizacion.getFechaEmision());
-        validarDetalles(cotizacion.getDetalles());
-        verificarClienteActivo(cotizacion.getCliente().getId());
+        validacionCotizacion.validarEmisionNoPasada(cotizacion.getFechaEmision());
+        validacionCotizacion.validarDetalles(cotizacion.getDetalles());
+        validacionCotizacion.verificarClienteActivo(cotizacion.getCliente().getId());
 
         cotizacion.setEstado(EstadoCotizacion.REGISTRADA);
         cotizacion.setAnulado(false);
@@ -92,11 +86,11 @@ public class CotizacionBOImpl implements CotizacionBO {
         cotizacion.setUsuarioRegistro(responsable);
         cotizacion.setFechaRegistro(LocalDateTime.now());
         return Transaccion.ejecutar(() -> {
-            verificarProductosActivos(cotizacion.getDetalles());
+            validacionCotizacion.verificarProductosActivos(cotizacion.getDetalles());
             cotizacion.setNumero(siguienteNumero(cotizacion.getFechaEmision()));
-            calcularTotales(cotizacion);
+            validacionCotizacion.calcularTotales(cotizacion);
             cotizacionDAO.save(cotizacion);
-            guardarDetalles(cotizacion);
+            validacionCotizacion.guardarDetalles(cotizacion);
             return cotizacion;
         });
     }
@@ -105,9 +99,9 @@ public class CotizacionBOImpl implements CotizacionBO {
     @Override
     public Cotizacion modificar(Cotizacion cotizacion, int idResponsable) throws SQLException {
         verificarPermiso(idResponsable);
-        validarCabecera(cotizacion);
-        validarDetalles(cotizacion.getDetalles());
-        verificarClienteActivo(cotizacion.getCliente().getId());
+        validacionCotizacion.validarCabecera(cotizacion);
+        validacionCotizacion.validarDetalles(cotizacion.getDetalles());
+        validacionCotizacion.verificarClienteActivo(cotizacion.getCliente().getId());
         return Transaccion.ejecutar(() -> {
             Cotizacion actual = obtenerExistente(cotizacion.getId());
             if (actual.isAnulado() || actual.getEstado() != EstadoCotizacion.REGISTRADA) {
@@ -116,22 +110,22 @@ public class CotizacionBOImpl implements CotizacionBO {
             // RF007: si se cambia la fecha de emision, no a una fecha pasada (la ya registrada se puede conservar);
             // y la cotizacion que se modifica tiene que seguir vigente
             if (!cotizacion.getFechaEmision().equals(actual.getFechaEmision())) {
-                validarEmisionNoPasada(cotizacion.getFechaEmision());
+                validacionCotizacion.validarEmisionNoPasada(cotizacion.getFechaEmision());
             }
             if (cotizacion.getFechaVigencia().isBefore(LocalDate.now())) {
                 throw new IllegalArgumentException("La fecha de vigencia no puede ser anterior a hoy");
             }
-            verificarProductosActivos(cotizacion.getDetalles());
+            validacionCotizacion.verificarProductosActivos(cotizacion.getDetalles());
             // los datos de auditoria y el estado no se cambian desde la edicion
             cotizacion.setNumero(actual.getNumero());
             cotizacion.setEstado(actual.getEstado());
             cotizacion.setAnulado(false);
             cotizacion.setUsuarioRegistro(actual.getUsuarioRegistro());
             cotizacion.setFechaRegistro(actual.getFechaRegistro());
-            calcularTotales(cotizacion);
+            validacionCotizacion.calcularTotales(cotizacion);
 
             cotizacionDAO.update(cotizacion);
-            reemplazarDetalles(cotizacion);
+            validacionCotizacion.reemplazarDetalles(cotizacion);
             return cotizacion;
         });
     }
@@ -269,137 +263,5 @@ public class CotizacionBOImpl implements CotizacionBO {
             throw new IllegalArgumentException("No existe la cotización con id " + idCotizacion);
         }
         return cotizacion;
-    }
-
-    // RF003: un cliente desactivado no puede seleccionarse en nuevos documentos
-    private void verificarClienteActivo(int idCliente) throws SQLException {
-        Cliente cliente = clienteDAO.load(idCliente);
-        if (cliente == null || !cliente.isEstado()) {
-            throw new IllegalArgumentException("El cliente " + idCliente + " no existe o está desactivado");
-        }
-    }
-
-    private void verificarProductosActivos(List<DetalleCotizacion> detalles) throws SQLException {
-        for (DetalleCotizacion detalle : detalles) {
-            // RF005: un producto desactivado no puede usarse en documentos nuevos
-            Producto producto = productoDAO.load(detalle.getProducto().getId());
-            if (producto == null || !producto.isEstado()) {
-                throw new IllegalArgumentException("El producto " + detalle.getProducto().getId()
-                        + " no existe o está desactivado");
-            }
-            // RF005: el precio de lista lo fija el Administrador. Se cotiza siempre al precio de venta vigente del
-            // producto, no al que mande la pantalla; el Vendedor solo ajusta con descuento.
-            detalle.setPrecioUnitario(producto.getPrecioVenta());
-            UnidadesVenta.validarCantidad(producto, detalle.getCantidad(), detalle.getNumeroLinea());
-            // RF005: no se cotiza por debajo del costo (precio efectivo = precio unitario menos el descuento
-            // repartido por unidad). Una venta bajo el costo solo sale con autorizacion (ver VentaBOImpl)
-            if (detalle.getCantidad() > 0) {
-                double efectivo = (detalle.getCantidad() * detalle.getPrecioUnitario() - detalle.getDescuento())
-                        / detalle.getCantidad();
-                // el precio incluye IGV y el costo no: se comparan ambos sin IGV (PreciosIgv)
-                if (PreciosIgv.sinIgv(efectivo) + 0.00005 < producto.getCostoUnitario()) {
-                    throw new IllegalArgumentException(String.format(java.util.Locale.ROOT,
-                            "La línea %d (%s) queda en S/ %.2f por unidad sin IGV, por debajo de su costo (S/ %.2f). Reduzca el descuento",
-                            detalle.getNumeroLinea(), producto.getNombre(), PreciosIgv.sinIgv(efectivo), producto.getCostoUnitario()));
-                }
-            }
-        }
-    }
-
-    // RNF002: las lineas que siguen se actualizan en su lugar (conservan su id) y las nuevas se insertan.
-    // detalle_cotizacion no tiene columna de baja logica: una linea quitada solo puede borrarse fisicamente,
-    // y eso se permite unicamente mientras la cotizacion esta REGISTRADA (borrador).
-    private void reemplazarDetalles(Cotizacion cotizacion) throws SQLException {
-        Map<Integer, DetalleCotizacion> anteriores = new HashMap<>();
-        for (DetalleCotizacion anterior : detalleCotizacionDAO.listar_por_cotizacion(cotizacion.getId())) {
-            anteriores.put(anterior.getNumeroLinea(), anterior);
-        }
-        for (DetalleCotizacion detalle : cotizacion.getDetalles()) {
-            detalle.setCotizacion(cotizacion);
-            DetalleCotizacion anterior = anteriores.remove(detalle.getNumeroLinea());
-            if (anterior != null) {
-                detalle.setId(anterior.getId());
-                detalleCotizacionDAO.update(detalle);
-            } else {
-                detalleCotizacionDAO.save(detalle);
-            }
-        }
-        for (DetalleCotizacion quitada : anteriores.values()) {
-            detalleCotizacionDAO.remove(quitada);
-        }
-    }
-
-    private void guardarDetalles(Cotizacion cotizacion) throws SQLException {
-        for (DetalleCotizacion detalle : cotizacion.getDetalles()) {
-            detalle.setCotizacion(cotizacion);
-            detalleCotizacionDAO.save(detalle);
-        }
-    }
-
-    // RF007: valor de venta, IGV y total se calculan aqui (precios con IGV incluido, ver PreciosIgv);
-    // no se confia en los que manda la interfaz
-    private void calcularTotales(Cotizacion cotizacion) {
-        BigDecimal subTotal = BigDecimal.ZERO;
-        for (DetalleCotizacion detalle : cotizacion.getDetalles()) {
-            BigDecimal bruto = BigDecimal.valueOf(detalle.getCantidad())
-                    .multiply(BigDecimal.valueOf(detalle.getPrecioUnitario()));
-            BigDecimal importe = bruto.subtract(BigDecimal.valueOf(detalle.getDescuento()))
-                    .setScale(2, RoundingMode.HALF_UP);
-            if (importe.signum() < 0) {
-                throw new IllegalArgumentException("El descuento de la línea " + detalle.getNumeroLinea()
-                        + " supera el importe de la línea");
-            }
-            detalle.setImporte(importe.doubleValue());
-            subTotal = subTotal.add(importe);
-        }
-        // los precios incluyen IGV: el total es la suma de los importes y se desglosa en valor de venta + IGV
-        BigDecimal total = subTotal;
-        cotizacion.setSubTotal(PreciosIgv.valorVenta(total).doubleValue());
-        cotizacion.setIgv(PreciosIgv.igv(total).doubleValue());
-        cotizacion.setTotal(total.doubleValue());
-    }
-
-    private void validarCabecera(Cotizacion cotizacion) {
-        Validador.obligatorio(cotizacion, "cotización");
-        Validador.obligatorio(cotizacion.getCliente(), "cliente");
-        Validador.obligatorio(cotizacion.getFechaEmision(), "fecha de emisión");
-        Validador.obligatorio(cotizacion.getFechaVigencia(), "fecha de vigencia");
-        // RF007: los importes de la cotizacion se expresan en soles
-        if (cotizacion.getNumero() != null && !cotizacion.getNumero().isBlank()) {
-            cotizacion.setNumero(Validador.textoObligatorio(cotizacion.getNumero(), "número", 20));
-        }
-        cotizacion.setObservaciones(Validador.textoOpcional(cotizacion.getObservaciones(), "observaciones", 255));
-        if (cotizacion.getFechaVigencia().isBefore(cotizacion.getFechaEmision())) {
-            throw new IllegalArgumentException("La fecha de vigencia no puede ser anterior a la fecha de emisión");
-        }
-    }
-
-    private void validarEmisionNoPasada(LocalDate fechaEmision) {
-        if (fechaEmision.isBefore(LocalDate.now())) {
-            throw new IllegalArgumentException("La fecha de emisión no puede ser anterior a hoy");
-        }
-    }
-
-    private void validarDetalles(List<DetalleCotizacion> detalles) {
-        if (detalles == null || detalles.isEmpty()) {
-            throw new IllegalArgumentException("La cotización debe tener al menos un detalle");
-        }
-        Set<Integer> lineas = new HashSet<>();
-        for (DetalleCotizacion detalle : detalles) {
-            Validador.obligatorio(detalle, "detalle de cotización");
-            Validador.obligatorio(detalle.getProducto(), "producto");
-            if (detalle.getNumeroLinea() <= 0 || !lineas.add(detalle.getNumeroLinea())) {
-                throw new IllegalArgumentException("Los números de línea deben ser positivos y únicos");
-            }
-            if (!Double.isFinite(detalle.getCantidad())
-                    || !Double.isFinite(detalle.getPrecioUnitario())
-                    || !Double.isFinite(detalle.getDescuento())
-                    || detalle.getCantidad() <= 0
-                    || detalle.getPrecioUnitario() <= 0
-                    || detalle.getDescuento() < 0) {
-                throw new IllegalArgumentException("La línea " + detalle.getNumeroLinea()
-                        + " debe tener cantidad y precio mayores a 0 y descuento no negativo");
-            }
-        }
     }
 }

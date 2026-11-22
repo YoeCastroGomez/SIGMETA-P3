@@ -5,18 +5,19 @@
 @inject NavigationManager Nav
 @using SigmetaWeb.Components.Pages.Seguridad
 
-<PageTitle>Ajuste por conteo físico · SIGMETA</PageTitle>
+<PageTitle>@Titulo · SIGMETA</PageTitle>
 
 @* RF012 y RF014 · Ajuste de inventario por conteo físico (Almacenero con autorización del Administrador).
-   GET /api/almacen/existencias · POST /api/almacen/ajustes/solicitar (autorización de ESTE ajuste: el Administrador
-   ve el producto, el stock, lo contado y la diferencia) · POST /api/almacen/ajustes (con la autorización aprobada).
-   Se escribe lo que se contó; el sistema calcula la diferencia y registra el movimiento. *@
-<Encabezado Rf="RF012" Titulo="Ajuste por conteo físico"
-            Subtitulo="Escribe lo que contaste en el almacén. El sistema registra la diferencia como sobrante o faltante.">
-
+     1 Preparar: producto (se busca por código, nombre o categoría), cantidad contada y motivo.
+     2 Autorización: POST /api/almacen/ajustes/solicitar con ESTE ajuste, más datosOperacion (la pantalla en JSON)
+       para retomarlo con /almacen/ajuste?solicitud=ID. El ajuste queda en Movimientos como «por registrar».
+     3 Registrar: con la autorización aprobada, POST /api/almacen/ajustes (el BO la consume: queda USADA).
+   GET /api/almacen/existencias · GET /api/solicitudes/en-curso?operacion=AJUSTE_INVENTARIO *@
+<Encabezado Rf="RF012" Titulo="@Titulo">
+    <a class="btn btn-outline-secondary" href="/almacen/movimientos">Volver</a>
 </Encabezado>
 
-<AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+<Notificacion Mensaje="@error" Error="true" Segundos="8" AlCerrar="() => error = null" />
 
 @if (!cargado)
 {
@@ -24,158 +25,199 @@
 }
 else
 {
-    <div class="card card-body mb-3" style="max-width: 820px;">
-        @* RF014: mientras la autorización espera o está aprobada, el ajuste no se cambia (se autorizó lo que se mandó) *@
-        <fieldset disabled="@Bloqueado" style="min-width: 0;">
-        <Campo Etiqueta="Producto" Id="producto" Obligatorio="true" Error="@E("producto")">
-            <select id="producto" class="form-select @Invalido("producto")" @bind="idProducto">
-                <option value="0">Elige un producto</option>
-                @foreach (var p in existencias)
-                {
-                    <option value="@p.Id">@p.CodigoInterno · @p.Nombre</option>
-                }
-            </select>
-        </Campo>
+    <PasosDocumento Pasos="@Pasos" Titulo="Pasos del ajuste" />
 
-        @if (Producto is not null)
-        {
-            <div class="row g-3 mb-3">
-                <div class="col-sm-4">
-                    <div class="border rounded p-3 h-100">
-                        <div class="small text-muted">Stock en el sistema</div>
-                        <div class="h4 fw-bold mb-0">@Formato.Cantidad(Producto.StockActual) <span class="small text-muted fw-normal">@TextosAlmacen.Unidad(Producto.UnidadVenta)</span></div>
-                    </div>
+    <div class="row g-3">
+        <div class="col-lg-8">
+            @* -------- 1. Producto contado -------- *@
+            <div class="card card-body mb-3">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                    <h2 class="h6 fw-semibold mb-0"><span class="numero-paso">1</span> Producto contado</h2>
+                    @if (Producto is not null && !Bloqueado && retomada is null)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CambiarProducto">Cambiar</button>
+                    }
                 </div>
-                <div class="col-sm-4">
-                    <div class="border rounded p-3 h-100">
-                        <div class="small text-muted">Contado</div>
-                        <div class="h4 fw-bold mb-0">@(contado is null ? "—" : Formato.Cantidad(contado))</div>
+
+                @if (Producto is null)
+                {
+                    <Campo Etiqueta="Buscar el producto" Id="buscarProducto" Error="@E("producto")" Clase="mb-2">
+                        <input id="buscarProducto" type="search" class="form-control @Invalido("producto")" maxlength="60" autocomplete="off"
+                               placeholder="Código, nombre o categoría"
+                               @bind="buscar" @bind:event="oninput" @onkeydown="AlTeclear" />
+                    </Campo>
+                    <div class="d-flex flex-wrap gap-2 mb-2" role="group" aria-label="Filtrar productos">
+                        @foreach (var (valor, texto) in Filtros)
+                        {
+                            <button type="button" class="btn btn-sm @(filtro == valor ? "btn-dark" : "btn-outline-secondary")"
+                                    aria-pressed="@(filtro == valor ? "true" : "false")" @onclick="() => filtro = valor">
+                                @texto <span class="opacity-75">@Cuantos(valor)</span>
+                            </button>
+                        }
                     </div>
-                </div>
-                <div class="col-sm-4">
-                    <div class="border rounded p-3 h-100">
-                        <div class="small text-muted">Diferencia</div>
-                        @if (Diferencia is null)
+
+                    var encontrados = Encontrados;
+                    if (existencias.Count == 0)
+                    {
+                        <p class="small text-muted mb-0">No hay productos activos.</p>
+                    }
+                    else if (encontrados.Count == 0)
+                    {
+                        <p class="small text-muted mb-0">@SinResultados</p>
+                    }
+                    else
+                    {
+                        <div class="lista-productos" role="listbox" aria-label="Productos">
+                            @foreach (var p in encontrados.Take(MaximoVisibles))
+                            {
+                                <button type="button" class="opcion-producto" role="option" @key="p.Id" @onclick="() => Elegir(p.Id)">
+                                    <span class="col-codigo">
+                                        <span class="numero">@p.CodigoInterno</span>
+                                        <span class="sub">@(p.Categoria ?? "Sin categoría")</span>
+                                    </span>
+                                    <span class="col-nombre fw-semibold">@p.Nombre</span>
+                                    <span class="col-stock">
+                                        <span class="cifra">@Formato.Cantidad(p.StockActual) <span class="sub d-inline">@TextosAlmacen.Unidad(p.UnidadVenta)</span></span>
+                                        <span class="sub">Mín. @Formato.Cantidad(p.StockMinimo)</span>
+                                    </span>
+                                    <span class="col-estado">
+                                        @if (EnCursoDe(p.Id) is { } tramite)
+                                        {
+                                            <Estado Texto="@EstadoAjuste(tramite)" />
+                                        }
+                                        else if (p.Situacion != "Normal")
+                                        {
+                                            <Estado Texto="@p.Situacion" />
+                                        }
+                                    </span>
+                                </button>
+                            }
+                        </div>
+                        @if (encontrados.Count > MaximoVisibles)
                         {
-                            <div class="h4 fw-bold mb-0">—</div>
+                            <div class="small text-muted mt-2">@MaximoVisibles de @encontrados.Count</div>
                         }
-                        else if (Math.Abs(Diferencia.Value) < 0.0005)
-                        {
-                            <div class="h4 fw-bold mb-0">0</div>
-                            <div class="small text-muted">Coincide: no hay ajuste</div>
-                        }
-                        else
-                        {
-                            <div class="h4 fw-bold mb-0 @(Diferencia > 0 ? "text-success-emphasis" : "text-danger-emphasis")">
-                                @(Diferencia > 0 ? "+" : "−")@Formato.Cantidad(Math.Abs(Diferencia.Value))
-                            </div>
-                            <div class="small text-muted">@(Diferencia > 0 ? "Sobrante: ingresa al stock" : "Faltante: sale del stock")
-                                · @Formato.Soles(Math.Abs(Diferencia.Value) * Producto.CostoUnitario) al costo</div>
-                        }
+                    }
+                }
+                else
+                {
+                    <div class="producto-elegido">
+                        <div>
+                            <div class="small text-muted">Código</div>
+                            <div class="numero fs-5">@Producto.CodigoInterno</div>
+                            <div class="small text-muted">@(Producto.Categoria ?? "Sin categoría")</div>
+                        </div>
+                        <div class="nombre">
+                            <div class="small text-muted">Producto</div>
+                            <div class="fw-semibold">@Producto.Nombre</div>
+                            @if (Producto.Situacion != "Normal")
+                            {
+                                <Estado Texto="@Producto.Situacion" />
+                            }
+                        </div>
+                        <div class="text-end">
+                            <div class="small text-muted">Costo unitario</div>
+                            <div class="fw-semibold">@Formato.Soles(Producto.CostoUnitario)</div>
+                        </div>
+                    </div>
+                    @if (retomada is null && EnCursoDe(Producto.Id) is { } otro)
+                    {
+                        <div class="alert alert-warning small mt-3 mb-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <span>Este producto ya tiene un ajuste <strong>@EstadoAjuste(otro).ToLowerInvariant()</strong>
+                                (contado: @Formato.Cantidad(LeerDatos(otro)?.CantidadContada)).</span>
+                            <a class="btn btn-sm btn-outline-secondary" href="@($"/almacen/ajuste?solicitud={otro.Id}")">Continuar ese ajuste</a>
+                        </div>
+                    }
+                }
+            </div>
+
+            @* -------- 2. Cantidad contada -------- *@
+            <div class="card card-body mb-3">
+                <h2 class="h6 fw-semibold mb-2"><span class="numero-paso">2</span> Cantidad contada</h2>
+                <div class="row g-3 align-items-stretch">
+                    <Campo Etiqueta="Contado" Id="contado" Obligatorio="true" Error="@E("contado")" Clase="col-sm-4">
+                        <div class="input-group">
+                            <input id="contado" type="number" min="0" step="any" class="form-control @Invalido("contado")"
+                                   @bind="contado" @bind:event="oninput" disabled="@(Bloqueado || Producto is null)" />
+                            @if (Producto is not null)
+                            {
+                                <span class="input-group-text">@TextosAlmacen.Unidad(Producto.UnidadVenta)</span>
+                            }
+                        </div>
+                    </Campo>
+                    <div class="col-sm-4">
+                        <div class="cuadro">
+                            <div class="small text-muted">Stock en el sistema</div>
+                            <div class="h4 fw-bold mb-0">@(Producto is null ? "—" : Formato.Cantidad(Producto.StockActual))</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="cuadro">
+                            <div class="small text-muted">Diferencia</div>
+                            @if (Diferencia is null)
+                            {
+                                <div class="h4 fw-bold mb-0">—</div>
+                            }
+                            else if (!HayDiferencia)
+                            {
+                                <div class="h4 fw-bold mb-0">0</div>
+                                <div class="small text-muted">Coincide: no hay ajuste</div>
+                            }
+                            else
+                            {
+                                <div class="h4 fw-bold mb-0 @(Diferencia > 0 ? "text-success-emphasis" : "text-danger-emphasis")">
+                                    @(Diferencia > 0 ? "+" : "−")@Formato.Cantidad(Math.Abs(Diferencia.Value))
+                                </div>
+                                <div class="small text-muted">@(Diferencia > 0 ? "Sobrante: ingresa al stock" : "Faltante: sale del stock")</div>
+                            }
+                        </div>
                     </div>
                 </div>
             </div>
-        }
 
-        <div class="row">
-            <Campo Etiqueta="Cantidad contada" Id="contado" Obligatorio="true" Error="@E("contado")" Clase="col-md-4 mb-3"
-                   Ayuda="Lo que hay físicamente en el almacén.">
-                <input id="contado" type="number" min="0" step="any" class="form-control @Invalido("contado")" @bind="contado" @bind:event="oninput" />
-            </Campo>
-            <Campo Etiqueta="Motivo" Id="motivo" Obligatorio="true" Error="@E("motivo")" Clase="col-md-8 mb-3"
-                   Ayuda="Causa de la diferencia: merma, rotura, error de conteo anterior, etc.">
-                <input id="motivo" class="form-control @Invalido("motivo")" maxlength="255" @bind="motivo" @bind:event="oninput" />
-            </Campo>
+            @* -------- 3. Motivo -------- *@
+            <div class="card card-body mb-3">
+                <h2 class="h6 fw-semibold mb-2"><span class="numero-paso">3</span> Motivo de la diferencia</h2>
+                <Campo Etiqueta="Motivo" Id="motivo" Obligatorio="true" Error="@E("motivo")">
+                    <input id="motivo" class="form-control @Invalido("motivo")" maxlength="@LargoMotivo"
+                           @bind="motivo" @bind:event="oninput" disabled="@Bloqueado" />
+                </Campo>
+                @if (!Bloqueado)
+                {
+                    <div class="d-flex flex-wrap gap-2" aria-label="Motivos frecuentes">
+                        @foreach (var m in Motivos)
+                        {
+                            <button type="button" class="btn btn-sm @(EsMotivo(m) ? "btn-dark" : "btn-outline-secondary")" @onclick="() => ElegirMotivo(m)">@m</button>
+                        }
+                    </div>
+                }
+            </div>
         </div>
 
-        </fieldset>
+        <div class="col-lg-4">
+            <ResumenTotal Etiqueta="Valor del ajuste al costo" Total="@((decimal)Valor)" Numero="@Producto?.CodigoInterno"
+                          EstadoTexto="@EstadoTexto" Detalle="@TextoDiferencia">
+                @if (Faltan.Count > 0 && !Bloqueado)
+                {
+                    <ul class="lista-pendientes list-unstyled small mb-0" aria-label="Lo que falta">
+                        @foreach (var f in Faltan)
+                        {
+                            <li class="falta"><span class="marca" aria-hidden="true">•</span><span>@f</span></li>
+                        }
+                    </ul>
+                }
 
-        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 border-top pt-3 mt-2">
-            <span class="small text-muted"><span class="text-danger">*</span> Campo obligatorio</span>
-            <div class="d-flex flex-wrap gap-2 align-items-start">
-                <a class="btn btn-outline-secondary" href="/almacen/movimientos">Cancelar</a>
-                <div style="width: 16rem;">
-                    <PedirAutorizacion Solicitar="Solicitar" Listo="@(Errores().Count == 0)"
-                                       EstadoChanged="e => estadoAutorizacion = e" AlError="m => error = m">
-                        <button class="btn btn-primary w-100" disabled="@guardando" @onclick="Guardar">Registrar ajuste</button>
-                    </PedirAutorizacion>
-                </div>
-            </div>
+                <PedirAutorizacion Listo="@(Errores().Count == 0)" Solicitar="Solicitar" Retomar="@retomada" Volver="/almacen/movimientos"
+                                   EstadoChanged="AlCambiarAutorizacion" AlError="m => error = m">
+                    <BotonCondicionado Texto="Registrar ajuste" TextoOcupado="Registrando..." Bloque="true" Clase="btn-primary w-100"
+                                       Ocupado="@guardando" AlHacerClic="Guardar" />
+                </PedirAutorizacion>
+                @if (estadoAutorizacion is null)
+                {
+                    <a class="btn btn-outline-secondary w-100" href="/almacen/movimientos">Cancelar</a>
+                }
+            </ResumenTotal>
         </div>
     </div>
 }
 
-@code {
-    private List<ExistenciaFila> existencias = new();
-    private string? estadoAutorizacion;     // RF014: null, PENDIENTE, APROBADA, RECHAZADA o VENCIDA
-    private int idProducto;
-    private double? contado;
-    private string motivo = "";
-    private bool cargado;
-    private bool intento;
-    private bool guardando;
-    private string? error;
-
-    private bool Bloqueado => estadoAutorizacion is "PENDIENTE" or "APROBADA";
-    private ExistenciaFila? Producto => existencias.FirstOrDefault(p => p.Id == idProducto);
-    private double? Diferencia => Producto is null || contado is null ? null : contado - Producto.StockActual;
-
-    // mismas reglas que MovimientoInventarioBOImpl.registrarAjuste
-    private Dictionary<string, string> Errores()
-    {
-        var e = new Dictionary<string, string>();
-        if (Producto is null) e["producto"] = "Elige el producto que contaste.";
-        if (contado is null) e["contado"] = "Escribe la cantidad contada.";
-        else if (contado < 0) e["contado"] = "La cantidad contada no puede ser negativa.";
-        else if (Diferencia is not null && Math.Abs(Diferencia.Value) < 0.0005) e["contado"] = "Coincide con el stock del sistema: no hay nada que ajustar.";
-        if (string.IsNullOrWhiteSpace(motivo)) e["motivo"] = "El motivo es obligatorio.";
-        return e;
-    }
-
-    private string? E(string campo) => intento && Errores().TryGetValue(campo, out var m) ? m : null;
-    private string Invalido(string campo) => E(campo) is null ? "" : "is-invalid";
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            existencias = await Api.Get<List<ExistenciaFila>>("almacen/existencias") ?? new();
-        }
-        catch (ErrorApi e)
-        {
-            error = e.Message;
-        }
-        cargado = true;
-    }
-
-    // RF014: pide la autorización de ESTE ajuste (mismo cuerpo que registrarlo)
-    private Task<SolicitudDatos?> Solicitar()
-    {
-        intento = true;
-        error = null;
-        return Api.Post<SolicitudDatos>("almacen/ajustes/solicitar", Cuerpo());
-    }
-
-    private object Cuerpo() => new { idProducto, cantidadContada = contado, motivo = motivo.Trim() };
-
-    private async Task Guardar()
-    {
-        intento = true;
-        error = null;
-        if (Errores().Count > 0) return;
-        guardando = true;
-        try
-        {
-            await Api.Post<object>("almacen/ajustes", Cuerpo());
-            Nav.NavigateTo(AvisoGuardado.Ruta("/almacen/movimientos", "ajuste", $"{Producto!.CodigoInterno} · {Producto.Nombre}"));
-        }
-        catch (ErrorApi e)
-        {
-            error = e.Message;
-        }
-        finally
-        {
-            guardando = false;
-        }
-    }
-}

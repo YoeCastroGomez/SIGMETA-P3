@@ -8,9 +8,12 @@
 @* RF014 · Solicitudes de todos los usuarios, vista del Administrador.
    PATRÓN UX (ver Shared/ComponentesFlujo.cs): chips por estado con su cantidad; si hay pendientes la pantalla
    abre en "Pendientes" y siempre van primero, porque son lo único que el Administrador tiene que hacer aquí.
+   Estados: Pendiente → Aprobada o Rechazada → Usada (se completó la operación) o Vencida (pasó su vigencia o
+   se revocó). Cancelada = la retiró su propio solicitante.
    GET /api/solicitudes (?estado=PENDIENTE) · POST /api/solicitudes/{id}/anular para revocar una aprobada. *@
-<Encabezado Rf="RF014" Titulo="Solicitudes de autorización"
-            Subtitulo="Cada autorización sirve para la operación que se pidió y una sola vez." />
+<Encabezado Rf="RF014" Titulo="Solicitudes de autorización">
+    <button class="btn btn-outline-secondary" @onclick="Cargar" disabled="@cargando">@(cargando ? "Actualizando..." : "Actualizar")</button>
+</Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 <SiguientePaso Mensaje="@exito" Detalle="@exitoDetalle" AlCerrar="() => exito = null" />
@@ -22,36 +25,40 @@
     <p class="small text-muted mb-0">Quedará vencida y el usuario ya no podrá usarla.</p>
 </Confirmacion>
 
+@* Indicadores: lo que hay que resolver primero y cómo terminan las autorizaciones *@
 <div class="row g-3 mb-3">
-    <div class="col-sm-4">
-        <div class="card card-body h-100">
+    <div class="col-sm-6 col-lg-3">
+        <button type="button" class="card card-body h-100 w-100 text-start indicador" @onclick="@(() => CambiarEstado("PENDIENTE"))">
             <div class="small text-muted">Pendientes de resolver</div>
             <div class="h4 fw-bold mb-0 @(Pendientes > 0 ? "text-warning-emphasis" : "")">@Pendientes</div>
-        </div>
+        </button>
     </div>
-    <div class="col-sm-4">
-        <div class="card card-body h-100">
-            <div class="small text-muted">Aprobadas vigentes</div>
+    <div class="col-sm-6 col-lg-3">
+        <button type="button" class="card card-body h-100 w-100 text-start indicador" @onclick="@(() => CambiarEstado("APROBADA"))">
+            <div class="small text-muted">Aprobadas sin usar</div>
             <div class="h4 fw-bold mb-0">@Vigentes</div>
-        </div>
+        </button>
     </div>
-    <div class="col-sm-4">
-        <div class="card card-body h-100">
+    <div class="col-sm-6 col-lg-3">
+        <button type="button" class="card card-body h-100 w-100 text-start indicador" @onclick="@(() => CambiarEstado("USADA"))">
+            <div class="small text-muted">Usadas</div>
+            <div class="h4 fw-bold mb-0">@CuantasEn("USADA")</div>
+        </button>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <button type="button" class="card card-body h-100 w-100 text-start indicador" @onclick="@(() => CambiarEstado(""))">
             <div class="small text-muted">Total registradas</div>
             <div class="h4 fw-bold mb-0">@(solicitudes?.Count ?? 0)</div>
-        </div>
+        </button>
     </div>
 </div>
 
 <div class="card card-body mb-3">
     <div class="row g-3 align-items-end sigmeta-filtros">
-        <Campo Etiqueta="Buscar" Id="fTexto" Clase="col-sm-8 col-md">
-            <input id="fTexto" type="search" class="form-control" maxlength="60" placeholder="Usuario, operación o comprobante"
+        <Campo Etiqueta="Buscar" Id="fTexto" Clase="col-12">
+            <input id="fTexto" type="search" class="form-control" maxlength="60" placeholder="Usuario, operación, comprobante, cliente o motivo"
                    @bind="filtroTexto" @bind:event="oninput" @bind:after="AlFiltrar" />
         </Campo>
-        <div class="col-auto">
-            <button class="btn btn-outline-secondary" @onclick="Cargar" disabled="@cargando">@(cargando ? "Actualizando..." : "Actualizar")</button>
-        </div>
     </div>
     <div class="mt-3">
         <ChipsFiltro Opciones="@Chips" Seleccionado="@filtroEstado" SeleccionadoChanged="CambiarEstado" />
@@ -65,16 +72,16 @@
 else
 {
     <div class="card mb-3">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+        <div class="table-responsive tabla-lista-contenedor">
+            <table class="table table-hover align-middle mb-0 tabla-lista tabla-solicitudes">
+                <thead>
                     <tr>
-                        <th>Solicitante</th>
                         <th>Operación</th>
+                        <th>Solicitante</th>
                         <th>Qué se autoriza</th>
-                        <th>Fecha</th>
+                        <th>Pedida</th>
                         <th>Estado</th>
-                        <th class="text-end">Acciones</th>
+                        <th><span class="visually-hidden">Acciones</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -82,31 +89,47 @@ else
                     {
                         <tr>
                             <td colspan="6">
-                                <ListaVacia Titulo="@(filtroEstado == "PENDIENTE" ? "No hay solicitudes pendientes: nada por resolver." : "No hay solicitudes con ese filtro.")" />
+                                <ListaVacia Titulo="@(filtroEstado == "PENDIENTE" ? "No hay solicitudes pendientes." : "No hay solicitudes con ese filtro.")" />
                             </td>
                         </tr>
                     }
                     @foreach (var s in Pagina)
                     {
-                        <tr>
-                            <td><strong>@s.Solicitante</strong><div class="small text-muted">@TextosSeguridad.Texto(s.RolSolicitante)</div></td>
-                            <td>@TextosSeguridad.Texto(s.Operacion)</td>
-                            <td style="max-width: 320px;">
+                        <tr @key="s.Id" class="@(s.Estado == "PENDIENTE" ? "por-resolver" : null)">
+                            <td class="col-operacion">
+                                <span class="fw-semibold">@TextosSeguridad.Texto(s.Operacion)</span>
                                 @if (!string.IsNullOrEmpty(s.Referencia))
                                 {
-                                    <strong>@s.Referencia</strong>
+                                    <div class="sub">@s.Referencia</div>
                                 }
-                                <div class="small text-muted">@s.Motivo</div>
                             </td>
-                            <td class="text-nowrap">@Formato.FechaHora(s.FechaSolicitud)</td>
-                            <td>
-                                <Estado Texto="@TextosSeguridad.Texto(s.Estado)" />
+                            <td class="text-nowrap">
+                                @(s.NombreSolicitante ?? s.Solicitante)
+                                <div class="sub">@s.Solicitante · @TextosSeguridad.Texto(s.RolSolicitante)</div>
+                            </td>
+                            <td class="col-autoriza">
+                                @if (Resumen(s) is { Length: > 0 } dato)
+                                {
+                                    <div class="dato">@dato</div>
+                                }
+                                <div class="sub motivo" title="@s.Motivo">@s.Motivo</div>
+                            </td>
+                            <td class="text-nowrap">
+                                @Formato.FechaHora(s.FechaSolicitud)
+                                <div class="sub @(s.Estado == "PENDIENTE" ? "espera" : null)">@TextosSeguridad.Hace(s.FechaSolicitud)</div>
+                            </td>
+                            <td class="text-nowrap">
+                                <Estado Texto="@TextosSeguridad.TextoEstado(s)" />
                                 @if (s.Vigente)
                                 {
-                                    <div class="small text-muted">hasta @Formato.FechaHora(s.FechaVencimiento)</div>
+                                    <div class="sub">Hasta @Formato.FechaHora(s.FechaVencimiento)</div>
+                                }
+                                else if (s.Estado is "RECHAZADA" or "USADA" or "VENCIDA" && !string.IsNullOrEmpty(s.Administrador))
+                                {
+                                    <div class="sub">@s.Administrador</div>
                                 }
                             </td>
-                            <td class="text-end">
+                            <td class="acciones">
                                 @if (s.Estado == "PENDIENTE")
                                 {
                                     <AccionesFila Principal="@(new AccionFila("Resolver", Ruta: $"/autorizaciones/aprobar/{s.Id}"))" AlElegir="Ejecutar" />
@@ -149,12 +172,26 @@ else
     private int Vigentes => solicitudes?.Count(s => s.Vigente) ?? 0;
 
     private List<SolicitudDatos> PorTexto => (solicitudes ?? new())
-        .Where(s => Busqueda.Coincide(filtroTexto, s.Solicitante, s.NombreSolicitante, TextosSeguridad.Texto(s.Operacion), s.Referencia))
+        .Where(s => Busqueda.Coincide(filtroTexto, s.Solicitante, s.NombreSolicitante, TextosSeguridad.Texto(s.Operacion),
+            s.Referencia, s.Motivo, s.Detalle))
         .ToList();
+
+    private int CuantasEn(string clave) => solicitudes?.Count(s => TextosSeguridad.ClaveEstado(s) == clave) ?? 0;
+
+    // el dato que más pesa de lo que se autoriza (la diferencia de un ajuste, el total de una nota o venta);
+    // el producto o el comprobante ya van debajo de la operación
+    private static string Resumen(SolicitudDatos s)
+    {
+        var datos = TextosSeguridad.LeerDetalle(s.Detalle).Where(d => d.Clave is not null && d.Valor is not null).ToList();
+        var dato = datos.FirstOrDefault(d => d.Clave!.StartsWith("Diferencia"))
+                   ?? datos.FirstOrDefault(d => d.Clave!.StartsWith("Total"))
+                   ?? datos.FirstOrDefault(d => d.Clave!.StartsWith("Cliente"));
+        return dato is null ? "" : $"{dato.Clave}: {dato.Valor}";
+    }
 
     // las pendientes primero (son lo que hay que resolver), luego las más recientes
     private List<SolicitudDatos> Filtradas => PorTexto
-        .Where(s => filtroEstado == "" || s.Estado == filtroEstado)
+        .Where(s => filtroEstado == "" || TextosSeguridad.ClaveEstado(s) == filtroEstado)
         .OrderByDescending(s => s.Estado == "PENDIENTE").ThenByDescending(s => s.FechaSolicitud)
         .ToList();
 
@@ -163,14 +200,16 @@ else
         get
         {
             var base_ = PorTexto;
-            int Cuantas(string e) => base_.Count(s => s.Estado == e);
+            int Cuantas(string e) => base_.Count(s => TextosSeguridad.ClaveEstado(s) == e);
             return new List<OpcionChip>
             {
                 new("", "Todas", base_.Count),
                 new("PENDIENTE", "Pendientes", Cuantas("PENDIENTE"), "ambar"),
                 new("APROBADA", "Aprobadas", Cuantas("APROBADA"), "verde"),
                 new("RECHAZADA", "Rechazadas", Cuantas("RECHAZADA"), "rojo"),
-                new("VENCIDA", "Vencidas o usadas", Cuantas("VENCIDA"))
+                new("USADA", "Usadas", Cuantas("USADA")),
+                new("VENCIDA", "Vencidas", Cuantas("VENCIDA"), "rojo"),
+                new("CANCELADA", "Canceladas", Cuantas("CANCELADA"))
             };
         }
     }
@@ -195,7 +234,6 @@ else
             "rechazada" => $"Se rechazó la solicitud de {Referencia}.",
             _ => null
         };
-        exitoDetalle = Guardado == "aprobada" ? "El solicitante ya puede completar esa operación dentro de la vigencia." : null;
         // si hay algo por resolver, se abre directo en las pendientes
         if (Pendientes > 0)
         {

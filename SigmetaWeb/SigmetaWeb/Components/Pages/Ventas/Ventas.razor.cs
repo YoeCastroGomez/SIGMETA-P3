@@ -1,5 +1,6 @@
 // Código de la página Ventas (parte 1 de 1). La vista está en Ventas.razor: es la misma clase (partial).
 using SigmetaWeb.Components.Pages.Clientes;
+using SigmetaWeb.Components.Pages.Seguridad;
 
 namespace SigmetaWeb.Components.Pages.Ventas;
 
@@ -148,6 +149,76 @@ public partial class Ventas
             error = e.Message;
             ventas ??= new();
         }
+        await CargarPorRegistrar();
+    }
+
+    // ---------------- RF014: ventas nuevas que esperan la autorización del descuento ----------------
+
+    private sealed record PorRegistrar(SolicitudDatos Solicitud, string Cliente, decimal Total);
+    private List<PorRegistrar> porRegistrar = new();
+
+    private async Task CargarPorRegistrar()
+    {
+        if (Rol != "Vendedor") return;
+        try
+        {
+            var enCurso = await Api.Get<List<SolicitudDatos>>($"solicitudes/en-curso?operacion={TextosSeguridad.OperacionDescuento}") ?? new();
+            var opciones = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web);
+            porRegistrar = new();
+            foreach (var s in enCurso)
+            {
+                VentaDatos? v = null;
+                try { v = System.Text.Json.JsonSerializer.Deserialize<VentaDatos>(s.DatosOperacion!, opciones); }
+                catch (System.Text.Json.JsonException) { }
+                if (v is null || v.Id > 0) continue;   // las ediciones ya están en la lista de ventas
+                var cliente = v.Cliente ?? clientes.FirstOrDefault(c => c.Id == v.IdCliente)?.NombreMostrado ?? "—";
+                porRegistrar.Add(new PorRegistrar(s, cliente, TextosVentas.Total(v.Lineas)));
+            }
+        }
+        catch (ErrorApi)
+        {
+            porRegistrar = new();
+        }
+    }
+
+    private static string TextoAutorizacion(SolicitudDatos s) => s.Estado switch
+    {
+        "PENDIENTE" => "Solicitada",
+        "APROBADA" => "Autorizada",
+        _ => TextosSeguridad.TextoEstado(s)
+    };
+
+    private static AccionFila PrincipalPorRegistrar(SolicitudDatos s) => s.Estado switch
+    {
+        "APROBADA" => new("Registrar", Ruta: $"/ventas/nueva?solicitud={s.Id}"),
+        "PENDIENTE" => new("Continuar", Ruta: $"/ventas/nueva?solicitud={s.Id}", Destacada: false),
+        _ => new("Corregir", Ruta: $"/ventas/nueva?solicitud={s.Id}", Destacada: false)
+    };
+
+    private List<AccionFila> SecundariasPorRegistrar(SolicitudDatos s) => new()
+    {
+        new("Ver solicitud", Ruta: $"/autorizaciones/detalle/{s.Id}"),
+        new("Descartar", Hacer: () => Descartar(s), Peligro: true)
+    };
+
+    // POST /api/solicitudes/{id}/descartar: la venta ya no se registrará
+    private async Task Descartar(SolicitudDatos s)
+    {
+        trabajando = true;
+        try
+        {
+            await Api.Post<object>($"solicitudes/{s.Id}/descartar", null);
+            exito = "Se descartó la venta por registrar.";
+            await CargarPorRegistrar();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        finally
+        {
+            trabajando = false;
+        }
     }
 
     private void SincronizarUrl()
@@ -191,49 +262,5 @@ public partial class Ventas
     {
         paginaActual = pagina;
         SincronizarUrl();
-    }
-
-    private async Task Limpiar()
-    {
-        var recargar = filtroCliente > 0;
-        filtroCliente = 0;
-        situacion = "";
-        busqueda = "";
-        paginaActual = 1;
-        if (recargar) await Cargar();
-        SincronizarUrl();
-    }
-
-    // ---------------- Anular (RF008) ----------------
-
-    private Task AbrirAnulacion(VentaDatos v)
-    {
-        error = null;
-        exito = null;
-        anulando = v;
-        return Task.CompletedTask;
-    }
-
-    // POST /api/ventas/{id}/anular {"motivo": ...}
-    private async Task ConfirmarAnulacion(string motivo)
-    {
-        if (anulando is null) return;
-        trabajando = true;
-        try
-        {
-            await Api.Post<object>($"ventas/{anulando.Id}/anular", new AnulacionDatos { Motivo = motivo });
-            exito = $"Se anuló la venta {anulando.Numero}.";
-            anulando = null;
-            await Cargar();
-        }
-        catch (ErrorApi e)
-        {
-            anulando = null;
-            error = e.Message;   // por ejemplo "No se puede anular una venta con comprobantes vigentes"
-        }
-        finally
-        {
-            trabajando = false;
-        }
     }
 }

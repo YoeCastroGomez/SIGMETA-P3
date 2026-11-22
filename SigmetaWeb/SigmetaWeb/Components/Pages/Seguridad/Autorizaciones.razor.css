@@ -1,0 +1,16 @@
+/* RF014: los indicadores filtran la lista al hacer clic */
+.indicador { cursor: pointer; color: inherit; font: inherit; }
+.indicador:hover, .indicador:focus-visible { border-color: var(--color-accent); }
+
+/* RF014: lista de solicitudes. Las pendientes se marcan con el color del tema (son lo que hay que resolver) */
+.tabla-solicitudes tr.por-resolver td:first-child { box-shadow: inset 3px 0 0 var(--color-accent); }
+.tabla-solicitudes .col-operacion { min-width: 12rem; }
+.tabla-solicitudes .col-autoriza { max-width: 22rem; }
+.tabla-solicitudes .dato { font-weight: 600; }
+.tabla-solicitudes .motivo {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.tabla-solicitudes .sub.espera { color: var(--bs-warning-text-emphasis); }

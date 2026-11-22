@@ -2,21 +2,14 @@
 package pe.edu.pucp.sigmeta.daoimpl.almacen;
 
 import pe.edu.pucp.sigmeta.dao.almacen.MovimientoInventarioDAO;
-import pe.edu.pucp.sigmeta.model.almacen.Despacho;
 import pe.edu.pucp.sigmeta.model.almacen.MovimientoInventario;
-import pe.edu.pucp.sigmeta.model.almacen.RecepcionCompra;
 import pe.edu.pucp.sigmeta.model.enums.TipoMovimientoInventario;
-import pe.edu.pucp.sigmeta.model.producto.Producto;
-import pe.edu.pucp.sigmeta.model.usuario.Usuario;
-import pe.edu.pucp.sigmeta.model.ventas.Comprobante;
 import pe.edu.pucp.sigmeta.transaction.transactionContext;
 
 import java.sql.CallableStatement;
 import java.sql.Connection;
-import java.sql.Statement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
@@ -84,7 +77,7 @@ public class MovimientoInventarioDAOImpl implements MovimientoInventarioDAO {
 
             try (ResultSet rs = cs.executeQuery()) {
                 if (rs.next()) {
-                    return mapearMovimiento(rs);
+                    return MovimientoInventarioMapeo.mapearMovimiento(rs);
                 }
             }
         }
@@ -116,7 +109,6 @@ public class MovimientoInventarioDAOImpl implements MovimientoInventarioDAO {
         }
     }
 
-
     @Override
     public List<MovimientoInventario> listAll() throws SQLException {
         String sql = "{CALL sp_movimiento_inventario_listar()}";
@@ -128,7 +120,7 @@ public class MovimientoInventarioDAOImpl implements MovimientoInventarioDAO {
              ResultSet rs = cs.executeQuery()) {
 
             while (rs.next()) {
-                movimientos.add(mapearMovimiento(rs));
+                movimientos.add(MovimientoInventarioMapeo.mapearMovimiento(rs));
             }
         }
 
@@ -144,7 +136,7 @@ public class MovimientoInventarioDAOImpl implements MovimientoInventarioDAO {
             ps.setInt(1, idProducto);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    movimientos.add(mapearMovimiento(rs));
+                    movimientos.add(MovimientoInventarioMapeo.mapearMovimiento(rs));
                 }
             }
         }
@@ -158,7 +150,7 @@ public class MovimientoInventarioDAOImpl implements MovimientoInventarioDAO {
         try (CallableStatement ps = conn.prepareCall(sql)) {
             ps.setInt(1, idMovimiento);
             try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? mapearMovimiento(rs) : null;
+                return rs.next() ? MovimientoInventarioMapeo.mapearMovimiento(rs) : null;
             }
         }
     }
@@ -226,7 +218,7 @@ public class MovimientoInventarioDAOImpl implements MovimientoInventarioDAO {
         try (CallableStatement cs = transactionContext.getConnection().prepareCall(sql)) {
             cs.setInt(1, idComprobante);
             try (ResultSet rs = cs.executeQuery()) {
-                while (rs.next()) movimientos.add(mapearMovimiento(rs));
+                while (rs.next()) movimientos.add(MovimientoInventarioMapeo.mapearMovimiento(rs));
             }
         }
         return movimientos;
@@ -260,65 +252,11 @@ public class MovimientoInventarioDAOImpl implements MovimientoInventarioDAO {
         try (CallableStatement ps = conn.prepareCall(sql)) {
             ps.setInt(1, idRecepcion);
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) lista.add(mapearMovimiento(rs));
+                while (rs.next()) lista.add(MovimientoInventarioMapeo.mapearMovimiento(rs));
             }
         }
         return lista;
     }
 
-    private MovimientoInventario mapearMovimiento(ResultSet rs)
-            throws SQLException {
-
-        MovimientoInventario movimiento = new MovimientoInventario();
-
-        movimiento.setId(rs.getInt("id"));
-
-        movimiento.setTipo(
-                TipoMovimientoInventario.valueOf(rs.getString("tipo"))
-        );
-
-        Timestamp fechaMovimiento = rs.getTimestamp("fecha_movimiento");
-        if (fechaMovimiento != null) {
-            movimiento.setFechaMovimiento(fechaMovimiento.toLocalDateTime());
-        }
-
-        movimiento.setCantidad(rs.getDouble("cantidad"));
-        movimiento.setStockResultante(rs.getDouble("stock_resultante"));
-        movimiento.setMotivo(rs.getString("motivo"));
-        movimiento.setCantidadContada(rs.getDouble("cantidad_contada"));
-        int idOriginal = rs.getInt("id_movimiento_revertido");
-        if (!rs.wasNull()) movimiento.setIdMovimientoRevertido(idOriginal);
-
-        Producto producto = new Producto();
-        producto.setId(rs.getInt("id_producto"));
-        movimiento.setProducto(producto);
-
-        int idRecepcion = rs.getInt("id_recepcion_compra");
-        if (!rs.wasNull()) {
-            RecepcionCompra recepcion = new RecepcionCompra();
-            recepcion.setId(idRecepcion);
-            movimiento.setRecepcionCompra(recepcion);
-        }
-
-        int idDespacho = rs.getInt("id_despacho");
-        if (!rs.wasNull()) {
-            Despacho despacho = new Despacho();
-            despacho.setId(idDespacho);
-            movimiento.setDespacho(despacho);
-        }
-
-        int idComprobante = rs.getInt("id_comprobante");
-        if (!rs.wasNull()) {
-            Comprobante comprobante = new Comprobante();
-            comprobante.setId(idComprobante);
-            movimiento.setComprobante(comprobante);
-        }
-
-        Usuario usuario = new Usuario();
-        usuario.setId(rs.getInt("id_usuario_registro"));
-        movimiento.setUsuarioRegistro(usuario);
-
-        return movimiento;
-    }
 }
 

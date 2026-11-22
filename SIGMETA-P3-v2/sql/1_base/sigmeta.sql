@@ -80,7 +80,8 @@ CREATE TABLE solicitud_autorizacion (
                                         operacion_restringida     VARCHAR(60)  NOT NULL,
                                         motivo                    VARCHAR(200),
                                         fecha_solicitud           DATETIME NOT NULL,
-                                        estado                    ENUM('PENDIENTE','APROBADA','RECHAZADA','VENCIDA') NOT NULL,
+                                        -- RF014: USADA = se consumio en la operacion autorizada; VENCIDA = paso su vigencia o se revoco
+                                        estado                    ENUM('PENDIENTE','APROBADA','RECHAZADA','VENCIDA','USADA') NOT NULL,
                                         fecha_resolucion          DATETIME,
                                         vigencia_minutos          INT NOT NULL DEFAULT 0,
                                         fecha_vencimiento         DATETIME,
@@ -88,6 +89,8 @@ CREATE TABLE solicitud_autorizacion (
                                         referencia                VARCHAR(80),
                                         detalle                   VARCHAR(1000),
                                         huella                    CHAR(64),
+                                        -- RF014: datos de la pantalla (JSON) para retomar la operacion; NULL si se descarto
+                                        datos_operacion           TEXT,
                                         CONSTRAINT fk_solicitud_autorizacion_solicitante
                                             FOREIGN KEY (id_solicitante)   REFERENCES usuario(id),
                                         CONSTRAINT fk_solicitud_autorizacion_administrador

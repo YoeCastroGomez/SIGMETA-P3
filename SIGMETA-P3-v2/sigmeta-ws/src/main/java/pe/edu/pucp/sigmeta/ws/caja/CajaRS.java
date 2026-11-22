@@ -1,7 +1,6 @@
 package pe.edu.pucp.sigmeta.ws.caja;
 
 import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
@@ -11,11 +10,8 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
 import pe.edu.pucp.sigmeta.bo.caja.CajaBO;
 import pe.edu.pucp.sigmeta.bo.caja.MovimientoCajaBO;
 import pe.edu.pucp.sigmeta.boimpl.caja.CajaBOImpl;
@@ -26,7 +22,6 @@ import pe.edu.pucp.sigmeta.model.caja.CierreCaja;
 import pe.edu.pucp.sigmeta.model.caja.MovimientoCaja;
 import pe.edu.pucp.sigmeta.model.enums.MedioPago;
 import pe.edu.pucp.sigmeta.model.enums.TipoMovimientoCaja;
-import pe.edu.pucp.sigmeta.model.ventas.Comprobante;
 import pe.edu.pucp.sigmeta.model.ventas.Venta;
 import pe.edu.pucp.sigmeta.ws.base.VentanillaBase;
 
@@ -60,7 +55,7 @@ public class CajaRS extends VentanillaBase {
             Utilidades.permitirCajeroOAdministrador(id);
             List<CajaDatos> lista = new ArrayList<>();
             for (Caja caja : cajaBO.listarTodasConUsuario()) {
-                lista.add(convertir(caja));
+                lista.add(CajaConversion.convertir(caja));
             }
             return lista;
         });
@@ -72,7 +67,7 @@ public class CajaRS extends VentanillaBase {
         return ejecutar(ticket, id -> {
             Utilidades.permitirCajeroOAdministrador(id);
             Caja caja = cajaBO.obtenerCajaAbiertaPorUsuario(id);
-            return caja == null ? null : conResumen(caja); // null = 204: el cajero no tiene caja abierta
+            return caja == null ? null : CajaConversion.conResumen(cajaBO, caja); // null = 204: el cajero no tiene caja abierta
         });
     }
 
@@ -82,7 +77,7 @@ public class CajaRS extends VentanillaBase {
         Response respuesta = ejecutar(ticket, id -> {
             Utilidades.permitirCajeroOAdministrador(id);
             Caja caja = cajaBO.obtenerPorId(idCaja);
-            return caja == null ? null : conResumen(caja);
+            return caja == null ? null : CajaConversion.conResumen(cajaBO, caja);
         });
         if (respuesta.getStatus() == Response.Status.NO_CONTENT.getStatusCode()) {
             return error(Response.Status.NOT_FOUND, "No existe la caja con id " + idCaja);
@@ -98,7 +93,7 @@ public class CajaRS extends VentanillaBase {
         return ejecutar(ticket, Response.Status.CREATED, id -> {
             Caja caja = new Caja();
             caja.setMontoInicial(datos.montoInicial);
-            return conResumen(cajaBO.abrirCaja(caja, id));
+            return CajaConversion.conResumen(cajaBO, cajaBO.abrirCaja(caja, id));
         });
     }
 
@@ -117,7 +112,7 @@ public class CajaRS extends VentanillaBase {
             }
             List<MovimientoDatos> lista = new ArrayList<>();
             for (MovimientoCaja m : movimientos) {
-                MovimientoDatos d = convertir(m);
+                MovimientoDatos d = CajaConversion.convertir(m);
                 d.anulado = anulados.contains(m.getId());
                 lista.add(d);
             }
@@ -133,8 +128,8 @@ public class CajaRS extends VentanillaBase {
             return error(Response.Status.BAD_REQUEST, "Faltan los datos del movimiento");
         }
         return ejecutar(ticket, Response.Status.CREATED, id -> {
-            MovimientoCaja movimiento = aMovimiento(datos, idCaja);
-            return convertir(movimientoCajaBO.registrarMovimiento(movimiento, id));
+            MovimientoCaja movimiento = CajaConversion.aMovimiento(datos, idCaja);
+            return CajaConversion.convertir(movimientoCajaBO.registrarMovimiento(movimiento, id));
         });
     }
 
@@ -146,9 +141,9 @@ public class CajaRS extends VentanillaBase {
             return error(Response.Status.BAD_REQUEST, "Faltan los datos del movimiento");
         }
         return ejecutar(ticket, id -> {
-            MovimientoCaja movimiento = aMovimiento(datos, idCaja);
+            MovimientoCaja movimiento = CajaConversion.aMovimiento(datos, idCaja);
             movimiento.setId(idMovimiento);
-            return convertir(movimientoCajaBO.modificar(movimiento, id));
+            return CajaConversion.convertir(movimientoCajaBO.modificar(movimiento, id));
         });
     }
 
@@ -157,7 +152,7 @@ public class CajaRS extends VentanillaBase {
     @Path("{id}/movimientos/{idMovimiento}/anular")
     public Response anularMovimiento(@HeaderParam("ticket") String ticket, @PathParam("id") int idCaja,
                                      @PathParam("idMovimiento") int idMovimiento) {
-        return ejecutar(ticket, id -> convertir(movimientoCajaBO.anular(idMovimiento, id)));
+        return ejecutar(ticket, id -> CajaConversion.convertir(movimientoCajaBO.anular(idMovimiento, id)));
     }
 
     @GET
@@ -175,7 +170,7 @@ public class CajaRS extends VentanillaBase {
                     d.cliente = v.getCliente().getNombreMostrado();
                     d.documentoCliente = v.getCliente().getNumeroDocumento();
                 }
-                d.comprobante = comprobante(v);
+                d.comprobante = CajaConversion.comprobante(v);
                 d.total = v.getTotal();
                 lista.add(d);
             }
@@ -201,7 +196,7 @@ public class CajaRS extends VentanillaBase {
             movimiento.setDocumentoOrigen(CompensacionCaja.DOCUMENTO_VENTA);
             movimiento.setIdDocumentoOrigen(datos.idVenta);
             // el monto lo pone el BO con el total de la venta
-            return convertir(movimientoCajaBO.registrarMovimiento(movimiento, id));
+            return CajaConversion.convertir(movimientoCajaBO.registrarMovimiento(movimiento, id));
         });
     }
 
@@ -219,89 +214,5 @@ public class CajaRS extends VentanillaBase {
             cierre.setMontoDeclarado(datos.montoDeclarado);
             return CierreRS.convertir(cajaBO.cerrarCaja(cierre, id));
         });
-    }
-
-    // ----- conversiones entre las clases del modelo y lo que viaja en JSON -----
-
-    private MovimientoCaja aMovimiento(MovimientoDatos datos, int idCaja) {
-        MovimientoCaja movimiento = new MovimientoCaja();
-        Caja caja = new Caja();
-        caja.setId(idCaja);
-        movimiento.setCaja(caja);
-        movimiento.setTipo(Utilidades.leerEnum(TipoMovimientoCaja.class, datos.tipo, "tipo de movimiento"));
-        movimiento.setMedioPago(Utilidades.leerEnum(MedioPago.class, datos.medioPago, "medio de pago"));
-        movimiento.setMonto(datos.monto);
-        movimiento.setConcepto(datos.concepto);
-        return movimiento;
-    }
-
-    static CajaDatos convertir(Caja caja) {
-        CajaDatos d = new CajaDatos();
-        d.id = caja.getId();
-        d.fechaApertura = Utilidades.fechaHora(caja.getFechaApertura());
-        d.montoInicial = caja.getMontoInicial();
-        d.usuarioApertura = Utilidades.usuario(caja.getUsuarioApertura());
-        d.abierta = caja.isAbierta();
-        return d;
-    }
-
-    // RF010: resumen de la jornada con los movimientos de la caja
-    private CajaDatos conResumen(Caja caja) throws SQLException {
-        CajaDatos d = convertir(caja);
-        Map<MedioPago, CajaDatos.TotalMedioPago> porMedio = new EnumMap<>(MedioPago.class);
-        for (MovimientoCaja m : cajaBO.listarMovimientosPorCaja(caja.getId())) {
-            boolean egreso = m.getTipo() == TipoMovimientoCaja.EGRESO_MANUAL;
-            switch (m.getTipo()) {
-                case COBRO_CONTADO -> d.totalCobrosContado += m.getMonto();
-                case COBRO_CREDITO -> d.totalCobrosCredito += m.getMonto();
-                case INGRESO_MANUAL -> d.totalIngresosManuales += m.getMonto();
-                case EGRESO_MANUAL -> {
-                    if (m.getDocumentoOrigen() == null) {
-                        d.totalEgresosManuales += m.getMonto();
-                    } else {
-                        d.totalDevoluciones += m.getMonto();
-                    }
-                }
-            }
-            CajaDatos.TotalMedioPago t = porMedio.computeIfAbsent(m.getMedioPago(), k -> {
-                CajaDatos.TotalMedioPago nuevo = new CajaDatos.TotalMedioPago();
-                nuevo.medioPago = k.name();
-                return nuevo;
-            });
-            if (egreso) {
-                t.egresos += m.getMonto();
-            } else {
-                t.ingresos += m.getMonto();
-            }
-            t.neto = t.ingresos - t.egresos;
-        }
-        d.porMedioPago = new ArrayList<>(porMedio.values());
-        d.montoEsperado = cajaBO.calcularMontoCalculado(caja.getId());
-        return d;
-    }
-
-    static MovimientoDatos convertir(MovimientoCaja m) {
-        MovimientoDatos d = new MovimientoDatos();
-        d.id = m.getId();
-        d.idCaja = m.getCaja() != null ? m.getCaja().getId() : 0;
-        d.tipo = m.getTipo() != null ? m.getTipo().name() : null;
-        d.fechaMovimiento = Utilidades.fechaHora(m.getFechaMovimiento());
-        d.medioPago = m.getMedioPago() != null ? m.getMedioPago().name() : null;
-        d.monto = m.getMonto();
-        d.concepto = m.getConcepto();
-        d.documentoOrigen = m.getDocumentoOrigen();
-        d.idDocumentoOrigen = m.getIdDocumentoOrigen();
-        d.usuarioRegistro = Utilidades.usuario(m.getUsuarioRegistro());
-        d.manual = (m.getTipo() == TipoMovimientoCaja.INGRESO_MANUAL || m.getTipo() == TipoMovimientoCaja.EGRESO_MANUAL)
-                && m.getDocumentoOrigen() == null;
-        return d;
-    }
-
-    private static String comprobante(Venta venta) {
-        if (venta.getComprobantes() == null || venta.getComprobantes().isEmpty()) {
-            return null;
-        }
-        Comprobante c = venta.getComprobantes().get(0);
-        return c.getSerie() + "-" + c.getNumero();
     }
 }

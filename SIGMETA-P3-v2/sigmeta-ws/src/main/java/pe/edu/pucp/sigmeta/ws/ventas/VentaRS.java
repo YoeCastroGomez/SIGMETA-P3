@@ -26,7 +26,6 @@ import pe.edu.pucp.sigmeta.boimpl.ventas.OrdenCompraClienteBOImpl;
 import pe.edu.pucp.sigmeta.boimpl.ventas.VentaBOImpl;
 import pe.edu.pucp.sigmeta.model.enums.CondicionPago;
 import pe.edu.pucp.sigmeta.model.enums.EstadoComprobante;
-import pe.edu.pucp.sigmeta.model.enums.EstadoVenta;
 import pe.edu.pucp.sigmeta.model.enums.TipoComprobante;
 import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.model.producto.Producto;
@@ -83,7 +82,7 @@ public class VentaRS extends VentanillaBase {
             Nombres nombres = new Nombres();
             List<VentaDatos> lista = new ArrayList<>();
             for (Venta v : ventas) {
-                VentaDatos d = convertir(v, nombres, comprobantes, numerosOrden, false);
+                VentaDatos d = VentaConversion.convertir(v, nombres, comprobantes, numerosOrden, false);
                 d.cobradaContado = cobradas.contains(v.getId());
                 lista.add(d);
             }
@@ -143,6 +142,23 @@ public class VentaRS extends VentanillaBase {
         });
     }
 
+    // RF005/RF014: lineas que quedan bajo el costo mientras se arma la venta (mismo cuerpo que registrar o modificar).
+    // [{"numeroLinea": 1, "producto": "...", "precioSinIgv": 5.30, "costo": 5.40}] ; vacio = no hace falta autorizacion
+    @POST
+    @Path("revisar-costo")
+    public Response revisarCosto(@HeaderParam("ticket") String ticket, VentaDatos datos) {
+        if (datos == null) {
+            return error(Response.Status.BAD_REQUEST, "Faltan los datos de la venta");
+        }
+        return ejecutar(ticket, id -> {
+            Venta venta = aVenta(datos);
+            if (datos.id > 0) {
+                venta.setId(datos.id);
+            }
+            return ventaBO.revisarCosto(venta, id);
+        });
+    }
+
     // RF005/RF014: pide la autorizacion de ESTA venta con lineas bajo el costo (mismo cuerpo que registrar o
     // modificar; en edicion manda su id). No registra nada: al aprobarse, se registra o guarda la misma venta.
     @POST
@@ -156,7 +172,8 @@ public class VentaRS extends VentanillaBase {
             if (datos.id > 0) {
                 venta.setId(datos.id);
             }
-            return pe.edu.pucp.sigmeta.ws.seguridad.SolicitudRS.resumen(ventaBO.solicitarDescuentoEspecial(venta, id));
+            return pe.edu.pucp.sigmeta.ws.seguridad.SolicitudRS.resumen(ventaBO.solicitarDescuentoEspecial(venta, id),
+                    id, datos.datosOperacion);
         });
     }
 
@@ -219,7 +236,7 @@ public class VentaRS extends VentanillaBase {
     }
 
     private VentaDatos conDetalle(Venta venta) throws SQLException {
-        VentaDatos d = convertir(venta, new Nombres(), comprobantesVigentes(), numerosOrden(), true);
+        VentaDatos d = VentaConversion.convertir(venta, new Nombres(), comprobantesVigentes(), numerosOrden(), true);
         d.cobradaContado = ventaBO.idsCobradasAlContado().contains(venta.getId());
         return d;
     }
@@ -244,54 +261,4 @@ public class VentaRS extends VentanillaBase {
         return mapa;
     }
 
-    static VentaDatos convertir(Venta v, Nombres nombres, Map<Integer, Comprobante> comprobantes,
-                                Map<Integer, String> numerosOrden, boolean conLineas) throws SQLException {
-        VentaDatos d = new VentaDatos();
-        d.id = v.getId();
-        d.numero = v.getNumero();
-        if (v.getCliente() != null) {
-            d.idCliente = v.getCliente().getId();
-            Cliente cliente = nombres.cliente(d.idCliente);
-            if (cliente != null) {
-                d.cliente = cliente.getNombreMostrado();
-                d.documentoCliente = cliente.getNumeroDocumento();
-            }
-        }
-        if (v.getOrdenCompraCliente() != null) {
-            d.idOrden = v.getOrdenCompraCliente().getId();
-            d.numeroOrden = numerosOrden.get(d.idOrden);
-        }
-        d.fechaEmision = Utilidades.fecha(v.getFechaEmision());
-        d.condicionPago = v.getCondicionPago() != null ? v.getCondicionPago().name() : null;
-        d.plazoCreditoDias = v.getPlazoCreditoDias();
-        d.anulado = v.isAnulado();
-        d.estado = v.isAnulado() ? EstadoVenta.ANULADA.name() : (v.getEstado() != null ? v.getEstado().name() : null);
-        d.observaciones = v.getObservaciones();
-        d.subTotal = v.getSubTotal();
-        d.igv = v.getIgv();
-        d.total = v.getTotal();
-        d.usuarioRegistro = nombres.usuario(v.getUsuarioRegistro());
-        d.fechaRegistro = Utilidades.fechaHora(v.getFechaRegistro());
-        d.motivoAnulacion = v.getMotivoAnulacion();
-        d.fechaAnulacion = Utilidades.fechaHora(v.getFechaAnulacion());
-        Comprobante c = comprobantes.get(v.getId());
-        if (c != null) {
-            d.idComprobante = c.getId();
-            d.tipoComprobante = c.getTipo().name();
-            d.comprobante = c.getSerie() + "-" + c.getNumero();
-        }
-        if (conLineas && v.getDetalles() != null) {
-            for (DetalleVenta det : v.getDetalles()) {
-                LineaDatos l = CotizacionRS.convertirLinea(det.getNumeroLinea(), det.getProducto(), det.getCantidad(),
-                        det.getPrecioUnitario(), det.getDescuento(), det.getImporte(), nombres);
-                l.idLinea = det.getId();
-                l.cantidadDespachada = det.getCantidadDespachada();
-                if (det.getDetalleOrdenCompraCliente() != null) {
-                    l.idDetalleOrden = det.getDetalleOrdenCompraCliente().getId();
-                }
-                d.lineas.add(l);
-            }
-        }
-        return d;
-    }
 }

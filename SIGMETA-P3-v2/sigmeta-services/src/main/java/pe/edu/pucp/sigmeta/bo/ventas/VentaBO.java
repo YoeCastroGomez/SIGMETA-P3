@@ -19,6 +19,9 @@ public interface VentaBO {
     // RNF003, panel de inicio: productos con más importe en las últimas 'ventas' ventas vigentes (una consulta)
     java.util.List<java.util.Map<String, Object>> topProductos(int ventas, int limite) throws SQLException;
 
+    // RF005/RF014: lineas de la venta en preparacion que quedan bajo el costo (no registra nada); vacia si ninguna
+    java.util.List<java.util.Map<String, Object>> revisarCosto(Venta venta, int idResponsable) throws SQLException;
+
     // RF005/RF014: pide la autorizacion de ESTA venta con lineas bajo el costo (el Administrador ve sus datos); no registra nada
     pe.edu.pucp.sigmeta.model.seguridad.SolicitudAutorizacion solicitarDescuentoEspecial(Venta venta, int idResponsable) throws SQLException;
 }

@@ -1219,3 +1219,63 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+-- ============================================================
+-- RF014: la solicitud se puede RETOMAR y distingue USADA de VENCIDA.
+--   estado USADA:    la autorizacion se consumio en la operacion que autorizaba (antes quedaba VENCIDA,
+--                    igual que una que paso su vigencia o que el Administrador revoco).
+--   datos_operacion: lo que el usuario preparo en la pantalla (JSON que manda Blazor). Sirve para volver a
+--                    abrir la operacion con la solicitud en curso (pendiente, aprobada o rechazada) sin pedirla
+--                    otra vez. NULL = descartada (ya no se muestra para continuar). No reemplaza a la huella:
+--                    la operacion se sigue validando con sus datos reales al registrarla.
+-- Agrega lo que falta en una base ya instalada; una base nueva ya lo trae desde 1_base.
+-- Se puede ejecutar mas de una vez.
+-- ============================================================
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS tmp_solicitud_retomar$$
+CREATE PROCEDURE tmp_solicitud_retomar()
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS
+                   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'solicitud_autorizacion'
+                     AND COLUMN_NAME = 'estado' AND COLUMN_TYPE LIKE '%USADA%') THEN
+        ALTER TABLE solicitud_autorizacion
+            MODIFY COLUMN estado ENUM('PENDIENTE','APROBADA','RECHAZADA','VENCIDA','USADA') NOT NULL;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS
+                   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'solicitud_autorizacion'
+                     AND COLUMN_NAME = 'datos_operacion') THEN
+        ALTER TABLE solicitud_autorizacion ADD COLUMN datos_operacion TEXT NULL;
+    END IF;
+END$$
+
+DELIMITER ;
+
+CALL tmp_solicitud_retomar();
+DROP PROCEDURE IF EXISTS tmp_solicitud_retomar;
+
+DELIMITER $$
+
+-- RF014: la autorizacion aprobada se consumio en su operacion (un solo uso). La llama
+-- SolicitudAutorizacionBOImpl.consumir dentro de la transaccion de la operacion: si esta falla, rollback.
+DROP PROCEDURE IF EXISTS sp_solicitud_autorizacion_usar$$
+CREATE PROCEDURE sp_solicitud_autorizacion_usar(IN p_id_solicitud_autorizacion INT)
+BEGIN
+    UPDATE solicitud_autorizacion
+    SET estado = 'USADA'
+    WHERE id = p_id_solicitud_autorizacion AND estado = 'APROBADA';
+END$$
+
+-- RF014: guarda (o borra con NULL) los datos de la pantalla para retomar la operacion
+DROP PROCEDURE IF EXISTS sp_solicitud_autorizacion_guardar_datos$$
+CREATE PROCEDURE sp_solicitud_autorizacion_guardar_datos(
+    IN p_id_solicitud_autorizacion INT,
+    IN p_datos_operacion TEXT
+)
+BEGIN
+    UPDATE solicitud_autorizacion
+    SET datos_operacion = p_datos_operacion
+    WHERE id = p_id_solicitud_autorizacion;
+END$$
+
+DELIMITER ;

@@ -20,12 +20,12 @@ import java.util.List;
 public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
 
     // RF014: operaciones restringidas del sistema. Cada una la pide un solo rol y, una vez aprobada,
-    // sirve para UNA operacion: el BO que la usa la consume (queda VENCIDA) en su misma transaccion.
+    // sirve para UNA operacion: el BO que la usa la consume (queda USADA) en su misma transaccion.
     public static final String OPERACION_DESCUENTO_ESPECIAL = "DESCUENTO_ESPECIAL";   // Vendedor: vender bajo el costo
     public static final String OPERACION_NOTA_CREDITO = "EMITIR_NOTA_CREDITO";         // Cajero: nota de credito
     public static final String OPERACION_AJUSTE_INVENTARIO = "AJUSTE_INVENTARIO";      // Almacenero: ajuste por conteo
 
-    private static final java.util.Map<String, TipoRol> ROL_POR_OPERACION = new java.util.LinkedHashMap<>();
+    static final java.util.Map<String, TipoRol> ROL_POR_OPERACION = new java.util.LinkedHashMap<>();
     private static final java.util.Map<String, String> DESCRIPCION_POR_OPERACION = new java.util.LinkedHashMap<>();
     static {
         ROL_POR_OPERACION.put(OPERACION_DESCUENTO_ESPECIAL, TipoRol.VENDEDOR);
@@ -59,10 +59,18 @@ public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
 
     private final SolicitudAutorizacionDAO solicitudDAO;
     private final UsuarioBO usuarioBO;
+    // partes de esta clase (mismo paquete)
+    private final AutorizacionOperacion autorizacionOperacion;
+    private final AutorizacionRetomable retomable;
+    // partes de esta clase (mismo paquete)
+    private final AutorizacionVigencia vigencia;
 
     public SolicitudAutorizacionBOImpl() {
         this.solicitudDAO = new SolicitudAutorizacionDAOImpl();
         this.usuarioBO = new UsuarioBOImpl();
+        this.autorizacionOperacion = new AutorizacionOperacion(solicitudDAO, usuarioBO);
+        this.retomable = new AutorizacionRetomable(solicitudDAO);
+        this.vigencia = new AutorizacionVigencia(solicitudDAO, usuarioBO);
     }
 
     // RF014
@@ -200,49 +208,36 @@ public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
         });
     }
 
-    // RF014
     @Override
     public boolean tieneAutorizacionVigente(int idUsuario, String operacionRestringida) throws SQLException {
-        return Transaccion.ejecutar(() -> {
-            String operacion = Validador.textoObligatorio(operacionRestringida, "operación restringida", 60);
-            return solicitudDAO.buscarVigente(idUsuario, operacion) != null;
-        });
+        return vigencia.tieneAutorizacionVigente(idUsuario, operacionRestringida);
     }
 
-    // RF013/RF014: la autorizacion se toma de la solicitud que el Administrador aprobo en su propia sesion,
-    // asi la operacion se ejecuta en la sesion del solicitante sin que el Administrador este conectado
     @Override
     public SolicitudAutorizacion obtenerAutorizacionVigente(int idUsuario, String operacionRestringida) throws SQLException {
-        return Transaccion.ejecutar(() -> {
-            String operacion = Validador.textoObligatorio(operacionRestringida, "operación restringida", 60);
-            SolicitudAutorizacion vigente = solicitudDAO.buscarVigente(idUsuario, operacion);
-            if(vigente == null || vigente.getAdministrador() == null){
-                return null;
-            }
-            Usuario administrador = usuarioBO.obtener(vigente.getAdministrador().getId());
-            if(administrador == null || !administrador.isEstado() || !administrador.getRol().isEstado()
-                    || administrador.getRol().getTipo() != TipoRol.ADMINISTRADOR){
-                // el administrador que aprobo ya no esta activo: la autorizacion no sirve
-                return null;
-            }
-            vigente.setAdministrador(administrador);
-            vigente.setSolicitante(usuarioBO.obtener(idUsuario));
-            return vigente;
-        });
+        return vigencia.obtenerAutorizacionVigente(idUsuario, operacionRestringida);
     }
 
-    // RF014: APROBADA -> VENCIDA (sp_solicitud_autorizacion_eliminar). Corre dentro de la transaccion
-    // de quien la usa: si esa operacion falla hay rollback y la autorizacion sigue APROBADA
     @Override
     public void consumir(int idSolicitud) throws SQLException {
-        Transaccion.ejecutar(() -> {
-            SolicitudAutorizacion solicitud = obtenerExistente(idSolicitud);
-            if(solicitud.getEstado() != EstadoAutorizacion.APROBADA){
-                throw new IllegalStateException("Solo se puede consumir una autorización aprobada (estado: " + solicitud.getEstado() + ")");
-            }
-            solicitudDAO.remove(solicitud);
-            return null;
-        });
+        vigencia.consumir(idSolicitud);
+    }
+
+    // ================= RF014: retomar la operacion con su solicitud (AutorizacionRetomable) =================
+
+    @Override
+    public void guardarDatosOperacion(int idSolicitud, int idSolicitante, String datosOperacion) throws SQLException {
+        retomable.guardarDatosOperacion(idSolicitud, idSolicitante, datosOperacion);
+    }
+
+    @Override
+    public List<SolicitudAutorizacion> listarEnCurso(int idSolicitante, String operacionRestringida) throws SQLException {
+        return retomable.listarEnCurso(idSolicitante, operacionRestringida);
+    }
+
+    @Override
+    public void descartar(int idSolicitud, int idResponsable) throws SQLException {
+        retomable.descartar(idSolicitud, idResponsable);
     }
 
     // ================= RF014 opcion B: la solicitud lleva la operacion =================
@@ -268,70 +263,13 @@ public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
     }
 
     @Override
-    public SolicitudAutorizacion solicitarOperacion(int idSolicitante, String operacionRestringida, String motivo,
-                                                    String referencia, String detalle, String huella) throws SQLException {
-        Validador.obligatorio(huella, "datos de la operación");
-        return Transaccion.ejecutar(() -> {
-            Usuario solicitante = usuarioBO.obtener(idSolicitante);
-            if (solicitante == null || !solicitante.isEstado()) {
-                throw new IllegalArgumentException("El solicitante no existe o está desactivado");
-            }
-            String operacion = operacionRestringida.toUpperCase(java.util.Locale.ROOT);
-            TipoRol rolDeLaOperacion = ROL_POR_OPERACION.get(operacion);
-            if (rolDeLaOperacion == null) {
-                throw new IllegalArgumentException("La operación restringida no existe");
-            }
-            if (rolDeLaOperacion != solicitante.getRol().getTipo()) {
-                throw new IllegalStateException("El rol " + solicitante.getRol().getTipo()
-                        + " no realiza la operación " + operacion);
-            }
-            // la misma operacion ya pedida: no se duplica (doble clic o se volvio a la pantalla)
-            SolicitudAutorizacion existente = solicitudDAO.buscarPorHuella(idSolicitante, operacion, huella, EstadoAutorizacion.APROBADA);
-            if (existente == null) {
-                existente = solicitudDAO.buscarPorHuella(idSolicitante, operacion, huella, EstadoAutorizacion.PENDIENTE);
-            }
-            if (existente != null) {
-                return existente;
-            }
-            SolicitudAutorizacion solicitud = new SolicitudAutorizacion();
-            solicitud.setSolicitante(solicitante);
-            solicitud.setOperacionRestringida(operacion);
-            solicitud.setMotivo(Validador.textoObligatorio(motivo, "motivo", 200));
-            solicitud.setFechaSolicitud(LocalDateTime.now());
-            solicitud.setEstado(EstadoAutorizacion.PENDIENTE);
-            solicitud.setVigenciaMinutos(0);
-            solicitud.setReferencia(Validador.textoOpcional(recortar(referencia, 80), "referencia", 80));
-            solicitud.setDetalle(recortar(detalle, 1000));
-            solicitud.setHuella(huella);
-            return solicitudDAO.save(solicitud);
-        });
+    public SolicitudAutorizacion solicitarOperacion(int idSolicitante, String operacionRestringida, String motivo, String referencia, String detalle, String huella) throws SQLException {
+        return autorizacionOperacion.solicitarOperacion(idSolicitante, operacionRestringida, motivo, referencia, detalle, huella);
     }
 
     @Override
     public SolicitudAutorizacion requerirAutorizacion(int idUsuario, String operacionRestringida, String huella) throws SQLException {
-        return Transaccion.ejecutar(() -> {
-            SolicitudAutorizacion aprobada = solicitudDAO.buscarPorHuella(idUsuario, operacionRestringida, huella, EstadoAutorizacion.APROBADA);
-            if (aprobada != null && aprobada.getAdministrador() != null) {
-                Usuario administrador = usuarioBO.obtener(aprobada.getAdministrador().getId());
-                if (administrador != null && administrador.isEstado() && administrador.getRol().isEstado()
-                        && administrador.getRol().getTipo() == TipoRol.ADMINISTRADOR) {
-                    aprobada.setAdministrador(administrador);
-                    aprobada.setSolicitante(usuarioBO.obtener(idUsuario));
-                    return aprobada;
-                }
-            }
-            if (solicitudDAO.buscarPorHuella(idUsuario, operacionRestringida, huella, EstadoAutorizacion.PENDIENTE) != null) {
-                throw new IllegalStateException("La solicitud de autorización de esta operación está en espera del Administrador");
-            }
-            throw new IllegalStateException("Esta operación " + MARCA_REQUIERE_AUTORIZACION
-                    + ". Use «Solicitar autorización»: el Administrador verá estos mismos datos");
-        });
-    }
-
-    private static String recortar(String texto, int maximo) {
-        if (texto == null) return null;
-        String t = texto.trim();
-        return t.length() <= maximo ? t : t.substring(0, maximo - 1) + "…";
+        return autorizacionOperacion.requerirAutorizacion(idUsuario, operacionRestringida, huella);
     }
 
     private SolicitudAutorizacion obtenerExistente(int idSolicitud) throws SQLException {

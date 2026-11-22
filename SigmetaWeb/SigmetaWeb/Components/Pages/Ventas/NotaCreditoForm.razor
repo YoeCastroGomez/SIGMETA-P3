@@ -7,23 +7,26 @@
 @using SigmetaWeb.Components.Pages.Almacen
 @using SigmetaWeb.Components.Pages.Seguridad
 
-<PageTitle>Nueva nota de crédito · SIGMETA</PageTitle>
+<PageTitle>@Titulo · SIGMETA</PageTitle>
 
 @* RF013 y RF014 · Nota de crédito por devolución. Todo en esta pantalla, en orden:
-     1 Preparar: comprobante, motivo y cantidades (la vista previa del total la calcula aquí; el BO la recalcula).
+     1 Preparar: comprobante (se busca por cliente, documento, comprobante o venta), motivo y cantidades
+       (la vista previa del total la calcula aquí; el BO la recalcula).
      2 Autorización: "Solicitar autorización" manda ESTA nota (POST /api/notas-credito/solicitar, mismo cuerpo que
-       registrarla). El sistema arma lo que ve el Administrador (comprobante, cliente, productos y total).
-       Mientras espera, PedirAutorizacion consulta sola cada pocos segundos y los datos quedan bloqueados.
+       registrarla, más datosOperacion: la pantalla en JSON para retomarla). El Administrador ve comprobante,
+       cliente, productos y total. Mientras espera, PedirAutorizacion consulta sola cada pocos segundos.
+       La solicitud queda guardada: si el Cajero sale, la nota aparece en la lista como «Solicitada» y se
+       retoma con /notas-credito/nueva?solicitud=ID (GET /api/solicitudes/{id}), sin pedirla otra vez.
      3 Registrar: con la autorización aprobada, POST /api/notas-credito. El BO exige la autorización de ESA nota
-       (mismo comprobante y cantidades) y la consume (un solo uso).
-   RF013 exige la autorización ANTES de emitir: la nota mueve stock, deuda y caja apenas se registra.
-   GET /api/notas-credito/comprobantes
-   · GET /api/notas-credito/comprobantes/{id}/lineas *@
-<Encabezado Rf="RF013" Titulo="Nueva nota de crédito">
+       (mismo comprobante y cantidades) y la consume (queda USADA). Si algo falla (por ejemplo, la caja cerrada)
+       no se registra nada y la autorización sigue aprobada.
+   GET /api/notas-credito/comprobantes · GET /api/notas-credito/comprobantes/{id}/lineas
+   · GET /api/solicitudes/en-curso?operacion=EMITIR_NOTA_CREDITO · GET /api/cajas/abierta *@
+<Encabezado Rf="RF013" Titulo="@Titulo">
     <a class="btn btn-outline-secondary" href="/notas-credito">Volver</a>
 </Encabezado>
 
-<Notificacion Mensaje="@error" Error="true" AlCerrar="() => error = null" />
+<Notificacion Mensaje="@error" Error="true" Segundos="8" AlCerrar="() => error = null" />
 <Notificacion Mensaje="@exito" AlCerrar="() => exito = null" />
 
 @if (!cargado)
@@ -36,42 +39,129 @@ else
 
     <div class="row g-3">
         <div class="col-lg-8">
-            @* -------- 1. Comprobante y motivo -------- *@
+            @* -------- 1. Comprobante que se corrige -------- *@
             <div class="card card-body mb-3">
-                <div class="row">
-                    <Campo Etiqueta="Comprobante" Id="comprobante" Obligatorio="true" Error="@E("comprobante")" Clase="col-md-7 mb-3"
-                           Ayuda="@(comprobantes.Count == 0 ? "No hay facturas ni boletas con mercadería entregada." : null)">
-                        <select id="comprobante" class="form-select @Invalido("comprobante")" @bind="idComprobante" @bind:after="AlElegirComprobante"
-                                disabled="@EsperandoOAutorizada">
-                            <option value="0">Elija el comprobante</option>
-                            @foreach (var c in comprobantes)
-                            {
-                                <option value="@c.Id">@c.Comprobante · @c.Cliente · @Formato.Soles(c.Total)</option>
-                            }
-                        </select>
-                    </Campo>
-                    <Campo Etiqueta="Motivo" Id="motivo" Obligatorio="true" Error="@E("motivo")" Clase="col-md-5 mb-3">
-                        <input id="motivo" class="form-control @Invalido("motivo")" maxlength="150" placeholder="Ejemplo: producto con falla"
-                               @bind="motivo" @bind:event="oninput" disabled="@EsperandoOAutorizada" />
-                    </Campo>
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                    <h2 class="h6 fw-semibold mb-0"><span class="numero-paso">1</span> Comprobante que se corrige</h2>
+                    @if (Origen is not null && !EsperandoOAutorizada && retomada is null)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CambiarComprobante">Cambiar</button>
+                    }
                 </div>
-                @if (Origen is not null)
+
+                @if (Origen is null)
                 {
-                    <div class="small text-muted border-top pt-2">
-                        @Origen.Cliente · @Origen.NumeroDocumento · Venta @Origen.Venta · @Formato.Legible(Origen.CondicionPago) · @Formato.Fecha(Origen.FechaEmision)
+                    <Campo Etiqueta="Buscar el comprobante" Id="buscarComprobante" Error="@E("comprobante")">
+                        <input id="buscarComprobante" type="search" class="form-control @Invalido("comprobante")" maxlength="60"
+                               placeholder="Cliente, RUC o DNI, comprobante o venta"
+                               @bind="buscarComprobante" @bind:event="oninput" />
+                    </Campo>
+                    @if (comprobantes.Count == 0)
+                    {
+                        <p class="small text-muted mb-0">No hay facturas ni boletas con mercadería entregada.</p>
+                    }
+                    else if (Encontrados.Count == 0)
+                    {
+                        <p class="small text-muted mb-0">Ningún comprobante coincide con «@buscarComprobante».</p>
+                    }
+                    else
+                    {
+                        <div class="lista-comprobantes" role="listbox" aria-label="Comprobantes con mercadería entregada">
+                            @foreach (var c in Encontrados.Take(MaximoVisibles))
+                            {
+                                <button type="button" class="opcion-comprobante" role="option" @onclick="() => ElegirComprobante(c.Id)">
+                                    <span class="col-doc">
+                                        <span class="numero">@c.Comprobante</span>
+                                        <span class="sub">@Formato.Legible(c.Tipo) · @Formato.Fecha(c.FechaEmision)</span>
+                                    </span>
+                                    <span class="col-cliente">
+                                        <span class="fw-semibold">@c.Cliente</span>
+                                        <span class="sub">@(string.IsNullOrEmpty(c.NumeroDocumento) ? "Sin documento" : c.NumeroDocumento)</span>
+                                    </span>
+                                    <span class="col-venta">
+                                        <span>Venta @c.Venta</span>
+                                        <span class="sub">@Formato.Legible(c.CondicionPago)</span>
+                                    </span>
+                                    <span class="col-total">@Formato.Soles(c.Total)</span>
+                                    @if (EnCursoDe(c.Id) is { } enTramite)
+                                    {
+                                        <span class="col-aviso"><Estado Texto="@EstadoNota(enTramite)" /></span>
+                                    }
+                                </button>
+                            }
+                        </div>
+                        @if (Encontrados.Count > MaximoVisibles)
+                        {
+                            <div class="small text-muted mt-2">@MaximoVisibles de @Encontrados.Count</div>
+                        }
+                    }
+                }
+                else
+                {
+                    <div class="comprobante-elegido">
+                        <div>
+                            <div class="small text-muted">@Formato.Legible(Origen.Tipo)</div>
+                            <div class="numero fs-5">@Origen.Comprobante</div>
+                            <div class="small text-muted">Emitida el @Formato.Fecha(Origen.FechaEmision)</div>
+                        </div>
+                        <div>
+                            <div class="small text-muted">Cliente</div>
+                            <div class="fw-semibold">@Origen.Cliente</div>
+                            <div class="small text-muted">@(string.IsNullOrEmpty(Origen.NumeroDocumento) ? "Sin documento" : Origen.NumeroDocumento)</div>
+                        </div>
+                        <div>
+                            <div class="small text-muted">Venta</div>
+                            <div class="fw-semibold">@Origen.Venta</div>
+                            <div class="small text-muted">@Formato.Legible(Origen.CondicionPago)</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="small text-muted">Total del comprobante</div>
+                            <div class="fw-semibold">@Formato.Soles(Origen.Total)</div>
+                        </div>
+                    </div>
+                    @if (retomada is null && EnCursoDe(Origen.Id) is { } otra)
+                    {
+                        <div class="alert alert-warning small mt-3 mb-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <span>Este comprobante ya tiene una nota <strong>@EstadoNota(otra).ToLowerInvariant()</strong>.</span>
+                            <a class="btn btn-sm btn-outline-secondary" href="@($"/notas-credito/nueva?solicitud={otra.Id}")">Continuar esa nota</a>
+                        </div>
+                    }
+                }
+            </div>
+
+            @* -------- 2. Motivo -------- *@
+            <div class="card card-body mb-3">
+                <h2 class="h6 fw-semibold mb-2"><span class="numero-paso">2</span> Motivo de la devolución</h2>
+                <Campo Etiqueta="Motivo" Id="motivo" Obligatorio="true" Error="@E("motivo")">
+                    <input id="motivo" class="form-control @Invalido("motivo")" maxlength="150"
+                           @bind="motivo" @bind:event="oninput" disabled="@EsperandoOAutorizada" />
+                </Campo>
+                @if (!EsperandoOAutorizada)
+                {
+                    <div class="d-flex flex-wrap gap-2" aria-label="Motivos frecuentes">
+                        @foreach (var m in MotivosFrecuentes)
+                        {
+                            <button type="button" class="btn btn-sm @(motivo == m ? "btn-dark" : "btn-outline-secondary")" @onclick="() => motivo = m">@m</button>
+                        }
                     </div>
                 }
             </div>
 
-            @* -------- Productos que se devuelven -------- *@
+            @* -------- 3. Productos que se devuelven -------- *@
             @if (Origen is not null)
             {
                 <div class="card mb-3">
                     <div class="card-body pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <h2 class="h6 fw-semibold mb-0">Productos que se devuelven</h2>
+                        <h2 class="h6 fw-semibold mb-0"><span class="numero-paso">3</span> Productos que se devuelven</h2>
                         @if (!EsperandoOAutorizada && lineas.Any(l => l.Devolvible > 0))
                         {
-                            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="DevolverTodo">Devolver todo</button>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="DevolverTodo">Devolver todo</button>
+                                @if (lineas.Any(l => l.Devolver > 0))
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Limpiar">Poner en cero</button>
+                                }
+                            </div>
                         }
                     </div>
                     <div class="table-responsive">
@@ -79,6 +169,7 @@ else
                             <thead>
                                 <tr>
                                     <th>Producto</th>
+                                    <th class="text-end">Vendido</th>
                                     <th class="text-end">Entregado</th>
                                     <th class="text-end">Ya devuelto</th>
                                     <th class="text-end">Precio (S/)</th>
@@ -91,7 +182,11 @@ else
                                 {
                                     var problema = Problema(l);
                                     <tr class="@(l.Devolvible <= 0 ? "text-muted" : "")">
-                                        <td>@l.Producto</td>
+                                        <td>
+                                            @l.Producto
+                                            <div class="sub">@l.CodigoInterno</div>
+                                        </td>
+                                        <td class="text-end">@Formato.Cantidad(l.Cantidad)</td>
                                         <td class="text-end">@Formato.Cantidad(l.CantidadDespachada)</td>
                                         <td class="text-end">@Formato.Cantidad(l.Acreditado)</td>
                                         <td class="text-end">@l.PrecioEfectivo.ToString("N2")</td>
@@ -128,7 +223,7 @@ else
         <div class="col-lg-4">
             @* RF013: tipo de nota (catálogo 09 SUNAT), mismo criterio que ComprobanteBOImpl.tipoNotaCredito *@
             <ResumenTotal Etiqueta="Total de la nota" Total="@((decimal)Total)" SubTotal="@((decimal)SubTotal)" Igv="@((decimal)Igv)"
-                          Detalle="@(Total > 0 ? NotaCreditoDatos.TextoTipo(TipoNota) : null)">
+                          EstadoTexto="@EstadoTexto" Detalle="@(Total > 0 ? NotaCreditoDatos.TextoTipo(TipoNota) : null)">
                 @if (Origen is not null && Total > 0)
                 {
                     @* qué pasará al registrar: mueve stock y dinero, por eso se dice antes *@
@@ -137,7 +232,15 @@ else
                         <li>@(Origen.CondicionPago == "CREDITO" ? "Baja la deuda del cliente." : "Si ya se cobró, sale un egreso de su caja.")</li>
                     </ul>
                 }
-                @if (Faltan.Count > 0)
+                @if (cajaCerrada && Origen is not null && Total > 0)
+                {
+                    @* RF010: la devolución de dinero sale de la caja abierta del Cajero *@
+                    <div class="alert alert-warning small mb-0 d-flex justify-content-between align-items-center gap-2" role="alert">
+                        <span class="fw-semibold">Su caja está cerrada</span>
+                        <a href="/caja">Abrir caja</a>
+                    </div>
+                }
+                @if (Faltan.Count > 0 && !EsperandoOAutorizada)
                 {
                     <ul class="lista-pendientes list-unstyled small mb-0" aria-label="Lo que falta">
                         @foreach (var f in Faltan)
@@ -147,14 +250,16 @@ else
                     </ul>
                 }
 
-                <PedirAutorizacion Listo="@Preparada" Solicitar="SolicitarAutorizacion"
-                                   EstadoChanged="e => estadoAutorizacion = e" AlError="m => error = m">
+                <PedirAutorizacion Listo="@Preparada" Solicitar="SolicitarAutorizacion" Retomar="@retomada" Volver="/notas-credito"
+                                   EstadoChanged="AlCambiarAutorizacion" AlError="m => error = m">
                     <BotonCondicionado Texto="Registrar nota de crédito" TextoOcupado="Registrando..." Bloque="true" Clase="btn-primary w-100"
                                        Ocupado="@guardando" AlHacerClic="Guardar" />
                 </PedirAutorizacion>
-                <a class="btn btn-outline-secondary w-100" href="/notas-credito">Cancelar</a>
+                @if (estadoAutorizacion is null)
+                {
+                    <a class="btn btn-outline-secondary w-100" href="/notas-credito">Cancelar</a>
+                }
             </ResumenTotal>
         </div>
     </div>
 }
-

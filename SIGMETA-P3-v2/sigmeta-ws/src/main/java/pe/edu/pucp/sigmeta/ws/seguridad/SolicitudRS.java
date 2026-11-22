@@ -31,6 +31,9 @@ import pe.edu.pucp.sigmeta.ws.caja.Utilidades;
 //
 //   GET  /api/solicitudes                    todas (Administrador); ?estado=PENDIENTE solo las pendientes
 //   GET  /api/solicitudes/mias               las del usuario de la sesion (Vendedor, Cajero, Almacenero)
+//   GET  /api/solicitudes/en-curso?operacion=EMITIR_NOTA_CREDITO   las que se pueden retomar (con sus datos y sin
+//                                            usar): las propias, o las de todos si es el Administrador
+//   POST /api/solicitudes/7/descartar        su solicitante ya no la retoma (si estaba pendiente o aprobada, se anula)
 //   GET  /api/solicitudes/operaciones        operaciones restringidas que puede pedir el usuario de la sesion
 //   GET  /api/solicitudes/vigente?operacion=EMITIR_NOTA_CREDITO   su autorizacion aprobada y vigente (204 si no hay)
 //   GET  /api/solicitudes/7                  una solicitud (su solicitante o el Administrador)
@@ -63,6 +66,27 @@ public class SolicitudRS extends VentanillaBase {
     @Path("mias")
     public Response listarMias(@HeaderParam("ticket") String ticket) {
         return ejecutar(ticket, id -> convertir(solicitudBO.listarPorSolicitante(id), null));
+    }
+
+    // RF014: operaciones que quedaron a medias con su solicitud (pendiente, aprobada, rechazada o vencida) y
+    // que se pueden retomar con los datos que se prepararon. El Administrador ve las de todos.
+    @GET
+    @Path("en-curso")
+    public Response enCurso(@HeaderParam("ticket") String ticket, @QueryParam("operacion") String operacion) {
+        return ejecutar(ticket, id -> {
+            Usuario usuario = usuarioBO.verificarRol(id, TipoRol.values());
+            int solicitante = usuario.getRol().getTipo() == TipoRol.ADMINISTRADOR ? 0 : id;
+            return convertir(solicitudBO.listarEnCurso(solicitante, operacion), null);
+        });
+    }
+
+    @POST
+    @Path("{id}/descartar")
+    public Response descartar(@HeaderParam("ticket") String ticket, @PathParam("id") int idSolicitud) {
+        return ejecutar(ticket, id -> {
+            solicitudBO.descartar(idSolicitud, id);
+            return null; // 204 sin cuerpo
+        });
     }
 
     @GET
@@ -118,7 +142,16 @@ public class SolicitudRS extends VentanillaBase {
                 "La autorización se pide desde la operación (nota de crédito, venta o ajuste), con sus datos");
     }
 
-    // Lo que responden los POST .../solicitar de cada operacion
+    // Lo que responden los POST .../solicitar de cada operacion. Guarda tambien lo que preparo la pantalla
+    // (datosOperacion, JSON) para que el solicitante pueda retomar la operacion sin volver a pedirla.
+    public static Map<String, Object> resumen(SolicitudAutorizacion s, int idSolicitante, String datosOperacion)
+            throws SQLException {
+        if (datosOperacion != null && !datosOperacion.isBlank()) {
+            new SolicitudAutorizacionBOImpl().guardarDatosOperacion(s.getId(), idSolicitante, datosOperacion);
+        }
+        return resumen(s);
+    }
+
     public static Map<String, Object> resumen(SolicitudAutorizacion s) {
         Map<String, Object> r = new HashMap<>();
         r.put("id", s.getId());
@@ -180,6 +213,7 @@ public class SolicitudRS extends VentanillaBase {
         d.vigenciaMinutos = s.getVigenciaMinutos();
         d.referencia = s.getReferencia();
         d.detalle = s.getDetalle();
+        d.datosOperacion = s.getDatosOperacion();
         Usuario solicitante = usuario(s.getSolicitante(), usuarios);
         if (solicitante != null) {
             d.idSolicitante = solicitante.getId();
@@ -200,6 +234,8 @@ public class SolicitudRS extends VentanillaBase {
         }
         d.estado = estado != null ? estado.name() : null;
         d.vigente = estado == EstadoAutorizacion.APROBADA;
+        // RF014: el anular de su solicitante la deja RECHAZADA sin Administrador: fue una cancelacion
+        d.cancelada = estado == EstadoAutorizacion.RECHAZADA && s.getAdministrador() == null;
         return d;
     }
 

@@ -42,6 +42,9 @@ public class VentaDatos {
     // RF008/RF010: venta al contado ya cobrada en caja (ya no se modifica). Solo lo lee la pantalla.
     public boolean cobradaContado;
 
+    // RF014: solo en "solicitar-autorizacion": la venta tal como la preparo el Vendedor (JSON), para retomarla
+    public String datosOperacion;
+
     public List<LineaDatos> lineas = new ArrayList<>();
 
     public VentaDatos() {

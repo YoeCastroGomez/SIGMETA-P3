@@ -10,7 +10,14 @@
 {
     <div class="notificacion @(Error ? "error" : "exito")" role="@(Error ? "alert" : "status")" aria-live="polite">
         <span class="icono" aria-hidden="true">@(Error ? "!" : "✓")</span>
-        <span class="texto">@Mensaje</span>
+        @if (Error)
+        {
+            <span class="texto"><strong class="titulo">No se pudo completar</strong>@Mensaje</span>
+        }
+        else
+        {
+            <span class="texto">@Mensaje</span>
+        }
         @if (!string.IsNullOrWhiteSpace(TextoAccion) && AlAccion.HasDelegate)
         {
             <button type="button" class="accion" @onclick="Accionar">@TextoAccion</button>
