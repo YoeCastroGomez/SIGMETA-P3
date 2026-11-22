@@ -1,0 +1,87 @@
+@* Panel de inicio del Almacenero: inventario por categoría y stock crítico. Parte de Home.razor: solo dibuja; los datos y cálculos están en Home.razor.cs (Panel). *@
+@using System.Globalization
+@using SigmetaWeb.Components.Pages.Compras
+@using SigmetaWeb.Components.Pages.Catalogo
+@using SigmetaWeb.Components.Pages.Clientes
+@using SigmetaWeb.Components.Pages.Caja
+@using SigmetaWeb.Components.Pages.Ventas
+<div class="sg-panel-grid sg-grid-principal">
+    <section class="sg-panel sg-panel-grafico">
+        <div class="sg-panel-cabecera"><div><h2>Productos por categoría</h2><p>Cantidad de referencias activas por categoría, no unidades mezcladas.</p></div></div>
+        @if (Panel.productos is null)
+        {
+            <div class="sg-sin-datos">El catálogo de productos no está disponible.</div>
+        }
+        else if (Panel.ProductosPorCategoria.Count == 0)
+        {
+            <div class="sg-sin-datos">No existen productos activos.</div>
+        }
+        else
+        {
+            <div class="sg-ranking">
+                @foreach (var grupo in Panel.ProductosPorCategoria)
+                {
+                    <div class="sg-ranking-fila" @key="grupo.Etiqueta">
+                        <div class="sg-ranking-encabezado"><span>@grupo.Etiqueta</span><strong>@grupo.Valor.ToString("N0") productos</strong></div>
+                        <div class="sg-barra-pista"><div class="sg-barra-relleno" style="width:@(Home.Porcentaje(grupo.Valor, Panel.MaximoCategoria))%"></div></div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+    <section class="sg-panel">
+        <div class="sg-panel-cabecera"><div><h2>Productos con stock crítico</h2><p>Existencias iguales o inferiores al mínimo.</p></div><a href="/almacen/stock-minimo" class="sg-enlace">Consultar</a></div>
+        @if (Panel.productos is null)
+        {
+            <div class="sg-sin-datos">No se pudieron consultar existencias.</div>
+        }
+        else if (Panel.StockCritico.Count == 0)
+        {
+            <div class="sg-sin-datos">No hay productos activos bajo el mínimo.</div>
+        }
+        else
+        {
+            <div class="sg-stock-lista">
+                @foreach (var producto in Panel.StockCritico)
+                {
+                    <div class="sg-stock-fila" @key="producto.Id">
+                        <span><strong>@producto.CodigoInterno</strong> @producto.Nombre</span>
+                        <small>@producto.StockActual.ToString("0.###") / @producto.StockMinimo.ToString("0.###") @Producto.TextoUnidad(producto.UnidadVenta)</small>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+</div>
+<div class="sg-panel-grid sg-grid-doble">
+    <section class="sg-panel">
+        <div class="sg-panel-cabecera"><div><h2>Estado de inventario</h2><p>Proporción de referencias activas.</p></div></div>
+        @if (Panel.productos is null)
+        {
+            <div class="sg-sin-datos">Sin información del inventario.</div>
+        }
+        else
+        {
+            <div class="sg-distribucion">
+                <div class="sg-anillo" style="@Panel.EstiloAnilloInventario"><div class="sg-anillo-centro"><strong>@Panel.productos.Count(p => p.Activo)</strong><small>activos</small></div></div>
+                <div class="sg-leyenda">
+                    <div class="sg-leyenda-fila"><span class="sg-leyenda-nombre"><i class="sg-color-a"></i>Sobre el mínimo</span><strong>@Panel.productos.Count(p => p.Activo && p.StockActual > p.StockMinimo)</strong></div>
+                    <div class="sg-leyenda-fila"><span class="sg-leyenda-nombre"><i class="sg-color-b"></i>En o bajo el mínimo</span><strong>@Panel.productos.Count(p => p.Activo && p.StockActual <= p.StockMinimo)</strong></div>
+                </div>
+            </div>
+        }
+    </section>
+    <section class="sg-panel">
+        <div class="sg-panel-cabecera"><div><h2>Operaciones del almacén</h2><p>Accesos para atender pendientes y verificar movimientos.</p></div></div>
+        <div class="sg-alertas">
+            <a href="/recepciones" class="sg-alerta-fila"><span>Recepciones <small>Consultar compras por recibir</small></span></a>
+            <a href="/despachos" class="sg-alerta-fila"><span>Despachos <small>Consultar ventas por despachar</small></span></a>
+            <a href="/almacen/kardex" class="sg-alerta-fila"><span>Kardex <small>Consultar movimientos históricos</small></span></a>
+        </div>
+        <p class="sg-nota">Los conteos de almacén se mostrarán aquí en una próxima versión.</p>
+    </section>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Home Panel { get; set; } = default!;
+}

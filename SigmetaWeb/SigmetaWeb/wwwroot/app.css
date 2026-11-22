@@ -1,5 +1,5 @@
-/* Hallmark · redesign: restyle (+ shell) · shape: app screen · genre: editorial · theme: newsprint (deal: manual, brand: ocre) · posture: restrained · modes: light+dark · signature: the ledger, every list set as a ruled register on newsprint · built: the project · v2.0.0 */
-/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V3 · weakest: V, a restyle keeps every screen's layout; the variety lives in the type, the rules and the paper, not in new compositions */
+/* Hallmark · redesign: restyle (+ shell) · shape: app screen · genre: modern-minimal · design system: ui-ux-pro-max data-dense dashboard (azul + ámbar de marca) · posture: restrained · modes: light+dark · signature: the ledger, every list a dense ruled register · built: the project · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V4 · weakest: H, a restyle keeps every screen layout; the work is one sans, hairline panels, a single amber signal and density */
 /* Hallmark · dismissed 58 · app screens: the words are the owner's and the screen budget does not apply to tables and forms */
 /* Hallmark · answered 67 · the uppercase on table cells and on some form fields is the owner's data rule (uniform old and new records), not a label voice */
 
@@ -66,7 +66,7 @@ strong, b, .fw-semibold, .fw-bold, .fw-bolder { font-weight: 600 !important; }
      4. Peligro confirmado .btn-danger              rojo relleno: el botón final de una confirmación */
 .btn {
     --bs-btn-font-family: var(--font-display);
-    --bs-btn-font-weight: 700;
+    --bs-btn-font-weight: 600;
     --bs-btn-font-size: .9375rem;
     --bs-btn-line-height: 1.2;
     --bs-btn-padding-x: var(--space-md);
@@ -289,7 +289,7 @@ html[data-bs-theme="dark"] .form-check-input:checked { border-color: var(--color
     --bs-table-color: var(--color-muted);
     --bs-table-border-color: var(--color-rule-2);
 }
-.table > tfoot > tr > * { border-top: 3px double var(--color-rule-2); font-weight: 600; }
+.table > tfoot > tr > * { border-top: 1px solid var(--color-rule-2); font-weight: 600; }
 .table > tbody > tr:last-child > * { border-bottom-color: transparent; }
 .table-responsive { scrollbar-width: thin; }
 
@@ -308,8 +308,8 @@ html[data-bs-theme="dark"] .form-check-input:checked { border-color: var(--color
     --bs-card-bg: var(--color-sheet);
     --bs-card-color: var(--color-ink);
     --bs-card-border-color: var(--color-rule);
-    --bs-card-border-radius: var(--radius);
-    --bs-card-inner-border-radius: var(--radius);
+    --bs-card-border-radius: var(--radius-card);
+    --bs-card-inner-border-radius: var(--radius-card);
     --bs-card-cap-bg: transparent;
     --bs-card-cap-padding-y: var(--space-sm);
     --bs-card-cap-padding-x: var(--space-md);
@@ -379,7 +379,7 @@ hr { border-color: var(--color-rule); opacity: 1; }
 }
 .nav-tabs .nav-link {
     font-family: var(--font-display);
-    font-weight: 700;
+    font-weight: 600;
     color: var(--color-muted);
     border: 0;
     padding: var(--space-xs) var(--space-md);
@@ -423,8 +423,8 @@ hr { border-color: var(--color-rule); opacity: 1; }
     --bs-modal-bg: var(--color-sheet);
     --bs-modal-color: var(--color-ink);
     --bs-modal-border-color: var(--color-rule-2);
-    --bs-modal-border-radius: var(--radius);
-    --bs-modal-inner-border-radius: var(--radius);
+    --bs-modal-border-radius: var(--radius-card);
+    --bs-modal-inner-border-radius: var(--radius-card);
     --bs-modal-header-border-color: var(--color-rule);
     --bs-modal-footer-border-color: var(--color-rule);
     --bs-modal-box-shadow: var(--shadow-pop);
@@ -454,7 +454,7 @@ hr { border-color: var(--color-rule); opacity: 1; }
     gap: var(--space-sm);
     min-height: 76px;
     padding: var(--space-md) var(--space-lg);
-    border-bottom: 3px double var(--color-rule-2);
+    border-bottom: 1px solid var(--color-rule-2);
     color: var(--color-ink);
     text-decoration: none;
 }
@@ -464,7 +464,7 @@ hr { border-color: var(--color-rule); opacity: 1; }
 .sigmeta-brand-texto { display: flex; flex-direction: column; gap: var(--space-3xs); min-width: 0; }
 .sigmeta-brand-nombre {
     font-family: var(--font-display);
-    font-weight: 700;
+    font-weight: 600;
     font-size: var(--text-lg);
     line-height: 1;
     letter-spacing: 0;
@@ -512,7 +512,7 @@ hr { border-color: var(--color-rule); opacity: 1; }
     background: transparent;
     cursor: pointer;
     font-family: var(--font-display);
-    font-weight: 700;
+    font-weight: 600;
     font-size: var(--text-base);
     line-height: 1.3;
     color: var(--color-ink);
@@ -554,7 +554,7 @@ hr { border-color: var(--color-rule); opacity: 1; }
     background: var(--color-sheet);
     color: var(--color-ink);
     font-family: var(--font-display);
-    font-weight: 700;
+    font-weight: 600;
     font-size: var(--text-sm);
 }
 .sigmeta-avatar { width: 36px; height: 36px; }
@@ -684,7 +684,7 @@ hr { border-color: var(--color-rule); opacity: 1; }
     width: 2rem;
     height: 2rem;
     font-family: var(--font-display);
-    font-weight: 700;
+    font-weight: 600;
     font-size: var(--text-base);
     color: var(--color-sheet);
 }
@@ -759,3 +759,50 @@ html:has(.sigmeta-confirmacion) body { overflow-y: hidden; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* =========================================================================
+   UI/UX Pro Max · reglas de calidad (references/pro-rules.md y quick-reference.md)
+   ========================================================================= */
+/* Todo lo que se puede pulsar muestra la mano; lo deshabilitado se ve y se siente deshabilitado */
+a[href], button:not(:disabled), [role="button"], select, summary, label[for], .form-check-input { cursor: pointer; }
+.btn:disabled, .btn.disabled, button:disabled, fieldset:disabled .btn { opacity: .55; cursor: not-allowed; }
+
+/* Tablas densas: la fila bajo el puntero se resalta (lectura de filas largas) y las cifras se alinean */
+.table-responsive .table > tbody > tr > * { transition: background-color var(--dur-micro) var(--ease-out); }
+.table-responsive .table > tbody > tr:hover > * { --bs-table-bg-state: var(--color-paper-2); }
+.table td.text-end, .table th.text-end { font-variant-numeric: tabular-nums; }
+
+/* Pantallas táctiles: objetivos de al menos 44 px (en escritorio se mantiene la densidad) */
+@media (pointer: coarse) {
+    .btn, .form-control, .form-select, .nav-link, .page-link { min-height: 44px; }
+    .btn-sm { min-height: 40px; }
+}
+
+/* La barra superior fija no tapa el elemento que recibe el foco ni el destino de un ancla */
+html { scroll-padding-top: 88px; }
+:focus-visible { scroll-margin-top: 88px; }
+/* Ícono de advertencia (SVG de la familia Lucide, en lugar del emoji ⚠) alineado con el texto */
+.icono-aviso { vertical-align: -2px; flex-shrink: 0; }
+
+/* Franja de error (AvisoError): dentro de la página, persistente y con X; reemplaza a la ventana modal */
+.aviso-error {
+    display: flex; align-items: flex-start; gap: var(--space-sm);
+    margin: 0 0 var(--space-md); padding: var(--space-sm) var(--space-md);
+    background: var(--color-danger-wash); color: var(--color-danger-ink);
+    border: 1px solid var(--color-danger-edge); border-left: 4px solid var(--color-danger);
+    border-radius: var(--radius);
+}
+.aviso-error:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.aviso-error-icono { flex-shrink: 0; margin-top: 2px; color: var(--color-danger); }
+.aviso-error-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.aviso-error-texto strong { font-weight: 600; }
+.aviso-error-texto span { overflow-wrap: anywhere; }
+.aviso-error-cerrar {
+    flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; margin: -4px -6px 0 0; padding: 0;
+    border: 0; border-radius: var(--radius); background: transparent; color: inherit; cursor: pointer;
+    transition: background-color var(--dur-micro) var(--ease-out);
+}
+.aviso-error-cerrar:hover { background: rgba(var(--color-danger-rgb), .12); }
+.aviso-error-cerrar:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+@media (pointer: coarse) { .aviso-error-cerrar { width: 44px; height: 44px; } }

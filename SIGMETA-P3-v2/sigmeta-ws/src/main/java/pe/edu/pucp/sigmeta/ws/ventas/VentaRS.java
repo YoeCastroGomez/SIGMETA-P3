@@ -61,6 +61,17 @@ public class VentaRS extends VentanillaBase {
     private final ComprobanteBO comprobanteBO = new ComprobanteBOImpl();
     private final UsuarioBO usuarioBO = new UsuarioBOImpl();
 
+    // RNF003, panel de inicio: GET /api/ventas/top-productos -> [{"producto": "...", "importe": 123.4}, ...]
+    // productos con más importe en las últimas 8 ventas vigentes, en una sola consulta a la base
+    @GET
+    @Path("top-productos")
+    public Response topProductos(@HeaderParam("ticket") String ticket) {
+        return ejecutar(ticket, id -> {
+            permitirConsulta(id);
+            return ventaBO.topProductos(8, 5);
+        });
+    }
+
     @GET
     public Response listar(@HeaderParam("ticket") String ticket, @QueryParam("cliente") Integer idCliente) {
         return ejecutar(ticket, id -> {

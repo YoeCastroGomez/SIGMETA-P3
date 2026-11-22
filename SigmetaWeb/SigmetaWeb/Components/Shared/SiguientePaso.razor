@@ -1,11 +1,13 @@
-@* Mensaje de éxito de una acción en una ventana modal, con un botón opcional para la acción que sigue
+@* Mensaje de éxito de una acción con un botón opcional para la acción que sigue
    (por ejemplo, después de aceptar una cotización: «Generar orden»).
    Uso:
        <SiguientePaso Mensaje="Se aceptó la cotización COT-2026-0012."
                       TextoAccion="Generar orden" Ruta="/ordenes/nueva?cotizacion=12"
-                      AlCerrar="() => exito = null" /> *@
-<MensajeModal Tipo="TipoMensaje.Exito" Mensaje="@Mensaje" Detalle="@Detalle" TextoAccion="@TextoAccion" Ruta="@Ruta"
-              AlAccion="AlAccion" AlCerrar="AlCerrar" />
+                      AlCerrar="() => exito = null" />
+   UI/UX Pro Max (Feedback): una confirmación no bloquea la pantalla. Se muestra como aviso flotante con el botón del
+   siguiente paso; se cierra solo (con más tiempo cuando trae botón) o con la X. El siguiente paso también sigue
+   disponible en la propia pantalla, así que no se pierde si el aviso se cierra. *@
+<Notificacion Mensaje="@Texto" TextoAccion="@TextoAccion" Ruta="@Ruta" AlAccion="AlAccion" AlCerrar="AlCerrar" Segundos="5" />
 
 @code {
     [Parameter] public string? Mensaje { get; set; }
@@ -14,4 +16,7 @@
     [Parameter] public string? Ruta { get; set; }
     [Parameter] public EventCallback AlAccion { get; set; }
     [Parameter] public EventCallback AlCerrar { get; set; }
+
+    private string? Texto => string.IsNullOrWhiteSpace(Mensaje) ? null
+        : string.IsNullOrWhiteSpace(Detalle) ? Mensaje : $"{Mensaje} {Detalle}";
 }

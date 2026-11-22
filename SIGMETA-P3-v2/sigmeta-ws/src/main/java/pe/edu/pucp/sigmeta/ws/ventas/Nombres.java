@@ -35,6 +35,10 @@ public class Nombres {
                 clientes.put(c.getId(), c);
             }
         }
+        // listarTodos solo trae clientes activos: una venta de un cliente desactivado se completa por id
+        if (!clientes.containsKey(idCliente)) {
+            clientes.put(idCliente, clienteBO.obtener(idCliente));
+        }
         return clientes.get(idCliente);
     }
 

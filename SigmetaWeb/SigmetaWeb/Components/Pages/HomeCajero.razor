@@ -1,0 +1,91 @@
+@* Panel de inicio del Cajero: caja abierta, cobros y cuentas por cobrar. Parte de Home.razor: solo dibuja; los datos y cálculos están en Home.razor.cs (Panel). *@
+@using System.Globalization
+@using SigmetaWeb.Components.Pages.Compras
+@using SigmetaWeb.Components.Pages.Catalogo
+@using SigmetaWeb.Components.Pages.Clientes
+@using SigmetaWeb.Components.Pages.Caja
+@using SigmetaWeb.Components.Pages.Ventas
+<div class="sg-panel-grid sg-grid-principal">
+    <section class="sg-panel sg-panel-grafico">
+        <div class="sg-panel-cabecera"><div><h2>Cobros de los últimos siete días</h2><p>Importes efectivamente registrados, excluyendo anulaciones.</p></div><span class="sg-chip">S/</span></div>
+        @if (Panel.cobros is null)
+        {
+            <div class="sg-sin-datos">No hay datos de cobros disponibles.</div>
+        }
+        else
+        {
+            <div class="sg-columnas-contenedor">
+                <div class="sg-columnas sg-columnas-siete">
+                    @foreach (var dia in Panel.SerieCobros)
+                    {
+                        <div class="sg-columna-contenedor" title="@($"{dia.Etiqueta}: {Home.Dinero(dia.Valor)}")" @key="dia.Etiqueta">
+                            <span class="sg-columna-valor">@dia.Valor.ToString("N0")</span>
+                            <div class="sg-columna-eje"><div class="sg-columna" style="height:@(Home.Porcentaje(dia.Valor, Panel.MaximoCobros))%"></div></div>
+                            <small>@dia.Etiqueta</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </section>
+    <section class="sg-panel">
+        <div class="sg-panel-cabecera"><div><h2>Medios de pago</h2><p>Distribución del importe cobrado.</p></div></div>
+        @if (Panel.cobros is null)
+        {
+            <div class="sg-sin-datos">No se pudo obtener la distribución.</div>
+        }
+        else if (Panel.MediosPago.Count == 0)
+        {
+            <div class="sg-sin-datos">Todavía no hay cobros vigentes.</div>
+        }
+        else
+        {
+            <div class="sg-ranking">
+                @foreach (var medio in Panel.MediosPago)
+                {
+                    <div class="sg-ranking-fila" @key="medio.Etiqueta">
+                        <div class="sg-ranking-encabezado"><span>@TextosCaja.Texto(medio.Etiqueta)</span><strong>@Home.Dinero(medio.Valor)</strong></div>
+                        <div class="sg-barra-pista"><div class="sg-barra-relleno" style="width:@(Home.Porcentaje(medio.Valor, Panel.MaximoMedio))%"></div></div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+</div>
+<div class="sg-panel-grid sg-grid-doble">
+    <section class="sg-panel">
+        <div class="sg-panel-cabecera"><div><h2>Cuentas por cobrar</h2><p>Clientes con mayor saldo pendiente.</p></div><a href="/cobranzas" class="sg-enlace">Abrir módulo</a></div>
+        @if (Panel.cuentas is null)
+        {
+            <div class="sg-sin-datos">Las cuentas por cobrar no están disponibles.</div>
+        }
+        else if (Panel.MayoresDeudas.Count == 0)
+        {
+            <div class="sg-sin-datos">No existen cuentas con saldo pendiente.</div>
+        }
+        else
+        {
+            <div class="sg-ranking">
+                @foreach (var deuda in Panel.MayoresDeudas)
+                {
+                    <div class="sg-ranking-fila" @key="deuda.Etiqueta">
+                        <div class="sg-ranking-encabezado"><span>@deuda.Etiqueta</span><strong>@Home.Dinero(deuda.Valor)</strong></div>
+                        <div class="sg-barra-pista"><div class="sg-barra-relleno" style="width:@(Home.Porcentaje(deuda.Valor, Panel.MaximoDeuda))%"></div></div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+    <section class="sg-panel">
+        <div class="sg-panel-cabecera"><div><h2>Resumen de caja</h2><p>Situación de la jornada y cuentas vencidas.</p></div></div>
+        <div class="sg-alertas">
+            <a href="/caja" class="sg-alerta-fila"><span>Estado de caja</span><strong>@(Panel.cajaConsultada ? Panel.cajaAbierta is null ? "Sin abrir" : "Abierta" : "—")</strong></a>
+            <a href="/caja" class="sg-alerta-fila"><span>Monto esperado</span><strong>@(Panel.cajaAbierta is null ? "—" : Home.Dinero(Panel.cajaAbierta.MontoEsperado))</strong></a>
+            <a href="/cobranzas" class="sg-alerta-fila"><span>Cuentas vencidas</span><strong>@Home.TextoConteo(Panel.CuentasVencidas)</strong></a>
+        </div>
+    </section>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Home Panel { get; set; } = default!;
+}

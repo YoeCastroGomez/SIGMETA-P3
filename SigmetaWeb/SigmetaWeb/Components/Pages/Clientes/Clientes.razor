@@ -86,25 +86,10 @@ else
                                 }
                             </td>
                             <td><Estado Texto="@(c.Activo ? "Activo" : "Inactivo")" /></td>
-                            <td class="text-end">
-                                <div class="d-inline-flex gap-1 text-nowrap">
-                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/clientes/editar/{c.Id}")">Editar</a>
-                                    @* RF003: la línea de crédito solo la maneja el Administrador *@
-                                    @if (c.Activo)
-                                    {
-                                        @* a un cliente desactivado no se le asigna crédito (el BO lo rechaza) *@
-                                        <AuthorizeView Roles="Administrador">
-                                            <Authorized>
-                                                <a class="btn btn-sm btn-outline-secondary" href="@($"/clientes/credito/{c.Id}")">Crédito</a>
-                                            </Authorized>
-                                        </AuthorizeView>
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => porDesactivar = c">Desactivar</button>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn btn-sm btn-outline-success" @onclick="() => Activar(c)">Activar</button>
-                                    }
-                                </div>
+                            @* UI/UX: una acción visible por fila y el resto en «⋯» (menos ruido en tablas densas, igual que Ventas) *@
+                            <td class="text-end acciones">
+                                <AccionesFila Principal="@(new AccionFila("Editar", Ruta: $"/clientes/editar/{c.Id}", Destacada: false))"
+                                              Otras="@OtrasAcciones(c)" AlElegir="Ejecutar" />
                             </td>
                         </tr>
                     }
@@ -116,6 +101,23 @@ else
 }
 
 @code {
+    [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
+
+    // Menú «⋯»: crédito (solo Administrador y clientes activos, RF003), desactivar o activar
+    private List<AccionFila> OtrasAcciones(Cliente c)
+    {
+        var lista = new List<AccionFila>();
+        if (c.Activo && Rol == "Administrador")
+            lista.Add(new("Línea de crédito", Ruta: $"/clientes/credito/{c.Id}"));
+        if (c.Activo)
+            lista.Add(new("Desactivar", Hacer: () => { porDesactivar = c; return Task.CompletedTask; }, Peligro: true));
+        else
+            lista.Add(new("Activar", Hacer: () => Activar(c)));
+        return lista;
+    }
+
+    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
+
     private int paginaActual = 1;
     private int tamanoPagina = 10;
     private IEnumerable<T> Paginar<T>(IEnumerable<T>? registros, int pagina, int tamano)

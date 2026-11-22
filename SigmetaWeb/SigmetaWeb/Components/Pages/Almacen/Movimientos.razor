@@ -108,16 +108,10 @@ else
                             <td class="small" style="max-width: 260px;">@m.Motivo</td>
                             <td>@m.Usuario</td>
                             <td class="text-end">
-                                <div class="d-inline-flex gap-1 text-nowrap">
-                                    @if (EsAlmacenero && m.EsAjusteOriginal && m.Revertido == 0)
-                                    {
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="@(() => Pedir(m, "revertir"))">Revertir</button>
-                                    }
-                                    @if (EsAdministrador)
-                                    {
-                                        <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Pedir(m, "motivo"))">Corregir motivo</button>
-                                    }
-                                </div>
+                                @if (AccionesMovimiento(m) is { Count: > 0 } acciones)
+                                {
+                                    <AccionesFila Otras="@acciones" AlElegir="Ejecutar" />
+                                }
                             </td>
                         </tr>
                     }
@@ -133,6 +127,16 @@ else
 }
 
 @code {
+    // UI/UX: una acción visible por fila y el resto en «⋯» (mismo patrón en todas las listas)
+    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
+    private List<AccionFila> AccionesMovimiento(MovimientoFila m)
+    {
+        var lista = new List<AccionFila>();
+        if (EsAdministrador) lista.Add(new("Corregir motivo", Hacer: () => { Pedir(m, "motivo"); return Task.CompletedTask; }));
+        if (EsAlmacenero && m.EsAjusteOriginal && m.Revertido == 0) lista.Add(new("Revertir", Hacer: () => { Pedir(m, "revertir"); return Task.CompletedTask; }, Peligro: true));
+        return lista;
+    }
+
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
     private bool EsAlmacenero => Rol == "Almacenero";
     private bool EsAdministrador => Rol == "Administrador";

@@ -136,15 +136,9 @@ else
                             <td>@d.Usuario</td>
                             <td><Estado Texto="@(d.Anulado ? "Anulado" : "Vigente")" /></td>
                             <td class="text-end">
-                                <div class="d-inline-flex gap-1 text-nowrap">
-                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => VerDetalle(d)">
-                                        @(detalleDe == d.Id ? "Ocultar" : "Ver detalle")
-                                    </button>
-                                    @if (!d.Anulado && PuedeAnular)
-                                    {
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirAnular(d)">Anular</button>
-                                    }
-                                </div>
+                                <AccionesFila Principal="@(new AccionFila(detalleDe == d.Id ? "Ocultar" : "Ver detalle", Hacer: () => VerDetalle(d), Destacada: false))"
+                                              Otras="@(!d.Anulado && PuedeAnular ? new List<AccionFila> { new("Anular", Hacer: () => { PedirAnular(d); return Task.CompletedTask; }, Peligro: true) } : new List<AccionFila>())"
+                                              AlElegir="Ejecutar" />
                             </td>
                         </tr>
                         @if (detalleDe == d.Id)
@@ -182,6 +176,9 @@ else
 }
 
 @code {
+    // UI/UX: una acción visible por fila y el resto en «⋯» (mismo patrón en todas las listas)
+    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
+
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
     private bool EsAlmacenero => Rol == "Almacenero";
     private bool PuedeAnular => Rol is "Almacenero" or "Administrador";

@@ -2,7 +2,7 @@
    texto rojo en español debajo del cuadro. Si Mensaje está vacío no muestra nada. *@
 @if (!string.IsNullOrEmpty(Mensaje))
 {
-    <div class="small text-danger mt-1">@Mensaje</div>
+    <div class="small text-danger mt-1 error-campo">@Mensaje</div>
 }
 
 @code {

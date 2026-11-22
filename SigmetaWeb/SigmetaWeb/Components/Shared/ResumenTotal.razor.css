@@ -1,5 +1,5 @@
 /* Queda a la vista al bajar por la página */
-.resumen-total { position: sticky; top: 76px; border-top: 3px double var(--color-rule-2) !important; }
+.resumen-total { position: sticky; top: 76px; border-top: 1px solid var(--color-rule-2) !important; }
 
 .cabecera {
     display: flex;
@@ -20,7 +20,7 @@
     margin-top: .2rem;
     font-family: var(--font-display);
     font-size: var(--text-2xl);
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
 }

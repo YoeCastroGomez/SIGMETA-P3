@@ -114,15 +114,9 @@ else
                             <td>@r.Usuario</td>
                             <td><Estado Texto="@(r.Anulada ? "Revertida" : "Vigente")" /></td>
                             <td class="text-end">
-                                <div class="d-inline-flex gap-1 text-nowrap">
-                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => VerDetalle(r)">
-                                        @(detalleDe == r.Id ? "Ocultar" : "Ver detalle")
-                                    </button>
-                                    @if (!r.Anulada && EsAlmacenero)
-                                    {
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirRevertir(r)">Revertir</button>
-                                    }
-                                </div>
+                                <AccionesFila Principal="@(new AccionFila(detalleDe == r.Id ? "Ocultar" : "Ver detalle", Hacer: () => VerDetalle(r), Destacada: false))"
+                                              Otras="@(!r.Anulada && EsAlmacenero ? new List<AccionFila> { new("Revertir", Hacer: () => { PedirRevertir(r); return Task.CompletedTask; }, Peligro: true) } : new List<AccionFila>())"
+                                              AlElegir="Ejecutar" />
                             </td>
                         </tr>
                         @if (detalleDe == r.Id)
@@ -160,6 +154,9 @@ else
 }
 
 @code {
+    // UI/UX: una acción visible por fila y el resto en «⋯» (mismo patrón en todas las listas)
+    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
+
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
     private bool EsAlmacenero => Rol == "Almacenero";
 

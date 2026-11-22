@@ -103,14 +103,10 @@ else
                             </td>
                             <td><Estado Texto="@(c.Anulado ? "Anulado" : "Vigente")" /></td>
                             <td class="text-end">
-                                <div class="d-inline-flex gap-1 text-nowrap">
-                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/cobranzas/{c.IdCuentaPorCobrar}")">Ver cuenta</a>
-                                    @if (!c.Anulado && (Rol == "Cajero" || Rol == "Administrador"))
-                                    {
-                                        <a class="btn btn-sm btn-outline-secondary" href="@($"/cobranzas/{c.IdCuentaPorCobrar}/cobros/{c.Id}")">Modificar</a>
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Anular(c)">Anular</button>
-                                    }
-                                </div>
+                                <AccionesFila Principal="@(new AccionFila("Ver cuenta", Ruta: $"/cobranzas/{c.IdCuentaPorCobrar}", Destacada: false))"
+                                              Otras="@(!c.Anulado && (Rol == "Cajero" || Rol == "Administrador")
+                                                  ? new List<AccionFila> { new("Modificar", Ruta: $"/cobranzas/{c.IdCuentaPorCobrar}/cobros/{c.Id}"), new("Anular", Hacer: () => Anular(c), Peligro: true) }
+                                                  : new List<AccionFila>())" AlElegir="Ejecutar" />
                             </td>
                         </tr>
                     }
@@ -122,6 +118,9 @@ else
 }
 
 @code {
+    // UI/UX: una acción visible por fila y el resto en «⋯» (mismo patrón en todas las listas)
+    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
+
     private int paginaActual = 1;
     private int tamanoPagina = 10;
     private IEnumerable<T> Paginar<T>(IEnumerable<T>? registros, int pagina, int tamano)

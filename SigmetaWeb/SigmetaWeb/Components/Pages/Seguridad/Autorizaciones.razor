@@ -107,20 +107,16 @@ else
                                 }
                             </td>
                             <td class="text-end">
-                                <div class="d-inline-flex gap-1 text-nowrap">
-                                    @if (s.Estado == "PENDIENTE")
-                                    {
-                                        <a class="btn btn-sm btn-primary" href="@($"/autorizaciones/aprobar/{s.Id}")">Resolver</a>
-                                    }
-                                    else
-                                    {
-                                        <a class="btn btn-sm btn-outline-secondary" href="@($"/autorizaciones/detalle/{s.Id}")">Ver</a>
-                                        @if (s.Vigente)
-                                        {
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => { error = exito = null; porRevocar = s; }">Revocar</button>
-                                        }
-                                    }
-                                </div>
+                                @if (s.Estado == "PENDIENTE")
+                                {
+                                    <AccionesFila Principal="@(new AccionFila("Resolver", Ruta: $"/autorizaciones/aprobar/{s.Id}"))" AlElegir="Ejecutar" />
+                                }
+                                else
+                                {
+                                    <AccionesFila Principal="@(new AccionFila("Ver", Ruta: $"/autorizaciones/detalle/{s.Id}", Destacada: false))"
+                                                  Otras="@(s.Vigente ? new List<AccionFila> { new("Revocar", Hacer: () => { error = exito = null; porRevocar = s; return Task.CompletedTask; }, Peligro: true) } : new List<AccionFila>())"
+                                                  AlElegir="Ejecutar" />
+                                }
                             </td>
                         </tr>
                     }
@@ -132,6 +128,9 @@ else
 }
 
 @code {
+    // UI/UX: una acción visible por fila y el resto en «⋯» (mismo patrón en todas las listas)
+    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
+
     private List<SolicitudDatos>? solicitudes;
     private string filtroEstado = "";
     private string filtroTexto = "";

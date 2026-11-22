@@ -89,20 +89,9 @@ else
                                 <td><strong>@p.RazonSocial</strong></td>
                                 <td>@(p.Rubro ?? "—")</td>
                                 <td><Estado Texto="@(p.Estado ? "Activo" : "Inactivo")" /></td>
-                                <td class="text-end">
-                                    <div class="d-inline-flex gap-1 text-nowrap">
-                                        <a class="btn btn-sm btn-outline-secondary" href="@($"/proveedores/editar/{p.Id}")">Editar</a>
-                                        @if (p.Estado)
-                                        {
-                                            <button type="button" class="btn btn-sm btn-outline-danger"
-                                                    disabled="@cargando" @onclick="() => porDesactivar = p">Desactivar</button>
-                                        }
-                                        else
-                                        {
-                                            <button type="button" class="btn btn-sm btn-outline-primary"
-                                                    disabled="@cargando" @onclick="() => porActivar = p">Reactivar</button>
-                                        }
-                                    </div>
+                                <td class="text-end acciones">
+                                    <AccionesFila Principal="@(new AccionFila("Editar", Ruta: $"/proveedores/editar/{p.Id}", Destacada: false))"
+                                                  Otras="@OtrasAcciones(p)" Ocupado="@cargando" AlElegir="Ejecutar" />
                                 </td>
                             </tr>
                         }
@@ -116,6 +105,12 @@ else
 }
 
 @code {
+    // UI/UX: una acción visible por fila y el resto en «⋯» (menos ruido en tablas densas; mismo patrón que Ventas)
+    private List<AccionFila> OtrasAcciones(Proveedor p) => p.Estado
+        ? new() { new("Desactivar", Hacer: () => { porDesactivar = p; return Task.CompletedTask; }, Peligro: true) }
+        : new() { new("Reactivar", Hacer: () => { porActivar = p; return Task.CompletedTask; }) };
+    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
+
     private List<Proveedor>? proveedores;
     private int paginaActual = 1;
     private int tamanoPagina = 10;

@@ -658,6 +658,13 @@ public class VentaBOImpl implements VentaBO {
         return Transaccion.ejecutar(() -> ventaDAO.listarPorCliente(idCliente));
     }
 
+    // RNF003, panel de inicio: top de productos por importe de las últimas ventas vigentes, calculado en la base
+    @Override
+    public List<Map<String, Object>> topProductos(int ventas, int limite) throws SQLException {
+        return Transaccion.consultar(() -> consultaDAO.consultar("sp_panel_top_productos",
+                Math.max(1, ventas), Math.max(1, limite)));
+    }
+
     // RF008/RF010: mismo criterio que la regla de modificar (sp_venta_contar_cobros_contado), en una sola consulta
     @Override
     public Set<Integer> idsCobradasAlContado() throws SQLException {

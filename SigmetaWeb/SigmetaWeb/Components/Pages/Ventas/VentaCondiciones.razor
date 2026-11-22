@@ -1,0 +1,58 @@
+@* Sección 3 de VentaForm: fecha de emisión, condición de pago, plazo y observaciones. Parte de VentaForm.razor:
+   edita la misma venta (Panel.venta) y, tras cada cambio, avisa al formulario (AlCambiar) para que se vuelva a
+   dibujar el resumen (total, lo que falta y Guardar). La validación sigue en VentaForm.razor.2.cs. *@
+<div class="card card-body mb-3">
+    <h2 class="h6 fw-semibold mb-3"><span class="seccion">3</span> Condiciones</h2>
+    <div class="row">
+        <div class="col-md-4">
+            <Campo Etiqueta="Fecha de emisión" Id="fecha" Obligatorio="true" Error="@(Panel.v.Error("fecha", Panel.Errores()))"
+                   Ayuda="@(Panel.EsNuevo ? $"Desde {VentaForm.FechaMinima:dd/MM} hasta hoy." : null)">
+                <input id="fecha" type="date" class="@(Panel.v.Clase("fecha", Panel.Errores()))"
+                       min="@(Panel.EsNuevo ? VentaForm.FechaMinima.ToString("yyyy-MM-dd") : null)" max="@(Panel.EsNuevo ? VentaForm.Hoy.ToString("yyyy-MM-dd") : null)"
+                       @bind="Panel.venta!.FechaEmision" @bind:format="yyyy-MM-dd" @bind:after="@(() => Cambio("fecha"))" disabled="@(!Panel.Editable)" />
+            </Campo>
+        </div>
+        <div class="col-md-4">
+            <Campo Etiqueta="Condición de pago" Id="condicion" Obligatorio="true" Ayuda="@Panel.AyudaCondicion">
+                <select id="condicion" class="form-select" @bind="Panel.venta!.CondicionPago" @bind:after="@(() => Cambio(null))" disabled="@(!Panel.EsNuevo)">
+                    <option value="CONTADO">Contado</option>
+                    <option value="CREDITO" disabled="@(Panel.EsNuevo && !Panel.TieneLinea)">@(Panel.EsNuevo && !Panel.TieneLinea ? "Crédito (el cliente no tiene línea)" : "Crédito")</option>
+                </select>
+            </Campo>
+        </div>
+        @if (Panel.venta!.CondicionPago == "CREDITO")
+        {
+            <div class="col-md-4">
+                <Campo Etiqueta="Plazo de crédito (días)" Id="plazo" Error="@(Panel.v.Error("plazo", Panel.Errores()))"
+                       Ayuda="@(Panel.ClienteActual is { } cp ? $"En 0 se usa el plazo del cliente ({cp.PlazoCreditoDias} días)." : "En 0 se usa el plazo del cliente.")">
+                    <input id="plazo" type="number" class="@(Panel.v.Clase("plazo", Panel.Errores()))" onkeydown="@ValidacionEnVivo.SoloPositivos"
+                           @bind="Panel.venta!.PlazoCreditoDias" @bind:event="oninput" @bind:after="@(() => Cambio("plazo"))" disabled="@(!Panel.EsNuevo)" />
+                </Campo>
+            </div>
+        }
+        <div class="col-12">
+            <Campo Etiqueta="Observaciones" Id="observaciones" Clase="mb-0">
+                <textarea id="observaciones" class="form-control observaciones" rows="2" maxlength="300"
+                          placeholder="Opcional: indicaciones de entrega o de pago"
+                          @bind="Panel.venta!.Observaciones" @bind:event="oninput" @bind:after="@(() => Cambio(null))" disabled="@(!Panel.Editable)"></textarea>
+            </Campo>
+        </div>
+    </div>
+    @if (Panel.EsNuevo && Panel.venta!.CondicionPago == "CREDITO" && Panel.ClienteActual is { } cl)
+    {
+        <div class="alert alert-light border small mt-3 mb-0">
+            <strong>Línea de crédito:</strong> hasta S/ @cl.LimiteCredito.ToString("N2") a @cl.PlazoCreditoDias días.
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public VentaForm Panel { get; set; } = default!;
+    [Parameter] public EventCallback AlCambiar { get; set; }
+
+    private Task Cambio(string? campo)
+    {
+        if (campo is not null) Panel.v.Tocado(campo);
+        return AlCambiar.InvokeAsync();
+    }
+}

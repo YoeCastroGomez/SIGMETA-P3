@@ -30,11 +30,11 @@
     align-items: center;
     gap: var(--space-sm);
     padding-bottom: var(--space-md);
-    border-bottom: 3px double var(--band-ink);
+    border-bottom: 1px solid var(--band-rule);
 }
 .login-emblema { display: inline-flex; flex: 0 0 auto; color: var(--color-brand); }
 .login-marca-nombre { display: flex; flex-direction: column; gap: var(--space-3xs); }
-.login-marca-nombre strong { font-family: var(--font-display); font-weight: 700; font-size: var(--text-xl); line-height: 1; }
+.login-marca-nombre strong { font-family: var(--font-display); font-weight: 600; font-size: var(--text-xl); line-height: 1; }
 .login-marca-nombre strong span { color: var(--color-brand); }
 .login-marca-nombre small { font-size: var(--text-sm); color: var(--band-soft); }
 
@@ -57,7 +57,7 @@
 .login-marca-modulos li {
     padding: 0 var(--space-md);
     font-family: var(--font-display);
-    font-weight: 700;
+    font-weight: 600;
     color: var(--band-ink);
     border-left: 1px solid var(--band-rule);
 }
@@ -138,3 +138,9 @@ html[data-bs-theme="dark"] .login-marca {
     .login-shell { width: calc(100% - 2 * var(--space-md)); }
     .login-formulario-zona { padding: var(--space-lg) var(--space-md); }
 }
+
+/* Acceso de sistema interno (no una página de publicidad): una sola columna con la marca arriba y el formulario */
+.login-shell { grid-template-columns: minmax(0, 1fr); width: min(460px, calc(100% - 2 * var(--space-md))); min-height: auto; margin: 8vh auto var(--space-lg); }
+.login-marca { padding: var(--space-lg) var(--space-xl); gap: var(--space-sm); min-height: auto; }
+.login-marca-top { padding-bottom: 0; border-bottom: 0; }
+.login-marca-pie { display: none; }

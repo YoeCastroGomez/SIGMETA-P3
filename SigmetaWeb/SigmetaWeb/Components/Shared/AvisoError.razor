@@ -1,10 +1,55 @@
-@* Mensaje de error de una acción (el texto que devolvió el Java, por ejemplo la regla del BO que no se cumplió),
-   en una ventana modal. Uso: <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
-   Si error es null o vacío no se muestra nada. Los errores de cada campo siguen debajo del campo (ErrorCampo). *@
-<MensajeModal Tipo="TipoMensaje.Error" Titulo="@Titulo" Mensaje="@Mensaje" AlCerrar="AlCerrar" />
+@* Mensaje de error de una acción (el texto que devolvió el Java, por ejemplo la regla del BO que no se cumplió, o
+   "Revise los campos marcados en rojo"). Uso: <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
+   Si error es null o vacío no se muestra nada. Los errores de cada campo siguen debajo del campo (Campo / ErrorCampo).
+
+   UI/UX Pro Max (Feedback / Forms):
+   - Franja roja dentro de la página, NO ventana modal: el error queda a la vista mientras se corrige el formulario.
+   - Persistente: no se cierra sola; se va cuando se corrige la causa o con la X.
+   - Al aparecer, el foco va al primer campo marcado en rojo (o a la franja si el error no es de un campo), y cada
+     campo con error queda enlazado a su mensaje (aria-invalid y aria-describedby) para los lectores de pantalla. *@
+@inject IJSRuntime JS
+
+@if (!string.IsNullOrWhiteSpace(Mensaje))
+{
+    <div class="aviso-error" role="alert" tabindex="-1" @ref="franja">
+        <svg class="aviso-error-icono" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" /><path d="M12 8v4" /><path d="M12 16h.01" />
+        </svg>
+        <div class="aviso-error-texto">
+            <strong>@(string.IsNullOrWhiteSpace(Titulo) ? "No se pudo completar la operación" : Titulo)</strong>
+            <span>@Mensaje</span>
+        </div>
+        @if (AlCerrar.HasDelegate)
+        {
+            <button type="button" class="aviso-error-cerrar" aria-label="Cerrar el aviso de error" @onclick="AlCerrar">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            </button>
+        }
+    </div>
+}
 
 @code {
     [Parameter] public string? Mensaje { get; set; }
     [Parameter] public string? Titulo { get; set; }
     [Parameter] public EventCallback AlCerrar { get; set; }
+
+    private ElementReference franja;
+    private string? mostrado;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // solo cuando aparece un error nuevo (no en cada redibujo)
+        if (!string.IsNullOrWhiteSpace(Mensaje) && Mensaje != mostrado)
+        {
+            mostrado = Mensaje;
+            try { await JS.InvokeVoidAsync("sigmetaErrores.enfocar", franja); }
+            catch (JSException) { }
+            catch (InvalidOperationException) { }   // prerender: aún no hay navegador
+        }
+        else if (string.IsNullOrWhiteSpace(Mensaje))
+        {
+            mostrado = null;
+        }
+    }
 }

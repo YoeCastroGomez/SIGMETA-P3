@@ -8,7 +8,8 @@
     @ChildContent
     @if (!string.IsNullOrEmpty(Error))
     {
-        <div class="small text-danger mt-1">@Error</div>
+        @* id: el campo se enlaza a este mensaje (aria-describedby) para los lectores de pantalla *@
+        <div class="small text-danger mt-1 error-campo" id="@(string.IsNullOrEmpty(Id) ? null : Id + "-error")">@Error</div>
     }
     else if (!string.IsNullOrEmpty(Ayuda))
     {

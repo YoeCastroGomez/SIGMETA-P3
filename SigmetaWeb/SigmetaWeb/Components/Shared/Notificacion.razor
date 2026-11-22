@@ -11,7 +11,11 @@
     <div class="notificacion @(Error ? "error" : "exito")" role="@(Error ? "alert" : "status")" aria-live="polite">
         <span class="icono" aria-hidden="true">@(Error ? "!" : "✓")</span>
         <span class="texto">@Mensaje</span>
-        @if (!string.IsNullOrWhiteSpace(TextoAccion) && !string.IsNullOrWhiteSpace(Ruta))
+        @if (!string.IsNullOrWhiteSpace(TextoAccion) && AlAccion.HasDelegate)
+        {
+            <button type="button" class="accion" @onclick="Accionar">@TextoAccion</button>
+        }
+        else if (!string.IsNullOrWhiteSpace(TextoAccion) && !string.IsNullOrWhiteSpace(Ruta))
         {
             <a class="accion" href="@Ruta">@TextoAccion</a>
         }
@@ -26,6 +30,14 @@
     [Parameter] public string? Ruta { get; set; }
     [Parameter] public int Segundos { get; set; } = 4;
     [Parameter] public EventCallback AlCerrar { get; set; }
+    // acción que corre en la pantalla (por ejemplo «Imprimir») en lugar de ir a una ruta
+    [Parameter] public EventCallback AlAccion { get; set; }
+
+    private async Task Accionar()
+    {
+        await Cerrar();
+        await AlAccion.InvokeAsync();
+    }
 
     private CancellationTokenSource? temporizador;
     private string? mostrado;

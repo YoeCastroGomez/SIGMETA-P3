@@ -74,14 +74,10 @@
                         <td>S/ @c.Total.ToString("N2")</td>
                         <td><Estado Texto="@c.Estado" /></td>
                         <td class="text-end">
-                            <div class="d-inline-flex gap-1 text-nowrap">
-                                <a class="btn btn-sm btn-outline-primary" href="@($"/compras/detalle/{c.Id}")">Ver detalle</a>
-                                @if (c.Estado == "REGISTRADA" && !c.Anulado)
-                                {
-                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/compras/editar/{c.Id}")">Editar</a>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" disabled="@cargando" @onclick="() => porAnular = c">Anular</button>
-                                }
-                            </div>
+                            <AccionesFila Principal="@(new AccionFila("Ver detalle", Ruta: $"/compras/detalle/{c.Id}", Destacada: false))"
+                                          Otras="@(c.Estado == "REGISTRADA" && !c.Anulado
+                                              ? new List<AccionFila> { new("Editar", Ruta: $"/compras/editar/{c.Id}"), new("Anular", Hacer: () => { porAnular = c; return Task.CompletedTask; }, Peligro: true) }
+                                              : new List<AccionFila>())" Ocupado="@cargando" AlElegir="Ejecutar" />
                         </td>
                     </tr>
                 }
@@ -104,6 +100,9 @@
 </div>
 
 @code {
+    // UI/UX: una acción visible por fila y el resto en «⋯» (mismo patrón en todas las listas)
+    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
+
     private List<CompraRest> compras = new();
     private List<CompraRest> resultado = new();
     private int paginaActual = 1;

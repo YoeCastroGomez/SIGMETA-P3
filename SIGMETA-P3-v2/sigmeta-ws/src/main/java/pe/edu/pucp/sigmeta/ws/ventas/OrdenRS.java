@@ -59,16 +59,12 @@ public class OrdenRS extends VentanillaBase {
             }
             Nombres nombres = new Nombres();
             List<OrdenDatos> lista = new ArrayList<>();
+            // RF007/RF008: queda algo por VENDER (no por entregar): alguna linea con pedido > ya vendido. El estado
+            // de la orden sigue a lo despachado; esto decide si se muestra "Registrar venta". RNF003: una sola consulta.
+            java.util.Set<Integer> porVender = ordenBO.idsPorVender();
             for (OrdenCompraCliente oc : ordenBO.listarTodos()) {
                 OrdenDatos d = convertir(oc, nombres, numerosCotizacion, false);
-                // RF007/RF008: queda algo por VENDER (no por entregar): alguna linea con pedido > ya vendido.
-                // El estado de la orden sigue a lo despachado; esto decide si se muestra "Registrar venta".
-                if (!oc.isAnulado() && (oc.getEstado() == EstadoOrdenCompraCliente.PENDIENTE
-                        || oc.getEstado() == EstadoOrdenCompraCliente.ATENDIDA_PARCIAL)) {
-                    OrdenCompraCliente conLineas = ordenBO.obtener(oc.getId());
-                    d.porVender = conLineas != null && conLineas.getDetalles() != null && conLineas.getDetalles().stream()
-                            .anyMatch(l -> l.getCantidad() - l.getCantidadVendida() > 0.0001);
-                }
+                d.porVender = porVender.contains(oc.getId());
                 lista.add(d);
             }
             return lista;

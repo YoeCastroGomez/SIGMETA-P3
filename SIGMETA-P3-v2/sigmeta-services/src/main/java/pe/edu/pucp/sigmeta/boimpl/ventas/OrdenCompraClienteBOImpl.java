@@ -173,6 +173,21 @@ public class OrdenCompraClienteBOImpl implements OrdenCompraClienteBO {
         });
     }
 
+    // RNF003: antes la lista cargaba cada orden y cada línea (decenas de consultas a la base en AWS, unos 4 s)
+    @Override
+    public java.util.Set<Integer> idsPorVender() throws SQLException {
+        return Transaccion.consultar(() -> {
+            java.util.Set<Integer> ids = new java.util.HashSet<>();
+            for (java.util.Map<String, Object> fila : new pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl()
+                    .consultar("sp_orden_compra_cliente_ids_por_vender")) {
+                if (fila.get("idOrden") instanceof Number n) {
+                    ids.add(n.intValue());
+                }
+            }
+            return ids;
+        });
+    }
+
     @Override
     public OrdenCompraCliente obtener(int id) throws SQLException {
         return Transaccion.ejecutar(() -> {

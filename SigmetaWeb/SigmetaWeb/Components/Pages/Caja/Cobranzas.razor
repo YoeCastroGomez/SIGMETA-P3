@@ -144,14 +144,16 @@ else
                                 }
                             </td>
                             <td class="text-end">
-                                <div class="d-inline-flex gap-1 text-nowrap">
-                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/cobranzas/{c.Id}")">Ver</a>
-                                    @if (Rol == "Cajero" && c.SaldoPendiente > 0)
-                                    {
-                                        @* RF009: el cobro lo registra el Cajero (CobroBOImpl exige el rol CAJERO) *@
-                                        <a class="btn btn-sm btn-primary" href="@($"/cobranzas/{c.Id}/cobro")">Cobrar</a>
-                                    }
-                                </div>
+                                @* RF009: el cobro lo registra el Cajero (CobroBOImpl exige el rol CAJERO) *@
+                                @if (Rol == "Cajero" && c.SaldoPendiente > 0)
+                                {
+                                    <AccionesFila Principal="@(new AccionFila("Cobrar", Ruta: $"/cobranzas/{c.Id}/cobro"))"
+                                                  Otras="@(new List<AccionFila> { new("Ver cuenta", Ruta: $"/cobranzas/{c.Id}") })" AlElegir="Ejecutar" />
+                                }
+                                else
+                                {
+                                    <AccionesFila Principal="@(new AccionFila("Ver", Ruta: $"/cobranzas/{c.Id}", Destacada: false))" AlElegir="Ejecutar" />
+                                }
                             </td>
                         </tr>
                     }
@@ -163,6 +165,9 @@ else
 }
 
 @code {
+    // UI/UX: una acción visible por fila y el resto en «⋯» (mismo patrón en todas las listas)
+    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
+
     private int paginaActual = 1;
     private int tamanoPagina = 10;
     private IEnumerable<T> Paginar<T>(IEnumerable<T>? registros, int pagina, int tamano)

@@ -80,14 +80,10 @@ else
                             <td><Estado Texto="@(u.Estado ? "Activo" : "Inactivo")" /></td>
                             <td class="text-nowrap">@Formato.Fecha(u.FechaRegistro)</td>
                             <td class="text-end">
-                                <div class="d-inline-flex gap-1 text-nowrap">
-                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/usuarios/editar/{u.Id}")">Editar</a>
-                                    @* RF002: nadie se desactiva a sí mismo; lo hace otro Administrador (el BO también lo rechaza) *@
-                                    @if (u.Estado && !EsYoMismo(u))
-                                    {
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => { error = exito = null; porDesactivar = u; }">Desactivar</button>
-                                    }
-                                </div>
+                                @* RF002: nadie se desactiva a sí mismo; lo hace otro Administrador (el BO también lo rechaza) *@
+                                <AccionesFila Principal="@(new AccionFila("Editar", Ruta: $"/usuarios/editar/{u.Id}", Destacada: false))"
+                                              Otras="@(u.Estado && !EsYoMismo(u) ? new List<AccionFila> { new("Desactivar", Hacer: () => { error = exito = null; porDesactivar = u; return Task.CompletedTask; }, Peligro: true) } : new List<AccionFila>())"
+                                              AlElegir="Ejecutar" />
                             </td>
                         </tr>
                     }
@@ -99,6 +95,9 @@ else
 }
 
 @code {
+    // UI/UX: una acción visible por fila y el resto en «⋯» (menos ruido en tablas densas; mismo patrón que Ventas)
+    private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
+
     private List<UsuarioDatos>? usuarios;
     private UsuarioDatos? porDesactivar;
 

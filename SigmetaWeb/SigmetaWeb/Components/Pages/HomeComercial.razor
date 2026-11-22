@@ -1,0 +1,182 @@
+@* Panel de inicio del Administrador y del Vendedor: gráficos, productos más vendidos y últimas ventas. Parte de Home.razor: solo dibuja; los datos y cálculos están en Home.razor.cs (Panel). *@
+@using System.Globalization
+@using SigmetaWeb.Components.Pages.Compras
+@using SigmetaWeb.Components.Pages.Catalogo
+@using SigmetaWeb.Components.Pages.Clientes
+@using SigmetaWeb.Components.Pages.Caja
+@using SigmetaWeb.Components.Pages.Ventas
+<div class="sg-panel-grid sg-grid-principal">
+    <section class="sg-panel sg-panel-grafico">
+        <div class="sg-panel-cabecera">
+            <div>
+                <h2>@(Panel.EsAdministrador ? "Ventas por mes" : "Evolución de ventas")</h2>
+                <p>@(Panel.EsAdministrador ? "Ventas no anuladas de los últimos 12 meses." : "Ventas no anuladas de los últimos siete días.")</p>
+            </div>
+            <span class="sg-chip">S/</span>
+        </div>
+        @if (Panel.ventas is null)
+        {
+            <div class="sg-sin-datos">Los datos de ventas no están disponibles.</div>
+        }
+        else if (Panel.EsAdministrador)
+        {
+            <div class="sg-columnas-contenedor">
+                <div class="sg-columnas">
+                    @foreach (var mes in Panel.SerieMensual)
+                    {
+                        <div class="sg-columna-contenedor" title="@($"{mes.Etiqueta}: {Home.Dinero(mes.Valor)}")" @key="mes.Etiqueta">
+                            <span class="sg-columna-valor">@mes.Valor.ToString("N0")</span>
+                            <div class="sg-columna-eje">
+                                <div class="sg-columna" style="height:@(Home.Porcentaje(mes.Valor, Panel.MaximoMensual))%"></div>
+                            </div>
+                            <small>@mes.Etiqueta</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="sg-linea-grafico">
+                <svg viewBox="0 0 540 185" role="img" aria-label="Ventas diarias en soles de los últimos siete días">
+                    <line x1="28" y1="150" x2="514" y2="150" class="sg-eje" />
+                    <line x1="28" y1="100" x2="514" y2="100" class="sg-cuadricula" />
+                    <line x1="28" y1="50" x2="514" y2="50" class="sg-cuadricula" />
+                    <polyline fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" points="@Panel.PuntosLinea" />
+                    @foreach (var punto in Panel.PuntosGrafico)
+                    {
+                        <circle cx="@punto.X" cy="@punto.Y" r="5" class="sg-punto-linea">
+                            <title>@punto.Etiqueta: @Home.Dinero(punto.Valor)</title>
+                        </circle>
+                    }
+                </svg>
+                <div class="sg-eje-fechas">
+                    @foreach (var dia in Panel.SerieDiaria)
+                    {
+                        <span @key="dia.Etiqueta">@dia.Etiqueta</span>
+                    }
+                </div>
+                <div class="sg-nota">Total de la última semana: <strong>@Home.Dinero(Panel.SerieDiaria.Sum(x => x.Valor))</strong></div>
+            </div>
+        }
+    </section>
+
+    <section class="sg-panel sg-panel-grafico">
+        <div class="sg-panel-cabecera">
+            <div>
+                <h2>Productos más vendidos</h2>
+                <p>Por importe, en las últimas 8 ventas.</p>
+            </div>
+            <span class="sg-chip">Top 5</span>
+        </div>
+        @if (Panel.ventas is null)
+        {
+            <div class="sg-sin-datos">No fue posible consultar las ventas.</div>
+        }
+        else if (Panel.TopProductos.Count == 0)
+        {
+            <div class="sg-sin-datos">No hay líneas de ventas recientes disponibles para calcular este ranking.</div>
+        }
+        else
+        {
+            <div class="sg-ranking">
+                @foreach (var producto in Panel.TopProductos)
+                {
+                    <div class="sg-ranking-fila" @key="producto.Etiqueta">
+                        <div class="sg-ranking-encabezado"><span title="@producto.Etiqueta">@producto.Etiqueta</span><strong>@Home.Dinero(producto.Valor)</strong></div>
+                        <div class="sg-barra-pista"><div class="sg-barra-relleno" style="width:@(Home.Porcentaje(producto.Valor, Panel.MaximoProducto))%"></div></div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+</div>
+
+<div class="sg-panel-grid sg-grid-secundario">
+    <section class="sg-panel">
+        <div class="sg-panel-cabecera"><div><h2>Distribución comercial</h2><p>Cantidad de cotizaciones, órdenes y ventas.</p></div></div>
+        @if (Panel.cotizaciones is null || Panel.ordenes is null || Panel.ventas is null)
+        {
+            <div class="sg-sin-datos">La distribución todavía no está disponible.</div>
+        }
+        else
+        {
+            <div class="sg-distribucion">
+                <div class="sg-anillo" style="@Panel.EstiloAnillo">
+                    <div class="sg-anillo-centro"><strong>@Panel.TotalOperaciones</strong><small>registros</small></div>
+                </div>
+                <div class="sg-leyenda">
+                    @foreach (var grupo in Panel.Distribucion)
+                    {
+                        <div class="sg-leyenda-fila" @key="grupo.Etiqueta">
+                            <span class="sg-leyenda-nombre"><i class="@grupo.Clase"></i>@grupo.Etiqueta</span>
+                            <strong>@grupo.Valor.ToString("N0")</strong>
+                        </div>
+                    }
+                </div>
+            </div>
+            <p class="sg-nota">Volúmenes de cada módulo; no representan una tasa de conversión.</p>
+        }
+    </section>
+
+    <section class="sg-panel">
+        <div class="sg-panel-cabecera"><div><h2>Embudo comercial</h2><p>Seguimiento de las operaciones registradas.</p></div></div>
+        @if (Panel.cotizaciones is null || Panel.ordenes is null || Panel.ventas is null)
+        {
+            <div class="sg-sin-datos">El embudo requiere los tres servicios comerciales.</div>
+        }
+        else
+        {
+            <div class="sg-embudo">
+                <div class="sg-embudo-nivel uno"><span>Cotizaciones</span><strong>@Panel.cotizaciones.Count</strong></div>
+                <div class="sg-embudo-nivel dos"><span>Órdenes</span><strong>@Panel.ordenes.Count</strong></div>
+                <div class="sg-embudo-nivel tres"><span>Ventas desde orden</span><strong>@Panel.ventas.Count(v => !v.Anulado && v.IdOrden > 0)</strong></div>
+            </div>
+            <p class="sg-nota">Las ventas directas no se cuentan en la última etapa.</p>
+        }
+    </section>
+
+    <section class="sg-panel">
+        <div class="sg-panel-cabecera"><div><h2>Alertas comerciales</h2><p>Operaciones que necesitan seguimiento.</p></div></div>
+        <div class="sg-alertas">
+            <a href="/cotizaciones" class="sg-alerta-fila"><span>Cotizaciones por vencer <small>Vigencia dentro de tres días</small></span><strong>@Home.TextoConteo(Panel.CotizacionesPorVencer)</strong></a>
+            <a href="/ordenes" class="sg-alerta-fila"><span>Órdenes sin atender <small>Pendientes por más de 48 horas</small></span><strong>@Home.TextoConteo(Panel.OrdenesAtrasadas)</strong></a>
+            <a href="/ventas" class="sg-alerta-fila"><span>Ventas del mes <small>Operaciones no anuladas</small></span><strong>@Home.TextoConteo(Panel.VentasMesCantidad)</strong></a>
+        </div>
+    </section>
+</div>
+
+<section class="sg-panel sg-panel-tabla">
+    <div class="sg-panel-cabecera">
+        <div><h2>Últimas ventas</h2><p>Registros recientes en el sistema.</p></div>
+        <a href="/ventas" class="sg-enlace">Ver todas</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Venta</th><th>Cliente</th><th>Fecha</th><th class="text-end">Importe</th><th>Estado</th></tr></thead>
+            <tbody>
+                @if (Panel.ventas is null || Panel.ventas.Count == 0)
+                {
+                    <tr><td colspan="5" class="sg-celda-vacia">@(Panel.ventas is null ? "Ventas no disponibles." : "No hay ventas registradas.")</td></tr>
+                }
+                else
+                {
+                    @foreach (var venta in Panel.UltimasVentas)
+                    {
+                        <tr @key="venta.Id">
+                            <td class="fw-semibold">@venta.Numero</td>
+                            <td>@venta.Cliente</td>
+                            <td>@Home.TextoFecha(venta.FechaEmision)</td>
+                            <td class="text-end">@Home.Dinero(venta.Total)</td>
+                            <td><span class="sg-estado @(venta.Anulado ? "sg-estado-anulado" : "")">@TextosVentas.Texto(venta.Estado)</span></td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public Home Panel { get; set; } = default!;
+}

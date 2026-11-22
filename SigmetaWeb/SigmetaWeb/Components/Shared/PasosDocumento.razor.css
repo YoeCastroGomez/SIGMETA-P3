@@ -1,5 +1,5 @@
 /* Recorrido del documento: una sola línea con conectores entre pasos. Variables de Bootstrap: tema claro y oscuro. */
-.pasos { padding: .8rem 1.1rem; border-top: 3px double var(--color-rule-2) !important; }
+.pasos { padding: .8rem 1.1rem; border-top: 1px solid var(--color-rule-2) !important; }
 
 .pasos ol {
     display: flex;
@@ -53,7 +53,7 @@
     line-height: 1.2;
 }
 
-.titulo { font-family: var(--font-display); font-size: .9375rem; font-weight: 700; white-space: nowrap; }
+.titulo { font-family: var(--font-display); font-size: .9375rem; font-weight: 600; white-space: nowrap; }
 .detalle { font-size: .76rem; color: var(--bs-secondary-color); overflow-wrap: anywhere; }
 a.detalle { color: var(--bs-link-color); text-decoration: none; }
 a.detalle:hover { text-decoration: underline; }

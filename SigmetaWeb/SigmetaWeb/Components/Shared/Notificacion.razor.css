@@ -28,7 +28,7 @@
     align-items: center;
     justify-content: center;
     font-size: .75rem;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--color-sheet);
     background: var(--bs-success);
 }
@@ -56,3 +56,6 @@
 @media (prefers-reduced-motion: reduce) {
     .notificacion { animation: none; }
 }
+/* la acción puede ser un botón (por ejemplo «Imprimir»): se ve igual que el enlace */
+button.accion { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; }
+button.accion:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
