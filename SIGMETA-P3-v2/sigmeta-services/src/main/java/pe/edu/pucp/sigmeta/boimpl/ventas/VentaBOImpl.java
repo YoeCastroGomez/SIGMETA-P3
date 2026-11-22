@@ -443,6 +443,56 @@ public class VentaBOImpl implements VentaBO {
         return lineas;
     }
 
+    // RF005/RF014: mientras el Vendedor arma la venta, que lineas quedan bajo el costo con los precios que fijara
+    // el BO (lista u orden) y su descuento. Asi la pantalla pide la autorizacion ANTES de intentar registrar.
+    // Si la venta todavia esta incompleta, no se informa nada: las reglas completas se validan al registrar.
+    @Override
+    public List<Map<String, Object>> revisarCosto(Venta venta, int idResponsable) throws SQLException {
+        usuarioBO.verificarRol(idResponsable, TipoRol.VENDEDOR);
+        if (venta == null || venta.getDetalles() == null || venta.getDetalles().isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+        return Transaccion.consultar(() -> {
+            List<Map<String, Object>> resultado = new java.util.ArrayList<>();
+            try {
+                if (venta.getId() > 0) {
+                    Venta actual = ventaDAO.load(venta.getId());
+                    if (actual != null) {
+                        venta.setOrdenCompraCliente(actual.getOrdenCompraCliente());
+                    }
+                }
+                if (venta.getOrdenCompraCliente() != null && venta.getOrdenCompraCliente().getId() > 0) {
+                    venta.setOrdenCompraCliente(ordenCompraClienteDAO.load(venta.getOrdenCompraCliente().getId()));
+                } else {
+                    venta.setOrdenCompraCliente(null);
+                }
+                enlazarLineasOrden(venta);
+                fijarPreciosYCantidades(venta.getDetalles());
+                calcularTotales(venta);
+            } catch (IllegalArgumentException | IllegalStateException e) {
+                return resultado;
+            }
+            for (DetalleVenta d : venta.getDetalles()) {
+                if (d.getCantidad() <= 0) {
+                    continue;
+                }
+                Producto producto = productoDAO.load(d.getProducto().getId());
+                BigDecimal efectivo = BigDecimal.valueOf(d.getImporte())
+                        .divide(BigDecimal.valueOf(d.getCantidad()), 4, RoundingMode.HALF_UP)
+                        .divide(PreciosIgv.FACTOR, 4, RoundingMode.HALF_UP);
+                if (producto != null && efectivo.compareTo(BigDecimal.valueOf(producto.getCostoUnitario())) < 0) {
+                    Map<String, Object> linea = new java.util.LinkedHashMap<>();
+                    linea.put("numeroLinea", d.getNumeroLinea());
+                    linea.put("producto", producto.getNombre());
+                    linea.put("precioSinIgv", efectivo.setScale(2, RoundingMode.HALF_UP).doubleValue());
+                    linea.put("costo", producto.getCostoUnitario());
+                    resultado.add(linea);
+                }
+            }
+            return resultado;
+        });
+    }
+
     // RF014: huella de la venta = venta (0 si es nueva), cliente, condicion de pago y cada linea
     // (producto, cantidad e importe). Si el Vendedor cambia algo despues de la aprobacion, hay que volver a pedirla.
     private static String huellaVenta(Venta venta) {

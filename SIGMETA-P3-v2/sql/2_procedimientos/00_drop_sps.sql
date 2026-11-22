@@ -52,6 +52,8 @@ DROP PROCEDURE IF EXISTS sp_solicitud_autorizacion_listar_por_solicitante;
 DROP PROCEDURE IF EXISTS sp_solicitud_autorizacion_buscar_vigente;
 DROP PROCEDURE IF EXISTS sp_solicitud_autorizacion_datos_operacion;
 DROP PROCEDURE IF EXISTS sp_solicitud_autorizacion_buscar_por_huella;
+DROP PROCEDURE IF EXISTS sp_solicitud_autorizacion_usar;
+DROP PROCEDURE IF EXISTS sp_solicitud_autorizacion_guardar_datos;
 
 -- ---------- 02_SP_claudia.sql (23) ----------
 DROP PROCEDURE IF EXISTS sp_categoria_insertar;

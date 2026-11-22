@@ -129,7 +129,7 @@ class NotaCreditoBOTest {
     void autorizacionDeUnSoloUso() throws Exception {
         SolicitudAutorizacion autorizacion = autorizarNota(1);
         emitir(1);
-        assertEquals(EstadoAutorizacion.VENCIDA, autorizaciones.obtener(autorizacion.getId()).getEstado());
+        assertEquals(EstadoAutorizacion.USADA, autorizaciones.obtener(autorizacion.getId()).getEstado());
         assertThrows(IllegalStateException.class, () -> emitir(1), "la segunda nota necesita otra autorizacion");
     }
 

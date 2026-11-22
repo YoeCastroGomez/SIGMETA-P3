@@ -3,15 +3,18 @@
 @attribute [Authorize(Roles = "Cajero,Administrador")]
 @inject ApiJava Api
 @using SigmetaWeb.Components.Pages.Almacen
+@using SigmetaWeb.Components.Pages.Seguridad
 
 <PageTitle>Notas de crédito · SIGMETA</PageTitle>
 
-@* RF013 · Notas de crédito por devolución. Las emite el Cajero con autorización; el Cajero y el Administrador
+@* RF013 y RF014 · Notas de crédito por devolución. Las emite el Cajero con autorización; el Cajero y el Administrador
    las modifican (motivo), anulan y consultan. PATRÓN UX (ver Shared/ComponentesFlujo.cs): chips por estado,
-   búsqueda por fechas y texto (la hace el Java: sp_nota_credito_buscar), y <ModalMotivo> para modificar y
-   anular, que dice qué va a pasar.
+   búsqueda por fechas y texto (la hace el Java: sp_nota_credito_buscar), y <ModalMotivo> para modificar y anular.
+   La lista también muestra las notas EN TRÁMITE: las que el Cajero ya pidió autorizar y todavía no registra
+   (Solicitada, Autorizada, Rechazada o Vencida). Se retoman con «Continuar» sin pedir otra autorización.
    GET /api/notas-credito?desde=&hasta=&texto= · GET /api/notas-credito/{id}/lineas · POST /api/notas-credito/{id}/anular
-   PUT /api/notas-credito/{id} {"motivo"}: modificar el motivo (Cajero o Administrador; el BO valida el rol y que no esté anulada) *@
+   PUT /api/notas-credito/{id} {"motivo"} · GET /api/solicitudes/en-curso?operacion=EMITIR_NOTA_CREDITO
+   POST /api/solicitudes/{id}/descartar (el Cajero ya no la registra) *@
 <Encabezado Rf="RF013" Titulo="Notas de crédito">
     @if (EsCajero)
     {
@@ -35,14 +38,20 @@
     <p class="small text-muted mb-0">Los productos y montos no cambian.</p>
 </ModalMotivo>
 
+@* RF014: el Cajero ya no va a registrar una nota en trámite *@
+<Confirmacion Visible="@(porDescartar is not null)" Titulo="Descartar la nota en trámite" TextoConfirmar="Descartar"
+              AlConfirmar="ConfirmarDescartar" AlCancelar="() => porDescartar = null">
+    <p class="mb-0">La nota sobre <strong>@porDescartar?.Comprobante</strong> (@porDescartar?.Cliente) deja de aparecer en esta lista.</p>
+</Confirmacion>
+
 @* La búsqueda la hace el Java (sp_nota_credito_buscar): se consulta al dejar de escribir o al cambiar una fecha *@
-<FiltrosLista @bind-Busqueda="texto" @bind-Busqueda:after="BuscarAlEscribir" Placeholder="Cliente, documento o comprobante"
+<FiltrosLista @bind-Busqueda="texto" @bind-Busqueda:after="BuscarAlEscribir" Placeholder="Cliente, RUC o DNI, nota o comprobante"
               Opciones="@Chips" Estado="@filtroEstado" EstadoChanged="CambiarEstado"
               HayFiltros="@(HayFiltros || filtroEstado != "")" AlLimpiar="Limpiar">
-    <Campo Etiqueta="Emitida desde" Id="fDesde" Clase="col-sm-6 col-md-2">
+    <Campo Etiqueta="Desde" Id="fDesde" Clase="col-sm-6 col-md-2">
         <input id="fDesde" type="date" class="form-control" @bind="desde" @bind:after="Buscar" />
     </Campo>
-    <Campo Etiqueta="Emitida hasta" Id="fHasta" Error="@(ValidacionEnVivo.ErrorRango(desde, hasta))" Clase="col-sm-6 col-md-2">
+    <Campo Etiqueta="Hasta" Id="fHasta" Error="@(ValidacionEnVivo.ErrorRango(desde, hasta))" Clase="col-sm-6 col-md-2">
         <input id="fHasta" type="date" class="@ValidacionEnVivo.ClaseRango(desde, hasta)" @bind="hasta" @bind:after="Buscar" />
     </Campo>
 </FiltrosLista>
@@ -60,8 +69,8 @@ else
             <table class="table table-hover align-middle mb-0 tabla-lista">
                 <thead>
                     <tr>
-                        <th>Nota</th>
-                        <th>Comprobante</th>
+                        <th>Nota de crédito</th>
+                        <th>Comprobante que corrige</th>
                         <th>Cliente</th>
                         <th class="text-end">Total (S/)</th>
                         <th>Estado</th>
@@ -87,52 +96,90 @@ else
                     }
                     @for (var i = 0; i < pagina.Count; i++)
                     {
-                        var n = pagina[i];
-                        var anulada = n.Estado == "ANULADO";
-                        var haciaArriba = pagina.Count > 3 && i >= pagina.Count - 2 && detalleDe != n.Id;
-                        <tr @key="n.Id" class="@(anulada ? "text-muted" : "")">
+                        var f = pagina[i];
+                        var haciaArriba = pagina.Count > 3 && i >= pagina.Count - 2 && detalleDe != f.Clave;
+                        <tr @key="f.Clave" class="@(f.Apagada ? "text-muted" : "")">
                             <td>
-                                <span class="numero">@n.Nota</span>
-                                <div class="sub">@Formato.Fecha(n.FechaEmision)</div>
+                                @if (f.Nota is not null)
+                                {
+                                    <span class="numero">@f.Nota.Nota</span>
+                                    <div class="sub">Emitida el @Formato.Fecha(f.Nota.FechaEmision)</div>
+                                }
+                                else
+                                {
+                                    <span class="por-emitir">Por emitir</span>
+                                    <div class="sub">Pedida @Formato.FechaHora(f.Solicitud!.FechaSolicitud)@(EsCajero ? "" : $" por {f.Solicitud.Solicitante}")</div>
+                                }
                             </td>
-                            <td>@n.Origen<div class="sub">Venta @n.Venta</div></td>
-                            <td>@n.Cliente</td>
-                            <td class="text-end text-nowrap fw-semibold">@n.Total.ToString("N2")</td>
-                            <td><Estado Texto="@(anulada ? "Anulada" : "Vigente")" /></td>
+                            <td>
+                                <span class="fw-semibold">@f.Comprobante</span>
+                                <div class="sub">@f.TipoComprobante@(string.IsNullOrEmpty(f.Venta) ? "" : $" · Venta {f.Venta}")</div>
+                            </td>
+                            <td>
+                                @f.Cliente
+                                @if (!string.IsNullOrEmpty(f.Documento))
+                                {
+                                    <div class="sub">@f.Documento</div>
+                                }
+                            </td>
+                            <td class="text-end text-nowrap fw-semibold">@f.Total.ToString("N2")</td>
+                            <td>
+                                <Estado Texto="@f.EstadoTexto" />
+                                @if (!string.IsNullOrEmpty(f.EstadoDetalle))
+                                {
+                                    <div class="sub">@f.EstadoDetalle</div>
+                                }
+                            </td>
                             <td class="acciones">
-                                <AccionesFila Principal="@(new AccionFila(detalleDe == n.Id ? "Ocultar" : "Ver", Hacer: () => VerDetalle(n), Destacada: false))"
-                                              Otras="@Secundarias(n)" Ocupado="@trabajando" HaciaArriba="@haciaArriba" AlElegir="Ejecutar" />
+                                <AccionesFila Principal="@Principal(f)" Otras="@Secundarias(f)" Ocupado="@trabajando" HaciaArriba="@haciaArriba" AlElegir="Ejecutar" />
                             </td>
                         </tr>
-                        @if (detalleDe == n.Id)
+                        @if (detalleDe == f.Clave)
                         {
                             <tr>
                                 <td colspan="6" class="bg-body-tertiary">
-                                    <div class="small mb-2"><strong>Motivo:</strong> @n.Motivo
-                                        · <strong>Autorizó:</strong> @(string.IsNullOrEmpty(n.Autorizo) ? "—" : n.Autorizo)
-                                        · @NotaCreditoDatos.TextoTipo(n.TipoNota) · @Formato.Legible(n.CondicionPago)</div>
-                                    <table class="table table-sm mb-0">
-                                        <thead>
-                                            <tr><th>Producto devuelto</th><th class="text-end">Cantidad</th><th class="text-end">Precio</th><th class="text-end">Descuento</th><th class="text-end">Importe</th></tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach (var l in detalle)
-                                            {
-                                                <tr>
-                                                    <td>@l.CodigoInterno · @l.Producto</td>
-                                                    <td class="text-end">@Formato.Cantidad(l.Cantidad) @TextosAlmacen.Unidad(l.UnidadVenta)</td>
-                                                    <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
-                                                    <td class="text-end">@l.Descuento.ToString("N2")</td>
-                                                    <td class="text-end">@l.Importe.ToString("N2")</td>
-                                                </tr>
-                                            }
-                                        </tbody>
-                                        <tfoot>
-                                            <tr><td colspan="4" class="text-end">Valor de venta</td><td class="text-end">@n.SubTotal.ToString("N2")</td></tr>
-                                            <tr><td colspan="4" class="text-end">IGV (18 %)</td><td class="text-end">@n.Igv.ToString("N2")</td></tr>
-                                            <tr><td colspan="4" class="text-end fw-bold">Total</td><td class="text-end fw-bold">@Formato.Soles(n.Total)</td></tr>
-                                        </tfoot>
-                                    </table>
+                                    @if (f.Nota is not null)
+                                    {
+                                        var n = f.Nota;
+                                        <div class="small mb-2"><strong>Motivo:</strong> @n.Motivo
+                                            · <strong>Autorizó:</strong> @(string.IsNullOrEmpty(n.Autorizo) ? "—" : n.Autorizo)
+                                            · @NotaCreditoDatos.TextoTipo(n.TipoNota) · @Formato.Legible(n.CondicionPago)</div>
+                                        <table class="table table-sm mb-0">
+                                            <thead>
+                                                <tr><th>Producto devuelto</th><th class="text-end">Cantidad</th><th class="text-end">Precio</th><th class="text-end">Descuento</th><th class="text-end">Importe</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var l in detalle)
+                                                {
+                                                    <tr>
+                                                        <td>@l.CodigoInterno · @l.Producto</td>
+                                                        <td class="text-end">@Formato.Cantidad(l.Cantidad) @TextosAlmacen.Unidad(l.UnidadVenta)</td>
+                                                        <td class="text-end">@l.PrecioUnitario.ToString("N2")</td>
+                                                        <td class="text-end">@l.Descuento.ToString("N2")</td>
+                                                        <td class="text-end">@l.Importe.ToString("N2")</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                            <tfoot>
+                                                <tr><td colspan="4" class="text-end">Valor de venta</td><td class="text-end">@n.SubTotal.ToString("N2")</td></tr>
+                                                <tr><td colspan="4" class="text-end">IGV (18 %)</td><td class="text-end">@n.Igv.ToString("N2")</td></tr>
+                                                <tr><td colspan="4" class="text-end fw-bold">Total</td><td class="text-end fw-bold">@Formato.Soles(n.Total)</td></tr>
+                                            </tfoot>
+                                        </table>
+                                    }
+                                    else
+                                    {
+                                        <div class="small mb-2"><strong>Motivo:</strong> @f.Solicitud!.Motivo</div>
+                                        <table class="table table-sm mb-0">
+                                            <thead><tr><th>Producto que se devuelve</th><th class="text-end">Cantidad</th></tr></thead>
+                                            <tbody>
+                                                @foreach (var l in f.Datos?.Lineas ?? new())
+                                                {
+                                                    <tr><td>@l.Producto</td><td class="text-end">@Formato.Cantidad(l.Cantidad)</td></tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -143,4 +190,3 @@ else
         <Paginacion TotalRegistros="@filtradas.Count" @bind-PaginaActual="paginaActual" @bind-TamanoPagina="tamanoPagina" />
     </div>
 }
-

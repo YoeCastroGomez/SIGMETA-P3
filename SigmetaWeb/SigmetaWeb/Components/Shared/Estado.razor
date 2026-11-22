@@ -19,11 +19,12 @@
         "inactivo", "inactiva", "rechazada", "rechazado", "anulada", "anulado", "revertido", "revertida",
         "vencida", "vencido", "bajo el minimo", "sin stock"
     };
-    private static readonly HashSet<string> Ambares = new() { "pendiente", "en el minimo", "por vencer" };
+    // RF014: "Solicitada" = espera al Administrador; "Autorizada" = lista para completarse; "Usada" y "Cancelada" van en gris
+    private static readonly HashSet<string> Ambares = new() { "pendiente", "en el minimo", "por vencer", "solicitada", "solicitado" };
     private static readonly HashSet<string> Verdes = new()
     {
         "activo", "activa", "aprobada", "aprobado", "vigente", "atendida", "recibida", "entrada", "ingreso",
-        "pagada", "aceptada", "emitida", "abierta", "despachada"
+        "pagada", "aceptada", "emitida", "abierta", "despachada", "autorizada", "autorizado"
     };
 
     private string Color

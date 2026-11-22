@@ -290,7 +290,8 @@ public class AlmacenRS extends VentanillaBase {
             return error(Response.Status.BAD_REQUEST, "Indique el producto y la cantidad contada");
         }
         return ejecutar(ticket, Response.Status.CREATED, id -> pe.edu.pucp.sigmeta.ws.seguridad.SolicitudRS.resumen(
-                movimientoBO.solicitarAjuste(datos.idProducto, id, datos.cantidadContada, datos.motivo)));
+                movimientoBO.solicitarAjuste(datos.idProducto, id, datos.cantidadContada, datos.motivo),
+                id, datos.datosOperacion));
     }
 
     // RF012/RF014: pide la autorizacion para revertir ESTE ajuste
@@ -348,6 +349,7 @@ public class AlmacenRS extends VentanillaBase {
         public String transportista;
         public String motivo;
         public Double cantidadContada;      // ajuste por conteo fisico
+        public String datosOperacion;       // RF014: solo al solicitar el ajuste: la pantalla (JSON), para retomarla
         public List<LineaAlmacen> lineas = new ArrayList<>();
 
         public DocumentoAlmacen() {

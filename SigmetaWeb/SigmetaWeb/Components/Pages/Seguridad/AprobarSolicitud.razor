@@ -7,46 +7,66 @@
 <PageTitle>Resolver solicitud · SIGMETA</PageTitle>
 
 @* RF014 · POST /api/solicitudes/{id}/aprobar {"vigenciaMinutos": 30} · POST /api/solicitudes/{id}/rechazar.
-   Solo el Administrador y solo una solicitud PENDIENTE. *@
+   Solo el Administrador y solo una solicitud PENDIENTE. A la izquierda lo que se autoriza (lo arma el sistema
+   desde la operación); a la derecha la decisión, con lo que pasa en cada caso. *@
 <Encabezado Rf="RF014" Titulo="Resolver solicitud">
     <a class="btn btn-outline-secondary" href="/autorizaciones">Volver a la lista</a>
 </Encabezado>
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 
+<Confirmacion Visible="@confirmarRechazo" Titulo="Rechazar la solicitud" TextoConfirmar="Rechazar"
+              AlConfirmar="Rechazar" AlCancelar="() => confirmarRechazo = false">
+    <p class="mb-0">@solicitud?.NombreSolicitante no podrá @(Accion(solicitud?.Operacion)) con estos datos.</p>
+</Confirmacion>
+
 @if (solicitud is not null)
 {
-    <div class="card card-body mb-3" style="max-width: 720px;">
-        <DatosSolicitud Solicitud="solicitud" />
-
-        @if (solicitud.Estado == "PENDIENTE")
-        {
-            <hr />
-            <Campo Etiqueta="Vigencia (minutos)" Id="vigencia" Obligatorio="true" Error="@ErrorVigencia"
-                   Ayuda="Tiempo para completar la operación después de aprobarla.">
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <input id="vigencia" type="number" min="1" max="1440" class="form-control @(ErrorVigencia is null ? "" : "is-invalid")"
-                           style="max-width: 140px;" @bind="vigencia" @bind:event="oninput" />
-                    @foreach (var m in new[] { 15, 30, 60, 120 })
-                    {
-                        <button type="button" class="btn btn-sm @(vigencia == m ? "btn-dark" : "btn-outline-secondary")"
-                                @onclick="() => vigencia = m">@m min</button>
-                    }
-                </div>
-            </Campo>
-
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3 mt-2">
-                <span class="small text-muted"><span class="text-danger">*</span> Obligatorio para aprobar</span>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-danger" disabled="@guardando" @onclick="Rechazar">Rechazar</button>
-                    <button class="btn btn-primary" disabled="@guardando" @onclick="Aprobar">Aprobar</button>
-                </div>
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card card-body h-100">
+                <DatosSolicitud Solicitud="solicitud" />
             </div>
-        }
-        else
-        {
-            <div class="alert alert-secondary mb-0">Esta solicitud ya fue resuelta.</div>
-        }
+        </div>
+        <div class="col-lg-5">
+            <div class="card card-body decision">
+                @if (solicitud.Estado == "PENDIENTE")
+                {
+                    <h2 class="h6 fw-semibold mb-3">Su decisión</h2>
+
+                    <Campo Etiqueta="Vigencia" Id="vigencia" Obligatorio="true" Error="@ErrorVigencia">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            @foreach (var m in new[] { 15, 30, 60, 120 })
+                            {
+                                <button type="button" class="btn btn-sm @(vigencia == m ? "btn-dark" : "btn-outline-secondary")"
+                                        @onclick="() => vigencia = m">@m min</button>
+                            }
+                            <div class="input-group input-group-sm" style="max-width: 9rem;">
+                                <input id="vigencia" type="number" min="1" max="1440" class="form-control @(ErrorVigencia is null ? "" : "is-invalid")"
+                                       aria-label="Otro tiempo en minutos" @bind="vigencia" @bind:event="oninput" />
+                                <span class="input-group-text">min</span>
+                            </div>
+                        </div>
+                    </Campo>
+
+                    @if (ErrorVigencia is null && vigencia > 0)
+                    {
+                        <div class="small text-muted mb-3">Vence a las @DateTime.Now.AddMinutes(vigencia).ToString("dd/MM HH:mm")</div>
+                    }
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" disabled="@guardando" @onclick="Aprobar">@(guardando ? "Guardando..." : $"Aprobar por {vigencia} min")</button>
+                        <button class="btn btn-outline-danger" disabled="@guardando" @onclick="() => confirmarRechazo = true">Rechazar</button>
+                    </div>
+                    <div class="small text-muted mt-2"><span class="text-danger">*</span> Obligatorio para aprobar</div>
+                }
+                else
+                {
+                    <h2 class="h6 fw-semibold mb-3">Ya resuelta</h2>
+                    <a class="btn btn-outline-secondary" href="/autorizaciones">Ver las demás solicitudes</a>
+                }
+            </div>
+        </div>
     </div>
 }
 else if (error is null)
@@ -61,10 +81,20 @@ else if (error is null)
     private int vigencia = 30;
     private bool intento;
     private bool guardando;
+    private bool confirmarRechazo;
     private string? error;
 
+    // lo que podrá hacer el solicitante con la autorización
+    private static string Accion(string? operacion) => operacion switch
+    {
+        TextosSeguridad.OperacionNotaCredito => "registrar esta nota de crédito",
+        TextosSeguridad.OperacionDescuento => "registrar esta venta con el precio bajo el costo",
+        TextosSeguridad.OperacionAjuste => "registrar este ajuste de inventario",
+        _ => "completar esta operación"
+    };
+
     // misma regla que el BO: la vigencia debe ser mayor a 0
-    private string? ErrorVigencia => !intento ? null
+    private string? ErrorVigencia => !intento && vigencia > 0 && vigencia <= 1440 ? null
         : vigencia <= 0 ? "La vigencia debe ser mayor a 0 minutos."
         : vigencia > 1440 ? "La vigencia no puede pasar de 1440 minutos (un día)."
         : null;
@@ -104,6 +134,7 @@ else if (error is null)
 
     private async Task Rechazar()
     {
+        confirmarRechazo = false;
         error = null;
         guardando = true;
         try

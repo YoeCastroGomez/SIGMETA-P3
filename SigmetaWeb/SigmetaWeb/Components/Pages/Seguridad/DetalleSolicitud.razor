@@ -3,8 +3,13 @@
 
 <PageTitle>Detalle de solicitud · SIGMETA</PageTitle>
 
-@* RF014 · GET /api/solicitudes/{id}. Solo lectura. La ve su solicitante o el Administrador. *@
+@* RF014 · GET /api/solicitudes/{id}. Solo lectura. La ve su solicitante o el Administrador.
+   Si la operación quedó a medias, su solicitante vuelve a ella desde aquí (Continuar / Completar / Corregir). *@
 <Encabezado Rf="RF014" Titulo="Detalle de la solicitud">
+    @if (solicitud is not null && Rol != "Administrador" && TextosSeguridad.RutaRetomar(solicitud) is string ruta)
+    {
+        <a class="btn btn-primary" href="@ruta">@TextosSeguridad.TextoRetomar(solicitud)</a>
+    }
     <a class="btn btn-outline-secondary" href="@Volver">Volver</a>
 </Encabezado>
 
@@ -12,14 +17,11 @@
 
 @if (solicitud is not null)
 {
-    <div class="card card-body mb-3" style="max-width: 720px;">
+    <div class="card card-body mb-3" style="max-width: 760px;">
         <DatosSolicitud Solicitud="solicitud" />
-        @if (solicitud.Estado == "VENCIDA")
-        {
-            <div class="alert alert-secondary mb-0">
-                Esta autorización ya no se puede usar: se usó en una operación, se revocó o pasó su vigencia.
-            </div>
-        }
+        <div class="alert @(solicitud.Estado is "APROBADA" ? "alert-success" : solicitud.Estado is "PENDIENTE" ? "alert-warning" : "alert-secondary") small mb-0">
+            @TextosSeguridad.QuePasa(solicitud)
+        </div>
     </div>
 }
 else if (error is null)

@@ -150,7 +150,7 @@ class VentaBOTest {
 
         Venta conPermiso = registrar(ventaBajoCosto(cliente, p));
         assertTrue(conPermiso.getId() > 0, "con la autorizacion vigente se registra");
-        assertEquals(EstadoAutorizacion.VENCIDA, autorizaciones.obtener(autorizacion.getId()).getEstado(),
+        assertEquals(EstadoAutorizacion.USADA, autorizaciones.obtener(autorizacion.getId()).getEstado(),
                 "la autorizacion queda consumida");
 
         assertThrows(IllegalStateException.class,

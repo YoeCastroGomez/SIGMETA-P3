@@ -15,4 +15,8 @@ public interface SolicitudAutorizacionDAO extends BaseDAO<SolicitudAutorizacion,
     // RF014: la solicitud de una operacion concreta (su huella) en un estado; APROBADA solo si no vencio
     SolicitudAutorizacion buscarPorHuella(int idSolicitante, String operacionRestringida, String huella,
                                           EstadoAutorizacion estado) throws SQLException;
+    // RF014: APROBADA -> USADA (se consumio en su operacion)
+    void marcarUsada(int idSolicitud) throws SQLException;
+    // RF014: datos de la pantalla para retomar la operacion (null = descartada)
+    void guardarDatosOperacion(int idSolicitud, String datosOperacion) throws SQLException;
 }

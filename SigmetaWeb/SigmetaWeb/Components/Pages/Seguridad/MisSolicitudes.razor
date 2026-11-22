@@ -5,18 +5,22 @@
 
 <PageTitle>Mis solicitudes · SIGMETA</PageTitle>
 
-@* RF014 · Solicitudes del usuario conectado. GET /api/solicitudes/mias · POST /api/solicitudes/{id}/anular.
-   Solo historial: la autorización se pide desde la operación (nota de crédito, venta bajo el costo, ajuste),
-   con sus datos. Mismo patrón de listas que ventas: FiltrosLista, AccionesFila y Notificacion. *@
+@* RF014 · Solicitudes del usuario conectado: el historial de lo que le pidió al Administrador.
+   GET /api/solicitudes/mias · POST /api/solicitudes/{id}/descartar (cancelar o dejar de retomar).
+   La autorización se pide desde la operación (nota de crédito, venta bajo el costo, ajuste), con sus datos, y
+   desde aquí se vuelve a esa operación para completarla o corregirla (Continuar / Completar / Corregir).
+   Estados: Pendiente → Aprobada o Rechazada → Usada (se completó la operación) o Vencida (pasó su vigencia).
+   Mismo patrón de listas que ventas: FiltrosLista, AccionesFila y Notificacion. *@
 <Encabezado Rf="RF014" Titulo="Mis solicitudes de autorización"
             Subtitulo="Se piden desde la operación que las necesita." />
 
 <Notificacion Mensaje="@error" Error="true" AlCerrar="() => error = null" />
 <Notificacion Mensaje="@exito" AlCerrar="() => exito = null" />
 
-<Confirmacion Visible="@(porAnular is not null)" Titulo="Anular solicitud" TextoConfirmar="Anular"
+<Confirmacion Visible="@(porAnular is not null)" Titulo="@(porAnular?.Estado is "PENDIENTE" or "APROBADA" ? "Cancelar la solicitud" : "Descartar la solicitud")"
+              TextoConfirmar="@(porAnular?.Estado is "PENDIENTE" or "APROBADA" ? "Cancelar solicitud" : "Descartar")"
               AlConfirmar="ConfirmarAnular" AlCancelar="() => porAnular = null">
-    <p class="mb-0 text-muted">Ya no podrás usar esta autorización.</p>
+    <p class="mb-0 text-muted">@(porAnular?.Estado is "PENDIENTE" or "APROBADA" ? "Ya no podrás usar esta autorización." : "Ya no aparecerá para corregirla.")</p>
 </Confirmacion>
 
 <FiltrosLista @bind-Busqueda="busqueda" @bind-Busqueda:after="AlBuscar" Placeholder="Comprobante, motivo u operación"
@@ -64,26 +68,23 @@ else
                         var haciaArriba = pagina.Count > 3 && i >= pagina.Count - 2;
                         <tr @key="s.Id">
                             <td>
-                                <span class="numero">@(string.IsNullOrEmpty(s.Referencia) ? TextosSeguridad.Texto(s.Operacion) : s.Referencia)</span>
+                                @* RF014: el tipo de operación es lo principal; el documento o producto va debajo *@
+                                <span class="fw-semibold">@TextosSeguridad.Texto(s.Operacion)</span>
                                 <div class="sub">
                                     @if (!string.IsNullOrEmpty(s.Referencia))
                                     {
-                                        @(TextosSeguridad.Texto(s.Operacion) + " · ")
+                                        @(s.Referencia + " · ")
                                     }
                                     @Formato.FechaHora(s.FechaSolicitud)
                                 </div>
                             </td>
                             <td class="motivo">@s.Motivo</td>
                             <td>
-                                <Estado Texto="@TextosSeguridad.Texto(s.Estado)" />
-                                @if (s.Vigente)
-                                {
-                                    <div class="sub">Hasta @Formato.FechaHora(s.FechaVencimiento)</div>
-                                }
+                                <Estado Texto="@TextosSeguridad.TextoEstado(s)" />
+                                <div class="sub">@SubEstado(s)</div>
                             </td>
                             <td class="acciones">
-                                <AccionesFila Principal="@(new AccionFila("Ver", Ruta: $"/autorizaciones/detalle/{s.Id}", Destacada: false))"
-                                              Otras="@Secundarias(s)" HaciaArriba="@haciaArriba" AlElegir="Ejecutar" />
+                                <AccionesFila Principal="@Principal(s)" Otras="@Secundarias(s)" HaciaArriba="@haciaArriba" AlElegir="Ejecutar" />
                             </td>
                         </tr>
                     }
@@ -108,26 +109,42 @@ else
     [SupplyParameterFromQuery(Name = "ref")] public string? Referencia { get; set; }
 
     private List<SolicitudDatos> PorBusqueda => (solicitudes ?? new())
-        .Where(s => Busqueda.Coincide(busqueda, s.Motivo, TextosSeguridad.Texto(s.Operacion), s.Referencia))
+        .Where(s => Busqueda.Coincide(busqueda, s.Motivo, TextosSeguridad.Texto(s.Operacion), s.Referencia, TextosSeguridad.TextoEstado(s)))
         .ToList();
 
     private List<SolicitudDatos> Filtradas => PorBusqueda
-        .Where(s => filtroEstado == "" || s.Estado == filtroEstado)
+        .Where(s => filtroEstado == "" || TextosSeguridad.ClaveEstado(s) == filtroEstado)
         .ToList();
+
+    // una línea bajo el estado: hasta cuándo sirve, cuánto lleva esperando o quién la resolvió
+    private static string SubEstado(SolicitudDatos s) => s.Cancelada ? "" : s.Estado switch
+    {
+        "PENDIENTE" => TextosSeguridad.Hace(s.FechaSolicitud),
+        "APROBADA" => $"Hasta {Formato.FechaHora(s.FechaVencimiento)}",
+        "RECHAZADA" => string.IsNullOrEmpty(s.Administrador) ? "" : $"Por {s.Administrador}",
+        _ => ""
+    };
+
+    // botón visible: volver a la operación si se puede retomar; si no, ver el detalle
+    private static AccionFila Principal(SolicitudDatos s) => TextosSeguridad.RutaRetomar(s) is string ruta
+        ? new(TextosSeguridad.TextoRetomar(s), Ruta: ruta, Destacada: s.Estado == "APROBADA")
+        : new("Ver", Ruta: $"/autorizaciones/detalle/{s.Id}", Destacada: false);
 
     private IReadOnlyList<OpcionChip> Chips
     {
         get
         {
             var base_ = PorBusqueda;
-            int Cuantas(string e) => base_.Count(s => s.Estado == e);
+            int Cuantas(string e) => base_.Count(s => TextosSeguridad.ClaveEstado(s) == e);
             return new List<OpcionChip>
             {
                 new("", "Todas", base_.Count),
                 new("PENDIENTE", "Pendientes", Cuantas("PENDIENTE"), "ambar"),
                 new("APROBADA", "Aprobadas", Cuantas("APROBADA"), "verde"),
                 new("RECHAZADA", "Rechazadas", Cuantas("RECHAZADA"), "rojo"),
-                new("VENCIDA", "Vencidas o usadas", Cuantas("VENCIDA"))
+                new("USADA", "Usadas", Cuantas("USADA")),
+                new("VENCIDA", "Vencidas", Cuantas("VENCIDA"), "rojo"),
+                new("CANCELADA", "Canceladas", Cuantas("CANCELADA"))
             };
         }
     }
@@ -139,11 +156,25 @@ else
         return lista.Skip((Math.Clamp(paginaActual, 1, total) - 1) * tamanoPagina).Take(tamanoPagina);
     }
 
-    // Menú «⋯»: anular mientras esté pendiente o aprobada sin usar
-    private List<AccionFila> Secundarias(SolicitudDatos s) =>
-        s.Estado == "PENDIENTE" || s.Vigente
-            ? new() { new("Anular", Hacer: () => PedirAnular(s), Peligro: true) }
-            : new();
+    // Menú «⋯»: ver el detalle (si el botón retoma la operación), cancelar mientras esté pendiente o aprobada
+    // sin usar, y descartar una rechazada o vencida que todavía aparece para corregir
+    private List<AccionFila> Secundarias(SolicitudDatos s)
+    {
+        var lista = new List<AccionFila>();
+        if (TextosSeguridad.RutaRetomar(s) is not null)
+        {
+            lista.Add(new("Ver detalle", Ruta: $"/autorizaciones/detalle/{s.Id}"));
+        }
+        if (s.Estado == "PENDIENTE" || s.Vigente)
+        {
+            lista.Add(new("Cancelar solicitud", Hacer: () => PedirAnular(s), Peligro: true));
+        }
+        else if (s.SePuedeRetomar)
+        {
+            lista.Add(new("Descartar", Hacer: () => PedirAnular(s), Peligro: true));
+        }
+        return lista;
+    }
 
     // Lo llama AccionesFila: la acción corre en esta pantalla para que se redibuje (ventana de anular)
     private Task Ejecutar(AccionFila a) => a.Hacer?.Invoke() ?? Task.CompletedTask;
@@ -199,9 +230,12 @@ else
         if (s is null) return;
         try
         {
-            await Api.Post<object>($"solicitudes/{s.Id}/anular", null);
+            // RF014: descartar cancela la pendiente o aprobada y deja de mostrar la operación para retomarla
+            await Api.Post<object>($"solicitudes/{s.Id}/descartar", null);
             await Cargar();
-            exito = $"Se anuló la solicitud de {TextosSeguridad.Texto(s.Operacion).ToLower()}.";
+            exito = s.Estado is "PENDIENTE" or "APROBADA"
+                ? $"Se canceló la solicitud de {TextosSeguridad.Texto(s.Operacion).ToLower()}."
+                : $"Se descartó la solicitud de {TextosSeguridad.Texto(s.Operacion).ToLower()}.";
         }
         catch (ErrorApi e)
         {

@@ -16,7 +16,7 @@ public class SolicitudDatos {
     public String descripcionOperacion;
     public String motivo;
     public String fechaSolicitud;
-    public String estado;               // PENDIENTE, APROBADA, RECHAZADA, VENCIDA
+    public String estado;               // PENDIENTE, APROBADA, RECHAZADA, VENCIDA, USADA
     public boolean vigente;             // aprobada y todavia dentro de su vigencia
     public String administrador;
     public String fechaResolucion;
@@ -25,6 +25,10 @@ public class SolicitudDatos {
     // RF014: la operacion que se autoriza (documento o producto y lo que revisa el Administrador)
     public String referencia;
     public String detalle;
+    // RF014: lo que el solicitante preparo en su pantalla (JSON) para retomar la operacion; null si no se puede
+    public String datosOperacion;
+    // RF014: la cancelo su solicitante ("Cambiar datos" o "Descartar"); no la rechazo un Administrador
+    public boolean cancelada;
 
     public SolicitudDatos() {
     }

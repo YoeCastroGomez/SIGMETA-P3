@@ -266,7 +266,7 @@ else
                     {
                         @* RF014: una línea queda bajo el costo. Se pide la autorización de ESTA venta (el Administrador ve
                            el cliente, el total y las líneas bajo el costo) y, aprobada, se guarda la misma venta. *@
-                        <PedirAutorizacion Solicitar="SolicitarAutorizacion" Listo="@Pendientes.All(p => p.Listo)"
+                        <PedirAutorizacion Solicitar="SolicitarAutorizacion" Listo="@Pendientes.All(p => p.Listo)" Retomar="@retomada" Volver="@VolverA"
                                            EstadoChanged="e => estadoAutorizacion = e" AlError="m => error = m">
                             <BotonCondicionado Texto="@(EsNuevo ? "Registrar venta" : "Guardar cambios")" TextoOcupado="Guardando..." Bloque="true"
                                                Clase="btn-primary w-100" Ocupado="@guardando" AlHacerClic="Guardar" />
@@ -278,7 +278,10 @@ else
                                            Clase="btn-primary w-100" Ocupado="@guardando" AlHacerClic="Guardar"
                                            Motivo="@(Pendientes.All(p => p.Listo) ? null : "Falta completar lo indicado.")" MostrarMotivo="false" />
                     }
-                    <a class="btn btn-outline-secondary w-100" href="@VolverA">Cancelar</a>
+                    @if (estadoAutorizacion is null)
+                    {
+                        <a class="btn btn-outline-secondary w-100" href="@VolverA">Cancelar</a>
+                    }
                 }
                 else
                 {

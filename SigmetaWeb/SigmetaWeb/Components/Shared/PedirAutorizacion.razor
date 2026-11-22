@@ -1,43 +1,70 @@
 @implements IDisposable
 @inject ApiJava Api
+@inject NavigationManager Nav
 @using SigmetaWeb.Components.Pages.Seguridad
 
 @* RF014 · Autorización de ESTA operación. La pantalla que la usa manda los datos de la operación
    (Solicitar: POST notas-credito/solicitar, ventas/solicitar-autorizacion, almacen/ajustes/solicitar...)
    y el sistema arma lo que ve el Administrador. Aquí solo se sigue su estado (GET solicitudes/{id} cada 8 s)
    y, cuando está aprobada, se muestra el botón de la pantalla (ChildContent) para completar la operación.
-   Pedirla otra vez con los mismos datos devuelve la misma solicitud (no se duplica). *@
+   Pedirla otra vez con los mismos datos devuelve la misma solicitud (no se duplica).
+   La solicitud queda guardada con los datos de la pantalla: si el usuario sale, la retoma después
+   (la pantalla la recibe en Retomar, por ejemplo /notas-credito/nueva?solicitud=ID) sin volver a pedirla.
+   Con una solicitud enviada: "Volver" sale y la deja guardada; "Cancelar solicitud" la descarta
+   (POST solicitudes/{id}/descartar), no se registra la operación y se vuelve a la lista.
+   "Corregir y volver a pedir" (rechazada o vencida) la descarta y deja corregir los datos. *@
+<Confirmacion Visible="@confirmarCancelar" Titulo="Cancelar la solicitud" TextoConfirmar="Cancelar solicitud"
+              AlConfirmar="Cancelar" AlCancelar="() => confirmarCancelar = false">
+    <p class="mb-0">No se registrará @QueSeCancela.</p>
+</Confirmacion>
+
 <div class="pedir-autorizacion">
     @if (solicitud is null)
     {
         <BotonCondicionado Texto="@TextoSolicitar" TextoOcupado="Enviando..." Bloque="true" Clase="btn-primary w-100"
                            Ocupado="@ocupado" AlHacerClic="Pedir" Motivo="@(Listo ? null : "Falta completar lo indicado.")" MostrarMotivo="false" />
-        <div class="small text-muted">El Administrador verá estos datos.</div>
     }
     else if (solicitud.Estado == "PENDIENTE")
     {
         <div class="estado espera" role="status">
             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-            Esperando al Administrador
-        </div>
-        <div class="d-flex gap-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary flex-fill" disabled="@ocupado" @onclick="Consultar">Actualizar</button>
-            <button type="button" class="btn btn-sm btn-outline-danger flex-fill" disabled="@ocupado" @onclick="CambiarDatos">Cambiar datos</button>
+            <span>
+                Solicitud enviada al Administrador
+                <span class="d-block fw-normal small">@TextosSeguridad.Hace(solicitud.FechaSolicitud)</span>
+            </span>
         </div>
     }
     else if (solicitud.Estado == "APROBADA")
     {
         <div class="estado aprobada" role="status">
-            Autorizada hasta las @Formato.FechaHora(solicitud.FechaVencimiento)@(string.IsNullOrEmpty(solicitud.Administrador) ? "" : $" · {solicitud.Administrador}")
+            <span>
+                Autorizada@(string.IsNullOrEmpty(solicitud.Administrador) ? "" : $" por {solicitud.Administrador}")
+                <span class="d-block fw-normal small">Vence @Formato.FechaHora(solicitud.FechaVencimiento)</span>
+            </span>
         </div>
         @ChildContent
     }
     else
     {
         <div class="estado rechazada" role="status">
-            @(solicitud.Estado == "RECHAZADA" ? $"Rechazada{(string.IsNullOrEmpty(solicitud.Administrador) ? "" : $" por {solicitud.Administrador}")}" : "La autorización venció o se usó")
+            <span>@TituloCerrada</span>
         </div>
-        <button type="button" class="btn btn-sm btn-outline-secondary w-100" disabled="@ocupado" @onclick="Reiniciar">Cambiar datos o volver a pedir</button>
+        @if (solicitud.Estado != "USADA")
+        {
+            <button type="button" class="btn btn-outline-secondary w-100" disabled="@ocupado" @onclick="Corregir">Corregir y volver a pedir</button>
+        }
+    }
+    @if (solicitud is not null)
+    {
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary flex-fill" href="@Volver">Volver</a>
+            @if (solicitud.Estado != "USADA")
+            {
+                <button type="button" class="btn btn-outline-danger flex-fill" disabled="@ocupado" @onclick="() => confirmarCancelar = true">
+                    @(solicitud.Estado is "PENDIENTE" or "APROBADA" ? "Cancelar solicitud" : "Descartar")
+                </button>
+            }
+        </div>
     }
 </div>
 
@@ -49,16 +76,47 @@
     [Parameter] public string TextoSolicitar { get; set; } = "Solicitar autorización";
     /// <summary>Botón para completar la operación; se muestra con la autorización aprobada.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
-    /// <summary>Avisa el estado (null, PENDIENTE, APROBADA, RECHAZADA, VENCIDA) para que la pantalla bloquee sus campos.</summary>
+    /// <summary>Avisa el estado (null, PENDIENTE, APROBADA, RECHAZADA, VENCIDA o USADA) para que la pantalla bloquee sus campos.</summary>
     [Parameter] public EventCallback<string?> EstadoChanged { get; set; }
     [Parameter] public EventCallback<string> AlError { get; set; }
+    /// <summary>Solicitud ya enviada que se retoma (la pantalla ya cargó sus datos).</summary>
+    [Parameter] public SolicitudDatos? Retomar { get; set; }
+    /// <summary>Lista a la que se vuelve ("Volver" deja la solicitud guardada; "Cancelar solicitud" la descarta).</summary>
+    [Parameter] public string Volver { get; set; } = "/";
 
+    private bool confirmarCancelar;
+    private string QueSeCancela => solicitud?.Operacion switch
+    {
+        TextosSeguridad.OperacionNotaCredito => "la nota de crédito",
+        TextosSeguridad.OperacionDescuento => "la venta",
+        TextosSeguridad.OperacionAjuste => "el ajuste",
+        _ => "la operación"
+    };
     private SolicitudDatos? solicitud;
+    private int idRetomada;
     private bool ocupado;
     private CancellationTokenSource? consultaPeriodica;
 
     /// <summary>Mientras espera o está aprobada, la operación no se cambia: se autorizó lo que se mandó.</summary>
     public bool Bloquea => solicitud?.Estado is "PENDIENTE" or "APROBADA";
+
+    private string TituloCerrada => solicitud!.Cancelada ? "Solicitud cancelada" : solicitud.Estado switch
+    {
+        "RECHAZADA" => $"Rechazada{(string.IsNullOrEmpty(solicitud.Administrador) ? "" : $" por {solicitud.Administrador}")}",
+        "USADA" => "La autorización ya se usó",
+        _ => "La autorización venció sin usarse"
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // se retoma una solicitud ya enviada: se sigue su estado sin pedirla otra vez
+        if (Retomar is not null && Retomar.Id != idRetomada)
+        {
+            idRetomada = Retomar.Id;
+            solicitud = Retomar;
+            await Avisar();
+        }
+    }
 
     private async Task Pedir()
     {
@@ -103,14 +161,38 @@
         }
     }
 
-    // anula la solicitud pendiente para poder cambiar la operación y pedirla de nuevo
-    private async Task CambiarDatos()
+    // rechazada o vencida: se descarta (ya no aparece para retomar) y se vuelve a preparar la operación
+    private Task Corregir() => Descartar();
+
+    // la operación ya no se hace: la solicitud se descarta y se vuelve a la lista (no se registra nada)
+    private async Task Cancelar()
+    {
+        confirmarCancelar = false;
+        if (solicitud is null) return;
+        ocupado = true;
+        try
+        {
+            await Api.Post<object>($"solicitudes/{solicitud.Id}/descartar", null);
+            consultaPeriodica?.Cancel();
+            Nav.NavigateTo(Volver);
+        }
+        catch (ErrorApi e)
+        {
+            await AlError.InvokeAsync(e.Message);
+        }
+        finally
+        {
+            ocupado = false;
+        }
+    }
+
+    private async Task Descartar()
     {
         if (solicitud is null) return;
         ocupado = true;
         try
         {
-            await Api.Post<object>($"solicitudes/{solicitud.Id}/anular", null);
+            await Api.Post<object>($"solicitudes/{solicitud.Id}/descartar", null);
         }
         catch (ErrorApi e)
         {

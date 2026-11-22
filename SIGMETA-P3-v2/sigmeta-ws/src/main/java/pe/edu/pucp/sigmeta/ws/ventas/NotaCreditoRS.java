@@ -112,8 +112,10 @@ public class NotaCreditoRS extends VentanillaBase {
         if (datos == null || datos.idComprobanteOrigen <= 0) {
             return error(Response.Status.BAD_REQUEST, "Elija el comprobante sobre el que se emite la nota de crédito");
         }
+        // RF014: tambien se guarda lo que preparo el Cajero, para retomar la nota sin volver a pedir la autorizacion
         return ejecutar(ticket, Response.Status.CREATED, id ->
-                pe.edu.pucp.sigmeta.ws.seguridad.SolicitudRS.resumen(comprobanteBO.solicitarNotaCredito(aNota(datos), id)));
+                pe.edu.pucp.sigmeta.ws.seguridad.SolicitudRS.resumen(comprobanteBO.solicitarNotaCredito(aNota(datos), id),
+                        id, datos.datosOperacion));
     }
 
     private Comprobante aNota(NotaDatos datos) {
@@ -175,6 +177,8 @@ public class NotaCreditoRS extends VentanillaBase {
         public int idComprobanteOrigen;
         public String motivo;
         public List<LineaNota> lineas = new ArrayList<>();
+        // RF014: solo en "solicitar": la pantalla tal como la preparo el Cajero (JSON), para retomarla
+        public String datosOperacion;
 
         public NotaDatos() {
         }

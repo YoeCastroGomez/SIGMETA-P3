@@ -143,6 +143,23 @@ public class VentaRS extends VentanillaBase {
         });
     }
 
+    // RF005/RF014: lineas que quedan bajo el costo mientras se arma la venta (mismo cuerpo que registrar o modificar).
+    // [{"numeroLinea": 1, "producto": "...", "precioSinIgv": 5.30, "costo": 5.40}] ; vacio = no hace falta autorizacion
+    @POST
+    @Path("revisar-costo")
+    public Response revisarCosto(@HeaderParam("ticket") String ticket, VentaDatos datos) {
+        if (datos == null) {
+            return error(Response.Status.BAD_REQUEST, "Faltan los datos de la venta");
+        }
+        return ejecutar(ticket, id -> {
+            Venta venta = aVenta(datos);
+            if (datos.id > 0) {
+                venta.setId(datos.id);
+            }
+            return ventaBO.revisarCosto(venta, id);
+        });
+    }
+
     // RF005/RF014: pide la autorizacion de ESTA venta con lineas bajo el costo (mismo cuerpo que registrar o
     // modificar; en edicion manda su id). No registra nada: al aprobarse, se registra o guarda la misma venta.
     @POST
@@ -156,7 +173,8 @@ public class VentaRS extends VentanillaBase {
             if (datos.id > 0) {
                 venta.setId(datos.id);
             }
-            return pe.edu.pucp.sigmeta.ws.seguridad.SolicitudRS.resumen(ventaBO.solicitarDescuentoEspecial(venta, id));
+            return pe.edu.pucp.sigmeta.ws.seguridad.SolicitudRS.resumen(ventaBO.solicitarDescuentoEspecial(venta, id),
+                    id, datos.datosOperacion);
         });
     }
 

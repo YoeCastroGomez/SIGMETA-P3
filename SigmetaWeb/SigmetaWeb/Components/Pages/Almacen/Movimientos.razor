@@ -2,6 +2,7 @@
 @* RF001: solo estos roles abren esta pantalla *@
 @attribute [Authorize(Roles = "Almacenero,Administrador")]
 @inject ApiJava Api
+@using SigmetaWeb.Components.Pages.Seguridad
 
 <PageTitle>Movimientos de almacén · SIGMETA</PageTitle>
 
@@ -62,6 +63,56 @@
         </div>
     </form>
 </div>
+
+@* RF014: ajustes por conteo que esperan (o ya tienen) la autorización del Administrador. Todavía no son
+   movimientos: se registran desde aquí con la misma autorización. GET /api/solicitudes/en-curso *@
+@if (porRegistrar.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-body pb-0">
+            <h2 class="h6 fw-semibold mb-0">Ajustes por registrar</h2>
+        </div>
+        <div class="table-responsive tabla-lista-contenedor">
+            <table class="table align-middle mb-0 tabla-lista">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th class="text-end">Contado</th>
+                        <th>Diferencia</th>
+                        <th>Motivo</th>
+                        <th>Autorización</th>
+                        <th><span class="visually-hidden">Acciones</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in porRegistrar)
+                    {
+                        <tr @key="s.Id">
+                            <td>
+                                <span class="fw-semibold">@s.Referencia</span>
+                                <div class="sub">Pedido @TextosSeguridad.Hace(s.FechaSolicitud)</div>
+                            </td>
+                            <td class="text-end text-nowrap">@Contado(s)</td>
+                            <td class="text-nowrap">@Diferencia(s)</td>
+                            <td class="small" style="max-width: 240px;">@s.Motivo</td>
+                            <td>
+                                <Estado Texto="@Ajuste.EstadoAjuste(s)" />
+                                @if (s.Vigente)
+                                {
+                                    <div class="sub">Hasta @Formato.FechaHora(s.FechaVencimiento)</div>
+                                }
+                            </td>
+                            <td class="acciones">
+                                <AccionesFila Principal="@PrincipalPorRegistrar(s)" Otras="@SecundariasPorRegistrar(s)"
+                                              Ocupado="@trabajando" AlElegir="Ejecutar" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
 
 @if (movimientos is null)
 {
@@ -168,8 +219,81 @@ else
     private IEnumerable<MovimientoFila> Pagina => tamanoPagina == 0 ? Filtrados
         : Filtrados.Skip((Math.Max(paginaActual, 1) - 1) * tamanoPagina).Take(tamanoPagina);
 
+    // ---------------- RF014: ajustes que esperan la autorización del Administrador ----------------
+
+    private List<SolicitudDatos> porRegistrar = new();
+    private bool trabajando;
+
+    private async Task CargarPorRegistrar()
+    {
+        if (!EsAlmacenero) return;
+        try
+        {
+            porRegistrar = await Api.Get<List<SolicitudDatos>>($"solicitudes/en-curso?operacion={TextosSeguridad.OperacionAjuste}") ?? new();
+        }
+        catch (ErrorApi)
+        {
+            porRegistrar = new();
+        }
+    }
+
+    // lo contado sale de los datos guardados al pedirla; la diferencia, del detalle que vio el Administrador
+    private static string Contado(SolicitudDatos s)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(s.DatosOperacion!);
+            var raiz = doc.RootElement;
+            var cantidad = raiz.TryGetProperty("cantidadContada", out var c) && c.TryGetDouble(out var v) ? Formato.Cantidad(v) : "—";
+            var unidad = raiz.TryGetProperty("unidad", out var u) ? u.GetString() : null;
+            return string.IsNullOrEmpty(unidad) ? cantidad : $"{cantidad} {unidad}";
+        }
+        catch (Exception e) when (e is System.Text.Json.JsonException or InvalidOperationException or ArgumentNullException)
+        {
+            return "—";
+        }
+    }
+
+    private static string Diferencia(SolicitudDatos s) =>
+        TextosSeguridad.LeerDetalle(s.Detalle).FirstOrDefault(l => l.Clave == "Diferencia")?.Valor ?? "—";
+
+    private static AccionFila PrincipalPorRegistrar(SolicitudDatos s) => s.Estado switch
+    {
+        "APROBADA" => new("Registrar", Ruta: $"/almacen/ajuste?solicitud={s.Id}"),
+        "PENDIENTE" => new("Continuar", Ruta: $"/almacen/ajuste?solicitud={s.Id}", Destacada: false),
+        _ => new("Corregir", Ruta: $"/almacen/ajuste?solicitud={s.Id}", Destacada: false)
+    };
+
+    private List<AccionFila> SecundariasPorRegistrar(SolicitudDatos s) => new()
+    {
+        new("Ver solicitud", Ruta: $"/autorizaciones/detalle/{s.Id}"),
+        new("Descartar", Hacer: () => Descartar(s), Peligro: true)
+    };
+
+    // POST /api/solicitudes/{id}/descartar: el ajuste ya no se registrará
+    private async Task Descartar(SolicitudDatos s)
+    {
+        trabajando = true;
+        error = exito = null;
+        try
+        {
+            await Api.Post<object>($"solicitudes/{s.Id}/descartar", null);
+            exito = $"Se descartó el ajuste de {s.Referencia}.";
+            await CargarPorRegistrar();
+        }
+        catch (ErrorApi e)
+        {
+            error = e.Message;
+        }
+        finally
+        {
+            trabajando = false;
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
+        await CargarPorRegistrar();
         await Buscar();
         if (Guardado == "ajuste")
         {

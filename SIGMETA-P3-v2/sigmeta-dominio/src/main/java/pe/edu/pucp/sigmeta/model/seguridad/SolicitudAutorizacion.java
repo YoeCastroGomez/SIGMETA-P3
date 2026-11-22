@@ -148,4 +148,17 @@ public class SolicitudAutorizacion {
     public void setHuella(String huella) {
         this.huella = huella;
     }
+
+    // RF014: lo que el usuario preparo en la pantalla (JSON), para retomar la operacion con esta solicitud.
+    // null = no se puede retomar (solicitud antigua o descartada). Solo rellena la pantalla: la operacion
+    // se vuelve a validar con sus datos reales (y su huella) al registrarla.
+    private String datosOperacion;
+
+    public String getDatosOperacion() {
+        return datosOperacion;
+    }
+
+    public void setDatosOperacion(String datosOperacion) {
+        this.datosOperacion = datosOperacion;
+    }
 }

@@ -187,6 +187,9 @@ public class VentaDatos
     // RF008/RF010: venta al contado ya cobrada en caja; el BO ya no la deja modificar
     public bool CobradaContado { get; set; }
     public List<LineaDatos> Lineas { get; set; } = new();
+    // RF014: solo al pedir la autorización del descuento: la venta tal como está en pantalla (JSON), para retomarla
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? DatosOperacion { get; set; }
 }
 
 // RF008: boleta o factura de una venta

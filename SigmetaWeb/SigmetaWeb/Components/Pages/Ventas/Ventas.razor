@@ -2,6 +2,7 @@
 @* RF001: solo estos roles abren esta pantalla *@
 @attribute [Authorize(Roles = "Vendedor,Cajero,Administrador")]
 @using SigmetaWeb.Components.Pages.Clientes
+@using SigmetaWeb.Components.Pages.Seguridad
 @inject ApiJava Api
 @inject NavigationManager Nav
 
@@ -59,6 +60,54 @@
         </select>
     </Campo>
 </FiltrosLista>
+
+@* RF014: ventas nuevas con precio bajo el costo que esperan (o ya tienen) la autorización del Administrador.
+   Todavía no son ventas: se registran desde aquí con la misma autorización. GET /api/solicitudes/en-curso *@
+@if (porRegistrar.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-body pb-0">
+            <h2 class="h6 fw-semibold mb-0">Ventas por registrar</h2>
+        </div>
+        <div class="table-responsive tabla-lista-contenedor">
+            <table class="table align-middle mb-0 tabla-lista">
+                <thead>
+                    <tr>
+                        <th>Venta</th>
+                        <th>Cliente</th>
+                        <th class="text-end">Total (S/)</th>
+                        <th>Autorización</th>
+                        <th><span class="visually-hidden">Acciones</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in porRegistrar)
+                    {
+                        <tr @key="p.Solicitud.Id">
+                            <td>
+                                <span class="text-muted fst-italic fw-semibold">Por registrar</span>
+                                <div class="sub">Pedida @Formato.FechaHora(p.Solicitud.FechaSolicitud)</div>
+                            </td>
+                            <td>@p.Cliente</td>
+                            <td class="text-end fw-semibold">@p.Total.ToString("N2")</td>
+                            <td>
+                                <Estado Texto="@TextoAutorizacion(p.Solicitud)" />
+                                @if (p.Solicitud.Vigente)
+                                {
+                                    <div class="sub">Hasta @Formato.FechaHora(p.Solicitud.FechaVencimiento)</div>
+                                }
+                            </td>
+                            <td class="acciones">
+                                <AccionesFila Principal="@PrincipalPorRegistrar(p.Solicitud)" Otras="@SecundariasPorRegistrar(p.Solicitud)"
+                                              Ocupado="@trabajando" AlElegir="Ejecutar" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
 
 @if (ventas is null)
 {

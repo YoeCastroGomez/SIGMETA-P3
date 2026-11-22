@@ -28,6 +28,9 @@ public partial class VentaForm
     [SupplyParameterFromQuery(Name = "orden")] public int? IdOrdenInicial { get; set; }
     // a dónde volver (la lista con sus filtros o la página de la venta)
     [SupplyParameterFromQuery(Name = "volver")] public string? VolverQ { get; set; }
+    // RF014: retoma la venta con la autorización de descuento ya pedida (desde Mis solicitudes): ?solicitud=ID
+    [SupplyParameterFromQuery(Name = "solicitud")] public int? IdSolicitud { get; set; }
+    private SolicitudDatos? retomada;
 
     internal VentaDatos? venta;
     private List<Cliente> clientes = new();
@@ -147,6 +150,49 @@ public partial class VentaForm
         {
             error = e.Message;
             venta ??= new VentaDatos { FechaEmision = DateOnly.FromDateTime(DateTime.Today) };
+        }
+        if (IdSolicitud is int idSolicitud && venta is not null)
+        {
+            await RetomarAutorizacion(idSolicitud);
+        }
+    }
+
+    // RF014: vuelve a armar la venta tal como se pidió el descuento y sigue su autorización (no se pide otra vez)
+    private async Task RetomarAutorizacion(int idSolicitud)
+    {
+        try
+        {
+            var s = await Api.Get<SolicitudDatos>($"solicitudes/{idSolicitud}");
+            if (s is null || s.Operacion != TextosSeguridad.OperacionDescuento || string.IsNullOrEmpty(s.DatosOperacion) || s.Estado == "USADA")
+            {
+                error = "No se pudo retomar esa solicitud: prepare la venta otra vez.";
+                return;
+            }
+            var guardada = System.Text.Json.JsonSerializer.Deserialize<VentaDatos>(s.DatosOperacion,
+                new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+            if (guardada is null) return;
+            guardada.DatosOperacion = null;
+            venta = guardada;
+            desdeOrden = venta.IdOrden > 0;
+            if (desdeOrden)
+            {
+                ordenElegida = await Api.Get<OrdenDatos>($"ordenes/{venta.IdOrden}");
+                if (ordenElegida is not null && ordenesAbiertas.All(o => o.Id != ordenElegida.Id))
+                {
+                    ordenesAbiertas.Add(ordenElegida);
+                }
+            }
+            else if (clientes.All(c => c.Id != venta.IdCliente))
+            {
+                clientes.Add(new Cliente { Id = venta.IdCliente, TipoPersona = "JURIDICA", RazonSocial = venta.Cliente, NumeroDocumento = venta.DocumentoCliente ?? "" });
+            }
+            requiereAutorizacion = true;
+            retomada = s;
+            estadoAutorizacion = s.Estado;
+        }
+        catch (Exception e) when (e is ErrorApi or System.Text.Json.JsonException)
+        {
+            error = e.Message;
         }
     }
 
@@ -279,7 +325,75 @@ public partial class VentaForm
         var partes = new List<string>();
         if (v.Error(n + "cantidad", e) is { } c) partes.Add("Cantidad: " + c);
         if (v.Error(n + "descuento", e, n + "cantidad", n + "precio") is { } d) partes.Add("Descuento: " + d);
+        // RF005/RF014: precio efectivo bajo el costo (lo calcula el BO con /api/ventas/revisar-costo)
+        var indice = venta?.Lineas.IndexOf(l) ?? -1;
+        if (bajoCosto.FirstOrDefault(b => b.NumeroLinea == indice + 1) is { } bc)
+        {
+            partes.Add($"Queda en S/ {bc.PrecioSinIgv:N2} sin IGV, bajo su costo (S/ {bc.Costo:N2}): necesita autorización");
+        }
         return partes.Count == 0 ? null : string.Join("  ·  ", partes);
+    }
+
+    // ---------------- RF005/RF014: precio bajo el costo, antes de registrar ----------------
+    private List<LineaBajoCosto> bajoCosto = new();
+    private string firmaCosto = "";
+    private CancellationTokenSource? esperaCosto;
+
+    private sealed class LineaBajoCosto
+    {
+        public int NumeroLinea { get; set; }
+        public string? Producto { get; set; }
+        public decimal PrecioSinIgv { get; set; }
+        public decimal Costo { get; set; }
+    }
+
+    // lo que decide el precio de cada línea: si cambia, se vuelve a revisar contra el costo
+    private string FirmaCosto() => venta is null ? "" : string.Join("|", venta.Lineas.Select(l =>
+        $"{l.IdProducto}:{l.Cantidad}:{l.Descuento}:{l.IdDetalleOrden}")) + $"#{venta.IdOrden}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (venta is null || !Editable || BloqueadaPorAutorizacion) return;
+        var firma = FirmaCosto();
+        if (firma == firmaCosto) return;
+        firmaCosto = firma;
+        esperaCosto?.Cancel();
+        var espera = esperaCosto = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(400, espera.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+        await RevisarCosto();
+        StateHasChanged();
+    }
+
+    private async Task RevisarCosto()
+    {
+        if (venta is null || venta.Lineas.Count == 0 || venta.FechaEmision is null)
+        {
+            bajoCosto = new();
+        }
+        else
+        {
+            for (var i = 0; i < venta.Lineas.Count; i++)
+            {
+                venta.Lineas[i].NumeroLinea = i + 1;
+            }
+            try
+            {
+                bajoCosto = await Api.Post<List<LineaBajoCosto>>("ventas/revisar-costo", venta) ?? new();
+            }
+            catch (ErrorApi)
+            {
+                bajoCosto = new();   // venta incompleta: lo valida el BO al registrar
+            }
+        }
+        // con una solicitud en curso se sigue mostrando su estado aunque cambien las líneas
+        requiereAutorizacion = bajoCosto.Count > 0 || estadoAutorizacion is not null;
     }
 
     // ---------------- Validación en pantalla (RNF004) ----------------

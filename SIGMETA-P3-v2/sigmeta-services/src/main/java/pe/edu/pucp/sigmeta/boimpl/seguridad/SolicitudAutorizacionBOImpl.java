@@ -20,7 +20,7 @@ import java.util.List;
 public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
 
     // RF014: operaciones restringidas del sistema. Cada una la pide un solo rol y, una vez aprobada,
-    // sirve para UNA operacion: el BO que la usa la consume (queda VENCIDA) en su misma transaccion.
+    // sirve para UNA operacion: el BO que la usa la consume (queda USADA) en su misma transaccion.
     public static final String OPERACION_DESCUENTO_ESPECIAL = "DESCUENTO_ESPECIAL";   // Vendedor: vender bajo el costo
     public static final String OPERACION_NOTA_CREDITO = "EMITIR_NOTA_CREDITO";         // Cajero: nota de credito
     public static final String OPERACION_AJUSTE_INVENTARIO = "AJUSTE_INVENTARIO";      // Almacenero: ajuste por conteo
@@ -231,8 +231,9 @@ public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
         });
     }
 
-    // RF014: APROBADA -> VENCIDA (sp_solicitud_autorizacion_eliminar). Corre dentro de la transaccion
-    // de quien la usa: si esa operacion falla hay rollback y la autorizacion sigue APROBADA
+    // RF014: APROBADA -> USADA (sp_solicitud_autorizacion_usar). Antes quedaba VENCIDA y no se distinguia de una
+    // que paso su vigencia o que se revoco. Corre dentro de la transaccion de quien la usa: si esa operacion
+    // falla hay rollback y la autorizacion sigue APROBADA (no hay que volver a pedirla)
     @Override
     public void consumir(int idSolicitud) throws SQLException {
         Transaccion.ejecutar(() -> {
@@ -240,7 +241,81 @@ public class SolicitudAutorizacionBOImpl implements SolicitudAutorizacionBO {
             if(solicitud.getEstado() != EstadoAutorizacion.APROBADA){
                 throw new IllegalStateException("Solo se puede consumir una autorización aprobada (estado: " + solicitud.getEstado() + ")");
             }
-            solicitudDAO.remove(solicitud);
+            solicitudDAO.marcarUsada(idSolicitud);
+            return null;
+        });
+    }
+
+    // ================= RF014: retomar la operacion con su solicitud =================
+
+    // tope del JSON de la pantalla (la columna es TEXT: 64 KB)
+    private static final int DATOS_OPERACION_MAXIMO = 60000;
+
+    @Override
+    public void guardarDatosOperacion(int idSolicitud, int idSolicitante, String datosOperacion) throws SQLException {
+        if (datosOperacion == null || datosOperacion.isBlank()) {
+            return; // la pantalla no mando datos: la solicitud vale igual, solo no se podra retomar
+        }
+        if (datosOperacion.length() > DATOS_OPERACION_MAXIMO) {
+            throw new IllegalArgumentException("Los datos de la operación son demasiado grandes para guardarlos");
+        }
+        Transaccion.ejecutar(() -> {
+            SolicitudAutorizacion solicitud = obtenerExistente(idSolicitud);
+            if (solicitud.getSolicitante() == null || solicitud.getSolicitante().getId() != idSolicitante) {
+                throw new IllegalStateException("Solo quien pidió la autorización guarda los datos de su operación");
+            }
+            if (solicitud.getEstado() != EstadoAutorizacion.PENDIENTE && solicitud.getEstado() != EstadoAutorizacion.APROBADA) {
+                return null; // ya resuelta: no se cambia
+            }
+            solicitudDAO.guardarDatosOperacion(idSolicitud, datosOperacion);
+            // se volvio a pedir la MISMA operacion (misma huella) despues de un rechazo o un vencimiento: la solicitud
+            // anterior ya no se retoma (si no, la operacion apareceria dos veces en la lista)
+            LocalDateTime ahora = LocalDateTime.now();
+            for (SolicitudAutorizacion anterior : solicitudDAO.listarPorSolicitante(idSolicitante)) {
+                boolean mismaOperacion = anterior.getId() != idSolicitud && anterior.getDatosOperacion() != null
+                        && solicitud.getHuella() != null && solicitud.getHuella().equals(anterior.getHuella())
+                        && solicitud.getOperacionRestringida().equals(anterior.getOperacionRestringida());
+                boolean yaNoSirve = anterior.getEstado() == EstadoAutorizacion.RECHAZADA
+                        || anterior.getEstado() == EstadoAutorizacion.VENCIDA
+                        || (anterior.getEstado() == EstadoAutorizacion.APROBADA && anterior.getFechaVencimiento() != null
+                            && !anterior.getFechaVencimiento().isAfter(ahora));
+                if (mismaOperacion && yaNoSirve) {
+                    solicitudDAO.guardarDatosOperacion(anterior.getId(), null);
+                }
+            }
+            return null;
+        });
+    }
+
+    @Override
+    public List<SolicitudAutorizacion> listarEnCurso(int idSolicitante, String operacionRestringida) throws SQLException {
+        return Transaccion.consultar(() -> {
+            List<SolicitudAutorizacion> todas = idSolicitante > 0
+                    ? solicitudDAO.listarPorSolicitante(idSolicitante) : solicitudDAO.listarTodos();
+            String operacion = operacionRestringida == null || operacionRestringida.isBlank() ? null
+                    : operacionRestringida.trim().toUpperCase(java.util.Locale.ROOT);
+            return todas.stream()
+                    .filter(s -> s.getDatosOperacion() != null && s.getEstado() != EstadoAutorizacion.USADA)
+                    .filter(s -> operacion == null || operacion.equals(s.getOperacionRestringida()))
+                    .sorted((a, b) -> Integer.compare(b.getId(), a.getId()))
+                    .toList();
+        });
+    }
+
+    @Override
+    public void descartar(int idSolicitud, int idResponsable) throws SQLException {
+        Transaccion.ejecutar(() -> {
+            SolicitudAutorizacion solicitud = obtenerExistente(idSolicitud);
+            if (solicitud.getSolicitante() == null || solicitud.getSolicitante().getId() != idResponsable) {
+                throw new IllegalStateException("Solo quien pidió la autorización puede descartarla");
+            }
+            if (solicitud.getEstado() == EstadoAutorizacion.USADA) {
+                throw new IllegalStateException("Esta autorización ya se usó en su operación");
+            }
+            if (solicitud.getEstado() == EstadoAutorizacion.PENDIENTE || solicitud.getEstado() == EstadoAutorizacion.APROBADA) {
+                solicitudDAO.remove(solicitud); // pendiente: queda cancelada; aprobada: ya no se puede usar
+            }
+            solicitudDAO.guardarDatosOperacion(idSolicitud, null);
             return null;
         });
     }

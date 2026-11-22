@@ -585,7 +585,7 @@ public class PruebaCrud {
 
         // e. la autorizacion es de un solo uso
         EstadoAutorizacion estado = solicitudBO.obtener(autorizacion.getId()).getEstado();
-        ok("Consumida", estado == EstadoAutorizacion.VENCIDA, "la autorizacion se uso una vez y quedo " + estado);
+        ok("Consumida", estado == EstadoAutorizacion.USADA, "la autorizacion se uso una vez y quedo " + estado);
 
         // f. la linea 2 entrego 2 y ya se devolvio 1: devolver 2 mas se rechaza (la cantidad se valida antes que la autorizacion)
         boolean rechazado = false;

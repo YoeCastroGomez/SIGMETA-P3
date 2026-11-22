@@ -160,6 +160,31 @@ public class SolicitudAutorizacionDAOImpl implements SolicitudAutorizacionDAO {
         return null;
     }
 
+    // RF014: la autorizacion se consumio en su operacion (sp_solicitud_autorizacion_usar)
+    @Override
+    public void marcarUsada(int idSolicitud) throws SQLException {
+        Connection connection = transactionContext.getConnection();
+        try(CallableStatement cs = connection.prepareCall("{call sp_solicitud_autorizacion_usar(?)}");){
+            cs.setInt(1, idSolicitud);
+            cs.executeUpdate();
+        }
+    }
+
+    // RF014: datos de la pantalla para retomar la operacion (sp_solicitud_autorizacion_guardar_datos)
+    @Override
+    public void guardarDatosOperacion(int idSolicitud, String datosOperacion) throws SQLException {
+        Connection connection = transactionContext.getConnection();
+        try(CallableStatement cs = connection.prepareCall("{call sp_solicitud_autorizacion_guardar_datos(?, ?)}");){
+            cs.setInt(1, idSolicitud);
+            if (datosOperacion == null) {
+                cs.setNull(2, Types.LONGVARCHAR);
+            } else {
+                cs.setString(2, datosOperacion);
+            }
+            cs.executeUpdate();
+        }
+    }
+
     // el parametro 1 es el id (OUT en insertar, IN en modificar)
     private void asignarParametros(CallableStatement cs, SolicitudAutorizacion solicitud) throws SQLException {
         cs.setInt(2, solicitud.getSolicitante().getId());
@@ -205,6 +230,8 @@ public class SolicitudAutorizacionDAOImpl implements SolicitudAutorizacionDAO {
         solicitud.setReferencia(columnaOpcional(rs, "referencia"));
         solicitud.setDetalle(columnaOpcional(rs, "detalle"));
         solicitud.setHuella(columnaOpcional(rs, "huella"));
+        // RF014: columna de 04_SP_sebastian.sql (retomar la operacion); null si la base aun no la tiene
+        solicitud.setDatosOperacion(columnaOpcional(rs, "datos_operacion"));
         return solicitud;
     }
 

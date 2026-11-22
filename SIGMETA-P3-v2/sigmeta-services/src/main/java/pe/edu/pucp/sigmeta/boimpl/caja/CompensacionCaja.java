@@ -57,7 +57,10 @@ public class CompensacionCaja {
                                               String documentoOrigen, int idDocumentoOrigen, Usuario responsable) throws SQLException {
         Caja caja = cajaDAO.obtenerCajaAbiertaPorUsuario(idCajero);
         if (caja == null) {
-            throw new IllegalStateException("El cajero debe tener su caja abierta para registrar la devolución de dinero (RF010)");
+            // RF010/RF013: el mensaje dice que hacer; la autorizacion no se consume porque la operacion hace rollback
+            throw new IllegalStateException(String.format(java.util.Locale.ROOT,
+                    "Su caja está cerrada. Esta operación le devuelve S/ %.2f al cliente y ese dinero sale de su caja: "
+                    + "ábrala en «Caja» y vuelva a registrarla. No se registró nada y la autorización sigue vigente.", monto));
         }
         return registrar(caja, TipoMovimientoCaja.EGRESO_MANUAL, medioPago, monto, concepto,
                 documentoOrigen, idDocumentoOrigen, responsable);
