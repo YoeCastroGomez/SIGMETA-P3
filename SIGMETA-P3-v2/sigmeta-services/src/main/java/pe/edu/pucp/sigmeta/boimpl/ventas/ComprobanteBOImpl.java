@@ -471,27 +471,65 @@ public class ComprobanteBOImpl implements ComprobanteBO {
                 if (responsable.getRol().getTipo() == TipoRol.VENDEDOR) {
                     throw new IllegalStateException("El rol VENDEDOR no anula notas de crédito; lo hace el Cajero o el Administrador");
                 }
-                // Revertir efectos de inventario
+                // RF013: localizar cada ingreso original del comprobante para revertirlo
+                // con id_movimiento_revertido; no confundir una devolucion anulada con merma.
                 List<DetalleNotaCredito> detalles = detalleNotaCreditoDAO.listarPorComprobante(idComprobante);
+                Map<Integer, Double> esperadoPorProducto = new HashMap<>();
                 for (DetalleNotaCredito d : detalles) {
-                    int idProd = d.getDetalleVenta().getProducto().getId();
-                    double stockActual = stockDAO.obtenerStockParaActualizar(idProd);
-                    if (stockActual < d.getCantidad()) {
-                        throw new IllegalStateException("Stock insuficiente para revertir la nota de crédito en el producto " + idProd);
+                    int idProducto = d.getDetalleVenta().getProducto().getId();
+                    if (!Double.isFinite(d.getCantidad()) || d.getCantidad() <= 0) {
+                        throw new IllegalStateException("La nota tiene cantidades historicas invalidas");
                     }
-                    double nuevoStock = stockActual - d.getCantidad();
-                    stockDAO.actualizarStock(idProd, nuevoStock);
+                    esperadoPorProducto.merge(idProducto, d.getCantidad(), Double::sum);
+                }
+                List<MovimientoInventario> ingresos = movimientoDAO.listarPorComprobante(idComprobante)
+                        .stream().filter(m -> m.getTipo() == TipoMovimientoInventario.INGRESO_DEVOLUCION)
+                        .sorted(java.util.Comparator.comparingInt(MovimientoInventario::getId).reversed())
+                        .toList();
+                Map<Integer, Double> ingresadoPorProducto = new HashMap<>();
+                for (MovimientoInventario original : ingresos) {
+                    if (!Double.isFinite(original.getCantidad()) || original.getCantidad() <= 0
+                            || movimientoDAO.existeReversion(original.getId())) {
+                        throw new IllegalStateException("El ingreso de la devolucion no es reversible");
+                    }
+                    ingresadoPorProducto.merge(original.getProducto().getId(), original.getCantidad(), Double::sum);
+                }
+                if (ingresos.isEmpty() || esperadoPorProducto.size() != ingresadoPorProducto.size()) {
+                    throw new IllegalStateException("Los ingresos del Kardex no coinciden con la nota de credito");
+                }
+                for (Map.Entry<Integer, Double> item : esperadoPorProducto.entrySet()) {
+                    if (Math.abs(item.getValue() - ingresadoPorProducto.getOrDefault(item.getKey(), -1.0)) > 0.0001) {
+                        throw new IllegalStateException("Los ingresos del Kardex no coinciden con la nota de credito");
+                    }
+                }
+                for (MovimientoInventario original : ingresos) {
+                    MovimientoInventario bloqueado = movimientoDAO.bloquearMovimiento(original.getId());
+                    if (bloqueado == null || bloqueado.getTipo() != TipoMovimientoInventario.INGRESO_DEVOLUCION
+                            || bloqueado.getComprobante() == null
+                            || bloqueado.getComprobante().getId() != idComprobante
+                            || movimientoDAO.existeReversion(original.getId())) {
+                        throw new IllegalStateException("El movimiento de devolucion no se puede revertir");
+                    }
+                    int idProd = original.getProducto().getId();
+                    double stockActual = stockDAO.obtenerStockParaActualizar(idProd);
+                    double nuevoStock = stockActual - original.getCantidad();
+                    if (!Double.isFinite(nuevoStock) || nuevoStock < -0.000001) {
+                        throw new IllegalStateException("Stock insuficiente para revertir la nota de credito en el producto " + idProd);
+                    }
+                    nuevoStock = Math.max(0, nuevoStock);
 
-                    MovimientoInventario mov = new MovimientoInventario();
-                    Producto prod = new Producto();
-                    prod.setId(idProd);
-                    mov.setProducto(prod);
-                    mov.setTipo(TipoMovimientoInventario.AJUSTE_SALIDA);
-                    mov.setCantidad(d.getCantidad());
-                    mov.setStockResultante(nuevoStock);
-                    mov.setUsuarioRegistro(responsable);
-                    mov.setMotivo("Reversión de nota de crédito " + comprobante.getSerie() + "-" + comprobante.getNumero());
-                    movimientoDAO.save(mov);
+                    MovimientoInventario inverso = new MovimientoInventario();
+                    inverso.setProducto(original.getProducto());
+                    inverso.setTipo(TipoMovimientoInventario.SALIDA_REVERSION_DEVOLUCION);
+                    inverso.setCantidad(original.getCantidad());
+                    inverso.setStockResultante(nuevoStock);
+                    inverso.setComprobante(comprobante);
+                    inverso.setUsuarioRegistro(responsable);
+                    inverso.setMotivo("Reversion de nota de credito " + comprobante.getSerie()
+                            + "-" + comprobante.getNumero());
+                    inverso.setIdMovimientoRevertido(original.getId());
+                    stockDAO.actualizarStock(idProd, nuevoStock);
+                    movimientoDAO.registrarReversionNotaCredito(inverso);
                 }
 
                 // Revertir el efecto en la cuenta por cobrar: la deuda vuelve a su monto anterior (RF013)
