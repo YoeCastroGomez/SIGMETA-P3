@@ -220,6 +220,39 @@ public class MovimientoInventarioDAOImpl implements MovimientoInventarioDAO {
     }
 
     @Override
+    public List<MovimientoInventario> listarPorComprobante(int idComprobante) throws SQLException {
+        String sql = "{call sp_movimiento_listar_comprobante(?)}";
+        List<MovimientoInventario> movimientos = new ArrayList<>();
+        try (CallableStatement cs = transactionContext.getConnection().prepareCall(sql)) {
+            cs.setInt(1, idComprobante);
+            try (ResultSet rs = cs.executeQuery()) {
+                while (rs.next()) movimientos.add(mapearMovimiento(rs));
+            }
+        }
+        return movimientos;
+    }
+
+    @Override
+    public MovimientoInventario registrarReversionNotaCredito(MovimientoInventario reversion)
+            throws SQLException {
+        String sql = "{call sp_movimiento_reversion_nota_credito(?, ?, ?, ?, ?, ?, ?, ?, ?)}";
+        try (CallableStatement cs = transactionContext.getConnection().prepareCall(sql)) {
+            cs.setInt(1, reversion.getProducto().getId());
+            cs.setString(2, reversion.getTipo().name());
+            cs.setDouble(3, reversion.getCantidad());
+            cs.setDouble(4, reversion.getStockResultante());
+            cs.setInt(5, reversion.getComprobante().getId());
+            cs.setInt(6, reversion.getUsuarioRegistro().getId());
+            cs.setString(7, reversion.getMotivo());
+            cs.setInt(8, reversion.getIdMovimientoRevertido());
+            cs.registerOutParameter(9, Types.INTEGER);
+            cs.execute();
+            reversion.setId(cs.getInt(9));
+            return reversion;
+        }
+    }
+
+    @Override
     public List<MovimientoInventario> listarPorRecepcion(int idRecepcion) throws SQLException {
         String sql = "{call sp_movimiento_listar_recepcion(?)}";
         List<MovimientoInventario> lista = new ArrayList<>();
