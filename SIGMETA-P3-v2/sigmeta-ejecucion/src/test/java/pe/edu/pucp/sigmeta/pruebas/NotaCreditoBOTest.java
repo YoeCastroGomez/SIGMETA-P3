@@ -15,6 +15,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import pe.edu.pucp.sigmeta.boimpl.Transaccion;
+import pe.edu.pucp.sigmeta.daoimpl.almacen.MovimientoInventarioDAOImpl;
+import pe.edu.pucp.sigmeta.model.enums.TipoMovimientoInventario;
+import pe.edu.pucp.sigmeta.model.almacen.MovimientoInventario;
 import pe.edu.pucp.sigmeta.boimpl.seguridad.SolicitudAutorizacionBOImpl;
 import pe.edu.pucp.sigmeta.model.enums.EstadoAutorizacion;
 import pe.edu.pucp.sigmeta.model.enums.EstadoComprobante;
@@ -209,6 +213,17 @@ class NotaCreditoBOTest {
         assertEquals(EstadoComprobante.ANULADO, comprobantes.obtener(nota.getId()).getEstado());
         assertEquals(stockAntes, stockFisico(producto.getId()), 0.001);
         assertEquals(saldoAntes, saldoCuenta(venta.getId()), CENTAVO);
+        List<MovimientoInventario> movimientos = Transaccion.consultar(() ->
+                new MovimientoInventarioDAOImpl().listarPorComprobante(nota.getId()));
+        List<MovimientoInventario> ingresos = movimientos.stream()
+                .filter(m -> m.getTipo() == TipoMovimientoInventario.INGRESO_DEVOLUCION).toList();
+        List<MovimientoInventario> reversiones = movimientos.stream()
+                .filter(m -> m.getTipo() == TipoMovimientoInventario.SALIDA_REVERSION_DEVOLUCION).toList();
+        assertEquals(1, ingresos.size(), "la nota registra un ingreso de devolucion");
+        assertEquals(1, reversiones.size(), "la anulacion registra una reversion especifica");
+        assertEquals(ingresos.get(0).getId(), reversiones.get(0).getIdMovimientoRevertido(),
+                "la salida debe apuntar al ingreso original");
+        assertEquals(ingresos.get(0).getCantidad(), reversiones.get(0).getCantidad(), 0.001);
         assertThrows(IllegalStateException.class,
                 () -> comprobantes.anular(nota.getId(), "Otra vez", CAJERO), "no se anula dos veces");
     }

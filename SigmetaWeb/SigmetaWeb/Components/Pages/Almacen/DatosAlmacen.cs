@@ -186,6 +186,7 @@ public static class TextosAlmacen
         "INGRESO_COMPRA" => "Ingreso por compra",
         "SALIDA_DESPACHO" => "Salida por despacho",
         "INGRESO_DEVOLUCION" => "Ingreso por devolución",
+        "SALIDA_REVERSION_DEVOLUCION" => "Reversión de nota de crédito",
         "INGRESO_REVERSION_DESPACHO" => "Reversión de despacho",
         "SALIDA_REVERSION_COMPRA" => "Reversión de recepción",
         "AJUSTE_INGRESO" => "Ajuste (sobrante)",
@@ -201,6 +202,6 @@ public static class TextosAlmacen
     public static readonly string[] TiposMovimiento =
     {
         "INGRESO_COMPRA", "SALIDA_DESPACHO", "INGRESO_DEVOLUCION", "INGRESO_REVERSION_DESPACHO",
-        "SALIDA_REVERSION_COMPRA", "AJUSTE_INGRESO", "AJUSTE_SALIDA", "REVERSION_AJUSTE_INGRESO", "REVERSION_AJUSTE_SALIDA"
+        "SALIDA_REVERSION_COMPRA", "SALIDA_REVERSION_DEVOLUCION", "AJUSTE_INGRESO", "AJUSTE_SALIDA", "REVERSION_AJUSTE_INGRESO", "REVERSION_AJUSTE_SALIDA"
     };
 }

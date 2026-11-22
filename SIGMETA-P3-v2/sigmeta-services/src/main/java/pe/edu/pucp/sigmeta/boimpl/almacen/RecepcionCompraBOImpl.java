@@ -56,31 +56,35 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
         this.usuarioBO = new UsuarioBOImpl();
     }
 
-    // Metodo de costeo: PROMEDIO PONDERADO. Cada ingreso por compra recalcula el costo unitario del
-    // producto (en unidad de venta, sin IGV):
-    //   costo nuevo = (stock anterior x costo anterior + cantidad que ingresa x costo de la compra)
-    //                 / (stock anterior + cantidad que ingresa)
-    // El costo de la compra es el importe neto de la linea (ya con su descuento) entre lo comprado,
-    // llevado a unidad de venta con el factor de conversion. Si no habia stock, queda el costo de la compra.
-    // Revertir una recepcion devuelve las unidades pero no recalcula el promedio (criterio conservador).
-    private void actualizarCostoPromedio(int idProducto, double stockAnterior, double cantidadStock,
-                                         DetalleCompra linea) throws SQLException {
-        if (linea.getCantidad() <= 0 || linea.getFactorConversion() <= 0) {
-            return;
+    // Promedio ponderado, sin IGV. Guardar siempre ambos costos de cada
+    // INGRESO_COMPRA para revertir exactamente el redondeo original.
+    private java.math.BigDecimal[] actualizarCostoPromedio(int idProducto, double stockAnterior,
+                                                            double cantidadStock, DetalleCompra linea)
+            throws SQLException {
+        if (!Double.isFinite(stockAnterior) || stockAnterior < 0 || !Double.isFinite(cantidadStock)
+                || cantidadStock <= 0 || !Double.isFinite(linea.getCantidad())
+                || linea.getCantidad() <= 0 || !Double.isFinite(linea.getFactorConversion())
+                || linea.getFactorConversion() <= 0 || !Double.isFinite(linea.getImporte())
+                || linea.getImporte() < 0) {
+            throw new IllegalArgumentException("Datos invalidos para calcular el costo promedio");
         }
         Producto producto = new pe.edu.pucp.sigmeta.daoimpl.producto.ProductoDAOImpl().load(idProducto);
-        if (producto == null) {
-            return;
+        if (producto == null || !Double.isFinite(producto.getCostoUnitario())
+                || producto.getCostoUnitario() < 0) {
+            throw new IllegalStateException("El costo actual del producto no es valido");
         }
+        java.math.BigDecimal anterior = java.math.BigDecimal.valueOf(producto.getCostoUnitario())
+                .setScale(2, java.math.RoundingMode.HALF_UP);
         java.math.BigDecimal costoCompra = java.math.BigDecimal.valueOf(linea.getImporte())
-                .divide(java.math.BigDecimal.valueOf(linea.getCantidad() * linea.getFactorConversion()),
+                .divide(java.math.BigDecimal.valueOf(linea.getCantidad())
+                        .multiply(java.math.BigDecimal.valueOf(linea.getFactorConversion())),
                         6, java.math.RoundingMode.HALF_UP);
-        java.math.BigDecimal anterior = java.math.BigDecimal.valueOf(Math.max(stockAnterior, 0));
-        java.math.BigDecimal ingreso = java.math.BigDecimal.valueOf(cantidadStock);
-        java.math.BigDecimal costoNuevo = anterior.multiply(java.math.BigDecimal.valueOf(producto.getCostoUnitario()))
-                .add(ingreso.multiply(costoCompra))
-                .divide(anterior.add(ingreso), 2, java.math.RoundingMode.HALF_UP);
-        new pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl().ejecutar("sp_producto_actualizar_costo", idProducto, costoNuevo);
+        java.math.BigDecimal posterior = CostoPromedioRecepcion.calcular(
+                java.math.BigDecimal.valueOf(stockAnterior), anterior,
+                java.math.BigDecimal.valueOf(cantidadStock), costoCompra);
+        new pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl().ejecutar(
+                "sp_producto_actualizar_costo", idProducto, posterior);
+        return new java.math.BigDecimal[]{anterior, posterior};
     }
 
     @Override
@@ -154,7 +158,7 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
                 int idProducto = linea.getProducto().getId();
                 double stockAnterior = stockDAO.obtenerStockParaActualizar(idProducto);
                 double nuevoStock = stockAnterior + cantidadStock;
-                actualizarCostoPromedio(idProducto, stockAnterior, cantidadStock, linea);
+                java.math.BigDecimal[] costos = actualizarCostoPromedio(idProducto, stockAnterior, cantidadStock, linea);
                 stockDAO.actualizarStock(idProducto, nuevoStock);
 
                 MovimientoInventario movimiento = new MovimientoInventario();
@@ -168,6 +172,9 @@ public class RecepcionCompraBOImpl implements RecepcionCompraBO {
                 movimiento.setUsuarioRegistro(recepcion.getUsuarioRegistro());
                 movimiento.setMotivo("Ingreso por recepción de compra");
                 movimientoDAO.save(movimiento);
+                // Snapshot enlazado con el movimiento original en la MISMA transaccion.
+                new pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl().ejecutar(
+                        "sp_costo_recepcion_guardar", movimiento.getId(), costos[0], costos[1]);
             }
 
             boolean completa = true;

@@ -210,13 +210,49 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
                 }
             }
 
+            // Revertir del movimiento mas reciente al mas antiguo de cada producto:
+            // los costos anteriores/posteriores se encadenan con el redondeo original.
             originales.sort(Comparator.comparingInt((MovimientoInventario m) -> m.getProducto().getId())
-                    .thenComparingInt(MovimientoInventario::getId));
+                    .thenComparing(Comparator.comparingInt(MovimientoInventario::getId).reversed()));
+            pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl consultas =
+                    new pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl();
+            java.util.Set<Integer> productosRevisados = new java.util.HashSet<>();
             List<MovimientoInventario> compensaciones = new ArrayList<>();
             for (MovimientoInventario m : originales) {
-                movimientoDAO.bloquearMovimiento(m.getId());
+                MovimientoInventario bloqueado = movimientoDAO.bloquearMovimiento(m.getId());
+                if (bloqueado == null) throw new IllegalStateException("No existe el ingreso original");
                 int idProducto = m.getProducto().getId();
+                if (productosRevisados.add(idProducto)) {
+                    // Ningun despacho, ajuste, otra recepcion ni compensacion posterior:
+                    // no se puede deshacer un promedio historico sobre otro movimiento.
+                    int ultimoId = movimientoDAO.listarPorProducto(idProducto).stream()
+                            .mapToInt(MovimientoInventario::getId).max().orElse(0);
+                    if (ultimoId != m.getId()) {
+                        throw new IllegalStateException("Existen movimientos posteriores del producto " + idProducto
+                                + "; concilie el historial antes de revertir esta recepcion");
+                    }
+                }
+                List<Map<String, Object>> historico = consultas.consultar("sp_costo_recepcion_obtener", m.getId());
+                if (historico.size() != 1 || !(historico.get(0).get("costoAnterior") instanceof Number)
+                        || !(historico.get(0).get("costoPosterior") instanceof Number)) {
+                    throw new IllegalStateException("La recepcion no tiene costos historicos verificables; "
+                            + "no es seguro revertirla automaticamente");
+                }
+                java.math.BigDecimal costoAnterior = new java.math.BigDecimal(
+                        historico.get(0).get("costoAnterior").toString());
+                java.math.BigDecimal costoPosterior = new java.math.BigDecimal(
+                        historico.get(0).get("costoPosterior").toString());
+                Producto productoActual = new pe.edu.pucp.sigmeta.daoimpl.producto.ProductoDAOImpl()
+                        .load(idProducto);
+                if (productoActual == null) throw new IllegalStateException("Producto no encontrado");
+                CostoPromedioRecepcion.validarCostoActual(
+                        java.math.BigDecimal.valueOf(productoActual.getCostoUnitario()), costoPosterior);
                 double stock = stockDAO.obtenerStockParaActualizar(idProducto);
+                // Si no coincide con el cierre del ingreso, hubo una alteracion de stock
+                // que no se puede reconstruir con certeza: se aborta todo el rollback.
+                if (!Double.isFinite(stock) || Math.abs(stock - m.getStockResultante()) > 0.0001) {
+                    throw new IllegalStateException("El stock no coincide con el historial de la recepcion");
+                }
                 double nuevoStock = stock - m.getCantidad();
                 if (!Double.isFinite(nuevoStock) || nuevoStock < -EPSILON) {
                     throw new IllegalStateException("Stock insuficiente para revertir la recepción");
@@ -227,6 +263,7 @@ public class MovimientoInventarioBOImpl implements MovimientoInventarioBO {
                 inverso.setRecepcionCompra(recepcion);
                 inverso.setStockResultante(nuevoStock);
                 stockDAO.actualizarStock(idProducto, nuevoStock);
+                consultas.ejecutar("sp_producto_actualizar_costo", idProducto, costoAnterior);
                 compensaciones.add(movimientoDAO.registrarCompensacion(inverso));
             }
             for (DetalleRecepcionCompra d : detalles) {

@@ -14,6 +14,8 @@ public interface MovimientoInventarioDAO extends BaseDAOHistorico<MovimientoInve
     boolean existeReversion(int idMovimientoOriginal) throws SQLException;
     MovimientoInventario registrarReversionDespacho(MovimientoInventario reversion) throws SQLException;
     MovimientoInventario registrarCompensacion(MovimientoInventario reversion) throws SQLException;
+    List<MovimientoInventario> listarPorComprobante(int idComprobante) throws SQLException;
+    MovimientoInventario registrarReversionNotaCredito(MovimientoInventario reversion) throws SQLException;
     List<MovimientoInventario> listarPorRecepcion(int idRecepcion) throws SQLException;
     List<MovimientoInventario> listarPorProducto(int idProducto) throws SQLException;
 
