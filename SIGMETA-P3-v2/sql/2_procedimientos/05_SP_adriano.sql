@@ -140,19 +140,14 @@ BEGIN
     WHERE id = p_id;
 END$$
 
--- Solo mientras la caja esta abierta: una caja cerrada ya cuadro con sus movimientos (RF010).
+-- RF010, RNF002: los movimientos de caja (dinero) nunca se borran. Un ingreso o egreso manual se anula
+-- registrando su movimiento contrario (MovimientoCajaBOImpl.anular). Este procedimiento queda solo para
+-- rechazar cualquier intento de borrado.
 DROP PROCEDURE IF EXISTS sp_movimiento_caja_eliminar$$
 CREATE PROCEDURE sp_movimiento_caja_eliminar(IN p_id INT)
 BEGIN
-    IF EXISTS (
-        SELECT 1 FROM movimiento_caja m
-        INNER JOIN caja c ON c.id = m.id_caja
-        WHERE m.id = p_id AND c.abierta = FALSE
-    ) THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'No se puede eliminar un movimiento de una caja cerrada';
-    END IF;
-    DELETE FROM movimiento_caja WHERE id = p_id;
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'Los movimientos de caja no se eliminan: se anulan con su movimiento contrario';
 END$$
 
 DROP PROCEDURE IF EXISTS sp_movimiento_caja_obtener$$
@@ -448,7 +443,7 @@ BEGIN
     SELECT x.id AS cxc_id, x.id_venta AS venta_id, v.numero AS venta_numero,
            x.id_cliente AS cliente_id, cl.razon_social, cl.numero_documento, cl.tipo_persona, cl.tipo_documento, cl.nombres, cl.apellidos,
            x.fecha_emision, x.fecha_vencimiento,
-           x.monto_original, x.monto_pagado, x.saldo_pendiente, CASE WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
+           x.monto_original, x.monto_acreditado, x.monto_pagado, x.saldo_pendiente, CASE WHEN v.anulado = TRUE THEN 'ANULADA' WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
     FROM cuenta_por_cobrar x
     LEFT JOIN venta v ON v.id = x.id_venta
     INNER JOIN cliente cl ON cl.id = x.id_cliente
@@ -461,7 +456,7 @@ BEGIN
     SELECT x.id AS cxc_id, x.id_venta AS venta_id, v.numero AS venta_numero,
            x.id_cliente AS cliente_id, cl.razon_social, cl.numero_documento, cl.tipo_persona, cl.tipo_documento, cl.nombres, cl.apellidos,
            x.fecha_emision, x.fecha_vencimiento,
-           x.monto_original, x.monto_pagado, x.saldo_pendiente, CASE WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
+           x.monto_original, x.monto_acreditado, x.monto_pagado, x.saldo_pendiente, CASE WHEN v.anulado = TRUE THEN 'ANULADA' WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
     FROM cuenta_por_cobrar x
     LEFT JOIN venta v ON v.id = x.id_venta
     INNER JOIN cliente cl ON cl.id = x.id_cliente
@@ -474,7 +469,7 @@ BEGIN
     SELECT x.id AS cxc_id, x.id_venta AS venta_id, v.numero AS venta_numero,
            x.id_cliente AS cliente_id, cl.razon_social, cl.numero_documento, cl.tipo_persona, cl.tipo_documento, cl.nombres, cl.apellidos,
            x.fecha_emision, x.fecha_vencimiento,
-           x.monto_original, x.monto_pagado, x.saldo_pendiente, CASE WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
+           x.monto_original, x.monto_acreditado, x.monto_pagado, x.saldo_pendiente, CASE WHEN v.anulado = TRUE THEN 'ANULADA' WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
     FROM cuenta_por_cobrar x
     LEFT JOIN venta v ON v.id = x.id_venta
     INNER JOIN cliente cl ON cl.id = x.id_cliente
@@ -488,11 +483,11 @@ BEGIN
     SELECT x.id AS cxc_id, x.id_venta AS venta_id, v.numero AS venta_numero,
            x.id_cliente AS cliente_id, cl.razon_social, cl.numero_documento, cl.tipo_persona, cl.tipo_documento, cl.nombres, cl.apellidos,
            x.fecha_emision, x.fecha_vencimiento,
-           x.monto_original, x.monto_pagado, x.saldo_pendiente, CASE WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
+           x.monto_original, x.monto_acreditado, x.monto_pagado, x.saldo_pendiente, CASE WHEN v.anulado = TRUE THEN 'ANULADA' WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
     FROM cuenta_por_cobrar x
     LEFT JOIN venta v ON v.id = x.id_venta
     INNER JOIN cliente cl ON cl.id = x.id_cliente
-    WHERE (CASE WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END) = p_estado
+    WHERE (CASE WHEN v.anulado = TRUE THEN 'ANULADA' WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END) = p_estado
     ORDER BY x.fecha_vencimiento;
 END$$
 
@@ -503,7 +498,7 @@ BEGIN
     SELECT x.id AS cxc_id, x.id_venta AS venta_id, v.numero AS venta_numero,
            x.id_cliente AS cliente_id, cl.razon_social, cl.numero_documento, cl.tipo_persona, cl.tipo_documento, cl.nombres, cl.apellidos,
            x.fecha_emision, x.fecha_vencimiento,
-           x.monto_original, x.monto_pagado, x.saldo_pendiente, CASE WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
+           x.monto_original, x.monto_acreditado, x.monto_pagado, x.saldo_pendiente, CASE WHEN v.anulado = TRUE THEN 'ANULADA' WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
     FROM cuenta_por_cobrar x
     LEFT JOIN venta v ON v.id = x.id_venta
     INNER JOIN cliente cl ON cl.id = x.id_cliente
@@ -518,7 +513,7 @@ BEGIN
     SELECT x.id AS cxc_id, x.id_venta AS venta_id, v.numero AS venta_numero,
            x.id_cliente AS cliente_id, cl.razon_social, cl.numero_documento, cl.tipo_persona, cl.tipo_documento, cl.nombres, cl.apellidos,
            x.fecha_emision, x.fecha_vencimiento,
-           x.monto_original, x.monto_pagado, x.saldo_pendiente, CASE WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
+           x.monto_original, x.monto_acreditado, x.monto_pagado, x.saldo_pendiente, CASE WHEN v.anulado = TRUE THEN 'ANULADA' WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
     FROM cuenta_por_cobrar x
     LEFT JOIN venta v ON v.id = x.id_venta
     INNER JOIN cliente cl ON cl.id = x.id_cliente
@@ -691,7 +686,7 @@ BEGIN
     SELECT x.id AS cxc_id, x.id_venta AS venta_id, v.numero AS venta_numero,
            x.id_cliente AS cliente_id, cl.razon_social, cl.numero_documento, cl.tipo_persona, cl.tipo_documento, cl.nombres, cl.apellidos,
            x.fecha_emision, x.fecha_vencimiento,
-           x.monto_original, x.monto_pagado, x.saldo_pendiente, CASE WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
+           x.monto_original, x.monto_acreditado, x.monto_pagado, x.saldo_pendiente, CASE WHEN v.anulado = TRUE THEN 'ANULADA' WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
     FROM cuenta_por_cobrar x
     LEFT JOIN venta v ON v.id = x.id_venta
     INNER JOIN cliente cl ON cl.id = x.id_cliente
@@ -713,7 +708,7 @@ BEGIN
     SELECT x.id AS cxc_id, x.id_venta AS venta_id, v.numero AS venta_numero,
            x.id_cliente AS cliente_id, cl.razon_social, cl.numero_documento, cl.tipo_persona, cl.tipo_documento, cl.nombres, cl.apellidos,
            x.fecha_emision, x.fecha_vencimiento,
-           x.monto_original, x.monto_pagado, x.saldo_pendiente, CASE WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
+           x.monto_original, x.monto_acreditado, x.monto_pagado, x.saldo_pendiente, CASE WHEN v.anulado = TRUE THEN 'ANULADA' WHEN x.saldo_pendiente <= 0.005 THEN 'PAGADA' WHEN x.fecha_vencimiento < CURDATE() THEN 'VENCIDA' WHEN x.monto_pagado > 0 THEN 'PAGADA_PARCIAL' ELSE 'PENDIENTE' END AS estado
     FROM cuenta_por_cobrar x
     LEFT JOIN venta v ON v.id = x.id_venta
     INNER JOIN cliente cl ON cl.id = x.id_cliente

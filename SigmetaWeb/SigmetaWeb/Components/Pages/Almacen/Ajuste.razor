@@ -42,19 +42,19 @@ else
             <div class="row g-3 mb-3">
                 <div class="col-sm-4">
                     <div class="border rounded p-3 h-100">
-                        <div class="small text-muted text-uppercase">Stock en el sistema</div>
+                        <div class="small text-muted">Stock en el sistema</div>
                         <div class="h4 fw-bold mb-0">@Formato.Cantidad(Producto.StockActual) <span class="small text-muted fw-normal">@TextosAlmacen.Unidad(Producto.UnidadVenta)</span></div>
                     </div>
                 </div>
                 <div class="col-sm-4">
                     <div class="border rounded p-3 h-100">
-                        <div class="small text-muted text-uppercase">Contado</div>
+                        <div class="small text-muted">Contado</div>
                         <div class="h4 fw-bold mb-0">@(contado is null ? "—" : Formato.Cantidad(contado))</div>
                     </div>
                 </div>
                 <div class="col-sm-4">
                     <div class="border rounded p-3 h-100">
-                        <div class="small text-muted text-uppercase">Diferencia</div>
+                        <div class="small text-muted">Diferencia</div>
                         @if (Diferencia is null)
                         {
                             <div class="h4 fw-bold mb-0">—</div>

@@ -1,40 +1,53 @@
-@* PATRÓN UX · Tarjeta de filtros de una lista (separada de la tabla): buscador con lupa, filtros extra y chips de estado.
+@* PATRÓN UX · Tarjeta de filtros de una lista, con el mismo estándar que Clientes, Proveedores o Cobros:
+   campos con etiqueta en una fila, el estado como lista desplegable y los botones Buscar y Limpiar.
+   La búsqueda por texto sigue filtrando mientras se escribe; Buscar la aplica en el acto.
    Uso:
-       <FiltrosLista @bind-Busqueda="busqueda" @bind-Busqueda:after="AlBuscar" Placeholder="Buscar por número o cliente"
+       <FiltrosLista @bind-Busqueda="busqueda" @bind-Busqueda:after="AlBuscar" Placeholder="Número o cliente"
                      Opciones="@Chips" Estado="@filtroEstado" EstadoChanged="CambiarEstado"
                      HayFiltros="@HayFiltros" AlLimpiar="Limpiar">
-           <select class="form-select filtro" aria-label="Cliente">...</select>   (opcional)
+           <Campo Etiqueta="Cliente" Id="fCliente" Clase="col-sm-6 col-md-3">
+               <select id="fCliente" class="form-select">...</select>
+           </Campo>   (opcional: filtros extra, cada uno en su Campo)
        </FiltrosLista> *@
-<div class="card filtros-lista mb-3">
-    <div class="barra">
-        <div class="buscar">
-            <svg class="lupa" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-            <input type="search" class="form-control" maxlength="80" autocomplete="off" aria-label="Buscar"
+<div class="card card-body mb-3">
+    <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="AplicarBusqueda" @onsubmit:preventDefault novalidate>
+        <Campo Etiqueta="@EtiquetaBusqueda" Id="fBuscar" Clase="col-sm-6 col-md">
+            <input id="fBuscar" type="search" class="form-control" maxlength="80" autocomplete="off"
                    placeholder="@Placeholder" value="@Busqueda" @oninput="CambiarBusqueda" />
-        </div>
+        </Campo>
         @ChildContent
-        @if (HayFiltros && AlLimpiar.HasDelegate)
+        @if (Opciones.Count > 0)
         {
-            <button type="button" class="btn btn-link btn-sm text-decoration-none" @onclick="AlLimpiar">Quitar filtros</button>
+            <Campo Etiqueta="@EtiquetaEstado" Id="fEstado" Clase="col-sm-6 col-md-3">
+                <select id="fEstado" class="form-select" value="@Estado" @onchange="CambiarEstado">
+                    @foreach (var o in Opciones)
+                    {
+                        <option value="@o.Valor">@o.Texto@(o.Cantidad is int n ? $" ({n})" : "")</option>
+                    }
+                </select>
+            </Campo>
         }
-    </div>
-    @if (Opciones.Count > 0)
-    {
-        <div class="estados">
-            <ChipsFiltro Opciones="@Opciones" Seleccionado="@Estado" SeleccionadoChanged="EstadoChanged" Etiqueta="@EtiquetaChips" />
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-dark">Buscar</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="Limpiar">Limpiar</button>
         </div>
+    </form>
+    @if (!string.IsNullOrEmpty(Ayuda))
+    {
+        <div class="form-text">@Ayuda</div>
     }
 </div>
 
 @code {
     [Parameter] public string Busqueda { get; set; } = "";
     [Parameter] public EventCallback<string> BusquedaChanged { get; set; }
-    [Parameter] public string Placeholder { get; set; } = "Buscar";
+    [Parameter] public string EtiquetaBusqueda { get; set; } = "Buscar";
+    [Parameter] public string Placeholder { get; set; } = "";
     [Parameter] public IReadOnlyList<OpcionChip> Opciones { get; set; } = Array.Empty<OpcionChip>();
     [Parameter] public string Estado { get; set; } = "";
     [Parameter] public EventCallback<string> EstadoChanged { get; set; }
-    [Parameter] public string EtiquetaChips { get; set; } = "Filtrar por estado";
+    [Parameter] public string EtiquetaEstado { get; set; } = "Estado";
+    [Parameter] public string? Ayuda { get; set; }
     [Parameter] public bool HayFiltros { get; set; }
     [Parameter] public EventCallback AlLimpiar { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
@@ -44,4 +57,11 @@
         Busqueda = e.Value?.ToString() ?? "";
         await BusquedaChanged.InvokeAsync(Busqueda);
     }
+
+    // Buscar: vuelve a aplicar el texto escrito (la pantalla consulta o filtra con su propio :after)
+    private Task AplicarBusqueda() => BusquedaChanged.InvokeAsync(Busqueda);
+
+    private Task CambiarEstado(ChangeEventArgs e) => EstadoChanged.InvokeAsync(e.Value?.ToString() ?? "");
+
+    private Task Limpiar() => AlLimpiar.HasDelegate ? AlLimpiar.InvokeAsync() : Task.CompletedTask;
 }

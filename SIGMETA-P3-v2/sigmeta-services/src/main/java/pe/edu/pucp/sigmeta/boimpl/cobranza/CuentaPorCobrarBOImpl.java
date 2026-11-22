@@ -217,8 +217,11 @@ public class CuentaPorCobrarBOImpl implements CuentaPorCobrarBO {
         }
     }
 
-    // RF009: el estado se deriva del saldo y del vencimiento
+    // RF009: el estado se deriva del saldo y del vencimiento. Una cuenta ANULADA (su venta se anulo) queda asi.
     public static EstadoCuentaPorCobrar calcularEstado(CuentaPorCobrar cxc) {
+        if (cxc.getEstado() == EstadoCuentaPorCobrar.ANULADA) {
+            return EstadoCuentaPorCobrar.ANULADA;
+        }
         if (cxc.getSaldoPendiente() <= 0.005) {
             return EstadoCuentaPorCobrar.PAGADA;
         }

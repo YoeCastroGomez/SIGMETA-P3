@@ -29,6 +29,23 @@ public class Comprobante {
     private String motivo;
     private Usuario administradorAutoriza;
     private List<DetalleNotaCredito> detalles;
+    // RF008: foto del cliente tal como salio impreso en la factura o boleta al emitirla. No cambia si despues
+    // el cliente cambia de nombre o direccion (null en comprobantes que no tienen foto, por ejemplo las notas)
+    private String clienteNombre;
+    private String clienteTipoDocumento;
+    private String clienteNumeroDocumento;
+    private String clienteDireccion;
+
+    public String getClienteNombre() { return clienteNombre; }
+    public void setClienteNombre(String clienteNombre) { this.clienteNombre = clienteNombre; }
+    public String getClienteTipoDocumento() { return clienteTipoDocumento; }
+    public void setClienteTipoDocumento(String clienteTipoDocumento) { this.clienteTipoDocumento = clienteTipoDocumento; }
+    public String getClienteNumeroDocumento() { return clienteNumeroDocumento; }
+    public void setClienteNumeroDocumento(String clienteNumeroDocumento) { this.clienteNumeroDocumento = clienteNumeroDocumento; }
+    public String getClienteDireccion() { return clienteDireccion; }
+    public void setClienteDireccion(String clienteDireccion) { this.clienteDireccion = clienteDireccion; }
+    // true si el comprobante tiene la foto de lo impreso
+    public boolean tieneFotoImpresa() { return clienteNombre != null; }
 
     public Comprobante() {
         this.detalles = new ArrayList<>();

@@ -1,28 +1,28 @@
 @* Bloque de solo lectura con los datos de una solicitud de autorización. Lo usan Resolver y Detalle. *@
 <div class="row">
     <div class="col-sm-6 mb-3">
-        <div class="small text-muted text-uppercase">Solicitante</div>
+        <div class="small text-muted">Solicitante</div>
         <div class="fw-semibold">@Solicitud.NombreSolicitante</div>
         <div class="small text-muted">@Solicitud.Solicitante · @TextosSeguridad.Texto(Solicitud.RolSolicitante)</div>
     </div>
     <div class="col-sm-6 mb-3">
-        <div class="small text-muted text-uppercase">Fecha y hora de solicitud</div>
+        <div class="small text-muted">Fecha y hora de solicitud</div>
         <div class="fw-semibold">@Formato.FechaHora(Solicitud.FechaSolicitud)</div>
     </div>
     <div class="col-sm-6 mb-3">
-        <div class="small text-muted text-uppercase">Operación restringida</div>
+        <div class="small text-muted">Operación restringida</div>
         <div class="fw-semibold">@TextosSeguridad.Texto(Solicitud.Operacion)</div>
         <div class="small text-muted">@Solicitud.DescripcionOperacion</div>
     </div>
     <div class="col-sm-6 mb-3">
-        <div class="small text-muted text-uppercase">Estado</div>
+        <div class="small text-muted">Estado</div>
         <div class="fw-semibold"><Estado Texto="@TextosSeguridad.Texto(Solicitud.Estado)" /></div>
     </div>
     @if (!string.IsNullOrEmpty(Solicitud.Referencia) || !string.IsNullOrEmpty(Solicitud.Detalle))
     {
         @* RF014: lo que se autoriza, armado por el sistema desde la operacion (no lo escribe el solicitante) *@
         <div class="col-12 mb-3">
-            <div class="small text-muted text-uppercase">Qué se autoriza</div>
+            <div class="small text-muted">Qué se autoriza</div>
             <div class="border rounded p-2 bg-light">
                 @if (!string.IsNullOrEmpty(Solicitud.Referencia))
                 {
@@ -36,20 +36,20 @@
         </div>
     }
     <div class="col-12 mb-3">
-        <div class="small text-muted text-uppercase">Motivo</div>
+        <div class="small text-muted">Motivo</div>
         <div>@Solicitud.Motivo</div>
     </div>
     @if (!string.IsNullOrEmpty(Solicitud.Administrador))
     {
         <div class="col-sm-6 mb-3">
-            <div class="small text-muted text-uppercase">Resuelta por</div>
+            <div class="small text-muted">Resuelta por</div>
             <div class="fw-semibold">@Solicitud.Administrador · @Formato.FechaHora(Solicitud.FechaResolucion)</div>
         </div>
     }
     @if (Solicitud.VigenciaMinutos > 0)
     {
         <div class="col-sm-6 mb-3">
-            <div class="small text-muted text-uppercase">Vigencia</div>
+            <div class="small text-muted">Vigencia</div>
             <div class="fw-semibold">@Solicitud.VigenciaMinutos min · vence @Formato.FechaHora(Solicitud.FechaVencimiento)</div>
         </div>
     }

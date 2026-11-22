@@ -214,6 +214,14 @@ public class ComprobanteRS extends VentanillaBase {
         } else if (c.getVenta() != null) {
             d.idVenta = c.getVenta().getId();
         }
+        // RF008: el cliente que sale es el que se imprimio al emitir, aunque despues cambie su ficha
+        // (el correo sigue siendo el actual: es a donde se envia)
+        if (c.tieneFotoImpresa()) {
+            d.cliente = c.getClienteNombre();
+            d.tipoDocumentoCliente = c.getClienteTipoDocumento();
+            d.documentoCliente = c.getClienteNumeroDocumento();
+            d.direccionCliente = c.getClienteDireccion();
+        }
         return d;
     }
 }

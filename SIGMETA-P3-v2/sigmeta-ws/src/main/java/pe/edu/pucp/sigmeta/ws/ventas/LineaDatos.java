@@ -22,6 +22,8 @@ public class LineaDatos {
     // solo en ordenes: id de la linea (la venta la usa para atenderla) y cuanto ya se vendio de ella
     public int idLinea;
     public double cantidadAtendida;
+    // solo en ordenes: cuanto ya esta en ventas vigentes (lo que falta vender = cantidad - cantidadVendida)
+    public double cantidadVendida;
 
     // solo en ventas: linea de la orden del cliente que atiende (0 en una venta directa) y avance del despacho
     public int idDetalleOrden;

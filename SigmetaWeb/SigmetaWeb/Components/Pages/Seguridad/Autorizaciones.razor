@@ -25,19 +25,19 @@
 <div class="row g-3 mb-3">
     <div class="col-sm-4">
         <div class="card card-body h-100">
-            <div class="small text-muted text-uppercase">Pendientes de resolver</div>
+            <div class="small text-muted">Pendientes de resolver</div>
             <div class="h4 fw-bold mb-0 @(Pendientes > 0 ? "text-warning-emphasis" : "")">@Pendientes</div>
         </div>
     </div>
     <div class="col-sm-4">
         <div class="card card-body h-100">
-            <div class="small text-muted text-uppercase">Aprobadas vigentes</div>
+            <div class="small text-muted">Aprobadas vigentes</div>
             <div class="h4 fw-bold mb-0">@Vigentes</div>
         </div>
     </div>
     <div class="col-sm-4">
         <div class="card card-body h-100">
-            <div class="small text-muted text-uppercase">Total registradas</div>
+            <div class="small text-muted">Total registradas</div>
             <div class="h4 fw-bold mb-0">@(solicitudes?.Count ?? 0)</div>
         </div>
     </div>

@@ -60,7 +60,16 @@ public class OrdenRS extends VentanillaBase {
             Nombres nombres = new Nombres();
             List<OrdenDatos> lista = new ArrayList<>();
             for (OrdenCompraCliente oc : ordenBO.listarTodos()) {
-                lista.add(convertir(oc, nombres, numerosCotizacion, false));
+                OrdenDatos d = convertir(oc, nombres, numerosCotizacion, false);
+                // RF007/RF008: queda algo por VENDER (no por entregar): alguna linea con pedido > ya vendido.
+                // El estado de la orden sigue a lo despachado; esto decide si se muestra "Registrar venta".
+                if (!oc.isAnulado() && (oc.getEstado() == EstadoOrdenCompraCliente.PENDIENTE
+                        || oc.getEstado() == EstadoOrdenCompraCliente.ATENDIDA_PARCIAL)) {
+                    OrdenCompraCliente conLineas = ordenBO.obtener(oc.getId());
+                    d.porVender = conLineas != null && conLineas.getDetalles() != null && conLineas.getDetalles().stream()
+                            .anyMatch(l -> l.getCantidad() - l.getCantidadVendida() > 0.0001);
+                }
+                lista.add(d);
             }
             return lista;
         });
@@ -178,6 +187,7 @@ public class OrdenRS extends VentanillaBase {
                         det.getPrecioUnitario(), det.getDescuento(), det.getImporte(), nombres);
                 l.idLinea = det.getId();
                 l.cantidadAtendida = det.getCantidadAtendida();
+                l.cantidadVendida = det.getCantidadVendida();
                 d.lineas.add(l);
             }
         }

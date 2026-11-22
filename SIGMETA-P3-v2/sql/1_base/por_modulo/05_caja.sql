@@ -41,9 +41,11 @@ CREATE TABLE cuenta_por_cobrar (
     fecha_emision        DATE NOT NULL,
     fecha_vencimiento    DATE NOT NULL,
     monto_original       DECIMAL(12,2) NOT NULL,
+    -- RF013: lo que rebajaron las notas de credito; monto_original (el total de la venta) no cambia
+    monto_acreditado     DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     monto_pagado         DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     saldo_pendiente      DECIMAL(12,2) NOT NULL,
-    estado               ENUM('PENDIENTE', 'PAGADA_PARCIAL', 'PAGADA', 'VENCIDA') NOT NULL,
+    estado               ENUM('PENDIENTE', 'PAGADA_PARCIAL', 'PAGADA', 'VENCIDA', 'ANULADA') NOT NULL,
     CONSTRAINT uk_cxc_venta UNIQUE(id_venta),
     CONSTRAINT fk_cuenta_por_cobrar_venta
         FOREIGN KEY (id_venta) REFERENCES venta(id),
@@ -144,14 +146,14 @@ INSERT INTO caja (
 --    (venta id_venta = 1, total 1534.00, plazo_credito_dias = 30 -> vence 2026-10-02)
 --    RF013: la nota de credito FC01-00000012 (106.20) revierte parte del saldo.
 --    Tras el cobro parcial del paso 3: monto_pagado = 800.00 y
---    la nota de credito rebaja la deuda: monto_original = 1534.00 - 106.20 = 1427.80,
---    saldo_pendiente = 1427.80 - 800.00 = 627.80, estado PAGADA_PARCIAL.
+--    la nota de credito rebaja la deuda sin tocar el monto original: monto_acreditado = 106.20,
+--    saldo_pendiente = 1534.00 - 106.20 - 800.00 = 627.80, estado PAGADA_PARCIAL.
 INSERT INTO cuenta_por_cobrar (
     id, id_venta, id_cliente, fecha_emision, fecha_vencimiento,
-    monto_original, monto_pagado, saldo_pendiente, estado
+    monto_original, monto_acreditado, monto_pagado, saldo_pendiente, estado
 ) VALUES (
     1, 1, 2, '2026-09-02', '2026-10-02',
-    1427.80, 800.00, 627.80, 'PAGADA_PARCIAL'
+    1534.00, 106.20, 800.00, 627.80, 'PAGADA_PARCIAL'
 );
 
 -- 3. Cobro parcial de la cuenta por cobrar (sin Caja directa en el modelo Java;

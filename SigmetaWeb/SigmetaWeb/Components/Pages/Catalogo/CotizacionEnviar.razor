@@ -31,7 +31,7 @@
 </style>
 
 <Encabezado Rf="RF007" Titulo="@(cotizacion is null ? "Cotización" : $"Cotización {cotizacion.Numero}")">
-    <a class="btn btn-outline-secondary" href="@VolverA">← Volver</a>
+    <a class="btn btn-outline-secondary" href="@VolverA">Volver</a>
     @if (cotizacion is not null && cotizacion.Estado != "ANULADA" && !cotizacion.Anulado)
     {
         <button type="button" class="btn @(PuedeMarcar ? "btn-outline-secondary" : "btn-primary")" disabled="@trabajando" @onclick="Imprimir">

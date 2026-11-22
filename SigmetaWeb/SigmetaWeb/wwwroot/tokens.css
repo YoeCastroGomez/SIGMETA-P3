@@ -1,0 +1,222 @@
+/* Hallmark · tokens · theme: newsprint (deal: manual) · brand: ocre SIGMETA #b65b19 · modes: light+dark · v2.0.0 */
+/* Únicos valores de color y tipografía del sistema. Todo lo demás (app.css y los .razor.css) usa estas variables.
+   Bootstrap se alimenta de aquí: sus --bs-* apuntan a los tokens, así cada pantalla toma el tema sin cambiar su HTML. */
+
+:root, html[data-bs-theme="light"] {
+    color-scheme: light;
+
+    /* Papel y tinta: papel de periódico cálido, tinta negra cálida */
+    --color-paper: #efece4;        /* fondo de la aplicación */
+    --color-sheet: #f8f6f0;        /* hoja: tarjetas, campos, modales (más clara que el fondo) */
+    --color-paper-2: #e7e3d8;      /* pozo: encabezados de tabla, menú lateral, ayudas */
+    --color-paper-3: #ddd8cb;      /* hover sobre pozo */
+    --color-ink: #211d19;
+    --color-ink-2: #3a342e;
+    --color-muted: #645c53;        /* 5.6:1 sobre el papel */
+    --color-rule: #d3ccbe;         /* filete fino */
+    --color-rule-2: #3a342e;       /* filete fuerte y doble filete */
+    --color-field: #8c8377;        /* borde de campos: 3:1 sobre la hoja */
+
+    /* Marca: el ocre de SIGMETA. --color-brand es la marca tal cual (marcas, foco, gráficos);
+       --color-accent es su versión de texto y relleno con 6:1 de contraste */
+    --color-brand: #b65b19;
+    --color-accent: #9c4a12;
+    --color-accent-rgb: 156, 74, 18;
+    --color-accent-hover: #7e3a0c;
+    --color-accent-active: #6a300a;
+    --color-accent-ink: #fbf7f0;
+    --color-accent-wash: #f3e3d3;
+    --color-focus: #b65b19;
+
+    /* Estados (estándar de colores de <Estado>) */
+    --color-success: #2f6b47;   --color-success-rgb: 47, 107, 71;
+    --color-success-ink: #1f4a31; --color-success-wash: #dde9df; --color-success-edge: #a9c7b2;
+    --color-warning: #a87410;   --color-warning-rgb: 168, 116, 16;
+    --color-warning-ink: #6b4500; --color-warning-wash: #f3e6c6; --color-warning-edge: #d9be7f;
+    --color-danger: #a3291d;    --color-danger-rgb: 163, 41, 29;
+    --color-danger-ink: #7d1e14;  --color-danger-wash: #f5deda;  --color-danger-edge: #dda79f;
+    --color-info: #2e5f73;      --color-info-rgb: 46, 95, 115;
+    --color-info-ink: #1f4553;    --color-info-wash: #dce7ea;    --color-info-edge: #a6c1ca;
+    --color-neutral: #6e665c;   --color-neutral-rgb: 110, 102, 92;
+
+    /* Gráficos del panel: una serie en ocre y sus dos tintes */
+    --chart-1: #b65b19;
+    --chart-2: #d9a06b;
+    --chart-3: #e9d2b6;
+    --chart-track: #e2ddd1;
+
+    --overlay: rgba(23, 19, 15, .62);
+    --shadow-pop: 0 1px 2px rgba(33, 29, 25, .06), 0 10px 28px rgba(33, 29, 25, .14);
+
+    /* RGB de apoyo para las utilidades de Bootstrap que mezclan opacidad */
+    --ink-rgb: 33, 29, 25;
+    --paper-rgb: 239, 236, 228;
+    --sheet-rgb: 248, 246, 240;
+    --paper-2-rgb: 231, 227, 216;
+
+    /* Tipografía: Zilla Slab para títulos, Spectral para todo el texto, Libre Franklin solo para cifras */
+    --font-display: "Zilla Slab", ui-serif, Georgia, serif;
+    --font-body: "Spectral", ui-serif, Georgia, serif;
+    --font-figures: "Libre Franklin", ui-sans-serif, system-ui, sans-serif;
+    --display-weight: 700;
+    --tracking-display: -0.015em;
+
+    /* Escala de pantalla de aplicación (razón 1.2 desde 16px) */
+    --text-xs: .8125rem;   /* 13px: pies y notas */
+    --text-sm: .875rem;    /* 14px: etiquetas, cabeceras de tabla */
+    --text-base: 1rem;
+    --text-md: 1.125rem;
+    --text-lg: 1.375rem;   /* títulos de panel */
+    --text-xl: 1.75rem;    /* título de pantalla */
+    --text-2xl: 2.25rem;   /* cifra destacada */
+    --text-3xl: 3rem;      /* título del panel de inicio y del acceso */
+
+    --space-3xs: 2px; --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px;
+    --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px; --space-3xl: 96px;
+
+    --radius: 0;
+    --rule-hair: 1px;
+    --control-h: 38px;
+    --control-h-sm: 31px;
+    --container: 1320px;
+    --sidebar-w: 264px;
+
+    --ease-out: cubic-bezier(.16, 1, .3, 1);
+    --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+    --dur-micro: 120ms;
+    --dur-short: 220ms;
+
+    --z-raised: 10; --z-dropdown: 100; --z-sticky: 200; --z-sticky-nav: 300; --z-modal: 400; --z-toast: 500;
+}
+
+html[data-bs-theme="dark"] {
+    color-scheme: dark;
+
+    --color-paper: #1c1916;
+    --color-sheet: #24201c;
+    --color-paper-2: #2c2723;
+    --color-paper-3: #36302a;
+    --color-ink: #efe9df;
+    --color-ink-2: #d9d1c4;
+    --color-muted: #b3a999;
+    --color-rule: #3e3731;
+    --color-rule-2: #d9d1c4;
+    --color-field: #7d7367;
+
+    --color-brand: #e08a45;
+    --color-accent: #e59a5b;
+    --color-accent-rgb: 229, 154, 91;
+    --color-accent-hover: #f0b07a;
+    --color-accent-active: #f5c196;
+    --color-accent-ink: #22140a;
+    --color-accent-wash: #3d2a1b;
+    --color-focus: #e59a5b;
+
+    --color-success: #7fbf93;   --color-success-rgb: 127, 191, 147;
+    --color-success-ink: #a9d9b6; --color-success-wash: #20332a; --color-success-edge: #3d5e48;
+    --color-warning: #d9a84e;   --color-warning-rgb: 217, 168, 78;
+    --color-warning-ink: #ebc57c; --color-warning-wash: #3a2f18; --color-warning-edge: #6b5426;
+    --color-danger: #ee8a7d;    --color-danger-rgb: 238, 138, 125;
+    --color-danger-ink: #f5ada3;  --color-danger-wash: #3e211d;  --color-danger-edge: #6e3a33;
+    --color-info: #86b4c4;      --color-info-rgb: 134, 180, 196;
+    --color-info-ink: #adcfdb;    --color-info-wash: #1f3036;    --color-info-edge: #3c5a64;
+    --color-neutral: #b3a999;   --color-neutral-rgb: 179, 169, 153;
+
+    --chart-1: #e08a45;
+    --chart-2: #bb8350;
+    --chart-3: #644530;
+    --chart-track: #36302a;
+
+    --overlay: rgba(8, 7, 6, .72);
+    --shadow-pop: 0 0 0 1px #3e3731;
+
+    --ink-rgb: 239, 233, 223;
+    --paper-rgb: 28, 25, 22;
+    --sheet-rgb: 36, 32, 28;
+    --paper-2-rgb: 44, 39, 35;
+}
+
+/* ---------- Bootstrap alimentado por los tokens (los dos temas) ---------- */
+:root, html[data-bs-theme="light"], html[data-bs-theme="dark"] {
+    --bs-font-sans-serif: var(--font-body);
+    --bs-body-font-family: var(--font-body);
+    --bs-body-font-size: 1rem;
+    --bs-body-line-height: 1.5;
+
+    --bs-body-bg: var(--color-paper);
+    --bs-body-bg-rgb: var(--paper-rgb);
+    --bs-body-color: var(--color-ink);
+    --bs-body-color-rgb: var(--ink-rgb);
+    --bs-emphasis-color: var(--color-ink);
+    --bs-emphasis-color-rgb: var(--ink-rgb);
+    --bs-heading-color: var(--color-ink);
+    --bs-secondary-color: var(--color-muted);
+    --bs-tertiary-color: var(--color-muted);
+    --bs-secondary-bg: var(--color-paper-2);
+    --bs-secondary-bg-rgb: var(--paper-2-rgb);
+    --bs-tertiary-bg: var(--color-paper-2);
+    --bs-tertiary-bg-rgb: var(--paper-2-rgb);
+    --bs-border-color: var(--color-rule);
+    --bs-border-color-translucent: var(--color-rule);
+
+    --bs-primary: var(--color-accent);
+    --bs-primary-rgb: var(--color-accent-rgb);
+    --bs-primary-text-emphasis: var(--color-accent-hover);
+    --bs-primary-bg-subtle: var(--color-accent-wash);
+    --bs-primary-border-subtle: var(--color-brand);
+    --bs-link-color: var(--color-accent);
+    --bs-link-color-rgb: var(--color-accent-rgb);
+    --bs-link-hover-color: var(--color-accent-hover);
+    --bs-link-hover-color-rgb: var(--color-accent-rgb);
+    --bs-focus-ring-color: var(--color-focus);
+
+    --bs-secondary: var(--color-neutral);
+    --bs-secondary-rgb: var(--color-neutral-rgb);
+    --bs-secondary-text-emphasis: var(--color-ink-2);
+    --bs-secondary-bg-subtle: var(--color-paper-2);
+    --bs-secondary-border-subtle: var(--color-rule);
+
+    --bs-success: var(--color-success);
+    --bs-success-rgb: var(--color-success-rgb);
+    --bs-success-text-emphasis: var(--color-success-ink);
+    --bs-success-bg-subtle: var(--color-success-wash);
+    --bs-success-border-subtle: var(--color-success-edge);
+
+    --bs-warning: var(--color-warning);
+    --bs-warning-rgb: var(--color-warning-rgb);
+    --bs-warning-text-emphasis: var(--color-warning-ink);
+    --bs-warning-bg-subtle: var(--color-warning-wash);
+    --bs-warning-border-subtle: var(--color-warning-edge);
+
+    --bs-danger: var(--color-danger);
+    --bs-danger-rgb: var(--color-danger-rgb);
+    --bs-danger-text-emphasis: var(--color-danger-ink);
+    --bs-danger-bg-subtle: var(--color-danger-wash);
+    --bs-danger-border-subtle: var(--color-danger-edge);
+
+    --bs-info: var(--color-info);
+    --bs-info-rgb: var(--color-info-rgb);
+    --bs-info-text-emphasis: var(--color-info-ink);
+    --bs-info-bg-subtle: var(--color-info-wash);
+    --bs-info-border-subtle: var(--color-info-edge);
+
+    --bs-light-rgb: var(--paper-2-rgb);
+    --bs-dark-rgb: var(--ink-rgb);
+    --bs-white-rgb: var(--sheet-rgb);
+    --bs-black-rgb: var(--ink-rgb);
+    --bs-light-text-emphasis: var(--color-ink-2);
+    --bs-light-bg-subtle: var(--color-paper-2);
+    --bs-light-border-subtle: var(--color-rule);
+    --bs-dark-text-emphasis: var(--color-ink);
+    --bs-dark-bg-subtle: var(--color-paper-3);
+    --bs-dark-border-subtle: var(--color-rule-2);
+
+    --bs-border-radius: 0;
+    --bs-border-radius-sm: 0;
+    --bs-border-radius-lg: 0;
+    --bs-border-radius-xl: 0;
+    --bs-border-radius-xxl: 0;
+    --bs-box-shadow: var(--shadow-pop);
+    --bs-box-shadow-sm: none;
+    --bs-box-shadow-lg: var(--shadow-pop);
+}

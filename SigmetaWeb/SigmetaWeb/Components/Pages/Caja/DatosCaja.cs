@@ -44,12 +44,16 @@ public class MovimientoDatos
     public string? DocumentoOrigen { get; set; }
     public int IdDocumentoOrigen { get; set; }
     public string? UsuarioRegistro { get; set; }
-    // true = ingreso o egreso que registró el cajero; es el único que se modifica o elimina
+    // true = ingreso o egreso que registró el cajero; es el único que se anula (y del que se corrige el concepto)
     public bool Manual { get; set; }
+    // true = manual ya anulado: en la caja está su movimiento contrario (RF010, no se borra)
+    public bool Anulado { get; set; }
 
     public bool EsEgreso => Tipo == "EGRESO_MANUAL";
+    // contrario de un ingreso o egreso manual anulado
+    public bool EsAnulacion => DocumentoOrigen == "ANULACION_MOVIMIENTO";
     // egreso que registró el sistema (venta anulada, nota de crédito o cobro anulado): no cuenta como cobro
-    public bool EsDevolucion => EsEgreso && DocumentoOrigen is not null;
+    public bool EsDevolucion => EsEgreso && DocumentoOrigen is not null && !EsAnulacion;
 }
 
 // RF010: venta al contado que todavía no se cobra
@@ -101,6 +105,8 @@ public class CuentaDatos
     public DateOnly? FechaEmision { get; set; }
     public DateOnly? FechaVencimiento { get; set; }
     public decimal MontoOriginal { get; set; }
+    // RF013: lo que rebajaron las notas de crédito; el monto original (total de la venta) no cambia
+    public decimal MontoAcreditado { get; set; }
     public decimal MontoPagado { get; set; }
     public decimal SaldoPendiente { get; set; }
     public string? Estado { get; set; }
@@ -151,6 +157,7 @@ public static class TextosCaja
         "VENTA" => "Venta al contado", "COBRO" => "Cobro de cuenta por cobrar",
         "ANULACION_VENTA" => "Anulación de venta", "NOTA_CREDITO" => "Nota de crédito",
         "ANULACION_NOTA_CREDITO" => "Anulación de nota de crédito", "ANULACION_COBRO" => "Anulación de cobro",
+        "ANULACION_MOVIMIENTO" => "Anulación de un movimiento manual",
         "PENDIENTE" => "Pendiente", "PAGADA_PARCIAL" => "Pagada parcial", "PAGADA" => "Pagada", "VENCIDA" => "Vencida",
         _ => valor ?? ""
     };

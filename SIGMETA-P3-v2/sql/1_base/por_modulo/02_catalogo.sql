@@ -62,7 +62,8 @@ CREATE TABLE cotizacion (
   observaciones VARCHAR(255),
   fecha_registro DATETIME NOT NULL,
   id_usuario_registro INT,
-  anulado BOOLEAN NOT NULL DEFAULT FALSE,
+  -- un solo estado: anulado se calcula de estado (no se escribe); asi nunca se contradicen
+  anulado BOOLEAN GENERATED ALWAYS AS (estado = 'ANULADA') STORED NOT NULL,
   motivo_anulacion VARCHAR(255),
   fecha_anulacion DATETIME,
   id_cliente INT NOT NULL,
@@ -109,8 +110,8 @@ INSERT INTO producto (codigo_interno, codigo_fabricante, codigo_proveedor, nombr
 ('INT-006', 'FAB-106', 'PROV-66', 'Fierro corrugado', 3, 'UNIDAD', 'UNIDAD', 1.000, 32.00, 26.00, 150.000, 30.000, TRUE, 34.00);
 
 -- 1 Cotización
-INSERT INTO cotizacion (numero, fecha_emision, sub_total, igv, total, fecha_registro, id_usuario_registro, anulado, id_cliente, estado) VALUES
-('COT-2026-0001', '2026-09-01', 1300.00, 234.00, 1534.00, '2026-09-01 15:00:00', 1, FALSE, 2, 'ACEPTADA');
+INSERT INTO cotizacion (numero, fecha_emision, sub_total, igv, total, fecha_registro, id_usuario_registro, id_cliente, estado) VALUES
+('COT-2026-0001', '2026-09-01', 1300.00, 234.00, 1534.00, '2026-09-01 15:00:00', 1, 2, 'ACEPTADA');
 
 -- 3 Líneas de Detalle
 INSERT INTO detalle_cotizacion (id_cotizacion, numero_linea, id_producto, cantidad, precio_unitario, descuento, importe) VALUES

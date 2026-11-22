@@ -132,19 +132,19 @@ else
                 @* Solo lectura: el crédito se cambia en la pantalla Línea de crédito. *@
                 <div class="row">
                     <div class="col-sm-3 mb-3">
-                        <div class="small text-muted text-uppercase">Condición de pago</div>
+                        <div class="small text-muted">Condición de pago</div>
                         <div class="fw-semibold">@Cliente.Texto(cliente.CondicionPago)</div>
                     </div>
                     <div class="col-sm-3 mb-3">
-                        <div class="small text-muted text-uppercase">Límite de crédito</div>
+                        <div class="small text-muted">Límite de crédito</div>
                         <div class="fw-semibold">S/ @cliente.LimiteCredito.ToString("N2")</div>
                     </div>
                     <div class="col-sm-3 mb-3">
-                        <div class="small text-muted text-uppercase">Plazo</div>
+                        <div class="small text-muted">Plazo</div>
                         <div class="fw-semibold">@cliente.PlazoCreditoDias días</div>
                     </div>
                     <div class="col-sm-3 mb-3">
-                        <div class="small text-muted text-uppercase">Calificación</div>
+                        <div class="small text-muted">Calificación</div>
                         <div class="fw-semibold">@Cliente.Texto(cliente.CalificacionCrediticia)</div>
                     </div>
                     <div class="col-sm-3">

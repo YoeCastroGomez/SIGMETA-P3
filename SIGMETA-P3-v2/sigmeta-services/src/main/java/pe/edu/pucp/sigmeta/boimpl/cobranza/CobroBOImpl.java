@@ -56,6 +56,9 @@ public class CobroBOImpl implements CobroBO {
             if (cxc == null) {
                 throw new IllegalArgumentException("No existe la cuenta por cobrar con id " + cobro.getCuentaPorCobrar().getId());
             }
+            if (cxc.getEstado() == EstadoCuentaPorCobrar.ANULADA) {
+                throw new IllegalStateException("La cuenta por cobrar está anulada porque su venta se anuló; no se cobra");
+            }
             if (cxc.getEstado() == EstadoCuentaPorCobrar.PAGADA) {
                 throw new IllegalStateException("La cuenta por cobrar ya está pagada");
             }
@@ -201,12 +204,12 @@ public class CobroBOImpl implements CobroBO {
     }
 
     // RF009: el saldo se actualiza con cada cobro (monto positivo) o anulacion (monto negativo).
-    // Criterio unico con las notas de credito: la NC rebaja monto_original (sp_comprobante_revertir_saldo_cpc)
-    // y el saldo siempre es monto_original - monto_pagado.
+    // Criterio unico con las notas de credito: la NC no toca monto_original, suma a monto_acreditado
+    // (sp_comprobante_revertir_saldo_cpc), y el saldo siempre es monto_original - monto_acreditado - monto_pagado.
     private void aplicarPago(CuentaPorCobrar cxc, double monto) {
         double pagado = CuentaPorCobrarBOImpl.redondear(cxc.getMontoPagado() + monto);
         cxc.setMontoPagado(pagado);
-        cxc.setSaldoPendiente(CuentaPorCobrarBOImpl.redondear(Math.max(0, cxc.getMontoOriginal() - pagado)));
+        cxc.setSaldoPendiente(CuentaPorCobrarBOImpl.redondear(Math.max(0, cxc.getDeudaNeta() - pagado)));
         cxc.setEstado(CuentaPorCobrarBOImpl.calcularEstado(cxc));
     }
 

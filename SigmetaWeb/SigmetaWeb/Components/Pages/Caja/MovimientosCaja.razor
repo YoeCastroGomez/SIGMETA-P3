@@ -9,9 +9,11 @@
    - GET    /api/cajas/abierta                       la caja abierta del usuario de la sesión
    - GET    /api/cajas/{id}/movimientos              movimientos de la caja
    - POST   /api/cajas/{id}/movimientos              ingreso o egreso manual (MovimientoCajaBO.registrarMovimiento)
-   - PUT    /api/cajas/{id}/movimientos/{idMov}      modificar un ingreso o egreso manual (MovimientoCajaBO.modificar)
-   - DELETE /api/cajas/{id}/movimientos/{idMov}      eliminar un ingreso o egreso manual (MovimientoCajaBO.eliminar)
-   Los cobros no se modifican ni eliminan: el de crédito se anula desde el cobro (RF009) y el de contado anulando la venta.
+   - PUT    /api/cajas/{id}/movimientos/{idMov}      corregir el concepto de un ingreso o egreso manual (MovimientoCajaBO.modificar)
+   - POST   /api/cajas/{id}/movimientos/{idMov}/anular  anular un ingreso o egreso manual (MovimientoCajaBO.anular)
+   RNF002: ningún movimiento se borra. Anular registra el movimiento contrario en la misma caja; el monto, el tipo y
+   el medio de pago no se cambian (para corregirlos se anula y se registra otro).
+   Los cobros no se anulan aquí: el de crédito se anula desde el cobro (RF009) y el de contado anulando la venta.
    Las devoluciones (venta anulada, nota de crédito, cobro anulado) las registra el sistema. *@
 <Encabezado Rf="RF010" Titulo="Movimientos de caja"
             Subtitulo="@(caja is null ? "" : $"Caja N.º {caja.Id} · abierta el {TextosCaja.FechaHora(caja.FechaApertura)} por {caja.UsuarioApertura}")">
@@ -24,6 +26,14 @@
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 <AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
+
+<Confirmacion Visible="@(porAnular is not null)" Titulo="Anular movimiento" TextoConfirmar="Anular"
+              AlConfirmar="ConfirmarAnular" AlCancelar="() => porAnular = null">
+    ¿Anular <strong>@porAnular?.Concepto</strong> (S/ @porAnular?.Monto.ToString("N2"))?
+    <div class="small text-muted mt-2">
+        El movimiento no se borra: se registra el @(porAnular?.EsEgreso == true ? "ingreso" : "egreso") contrario en esta caja.
+    </div>
+</Confirmacion>
 
 @if (cargando)
 {
@@ -40,11 +50,15 @@ else
     @if (formulario is not null)
     {
         <div class="card card-body mb-3">
-            <h2 class="h6 fw-semibold mb-3">@(formulario.Id == 0 ? "Nuevo movimiento manual" : "Modificar movimiento manual")</h2>
+            <h2 class="h6 fw-semibold mb-3">@(formulario.Id == 0 ? "Nuevo movimiento manual" : "Corregir el concepto")</h2>
+            @if (formulario.Id != 0)
+            {
+                <p class="small text-muted">El tipo, el medio de pago y el monto no se cambian. Si están mal, anule el movimiento y registre otro.</p>
+            }
             <div class="row">
                 <div class="col-md-4">
                     <Campo Etiqueta="Tipo" Id="tipo" Obligatorio="true">
-                        <select id="tipo" class="form-select" @bind="formulario.Tipo">
+                        <select id="tipo" class="form-select" disabled="@(formulario.Id != 0)" @bind="formulario.Tipo">
                             <option value="INGRESO_MANUAL">Ingreso manual</option>
                             <option value="EGRESO_MANUAL">Egreso manual</option>
                         </select>
@@ -52,7 +66,7 @@ else
                 </div>
                 <div class="col-md-4">
                     <Campo Etiqueta="Medio de pago" Id="medio" Obligatorio="true">
-                        <select id="medio" class="form-select" @bind="formulario.MedioPago">
+                        <select id="medio" class="form-select" disabled="@(formulario.Id != 0)" @bind="formulario.MedioPago">
                             @foreach (var m in TextosCaja.MediosPago)
                             {
                                 <option value="@m">@TextosCaja.Texto(m)</option>
@@ -64,6 +78,7 @@ else
                     @* Estándar RNF004: cada error sale en rojo debajo de su cuadro; los del BO, en el aviso de arriba *@
                     <Campo Etiqueta="Monto (S/)" Id="monto" Obligatorio="true" Ayuda="Mayor a 0." Error="@(v.Error("monto", Errores()))">
                         <input id="monto" type="number" step="0.01" class="@(v.Clase("monto", Errores()))" onkeydown="@ValidacionEnVivo.SoloPositivos"
+                               disabled="@(formulario.Id != 0)"
                                @bind="formulario.Monto" @bind:event="oninput" @bind:after="@(() => v.Tocado("monto"))" />
                     </Campo>
                 </div>
@@ -120,6 +135,10 @@ else
                                 {
                                     <div><span class="badge rounded-pill border bg-secondary-subtle text-secondary-emphasis border-secondary-subtle">no cuenta como cobro</span></div>
                                 }
+                                @if (m.Anulado)
+                                {
+                                    <div><Estado Texto="Anulado" /></div>
+                                }
                             </td>
                             <td>@m.UsuarioRegistro</td>
                             <td class="text-end text-nowrap @(m.EsEgreso ? "text-danger" : "")">
@@ -127,10 +146,10 @@ else
                             </td>
                             <td class="text-end">
                                 <div class="d-inline-flex gap-1 text-nowrap">
-                                    @if (m.Manual)
+                                    @if (m.Manual && !m.Anulado)
                                     {
-                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(m)">Modificar</button>
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Eliminar(m)">Eliminar</button>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(m)">Corregir concepto</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirAnular(m)">Anular</button>
                                     }
                                 </div>
                             </td>
@@ -248,7 +267,7 @@ else
             else
             {
                 await Api.Put<MovimientoDatos>($"cajas/{caja.Id}/movimientos/{formulario.Id}", datos);
-                exito = "Se modificó el movimiento.";
+                exito = "Se corrigió el concepto del movimiento.";
             }
             formulario = null;
             await Cargar();
@@ -260,15 +279,25 @@ else
         guardando = false;
     }
 
-    private async Task Eliminar(MovimientoDatos m)
+    private MovimientoDatos? porAnular;   // movimiento esperando la confirmación
+
+    private void PedirAnular(MovimientoDatos m)
     {
-        if (caja is null) return;
         error = null;
         exito = null;
+        porAnular = m;
+    }
+
+    // RF010, RNF002: no se borra; el Java registra el movimiento contrario en la misma caja
+    private async Task ConfirmarAnular()
+    {
+        var m = porAnular;
+        porAnular = null;
+        if (caja is null || m is null) return;
         try
         {
-            await Api.Delete($"cajas/{caja.Id}/movimientos/{m.Id}");
-            exito = $"Se eliminó el movimiento \"{m.Concepto}\".";
+            await Api.Post<MovimientoDatos>($"cajas/{caja.Id}/movimientos/{m.Id}/anular", new { });
+            exito = $"Se anuló el movimiento \"{m.Concepto}\": quedó registrado su {(m.EsEgreso ? "ingreso" : "egreso")} contrario.";
             await Cargar();
         }
         catch (ErrorApi e)

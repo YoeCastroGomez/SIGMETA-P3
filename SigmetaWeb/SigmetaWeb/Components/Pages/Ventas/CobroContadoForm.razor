@@ -33,15 +33,15 @@ else
         <h2 class="h6 fw-semibold mb-3">Caja abierta</h2>
         <div class="row">
             <div class="col-sm-4 mb-3">
-                <div class="small text-muted text-uppercase">Caja</div>
+                <div class="small text-muted">Caja</div>
                 <div class="fw-semibold">N.º @caja.Id</div>
             </div>
             <div class="col-sm-4 mb-3">
-                <div class="small text-muted text-uppercase">Cajero</div>
+                <div class="small text-muted">Cajero</div>
                 <div class="fw-semibold">@caja.UsuarioApertura</div>
             </div>
             <div class="col-sm-4 mb-3">
-                <div class="small text-muted text-uppercase">Apertura</div>
+                <div class="small text-muted">Apertura</div>
                 <div class="fw-semibold">@TextosCaja.FechaHora(caja.FechaApertura)</div>
             </div>
         </div>
@@ -60,19 +60,19 @@ else
             <h2 class="h6 fw-semibold mb-3">Venta</h2>
             <div class="row">
                 <div class="col-sm-4 mb-3">
-                    <div class="small text-muted text-uppercase">Venta</div>
+                    <div class="small text-muted">Venta</div>
                     <div class="fw-semibold">@venta.Numero</div>
                 </div>
                 <div class="col-sm-4 mb-3">
-                    <div class="small text-muted text-uppercase">Comprobante</div>
+                    <div class="small text-muted">Comprobante</div>
                     <div class="fw-semibold">@(venta.Comprobante ?? "Sin emitir")</div>
                 </div>
                 <div class="col-sm-4 mb-3">
-                    <div class="small text-muted text-uppercase">Emisión</div>
+                    <div class="small text-muted">Emisión</div>
                     <div class="fw-semibold">@TextosCaja.Fecha(venta.FechaEmision)</div>
                 </div>
                 <div class="col-12 mb-3">
-                    <div class="small text-muted text-uppercase">Cliente</div>
+                    <div class="small text-muted">Cliente</div>
                     <div class="fw-semibold">@venta.Cliente <span class="small text-muted">@venta.DocumentoCliente</span></div>
                 </div>
             </div>

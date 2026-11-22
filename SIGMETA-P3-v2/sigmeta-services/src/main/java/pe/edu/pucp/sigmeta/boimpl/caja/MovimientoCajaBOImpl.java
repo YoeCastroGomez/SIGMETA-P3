@@ -63,48 +63,60 @@ public class MovimientoCajaBOImpl implements MovimientoCajaBO {
         });
     }
 
-    // RF010
+    // RF010, RNF002: de un ingreso o egreso manual solo se corrige el concepto (texto descriptivo). El tipo, el
+    // medio de pago y el monto no se reescriben: para corregirlos se anula el movimiento (queda su contrario en
+    // la caja) y se registra otro. Asi la caja conserva todo lo que paso.
     @Override
     public MovimientoCaja modificar(MovimientoCaja movimiento, int idResponsable) throws SQLException {
         usuarioBO.verificarRol(idResponsable, TipoRol.CAJERO);
         validarDatos(movimiento);
         return Transaccion.ejecutar(() -> {
             MovimientoCaja actual = obtenerExistente(movimiento.getId());
-            if (!esManual(actual) || !esManual(movimiento.getTipo())) {
+            if (!esManual(actual)) {
                 throw new IllegalStateException("Solo se modifican ingresos y egresos manuales; los cobros se anulan desde su origen");
             }
-            Caja caja = obtenerCajaAbiertaDelCajero(actual.getCaja().getId(), idResponsable);
-            if (esEgresoEnEfectivo(movimiento)) {
-                double liberado = esEgresoEnEfectivo(actual) ? actual.getMonto() : 0;
-                verificarEfectivoDisponible(caja, movimiento.getMonto(), liberado);
+            if (estaAnulado(actual)) {
+                throw new IllegalStateException("El movimiento ya está anulado y no se modifica");
             }
-            movimiento.setCaja(caja);
-            movimiento.setDocumentoOrigen(null);
-            movimiento.setIdDocumentoOrigen(0);
-            movimiento.setUsuarioRegistro(actual.getUsuarioRegistro());
-            movimientoCajaDAO.update(movimiento);
-            return movimiento;
+            obtenerCajaAbiertaDelCajero(actual.getCaja().getId(), idResponsable);
+            if (movimiento.getTipo() != actual.getTipo() || movimiento.getMedioPago() != actual.getMedioPago()
+                    || Math.abs(movimiento.getMonto() - actual.getMonto()) > 0.005) {
+                throw new IllegalStateException("El tipo, el medio de pago y el monto no se modifican: anule el movimiento "
+                        + "(queda su contrario en la caja) y registre otro con los datos correctos");
+            }
+            actual.setConcepto(movimiento.getConcepto());
+            movimientoCajaDAO.update(actual);
+            return actual;
         });
     }
 
-    // RF010: solo ingresos y egresos manuales, por el cajero que abrio la caja y con la caja abierta.
-    // Los cobros no se eliminan: el de credito se anula desde el cobro (RF009) y el de contado anulando la venta.
+    // RF010, RNF002: solo ingresos y egresos manuales, por el cajero que abrio la caja y con la caja abierta.
+    // No se borra: se registra el movimiento contrario en la misma caja (ANULACION_MOVIMIENTO + id del original),
+    // igual que se compensan los cobros. Los cobros no se anulan aqui: el de credito se anula desde el cobro
+    // (RF009) y el de contado anulando la venta.
     @Override
-    public void eliminar(MovimientoCaja movimiento, int idResponsable) throws SQLException {
-        usuarioBO.verificarRol(idResponsable, TipoRol.CAJERO);
-        Validador.obligatorio(movimiento, "movimiento de caja");
-        Transaccion.ejecutar(() -> {
-            MovimientoCaja actual = obtenerExistente(movimiento.getId());
+    public MovimientoCaja anular(int idMovimiento, int idResponsable) throws SQLException {
+        Usuario responsable = usuarioBO.verificarRol(idResponsable, TipoRol.CAJERO);
+        return Transaccion.ejecutar(() -> {
+            MovimientoCaja actual = obtenerExistente(idMovimiento);
             if (actual.getTipo() == TipoMovimientoCaja.COBRO_CREDITO) {
                 throw new IllegalStateException("El ingreso de un cobro de crédito se retira anulando el cobro");
             }
             if (!esManual(actual)) {
-                throw new IllegalStateException("Solo se eliminan ingresos y egresos manuales; los cobros se anulan desde su origen");
+                throw new IllegalStateException("Solo se anulan ingresos y egresos manuales; los cobros se anulan desde su origen");
+            }
+            if (estaAnulado(actual)) {
+                throw new IllegalStateException("El movimiento ya está anulado");
             }
             obtenerCajaAbiertaDelCajero(actual.getCaja().getId(), idResponsable);
-            movimientoCajaDAO.remove(actual);
-            return null;
+            return new CompensacionCaja().compensar(actual, "Anulación: " + actual.getConcepto(),
+                    CompensacionCaja.DOCUMENTO_ANULACION_MOVIMIENTO, actual.getId(), responsable);
         });
+    }
+
+    // un manual esta anulado si ya tiene su movimiento contrario
+    private boolean estaAnulado(MovimientoCaja movimiento) throws SQLException {
+        return !movimientoCajaDAO.buscarPorDocumento(CompensacionCaja.DOCUMENTO_ANULACION_MOVIMIENTO, movimiento.getId()).isEmpty();
     }
 
     @Override

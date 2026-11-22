@@ -7,8 +7,7 @@
     El rol llega del login (demostración). Aquí no se valida nada.
     Para agregar una pantalla: se agrega su enlace en el menú de CADA rol que la usa.
 *@
-<nav class="nav flex-column py-3" aria-label="Menú principal">
-    <div class="px-3 pb-2 small text-uppercase fw-semibold" style="letter-spacing:.09em;color:#919da9;font-size:.67rem">Espacio de trabajo</div>
+<nav class="nav flex-column py-2" aria-label="Menú principal">
     <NavLink class="nav-link sigmeta-nav-inicio" href="/" Match="NavLinkMatch.All" @onclick="AlNavegar">
         <span class="sigmeta-nav-icono" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -21,9 +20,8 @@
     @if (MenuActual.Length == 0)
     {
         @* RF001: un rol que no es ninguno de los cuatro no ve ninguna opción (mínimo acceso por defecto) *@
-        <div class="mx-3 mt-3 p-3 rounded-3 small"
-             style="border:1px dashed rgba(145,157,169,.45);color:#c3cbd3;background:rgba(255,255,255,.03);line-height:1.45">
-            <div class="fw-semibold mb-1" style="color:#e8ecef">Sin módulos asignados</div>
+        <div class="sigmeta-menu-vacio">
+            <strong>Sin módulos asignados</strong>
             Tu cuenta todavía no tiene opciones habilitadas. Consulta con el Administrador del sistema.
         </div>
     }
@@ -31,10 +29,10 @@
     @foreach (var grupo in MenuActual)
     {
         var abierto = abiertos.Contains(grupo.Titulo);
-        <button type="button" class="menu-grupo btn btn-link text-decoration-none text-uppercase fw-semibold d-flex justify-content-between align-items-center w-100"
+        <button type="button" class="menu-grupo d-flex justify-content-between align-items-center w-100"
                 aria-expanded="@(abierto ? "true" : "false")"
                 @onclick="() => Alternar(grupo.Titulo)">
-            <span class="d-flex align-items-center gap-2 sigmeta-grupo-nombre"><span class="sigmeta-grupo-sigla" aria-hidden="true">@SiglaGrupo(grupo.Titulo)</span>@grupo.Titulo</span>
+            <span class="sigmeta-grupo-nombre">@grupo.Titulo</span>
             <span class="menu-chevron @(abierto ? "abierto" : "")" aria-hidden="true">›</span>
         </button>
 
@@ -44,7 +42,7 @@
                 @foreach (var l in grupo.Enlaces)
                 {
                     <NavLink class="nav-link" href="@l.Ruta" @onclick="AlNavegar">
-                        <span class="sigmeta-submenu-punto" aria-hidden="true"></span><span>@l.Texto</span>
+                        <span>@l.Texto</span>
                     </NavLink>
                 }
             </div>
@@ -56,19 +54,6 @@
     [Parameter] public string Rol { get; set; } = "";
     [Parameter] public EventCallback AlNavegar { get; set; }
 
-    private static string SiglaGrupo(string titulo) => titulo switch
-    {
-        "Ventas" => "VE",
-        "Caja y cobranza" => "CA",
-        "Compras e inventario" => "CO",
-        "Inventario" => "IN",
-        "Almacén" => "AL",
-        "Catálogo" => "CT",
-        "Administración" => "AD",
-        "Autorizaciones" => "AU",
-        _ => "•"
-    };
-
     private record Enlace(string Texto, string Ruta);
     private record Grupo(string Titulo, Enlace[] Enlaces);
 
@@ -79,6 +64,7 @@
             new("Clientes", "/clientes"),                      // RF003
             new("Cotizaciones", "/cotizaciones"),              // RF007 (consulta y anular)
             new("Órdenes de clientes", "/ordenes"),            // RF007 (consulta y anular)
+            new("Ventas y comprobantes", "/ventas"),           // RF008 (consulta y anular; no registra ventas)
             new("Notas de crédito", "/notas-credito"),         // RF013
         }),
         new("Caja y cobranza", new Enlace[] {

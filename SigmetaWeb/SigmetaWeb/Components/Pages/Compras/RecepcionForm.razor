@@ -31,19 +31,19 @@ else
         <div class="card card-body mb-3">
             <div class="row">
                 <div class="col-sm-6 col-md-3 mb-2">
-                    <div class="small text-muted text-uppercase">Proveedor</div>
+                    <div class="small text-muted">Proveedor</div>
                     <div class="fw-semibold">@compra.Proveedor</div>
                 </div>
                 <div class="col-sm-6 col-md-3 mb-2">
-                    <div class="small text-muted text-uppercase">Emisión</div>
+                    <div class="small text-muted">Emisión</div>
                     <div class="fw-semibold">@Formato.Fecha(compra.FechaEmision)</div>
                 </div>
                 <div class="col-sm-6 col-md-3 mb-2">
-                    <div class="small text-muted text-uppercase">Llegada estimada</div>
+                    <div class="small text-muted">Llegada estimada</div>
                     <div class="fw-semibold">@Formato.Fecha(compra.FechaRecepcionEstimada)</div>
                 </div>
                 <div class="col-sm-6 col-md-3 mb-2">
-                    <div class="small text-muted text-uppercase">Estado</div>
+                    <div class="small text-muted">Estado</div>
                     <div class="fw-semibold"><Estado Texto="@Formato.Legible(compra.Estado)" /></div>
                 </div>
             </div>

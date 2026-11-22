@@ -16,6 +16,8 @@ public class CuentaDatos {
     public String fechaEmision;
     public String fechaVencimiento;
     public double montoOriginal;
+    // RF013: lo que rebajaron las notas de credito (el monto original no cambia)
+    public double montoAcreditado;
     public double montoPagado;
     public double saldoPendiente;
     // PENDIENTE, PAGADA_PARCIAL, PAGADA o VENCIDA

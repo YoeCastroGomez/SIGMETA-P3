@@ -24,6 +24,8 @@ public class LineaDatos
     // en ordenes y ventas: id de la linea; en ordenes, cuanto ya se atendio (despacho)
     public int IdLinea { get; set; }
     public decimal CantidadAtendida { get; set; }
+    // en órdenes: cuánto ya está en ventas vigentes; lo que falta vender = Cantidad - CantidadVendida
+    public decimal CantidadVendida { get; set; }
 
     // en ventas: linea de la orden que atiende (0 en venta directa) y lo despachado
     public int IdDetalleOrden { get; set; }
@@ -132,6 +134,8 @@ public class CotizacionDatos
 // RF007: orden de compra del cliente (se genera desde una cotizacion ACEPTADA)
 public class OrdenDatos
 {
+    // en la lista: queda algo por vender (pedido > ya vendido). El estado sigue a lo entregado, no a lo vendido
+    public bool PorVender { get; set; }
     public int Id { get; set; }
     public string? Numero { get; set; }
     public string? NumeroOrdenCliente { get; set; }

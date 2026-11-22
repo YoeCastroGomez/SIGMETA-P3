@@ -52,28 +52,28 @@ else if (reporte == "comercial" && comercial is not null)
     <div class="row g-3 mb-3">
         <div class="col-sm-6 col-lg-3">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Ventas al contado</div>
+                <div class="small text-muted">Ventas al contado</div>
                 <div class="h5 fw-bold mb-0">@Formato.Soles(t.MontoContado)</div>
                 <div class="small text-muted">@t.VentasContado.ToString("N0") ventas</div>
             </div>
         </div>
         <div class="col-sm-6 col-lg-3">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Ventas al crédito</div>
+                <div class="small text-muted">Ventas al crédito</div>
                 <div class="h5 fw-bold mb-0">@Formato.Soles(t.MontoCredito)</div>
                 <div class="small text-muted">@t.VentasCredito.ToString("N0") ventas</div>
             </div>
         </div>
         <div class="col-sm-6 col-lg-3">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Venta neta del periodo</div>
+                <div class="small text-muted">Venta neta del periodo</div>
                 <div class="h5 fw-bold mb-0">@Formato.Soles(t.VentaNeta)</div>
                 <div class="small text-muted">menos @Formato.Soles(t.MontoNotasCredito) en @t.NotasCredito.ToString("N0") notas de crédito</div>
             </div>
         </div>
         <div class="col-sm-6 col-lg-3">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Por cobrar a la fecha</div>
+                <div class="small text-muted">Por cobrar a la fecha</div>
                 <div class="h5 fw-bold mb-0">@Formato.Soles(t.SaldoPorCobrar)</div>
                 <div class="small @(t.SaldoVencido > 0 ? "text-danger" : "text-muted")">@Formato.Soles(t.SaldoVencido) vencido</div>
             </div>
@@ -204,27 +204,27 @@ else if (reporte == "abastecimiento" && abastecimiento is not null)
     <div class="row g-3 mb-3">
         <div class="col-sm-6 col-lg-3">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Comprado en el periodo</div>
+                <div class="small text-muted">Comprado en el periodo</div>
                 <div class="h5 fw-bold mb-0">@Formato.Soles(abastecimiento.Compras.Sum(c => c.Total))</div>
                 <div class="small text-muted">@abastecimiento.Compras.Sum(c => c.Compras).ToString("N0") compras</div>
             </div>
         </div>
         <div class="col-sm-6 col-lg-3">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Compras por recibir</div>
+                <div class="small text-muted">Compras por recibir</div>
                 <div class="h5 fw-bold mb-0">@abastecimiento.Compras.Sum(c => c.PorRecibir).ToString("N0")</div>
             </div>
         </div>
         <div class="col-sm-6 col-lg-3">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Inventario al costo promedio</div>
+                <div class="small text-muted">Inventario al costo promedio</div>
                 <div class="h5 fw-bold mb-0">@Formato.Soles(abastecimiento.Inventario.Sum(i => i.ValorCosto))</div>
                 <div class="small text-muted">a precio de venta @Formato.Soles(abastecimiento.Inventario.Sum(i => i.ValorVenta))</div>
             </div>
         </div>
         <div class="col-sm-6 col-lg-3">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Productos en su mínimo</div>
+                <div class="small text-muted">Productos en su mínimo</div>
                 <div class="h5 fw-bold mb-0">@abastecimiento.Inventario.Sum(i => i.EnMinimo).ToString("N0")</div>
                 <div class="small"><a href="/almacen/stock-minimo">Ver cuáles</a></div>
             </div>
@@ -343,26 +343,26 @@ else if (reporte == "caja" && caja is not null)
     <div class="row g-3 mb-3">
         <div class="col-sm-6 col-lg-3">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Cierres vigentes</div>
+                <div class="small text-muted">Cierres vigentes</div>
                 <div class="h5 fw-bold mb-0">@vigentes.Count</div>
             </div>
         </div>
         <div class="col-sm-6 col-lg-3">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Cierres revertidos</div>
+                <div class="small text-muted">Cierres revertidos</div>
                 <div class="h5 fw-bold mb-0">@(caja.Cierres.Count - vigentes.Count)</div>
             </div>
         </div>
         <div class="col-sm-6 col-lg-3">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Diferencia neta (vigentes)</div>
+                <div class="small text-muted">Diferencia neta (vigentes)</div>
                 <div class="h5 fw-bold mb-0 @(vigentes.Sum(c => c.Diferencia) < 0 ? "text-danger" : "")">@Formato.Soles(vigentes.Sum(c => c.Diferencia))</div>
                 <div class="small text-muted">negativa = faltó dinero</div>
             </div>
         </div>
         <div class="col-sm-6 col-lg-3">
             <div class="card card-body h-100">
-                <div class="small text-muted text-uppercase">Ingreso neto en cajas</div>
+                <div class="small text-muted">Ingreso neto en cajas</div>
                 <div class="h5 fw-bold mb-0">@Formato.Soles(caja.PorMedioPago.Sum(m => m.Neto))</div>
             </div>
         </div>

@@ -12,17 +12,12 @@
 <div class="sg-dashboard">
     <header class="sg-hero">
         <div class="sg-hero-content">
-            <div class="sg-eyebrow">SIGMETA / PANEL DE CONTROL</div>
             <h1>Bienvenido(a), @(string.IsNullOrWhiteSpace(Rol) ? "SIGMETA" : Rol)</h1>
             <p>@DescripcionRol</p>
             <div class="sg-hero-tags">
-                <span class="sg-tag"><span class="sg-punto"></span>@(AccesosActuales.Length == 0 ? "Sin rol asignado" : Rol)</span>
+                <span class="sg-tag">@(AccesosActuales.Length == 0 ? "Sin rol asignado" : Rol)</span>
                 <span class="sg-tag">@DateTime.Today.ToString("dd 'de' MMMM 'de' yyyy", Cultura)</span>
             </div>
-        </div>
-        <div class="sg-hero-arte" aria-hidden="true">
-            <div class="sg-hero-circulo">SM</div>
-            <div class="sg-hero-barras"><i></i><i></i><i></i><i></i><i></i></div>
         </div>
     </header>
 
@@ -60,10 +55,7 @@
             @foreach (var kpi in Indicadores)
             {
                 <a class="sg-kpi" href="@kpi.Ruta" @key="kpi.Titulo">
-                    <div class="sg-kpi-encabezado">
-                        <span>@kpi.Titulo</span>
-                        <span class="sg-kpi-icono" aria-hidden="true">@kpi.Icono</span>
-                    </div>
+                    <div class="sg-kpi-encabezado">@kpi.Titulo</div>
                     <div class="sg-kpi-valor">@kpi.Valor</div>
                     <div class="sg-kpi-ayuda">@kpi.Detalle</div>
                 </a>
@@ -206,9 +198,9 @@
                 <section class="sg-panel">
                     <div class="sg-panel-cabecera"><div><h2>Alertas comerciales</h2><p>Operaciones que necesitan seguimiento.</p></div></div>
                     <div class="sg-alertas">
-                        <a href="/cotizaciones" class="sg-alerta-fila"><span><span class="sg-alerta-icono">!</span>Cotizaciones por vencer <small>Vigencia dentro de tres días</small></span><strong>@TextoConteo(CotizacionesPorVencer)</strong></a>
-                        <a href="/ordenes" class="sg-alerta-fila"><span><span class="sg-alerta-icono">!</span>Órdenes sin atender <small>Pendientes por más de 48 horas</small></span><strong>@TextoConteo(OrdenesAtrasadas)</strong></a>
-                        <a href="/ventas" class="sg-alerta-fila"><span><span class="sg-alerta-icono">↗</span>Ventas del mes <small>Operaciones no anuladas</small></span><strong>@TextoConteo(VentasMesCantidad)</strong></a>
+                        <a href="/cotizaciones" class="sg-alerta-fila"><span>Cotizaciones por vencer <small>Vigencia dentro de tres días</small></span><strong>@TextoConteo(CotizacionesPorVencer)</strong></a>
+                        <a href="/ordenes" class="sg-alerta-fila"><span>Órdenes sin atender <small>Pendientes por más de 48 horas</small></span><strong>@TextoConteo(OrdenesAtrasadas)</strong></a>
+                        <a href="/ventas" class="sg-alerta-fila"><span>Ventas del mes <small>Operaciones no anuladas</small></span><strong>@TextoConteo(VentasMesCantidad)</strong></a>
                     </div>
                 </section>
             </div>
@@ -216,7 +208,7 @@
             <section class="sg-panel sg-panel-tabla">
                 <div class="sg-panel-cabecera">
                     <div><h2>Últimas ventas</h2><p>Registros recientes en el sistema.</p></div>
-                    <a href="/ventas" class="sg-enlace">Ver todas ↗</a>
+                    <a href="/ventas" class="sg-enlace">Ver todas</a>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
@@ -295,7 +287,7 @@
             </div>
             <div class="sg-panel-grid sg-grid-doble">
                 <section class="sg-panel">
-                    <div class="sg-panel-cabecera"><div><h2>Cuentas por cobrar</h2><p>Clientes con mayor saldo pendiente.</p></div><a href="/cobranzas" class="sg-enlace">Abrir módulo ↗</a></div>
+                    <div class="sg-panel-cabecera"><div><h2>Cuentas por cobrar</h2><p>Clientes con mayor saldo pendiente.</p></div><a href="/cobranzas" class="sg-enlace">Abrir módulo</a></div>
                     @if (cuentas is null)
                     {
                         <div class="sg-sin-datos">Las cuentas por cobrar no están disponibles.</div>
@@ -320,9 +312,9 @@
                 <section class="sg-panel">
                     <div class="sg-panel-cabecera"><div><h2>Resumen de caja</h2><p>Situación de la jornada y cuentas vencidas.</p></div></div>
                     <div class="sg-alertas">
-                        <a href="/caja" class="sg-alerta-fila"><span><span class="sg-alerta-icono">↗</span>Estado de caja</span><strong>@(cajaConsultada ? cajaAbierta is null ? "Sin abrir" : "Abierta" : "—")</strong></a>
-                        <a href="/caja" class="sg-alerta-fila"><span><span class="sg-alerta-icono">S/</span>Monto esperado</span><strong>@(cajaAbierta is null ? "—" : Dinero(cajaAbierta.MontoEsperado))</strong></a>
-                        <a href="/cobranzas" class="sg-alerta-fila"><span><span class="sg-alerta-icono">!</span>Cuentas vencidas</span><strong>@TextoConteo(CuentasVencidas)</strong></a>
+                        <a href="/caja" class="sg-alerta-fila"><span>Estado de caja</span><strong>@(cajaConsultada ? cajaAbierta is null ? "Sin abrir" : "Abierta" : "—")</strong></a>
+                        <a href="/caja" class="sg-alerta-fila"><span>Monto esperado</span><strong>@(cajaAbierta is null ? "—" : Dinero(cajaAbierta.MontoEsperado))</strong></a>
+                        <a href="/cobranzas" class="sg-alerta-fila"><span>Cuentas vencidas</span><strong>@TextoConteo(CuentasVencidas)</strong></a>
                     </div>
                 </section>
             </div>
@@ -354,7 +346,7 @@
                     }
                 </section>
                 <section class="sg-panel">
-                    <div class="sg-panel-cabecera"><div><h2>Productos con stock crítico</h2><p>Existencias iguales o inferiores al mínimo.</p></div><a href="/almacen/stock-minimo" class="sg-enlace">Consultar ↗</a></div>
+                    <div class="sg-panel-cabecera"><div><h2>Productos con stock crítico</h2><p>Existencias iguales o inferiores al mínimo.</p></div><a href="/almacen/stock-minimo" class="sg-enlace">Consultar</a></div>
                     @if (productos is null)
                     {
                         <div class="sg-sin-datos">No se pudieron consultar existencias.</div>
@@ -398,9 +390,9 @@
                 <section class="sg-panel">
                     <div class="sg-panel-cabecera"><div><h2>Operaciones del almacén</h2><p>Accesos para atender pendientes y verificar movimientos.</p></div></div>
                     <div class="sg-alertas">
-                        <a href="/recepciones" class="sg-alerta-fila"><span><span class="sg-alerta-icono">↓</span>Recepciones <small>Consultar compras por recibir</small></span><span>↗</span></a>
-                        <a href="/despachos" class="sg-alerta-fila"><span><span class="sg-alerta-icono">↑</span>Despachos <small>Consultar ventas por despachar</small></span><span>↗</span></a>
-                        <a href="/almacen/kardex" class="sg-alerta-fila"><span><span class="sg-alerta-icono">≡</span>Kardex <small>Consultar movimientos históricos</small></span><span>↗</span></a>
+                        <a href="/recepciones" class="sg-alerta-fila"><span>Recepciones <small>Consultar compras por recibir</small></span><span aria-hidden="true">↗</span></a>
+                        <a href="/despachos" class="sg-alerta-fila"><span>Despachos <small>Consultar ventas por despachar</small></span><span aria-hidden="true">↗</span></a>
+                        <a href="/almacen/kardex" class="sg-alerta-fila"><span>Kardex <small>Consultar movimientos históricos</small></span><span aria-hidden="true">↗</span></a>
                     </div>
                     <p class="sg-nota">Los conteos de almacén se mostrarán aquí en una próxima versión.</p>
                 </section>
@@ -413,7 +405,6 @@
                 @foreach (var acceso in AccesosActuales)
                 {
                     <a class="sg-acceso" href="@acceso.Ruta" @key="acceso.Ruta">
-                        <div class="sg-acceso-cabecera"><span class="sg-acceso-icono" aria-hidden="true">@acceso.Icono</span><span aria-hidden="true">↗</span></div>
                         <strong>@acceso.Titulo</strong>
                         <small>@acceso.Descripcion</small>
                     </a>
@@ -601,10 +592,10 @@
     {
         get
         {
-            if (TotalOperaciones == 0) return "background:conic-gradient(#78675f 0 100%)";
+            if (TotalOperaciones == 0) return "background:conic-gradient(var(--chart-track) 0 100%)";
             var a = Porcentaje(cotizaciones?.Count ?? 0, TotalOperaciones);
             var b = a + Porcentaje(ordenes?.Count ?? 0, TotalOperaciones);
-            return $"background:conic-gradient(#e87f23 0 {a.ToString(CultureInfo.InvariantCulture)}%, #f4b26c {a.ToString(CultureInfo.InvariantCulture)}% {b.ToString(CultureInfo.InvariantCulture)}%, #ffe0bc {b.ToString(CultureInfo.InvariantCulture)}% 100%)";
+            return $"background:conic-gradient(var(--chart-1) 0 {a.ToString(CultureInfo.InvariantCulture)}%, var(--chart-2) {a.ToString(CultureInfo.InvariantCulture)}% {b.ToString(CultureInfo.InvariantCulture)}%, var(--chart-3) {b.ToString(CultureInfo.InvariantCulture)}% 100%)";
         }
     }
 
@@ -639,10 +630,10 @@
         get
         {
             var activos = productos?.Count(p => p.Activo) ?? 0;
-            if (activos == 0) return "background:conic-gradient(#78675f 0 100%)";
+            if (activos == 0) return "background:conic-gradient(var(--chart-track) 0 100%)";
             var bien = productos!.Count(p => p.Activo && p.StockActual > p.StockMinimo);
             var p = Porcentaje(bien, activos).ToString(CultureInfo.InvariantCulture);
-            return $"background:conic-gradient(#e87f23 0 {p}%, #f4b26c {p}% 100%)";
+            return $"background:conic-gradient(var(--chart-1) 0 {p}%, var(--chart-2) {p}% 100%)";
         }
     }
 

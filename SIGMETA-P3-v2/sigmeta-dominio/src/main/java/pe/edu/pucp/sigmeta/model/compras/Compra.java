@@ -53,6 +53,13 @@ public class Compra extends DocumentoComercial {
         this.proveedor = proveedor;
     }
 
+    // Un solo estado: anulado no es un dato aparte, se deriva del estado (en la base es una columna
+    // calculada: anulado = (estado = 'ANULADA')). Asi "anulado" y el estado nunca se contradicen.
+    @Override
+    public boolean isAnulado() {
+        return estado == EstadoCompra.ANULADA;
+    }
+
     public EstadoCompra getEstado() {
         return estado;
     }

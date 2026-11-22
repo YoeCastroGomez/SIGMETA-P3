@@ -32,25 +32,25 @@ else
     <div class="card card-body mb-3" style="max-width: 760px;">
         <div class="row">
             <div class="col-sm-7 mb-3">
-                <div class="small text-muted text-uppercase">Cliente</div>
+                <div class="small text-muted">Cliente</div>
                 <div class="fw-semibold">@cuenta.Cliente</div>
             </div>
             <div class="col-sm-5 mb-3">
-                <div class="small text-muted text-uppercase">Venta</div>
+                <div class="small text-muted">Venta</div>
                 <div class="fw-semibold">@cuenta.Venta <span class="small text-muted">@cuenta.Comprobante</span></div>
             </div>
             <div class="col-sm-7 mb-3">
-                <div class="small text-muted text-uppercase">Vencimiento</div>
+                <div class="small text-muted">Vencimiento</div>
                 <div class="fw-semibold">@TextosCaja.Fecha(cuenta.FechaVencimiento)</div>
             </div>
             <div class="col-sm-5 mb-3">
-                <div class="small text-muted text-uppercase">Saldo pendiente</div>
+                <div class="small text-muted">Saldo pendiente</div>
                 <div class="fw-semibold">S/ @cuenta.SaldoPendiente.ToString("N2")</div>
             </div>
             @if (Editando)
             {
                 <div class="col-sm-7 mb-3">
-                    <div class="small text-muted text-uppercase">Registrado por</div>
+                    <div class="small text-muted">Registrado por</div>
                     <div class="fw-semibold">@cobro.UsuarioRegistro · @TextosCaja.FechaHora(cobro.FechaRegistro)</div>
                 </div>
             }

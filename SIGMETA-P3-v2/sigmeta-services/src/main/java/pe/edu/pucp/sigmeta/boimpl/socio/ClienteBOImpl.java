@@ -55,6 +55,9 @@ public class ClienteBOImpl implements ClienteBO {
             validarRazonSocialUnica(cliente);
             // los datos de credito no se cambian aqui, solo con asignarLineaCredito / retirarLineaCredito
             copiarDatosCredito(actual, cliente);
+            // RF003: modificar no activa ni desactiva al cliente (eso es desactivar / activar). Si el pedido no
+            // trae el estado, el booleano llega en false y antes lo desactivaba sin avisar.
+            cliente.setEstado(actual.isEstado());
             return clienteDAO.update(cliente);
         });
     }

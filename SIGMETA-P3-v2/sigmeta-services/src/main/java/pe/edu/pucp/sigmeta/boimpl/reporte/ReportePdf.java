@@ -189,12 +189,42 @@ public final class ReportePdf {
                 if (jrxml == null) {
                     throw new IllegalStateException("No se encontró la plantilla /reports/" + n);
                 }
+                prepararCompilador();
                 return JasperCompileManager.compileReport(jrxml);
             } catch (JRException | IOException e) {
                 throw new RuntimeException("Falta la plantilla compilada " + n + ".jasper. Ejecute 'mvn clean install' "
                         + "con GlassFish detenido y vuelva a desplegar. Detalle: " + e.getMessage(), e);
             }
         });
+    }
+
+    private static volatile boolean compiladorListo;
+
+    /**
+     * Respaldo por si falta un .jasper: el compilador de Java que usa JasperReports solo ve el classpath del
+     * servidor (java.class.path), no las librerias del .war, y falla con "cannot find symbol class JRFillField".
+     * Se le pasan los .jar de la carpeta donde esta JasperReports (WEB-INF/lib dentro de GlassFish).
+     */
+    private static void prepararCompilador() {
+        if (compiladorListo) {
+            return;
+        }
+        try {
+            java.io.File jar = new java.io.File(JasperReport.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+            java.io.File carpeta = jar.isFile() ? jar.getParentFile() : jar;
+            StringBuilder classpath = new StringBuilder(System.getProperty("java.class.path", ""));
+            java.io.File[] jars = carpeta.listFiles((d, nombreArchivo) -> nombreArchivo.endsWith(".jar"));
+            if (jars != null) {
+                for (java.io.File f : jars) {
+                    classpath.append(java.io.File.pathSeparator).append(f.getAbsolutePath());
+                }
+            }
+            net.sf.jasperreports.engine.DefaultJasperReportsContext.getInstance()
+                    .setProperty("net.sf.jasperreports.compiler.classpath", classpath.toString());
+        } catch (Exception e) {
+            // sin la ubicacion de las librerias se intenta con el classpath por defecto
+        }
+        compiladorListo = true;
     }
 
     /** Agrega el subreporte compilado y su data source (una copia de cada fila con los textos de presentacion). */

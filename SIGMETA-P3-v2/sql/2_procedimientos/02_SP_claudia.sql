@@ -141,10 +141,10 @@ CREATE PROCEDURE sp_cotizacion_insertar(
 BEGIN
     INSERT INTO cotizacion (
         numero, fecha_emision, sub_total, igv, total, observaciones, fecha_registro, 
-        id_usuario_registro, anulado, id_cliente, fecha_vigencia, estado
+        id_usuario_registro, id_cliente, fecha_vigencia, estado
     ) VALUES (
         p_numero, p_fecha_emision, p_sub_total, p_igv, p_total, p_observaciones, NOW(), 
-        p_id_usuario_registro, FALSE, p_id_cliente, p_fecha_vigencia, p_estado
+        p_id_usuario_registro, p_id_cliente, p_fecha_vigencia, p_estado
     );
     SET p_id_cotizacion = LAST_INSERT_ID();
 END$$
@@ -175,7 +175,7 @@ CREATE PROCEDURE sp_cotizacion_eliminar(
 )
 BEGIN
     UPDATE cotizacion 
-    SET anulado = TRUE, motivo_anulacion = p_motivo_anulacion, fecha_anulacion = NOW(), estado = 'ANULADA'
+    SET motivo_anulacion = p_motivo_anulacion, fecha_anulacion = NOW(), estado = 'ANULADA'
     WHERE id = p_id_cotizacion;
 END$$
 

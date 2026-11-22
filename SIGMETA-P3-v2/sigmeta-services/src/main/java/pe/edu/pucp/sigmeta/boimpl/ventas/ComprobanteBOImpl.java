@@ -82,6 +82,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
     private final CompensacionCaja compensacionCaja;
     private final SolicitudAutorizacionBO autorizacionBO;
     private final DespachoDAO despachoDAO;
+    private final pe.edu.pucp.sigmeta.dao.ConsultaDAO consultaDAO = new pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl();
 
     public ComprobanteBOImpl() {
         this.comprobanteDAO = new ComprobanteDAOImpl();
@@ -151,8 +152,32 @@ public class ComprobanteBOImpl implements ComprobanteBO {
             comprobante.setFechaRegistro(LocalDateTime.now());
 
             guardarConNumeroUnico(comprobante);
+            // RF008: foto de lo que se imprime (cliente y lineas con codigo y nombre del producto). La
+            // representacion impresa sale siempre de esta foto, aunque despues cambien el cliente o el catalogo
+            consultaDAO.ejecutar("sp_comprobante_congelar", comprobante.getId());
+            cargarFotoImpresa(comprobante);
             return comprobante;
         });
+    }
+
+    // RF008: completa el comprobante con el cliente tal como se imprimio (no hace nada si no tiene foto)
+    private void cargarFotoImpresa(Comprobante c) throws SQLException {
+        if (c == null || (c.getTipo() != TipoComprobante.FACTURA && c.getTipo() != TipoComprobante.BOLETA)) {
+            return;
+        }
+        List<Map<String, Object>> filas = consultaDAO.consultar("sp_comprobante_impreso", c.getId());
+        if (filas.isEmpty() || filas.get(0).get("clienteNombre") == null) {
+            return;
+        }
+        Map<String, Object> f = filas.get(0);
+        c.setClienteNombre(texto(f.get("clienteNombre")));
+        c.setClienteTipoDocumento(texto(f.get("clienteTipoDocumento")));
+        c.setClienteNumeroDocumento(texto(f.get("clienteNumeroDocumento")));
+        c.setClienteDireccion(texto(f.get("clienteDireccion")));
+    }
+
+    private static String texto(Object valor) {
+        return valor == null ? null : valor.toString();
     }
 
     // RF013: Emision de nota de credito autorizada por administrador.
@@ -575,6 +600,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
     public Comprobante obtener(int id) throws SQLException {
         return Transaccion.ejecutar(() -> {
             Comprobante c = comprobanteDAO.load(id);
+            cargarFotoImpresa(c);
             if (c != null && c.getTipo() == TipoComprobante.NOTA_CREDITO) {
                 List<DetalleNotaCredito> detalles = detalleNotaCreditoDAO.listarPorComprobante(id);
                 for (DetalleNotaCredito d : detalles) {
@@ -612,7 +638,7 @@ public class ComprobanteBOImpl implements ComprobanteBO {
                 throw new IllegalStateException("El comprobante " + c.getSerie() + "-" + c.getNumero() + " está anulado");
             }
             Venta venta = ventaDAO.load(c.getVenta().getId());
-            Cliente cliente = venta == null || venta.getCliente() == null ? null : clienteDAO.load(venta.getCliente().getId());
+            cargarFotoImpresa(c);
             cabecera.put("TITULO", c.getTipo() == TipoComprobante.FACTURA ? "FACTURA ELECTRÓNICA" : "BOLETA DE VENTA ELECTRÓNICA");
             cabecera.put("NUMERO", c.getSerie() + "-" + c.getNumero());
             cabecera.put("FECHA_EMISION", c.getFechaEmision() == null ? ""
@@ -623,6 +649,28 @@ public class ComprobanteBOImpl implements ComprobanteBO {
             cabecera.put("VENTA", venta == null ? "" : venta.getNumero());
             cabecera.put("CONDICION_PAGO", venta == null || venta.getCondicionPago() == null ? ""
                     : venta.getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CREDITO ? "Crédito" : "Contado");
+            // RF008: el PDF sale de la foto tomada al emitir (cliente y lineas), no de los datos de hoy
+            List<Map<String, Object>> foto = consultaDAO.consultar("sp_comprobante_impreso_lineas", c.getId());
+            if (c.tieneFotoImpresa() && !foto.isEmpty()) {
+                cabecera.put("CLIENTE", c.getClienteNombre());
+                cabecera.put("TIPO_DOCUMENTO", c.getClienteTipoDocumento() == null ? "Documento" : c.getClienteTipoDocumento());
+                cabecera.put("DOCUMENTO", c.getClienteNumeroDocumento());
+                cabecera.put("DIRECCION", c.getClienteDireccion() == null ? "—" : c.getClienteDireccion());
+                for (Map<String, Object> f : foto) {
+                    Map<String, Object> linea = new HashMap<>();
+                    linea.put("numeroLinea", ((Number) f.get("numeroLinea")).intValue());
+                    linea.put("codigo", texto(f.get("codigo")));
+                    linea.put("descripcion", texto(f.get("descripcion")));
+                    linea.put("cantidad", ((Number) f.get("cantidad")).doubleValue());
+                    linea.put("precioUnitario", ((Number) f.get("precioUnitario")).doubleValue());
+                    linea.put("descuento", ((Number) f.get("descuento")).doubleValue());
+                    linea.put("importe", ((Number) f.get("importe")).doubleValue());
+                    lineas.add(linea);
+                }
+                return null;
+            }
+            // comprobante sin foto (emitido antes de la migracion 12 y no completado por ella): datos actuales
+            Cliente cliente = venta == null || venta.getCliente() == null ? null : clienteDAO.load(venta.getCliente().getId());
             if (cliente != null) {
                 cabecera.put("CLIENTE", cliente.getNombreMostrado());
                 cabecera.put("TIPO_DOCUMENTO", cliente.getTipoDocumento() == null ? "Documento" : cliente.getTipoDocumento().name());

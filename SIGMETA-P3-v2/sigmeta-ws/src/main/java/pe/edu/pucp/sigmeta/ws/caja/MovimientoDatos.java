@@ -11,12 +11,15 @@ public class MovimientoDatos {
     public String medioPago;
     public double monto;
     public String concepto;
-    // VENTA, COBRO, ANULACION_VENTA, NOTA_CREDITO, ANULACION_NOTA_CREDITO, ANULACION_COBRO o null (manual)
+    // VENTA, COBRO, ANULACION_VENTA, NOTA_CREDITO, ANULACION_NOTA_CREDITO, ANULACION_COBRO,
+    // ANULACION_MOVIMIENTO o null (manual)
     public String documentoOrigen;
     public int idDocumentoOrigen;
     public String usuarioRegistro;
-    // true = ingreso o egreso que registro el cajero: es el unico que se modifica o elimina
+    // true = ingreso o egreso que registro el cajero: es el unico que se anula (y del que se corrige el concepto)
     public boolean manual;
+    // true = manual ya anulado (en la caja esta su movimiento contrario)
+    public boolean anulado;
 
     public MovimientoDatos() {
     }

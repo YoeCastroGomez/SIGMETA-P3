@@ -8,47 +8,34 @@
     <section class="login-marca" aria-label="Presentación de SIGMETA">
         <div class="login-marca-top">
             <span class="login-emblema" aria-hidden="true">
-                <svg viewBox="0 0 48 48" width="34" height="34" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="5" y="5" width="38" height="38" rx="11" stroke="white" stroke-opacity=".28"/>
-                    <path d="M14 31V19L24 13L34 19V31L24 37L14 31Z" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
-                    <path d="M14 19L24 25L34 19M24 25V37" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                <svg viewBox="0 0 48 48" width="38" height="38" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 33V15L24 7L38 15V33L24 41L10 33Z" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+                    <path d="M10 15L24 23L38 15M24 23V41" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </span>
             <div class="login-marca-nombre">
                 <strong>SIGMETA<span>.</span></strong>
-                <small>GESTIÓN EMPRESARIAL</small>
+                <small>Gestión empresarial</small>
             </div>
         </div>
 
         <div class="login-marca-centro">
-            <span class="login-marca-etiqueta">GRUPO META · PLATAFORMA EMPRESARIAL</span>
-            <h1>Todo tu negocio.<br/><em>En un solo lugar.</em></h1>
+            <h1>Todo tu negocio.<br/>En un solo lugar.</h1>
             <p>Organiza tus operaciones comerciales, compras e inventario desde un espacio de trabajo integrado.</p>
-            <div class="login-marca-modulos" aria-label="Módulos de SIGMETA">
-                <span>Ventas</span>
-                <span>Compras</span>
-                <span>Inventario</span>
-                <span>Administración</span>
-            </div>
+            <ul class="login-marca-modulos" aria-label="Módulos de SIGMETA">
+                <li>Ventas</li>
+                <li>Compras</li>
+                <li>Inventario</li>
+                <li>Administración</li>
+            </ul>
         </div>
 
-        <div class="login-marca-pie">
-            <span class="login-marca-punto" aria-hidden="true"></span>
-            Acceso para personal autorizado · Grupo Meta
-        </div>
-        <div class="login-marca-decoracion" aria-hidden="true"></div>
+        <div class="login-marca-pie">Acceso para personal autorizado de Grupo Meta.</div>
     </section>
 
     <section class="login-formulario-zona" aria-label="Iniciar sesión">
         <div class="login-formulario">
             <div class="login-formulario-encabezado">
-                <span class="login-formulario-insignia">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <rect x="5" y="10" width="14" height="11" rx="2"/>
-                        <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
-                    </svg>
-                </span>
-                <div class="login-formulario-bienvenida">BIENVENIDO A SIGMETA</div>
                 <h2>Iniciar sesión</h2>
                 <p>Ingresa tus credenciales para continuar a tu espacio de trabajo.</p>
             </div>
@@ -100,7 +87,6 @@
                    (se revisa en el navegador para que también funcione con usuario y clave autocompletados). *@
                 <button type="submit" class="btn btn-primary login-ingresar" @onclick="@(() => v.Intentar(Errores()))">
                     Ingresar a SIGMETA
-                    <span aria-hidden="true">→</span>
                 </button>
             </form>
             <div class="login-ayuda">

@@ -25,7 +25,8 @@ CREATE TABLE compra (
     fecha_registro DATETIME NOT NULL,
     id_usuario_registro INT NOT NULL,
 
-    anulado BOOLEAN NOT NULL DEFAULT FALSE,
+    -- un solo estado: anulado se calcula de estado (no se escribe); asi nunca se contradicen
+    anulado BOOLEAN GENERATED ALWAYS AS (estado = 'ANULADA') STORED NOT NULL,
     motivo_anulacion VARCHAR(200),
     fecha_anulacion DATETIME,
 
@@ -179,12 +180,12 @@ CREATE TABLE movimiento_inventario (
 INSERT INTO compra (
     id, id_proveedor, numero, fecha_emision,
     sub_total, igv, total, observaciones, fecha_registro,
-    id_usuario_registro, anulado, motivo_anulacion, fecha_anulacion,
+    id_usuario_registro, motivo_anulacion, fecha_anulacion,
     estado, fecha_recepcion_estimada
 ) VALUES (
     1, 1, 'OC-DELTA-0087', '2026-08-25',
     1250.00, 225.00, 1475.00, 'Reposicion de stock de martillos', '2026-08-25 10:00:00',
-    4, FALSE, NULL, NULL,
+    4, NULL, NULL,
     'RECIBIDA', '2026-08-28'
 );
 

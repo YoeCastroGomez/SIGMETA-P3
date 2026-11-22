@@ -35,40 +35,45 @@ else
         <h2 class="h6 fw-semibold mb-3">Datos de la cuenta</h2>
         <div class="row">
             <div class="col-sm-6 col-md-4 mb-3">
-                <div class="small text-muted text-uppercase">Cliente</div>
+                <div class="small text-muted">Cliente</div>
                 <div class="fw-semibold">@cuenta.Cliente</div>
                 <div class="small text-muted">@cuenta.DocumentoCliente</div>
             </div>
             <div class="col-sm-6 col-md-4 mb-3">
-                <div class="small text-muted text-uppercase">Venta</div>
+                <div class="small text-muted">Venta</div>
                 <div class="fw-semibold">@cuenta.Venta</div>
             </div>
             <div class="col-sm-6 col-md-4 mb-3">
-                <div class="small text-muted text-uppercase">Comprobante</div>
+                <div class="small text-muted">Comprobante</div>
                 <div class="fw-semibold">@(cuenta.Comprobante ?? "Sin comprobante")</div>
             </div>
             <div class="col-sm-6 col-md-4 mb-3">
-                <div class="small text-muted text-uppercase">Emisión</div>
+                <div class="small text-muted">Emisión</div>
                 <div class="fw-semibold">@TextosCaja.Fecha(cuenta.FechaEmision)</div>
             </div>
             <div class="col-sm-6 col-md-4 mb-3">
-                <div class="small text-muted text-uppercase">Vencimiento</div>
+                <div class="small text-muted">Vencimiento</div>
                 <div class="fw-semibold @(cuenta.Vencida ? "text-danger" : "")">@TextosCaja.Fecha(cuenta.FechaVencimiento)</div>
             </div>
             <div class="col-sm-6 col-md-4 mb-3">
-                <div class="small text-muted text-uppercase">Estado</div>
+                <div class="small text-muted">Estado</div>
                 <div><Estado Texto="@TextosCaja.Texto(cuenta.Estado)" /></div>
             </div>
-            <div class="col-sm-4 mb-3">
-                <div class="small text-muted text-uppercase">Monto original</div>
+            @* RF013: saldo = monto original − notas de crédito − pagado *@
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted">Monto original</div>
                 <div class="fw-semibold">S/ @cuenta.MontoOriginal.ToString("N2")</div>
             </div>
-            <div class="col-sm-4 mb-3">
-                <div class="small text-muted text-uppercase">Pagado</div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted">Notas de crédito</div>
+                <div class="fw-semibold">@(cuenta.MontoAcreditado > 0 ? $"− S/ {cuenta.MontoAcreditado:N2}" : "—")</div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted">Pagado</div>
                 <div class="fw-semibold">S/ @cuenta.MontoPagado.ToString("N2")</div>
             </div>
-            <div class="col-sm-4 mb-3">
-                <div class="small text-muted text-uppercase">Saldo pendiente</div>
+            <div class="col-sm-6 col-md-3 mb-3">
+                <div class="small text-muted">Saldo pendiente</div>
                 <div class="fw-semibold">S/ @cuenta.SaldoPendiente.ToString("N2")</div>
             </div>
         </div>

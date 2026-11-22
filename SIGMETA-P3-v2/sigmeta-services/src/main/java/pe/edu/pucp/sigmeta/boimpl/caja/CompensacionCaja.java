@@ -22,6 +22,8 @@ public class CompensacionCaja {
     public static final String DOCUMENTO_ANULACION_VENTA = "ANULACION_VENTA";
     public static final String DOCUMENTO_NOTA_CREDITO = "NOTA_CREDITO";
     public static final String DOCUMENTO_ANULACION_NOTA_CREDITO = "ANULACION_NOTA_CREDITO";
+    // contrario de un ingreso o egreso manual anulado; id_documento_origen = id del movimiento anulado
+    public static final String DOCUMENTO_ANULACION_MOVIMIENTO = "ANULACION_MOVIMIENTO";
 
     private final MovimientoCajaDAO movimientoCajaDAO;
     private final CajaDAO cajaDAO;
@@ -33,9 +35,7 @@ public class CompensacionCaja {
 
     // movimientos de caja registrados para un documento (por ejemplo, los cobros al contado de una venta)
     public List<MovimientoCaja> buscar(String documentoOrigen, int idDocumentoOrigen) throws SQLException {
-        return movimientoCajaDAO.listarTodosConDetalle().stream()
-                .filter(m -> documentoOrigen.equals(m.getDocumentoOrigen()) && m.getIdDocumentoOrigen() == idDocumentoOrigen)
-                .toList();
+        return movimientoCajaDAO.buscarPorDocumento(documentoOrigen, idDocumentoOrigen);
     }
 
     // registra el movimiento contrario en la misma caja del original; la caja debe seguir abierta

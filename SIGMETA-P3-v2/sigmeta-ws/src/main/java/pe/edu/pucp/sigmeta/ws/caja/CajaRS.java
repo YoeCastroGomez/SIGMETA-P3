@@ -38,8 +38,8 @@ import pe.edu.pucp.sigmeta.ws.base.VentanillaBase;
 //   POST   /api/cajas                              abrir caja: {"montoInicial": 500}
 //   GET    /api/cajas/{id}/movimientos             movimientos de la caja
 //   POST   /api/cajas/{id}/movimientos             ingreso o egreso manual
-//   PUT    /api/cajas/{id}/movimientos/{idMov}     modificar un ingreso o egreso manual
-//   DELETE /api/cajas/{id}/movimientos/{idMov}     eliminar un ingreso o egreso manual
+//   PUT    /api/cajas/{id}/movimientos/{idMov}     corregir el concepto de un ingreso o egreso manual
+//   POST   /api/cajas/{id}/movimientos/{idMov}/anular  anular un ingreso o egreso manual (registra su contrario)
 //   GET    /api/cajas/ventas-por-cobrar            ventas al contado que aun no se cobran
 //   POST   /api/cajas/{id}/cobros-contado          cobrar una venta al contado: {"idVenta": 4, "medioPago": "EFECTIVO"}
 //   POST   /api/cajas/{id}/cerrar                  cerrar la caja: {"montoDeclarado": 1250.50}
@@ -107,9 +107,19 @@ public class CajaRS extends VentanillaBase {
     public Response listarMovimientos(@HeaderParam("ticket") String ticket, @PathParam("id") int idCaja) {
         return ejecutar(ticket, id -> {
             Utilidades.permitirCajeroOAdministrador(id);
+            List<MovimientoCaja> movimientos = cajaBO.listarMovimientosPorCaja(idCaja);
+            // RF010: un manual esta anulado si en la caja esta su contrario (ANULACION_MOVIMIENTO + su id)
+            java.util.Set<Integer> anulados = new java.util.HashSet<>();
+            for (MovimientoCaja m : movimientos) {
+                if (CompensacionCaja.DOCUMENTO_ANULACION_MOVIMIENTO.equals(m.getDocumentoOrigen())) {
+                    anulados.add(m.getIdDocumentoOrigen());
+                }
+            }
             List<MovimientoDatos> lista = new ArrayList<>();
-            for (MovimientoCaja m : cajaBO.listarMovimientosPorCaja(idCaja)) {
-                lista.add(convertir(m));
+            for (MovimientoCaja m : movimientos) {
+                MovimientoDatos d = convertir(m);
+                d.anulado = anulados.contains(m.getId());
+                lista.add(d);
             }
             return lista;
         });
@@ -142,16 +152,12 @@ public class CajaRS extends VentanillaBase {
         });
     }
 
-    @DELETE
-    @Path("{id}/movimientos/{idMovimiento}")
-    public Response eliminarMovimiento(@HeaderParam("ticket") String ticket, @PathParam("id") int idCaja,
-                                       @PathParam("idMovimiento") int idMovimiento) {
-        return ejecutar(ticket, id -> {
-            MovimientoCaja movimiento = new MovimientoCaja();
-            movimiento.setId(idMovimiento);
-            movimientoCajaBO.eliminar(movimiento, id);
-            return null;
-        });
+    // RF010, RNF002: el movimiento no se borra; se registra su contrario en la misma caja (lo devuelve)
+    @POST
+    @Path("{id}/movimientos/{idMovimiento}/anular")
+    public Response anularMovimiento(@HeaderParam("ticket") String ticket, @PathParam("id") int idCaja,
+                                     @PathParam("idMovimiento") int idMovimiento) {
+        return ejecutar(ticket, id -> convertir(movimientoCajaBO.anular(idMovimiento, id)));
     }
 
     @GET
