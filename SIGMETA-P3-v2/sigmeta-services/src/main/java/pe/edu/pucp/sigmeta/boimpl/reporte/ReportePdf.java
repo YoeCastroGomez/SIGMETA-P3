@@ -124,6 +124,12 @@ public final class ReportePdf {
             double dias = ReporteFormato.numero(f.get("diasAtraso"));
             f.put("diasAtrasoTexto", dias > 0 ? ReporteFormato.entero(dias) + " d" : "—");
         });
+        // RF013: seguimiento de las notas de credito del periodo
+        tabla(p, "NOTAS_CREDITO", datos.get("notasCredito"), f -> {
+            f.put("fechaTexto", ReporteFormato.fecha(ReporteFormato.texto(f.get("fechaEmision"))));
+            f.put("estadoTexto", "ANULADO".equals(ReporteFormato.texto(f.get("estado"))) ? "Anulada"
+                    : "Vigente · autorizó " + ReporteFormato.texto(f.get("autorizo")));
+        });
     }
 
     private static void abastecimiento(Map<String, Object> datos, Map<String, Object> p) {
@@ -164,6 +170,16 @@ public final class ReportePdf {
         });
         tabla(p, "MEDIO_PAGO", datos.get("porMedioPago"), f -> f.put("medioTexto", ReporteFormato.legible(ReporteFormato.texto(f.get("medioPago")))));
         tabla(p, "CAJERO", datos.get("porCajero"), f -> { });
+        // RF009 + RF013 + RNF001: anulaciones del periodo con su motivo, usuario y fecha
+        tabla(p, "ANULACIONES", datos.get("anulaciones"), f -> {
+            f.put("fechaTexto", ReporteFormato.fechaHora(ReporteFormato.texto(f.get("fecha"))));
+            f.put("tipoTexto", switch (ReporteFormato.texto(f.get("tipo"))) {
+                case "COBRO" -> "Cobro";
+                case "NOTA_CREDITO" -> "Nota de crédito";
+                case "CUENTA_POR_COBRAR" -> "Cuenta por cobrar";
+                default -> ReporteFormato.legible(ReporteFormato.texto(f.get("tipo")));
+            });
+        });
     }
 
     // ------------------------------------------------------------------ JasperReports
@@ -177,7 +193,12 @@ public final class ReportePdf {
         return COMPILADAS.computeIfAbsent(nombre, n -> {
             try (InputStream jasper = ReportePdf.class.getResourceAsStream("/reports/" + n + ".jasper")) {
                 if (jasper != null) {
-                    return (JasperReport) JRLoader.loadObject(jasper);
+                    byte[] compilada = jasper.readAllBytes();
+                    // un .jasper compilado con un JDK mas nuevo que el de GlassFish no se puede usar
+                    // (UnsupportedClassVersionError al llenar): en ese caso se compila el .jrxml aqui mismo
+                    if (compatibleConEsteJava(compilada)) {
+                        return (JasperReport) JRLoader.loadObject(new java.io.ByteArrayInputStream(compilada));
+                    }
                 }
             } catch (JRException | IOException e) {
                 throw new RuntimeException("No se pudo cargar la plantilla " + n + ".jasper: " + e.getMessage(), e);
@@ -193,6 +214,24 @@ public final class ReportePdf {
                         + "con GlassFish detenido y vuelva a desplegar. Detalle: " + e.getMessage(), e);
             }
         });
+    }
+
+    /**
+     * Revisa la version de las clases que van dentro del .jasper (cada clase empieza con CAFEBABE y luego trae
+     * su version). Si alguna es mas nueva que este Java, el .jasper no sirve en este servidor.
+     */
+    static boolean compatibleConEsteJava(byte[] jasper) {
+        int maxima = 44 + Runtime.version().feature();
+        for (int i = 0; i + 7 < jasper.length; i++) {
+            if ((jasper[i] & 0xFF) == 0xCA && (jasper[i + 1] & 0xFF) == 0xFE
+                    && (jasper[i + 2] & 0xFF) == 0xBA && (jasper[i + 3] & 0xFF) == 0xBE) {
+                int version = ((jasper[i + 6] & 0xFF) << 8) | (jasper[i + 7] & 0xFF);
+                if (version > maxima) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private static volatile boolean compiladorListo;
@@ -221,6 +260,8 @@ public final class ReportePdf {
         } catch (Exception e) {
             // sin la ubicacion de las librerias se intenta con el classpath por defecto
         }
+        net.sf.jasperreports.engine.DefaultJasperReportsContext.getInstance()
+                .setProperty(CompiladorPlantillasJava.PROPIEDAD, CompiladorPlantillasJava.class.getName());
         compiladorListo = true;
     }
 

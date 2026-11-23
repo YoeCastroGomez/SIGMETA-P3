@@ -34,15 +34,15 @@
         <div class="card-body pb-0"><h2 class="h6 fw-semibold mb-3">Compras a proveedores</h2></div>
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
-                <thead class="table-light"><tr><th>Proveedor</th><th>RUC</th><th class="text-end">Compras</th><th class="text-end">Por recibir</th><th class="text-end">Total</th></tr></thead>
+                <thead class="table-light"><tr><th>Proveedor</th><th>RUC</th><th class="text-end">Compras</th><th class="text-end">Por recibir</th><th class="text-end">Total</th><th style="width: 25%;">% del total comprado</th></tr></thead>
                 <tbody>
                     @if (Datos.Compras.Count == 0)
                     {
-                        <tr><td colspan="5" class="text-center text-muted py-3">No hubo compras en el periodo.</td></tr>
+                        <tr><td colspan="6" class="text-center text-muted py-3">No hubo compras en el periodo.</td></tr>
                     }
                     @foreach (var c in Datos.Compras)
                     {
-                        <tr><td>@c.Proveedor</td><td>@c.Ruc</td><td class="text-end">@c.Compras.ToString("N0")</td><td class="text-end">@c.PorRecibir.ToString("N0")</td><td class="text-end">@c.Total.ToString("N2")</td></tr>
+                        <tr><td>@c.Proveedor</td><td>@c.Ruc</td><td class="text-end">@c.Compras.ToString("N0")</td><td class="text-end">@c.PorRecibir.ToString("N0")</td><td class="text-end">@c.Total.ToString("N2")</td><td><BarraParticipacion Valor="c.Total" Total="Datos.Compras.Sum(x => x.Total)" /></td></tr>
                     }
                 </tbody>
             </table>
@@ -51,18 +51,18 @@
 
     <div class="row g-3 mb-3">
         <div class="col-lg-6">
-            <div class="card h-100">
+            <div class="card">
                 <div class="card-body pb-0">
                     <h2 class="h6 fw-semibold mb-1">Productos de mayor movimiento (10 primeros)</h2>
                     <p class="small text-muted mb-3">Unidades despachadas, menos lo devuelto.</p>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead class="table-light"><tr><th>Producto</th><th class="text-end">Salieron</th><th class="text-end">En almacén</th></tr></thead>
+                        <thead class="table-light"><tr><th>Producto</th><th class="text-end">Salieron</th><th class="text-end">En almacén</th><th style="width: 30%;">% de las unidades del top 10</th></tr></thead>
                         <tbody>
                             @if (Datos.MayorMovimiento.Count == 0)
                             {
-                                <tr><td colspan="3" class="text-center text-muted py-3">No hubo despachos en el periodo.</td></tr>
+                                <tr><td colspan="4" class="text-center text-muted py-3">No hubo despachos en el periodo.</td></tr>
                             }
                             @foreach (var p in Datos.MayorMovimiento)
                             {
@@ -70,6 +70,7 @@
                                     <td><strong>@p.CodigoInterno</strong> <div class="small text-muted">@p.Producto</div></td>
                                     <td class="text-end">@Formato.Cantidad(p.Unidades) @TextosAlmacen.Unidad(p.UnidadVenta)</td>
                                     <td class="text-end">@Formato.Cantidad(p.StockActual)</td>
+                                    <td><BarraParticipacion Valor="p.Unidades" Total="Datos.MayorMovimiento.Sum(x => x.Unidades)" Color="bg-info" /></td>
                                 </tr>
                             }
                         </tbody>
@@ -78,7 +79,7 @@
             </div>
         </div>
         <div class="col-lg-6">
-            <div class="card h-100">
+            <div class="card">
                 <div class="card-body pb-0">
                     <h2 class="h6 fw-semibold mb-1">Productos sin movimiento</h2>
                     <p class="small text-muted mb-3">Con existencias y sin ninguna salida en el periodo: capital inmovilizado.</p>
@@ -114,11 +115,11 @@
         </div>
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
-                <thead class="table-light"><tr><th>Categoría</th><th class="text-end">Productos</th><th class="text-end">En su mínimo</th><th class="text-end">Valor al costo</th><th class="text-end">Valor a precio de venta</th></tr></thead>
+                <thead class="table-light"><tr><th>Categoría</th><th class="text-end">Productos</th><th class="text-end">En su mínimo</th><th class="text-end">Valor al costo</th><th class="text-end">Valor a precio de venta</th><th style="width: 22%;">% del valor al costo</th></tr></thead>
                 <tbody>
                     @foreach (var i in Datos.Inventario)
                     {
-                        <tr><td>@i.Categoria</td><td class="text-end">@i.Productos.ToString("N0")</td><td class="text-end">@i.EnMinimo.ToString("N0")</td><td class="text-end">@i.ValorCosto.ToString("N2")</td><td class="text-end">@i.ValorVenta.ToString("N2")</td></tr>
+                        <tr><td>@i.Categoria</td><td class="text-end">@i.Productos.ToString("N0")</td><td class="text-end">@i.EnMinimo.ToString("N0")</td><td class="text-end">@i.ValorCosto.ToString("N2")</td><td class="text-end">@i.ValorVenta.ToString("N2")</td><td><BarraParticipacion Valor="i.ValorCosto" Total="Datos.Inventario.Sum(x => x.ValorCosto)" Color="bg-success" /></td></tr>
                     }
                 </tbody>
                 <tfoot class="table-light">
@@ -128,6 +129,7 @@
                         <th class="text-end">@Datos.Inventario.Sum(i => i.EnMinimo).ToString("N0")</th>
                         <th class="text-end">@Datos.Inventario.Sum(i => i.ValorCosto).ToString("N2")</th>
                         <th class="text-end">@Datos.Inventario.Sum(i => i.ValorVenta).ToString("N2")</th>
+                        <th>100 %</th>
                     </tr>
                 </tfoot>
             </table>
@@ -138,6 +140,6 @@
 
 @code {
     [Parameter, EditorRequired] public ReporteAbastecimiento Datos { get; set; } = default!;
-    // barra con el título y los botones de descarga (PDF y CSV) que arma la página
+    // barra con el título y los botones de descarga (PDF, Excel y XML) que arma la página
     [Parameter, EditorRequired] public Func<string, string, RenderFragment> Barra { get; set; } = default!;
 }

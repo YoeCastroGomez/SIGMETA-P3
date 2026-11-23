@@ -26,6 +26,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 SET SQL_SAFE_UPDATES = 0;
 
 -- 1. LIMPIEZA (TRUNCATE tambien reinicia los AUTO_INCREMENT)
+TRUNCATE TABLE registro_anulacion;
 TRUNCATE TABLE detalle_nota_credito;
 TRUNCATE TABLE detalle_despacho;
 TRUNCATE TABLE despacho;

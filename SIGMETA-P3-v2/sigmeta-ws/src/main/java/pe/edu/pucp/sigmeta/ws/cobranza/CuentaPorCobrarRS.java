@@ -33,6 +33,8 @@ import pe.edu.pucp.sigmeta.ws.caja.Utilidades;
 //   GET /api/cuentas-por-cobrar?vencidas=true                     las vencidas (listarVencidas)
 //   GET /api/cuentas-por-cobrar/resumen                           total de saldos pendientes y vencidos (Administrador)
 //   GET /api/cuentas-por-cobrar/{id}                              una cuenta con sus cobros
+//   GET /api/cuentas-por-cobrar/{id}/historial                    lo que le paso a la cuenta, con las anulaciones
+//   GET /api/cuentas-por-cobrar/{id}/notas-credito                sus notas de credito (seguimiento)
 //
 // Si llegan varios filtros se usa el primero de la lista de arriba. Las busquedas las hace el BO.
 @Path("cuentas-por-cobrar")
@@ -105,6 +107,21 @@ public class CuentaPorCobrarRS extends VentanillaBase {
             return error(Response.Status.NOT_FOUND, "No existe la cuenta por cobrar con id " + idCuenta);
         }
         return respuesta;
+    }
+
+    // RF009 + RF013 + RNF001: historial de la cuenta (venta, notas de credito, cobros y anulaciones con motivo,
+    // usuario y fecha). Lo arma la base: sp_cuenta_por_cobrar_historial
+    @GET
+    @Path("{id}/historial")
+    public Response historial(@HeaderParam("ticket") String ticket, @PathParam("id") int idCuenta) {
+        return ejecutar(ticket, id -> cuentaBO.historial(idCuenta, id));
+    }
+
+    // RF013: notas de credito de la venta de la cuenta, con su estado y su anulacion (sp_cuenta_por_cobrar_notas_credito)
+    @GET
+    @Path("{id}/notas-credito")
+    public Response notasCredito(@HeaderParam("ticket") String ticket, @PathParam("id") int idCuenta) {
+        return ejecutar(ticket, id -> cuentaBO.notasCredito(idCuenta, id));
     }
 
     static CuentaDatos convertir(CuentaPorCobrar cxc) {

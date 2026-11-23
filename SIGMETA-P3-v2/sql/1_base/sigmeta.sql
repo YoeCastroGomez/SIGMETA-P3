@@ -890,6 +890,28 @@ CREATE TABLE cierre_caja (
         FOREIGN KEY (id_usuario_reapertura) REFERENCES usuario(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tabla: registro_anulacion
+-- RNF001 / RF009 / RF013: quien, cuando y por que se anulo un cobro, una nota de credito o una cuenta por cobrar.
+-- Una fila por documento anulado (no se borra ni se modifica). id_cuenta_por_cobrar enlaza la anulacion con la
+-- cuenta afectada para mostrarla en su historial; NULL si la nota de credito era de una venta al contado.
+CREATE TABLE registro_anulacion (
+    id                   INT AUTO_INCREMENT PRIMARY KEY,
+    tipo_documento       ENUM('COBRO', 'NOTA_CREDITO', 'CUENTA_POR_COBRAR') NOT NULL,
+    id_documento         INT NOT NULL,
+    documento            VARCHAR(40) NOT NULL,
+    id_cuenta_por_cobrar INT NULL,
+    monto                DECIMAL(12,2) NOT NULL,
+    motivo               VARCHAR(200) NOT NULL,
+    id_usuario           INT NOT NULL,
+    fecha                DATETIME NOT NULL,
+    CONSTRAINT uq_registro_anulacion_documento UNIQUE (tipo_documento, id_documento),
+    CONSTRAINT fk_registro_anulacion_cuenta
+        FOREIGN KEY (id_cuenta_por_cobrar) REFERENCES cuenta_por_cobrar(id),
+    CONSTRAINT fk_registro_anulacion_usuario
+        FOREIGN KEY (id_usuario) REFERENCES usuario(id),
+    INDEX ix_registro_anulacion_fecha (fecha)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 -- ============ DATOS DE PRUEBA ============
 -- ============================================================

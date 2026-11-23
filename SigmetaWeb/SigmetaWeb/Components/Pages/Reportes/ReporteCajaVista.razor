@@ -31,16 +31,16 @@
     </div>
 
     <div class="row g-3 mb-3">
-        <div class="col-lg-7">
-            <div class="card h-100">
+        <div class="col-12">
+            <div class="card">
                 <div class="card-body pb-0"><h2 class="h6 fw-semibold mb-3">Dinero por medio de pago</h2></div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead class="table-light"><tr><th>Medio</th><th class="text-end">Cobros contado</th><th class="text-end">Cobros crédito</th><th class="text-end">Ingresos</th><th class="text-end">Egresos</th><th class="text-end">Neto</th></tr></thead>
+                        <thead class="table-light"><tr><th>Medio</th><th class="text-end">Cobros contado</th><th class="text-end">Cobros crédito</th><th class="text-end">Ingresos</th><th class="text-end">Egresos</th><th class="text-end">Neto</th><th style="width: 22%;">% del neto total</th></tr></thead>
                         <tbody>
                             @if (Datos.PorMedioPago.Count == 0)
                             {
-                                <tr><td colspan="6" class="text-center text-muted py-3">No hubo movimientos de caja en el periodo.</td></tr>
+                                <tr><td colspan="7" class="text-center text-muted py-3">No hubo movimientos de caja en el periodo.</td></tr>
                             }
                             @foreach (var m in Datos.PorMedioPago)
                             {
@@ -51,6 +51,7 @@
                                     <td class="text-end">@m.Ingresos.ToString("N2")</td>
                                     <td class="text-end">@m.Egresos.ToString("N2")</td>
                                     <td class="text-end fw-semibold">@m.Neto.ToString("N2")</td>
+                                    <td><BarraParticipacion Valor="m.Neto" Total="Datos.PorMedioPago.Where(x => x.Neto > 0).Sum(x => x.Neto)" /></td>
                                 </tr>
                             }
                         </tbody>
@@ -58,8 +59,8 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-5">
-            <div class="card h-100">
+        <div class="col-12">
+            <div class="card">
                 <div class="card-body pb-0"><h2 class="h6 fw-semibold mb-3">Diferencias por cajero</h2></div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
@@ -120,11 +121,58 @@
         <Paginacion TotalRegistros="@Datos.Cierres.Count" @bind-PaginaActual="paginaCierres" @bind-TamanoPagina="tamanoCierres" />
     </div>
 
-    @Barra("Reporte de caja", "Cierres realizados, diferencias y responsables")
+
+    @* RF009 + RF013 + RNF001: anulaciones del periodo (quién, cuándo y por qué). También salen en el PDF. *@
+    <div class="card mb-3">
+        <div class="card-body pb-0">
+            <h2 class="h6 fw-semibold mb-1">Anulaciones del periodo</h2>
+            <p class="small text-muted mb-3">Cobros, notas de crédito y cuentas por cobrar anuladas, con su motivo, el usuario que las anuló y la fecha.</p>
+        </div>
+        @if (Datos.Anulaciones.Count > 0)
+        {
+            var totalAnulado = Datos.Anulaciones.Sum(a => a.Monto);
+            <div class="card-body pt-0 d-flex flex-wrap gap-3 small">
+                @foreach (var g in Datos.Anulaciones.GroupBy(a => a.TipoTexto))
+                {
+                    <div class="flex-fill" style="min-width: 200px;">
+                        <div class="d-flex justify-content-between"><span>@g.Key (@g.Count())</span><span>@Formato.Soles(g.Sum(a => a.Monto))</span></div>
+                        <BarraParticipacion Valor="g.Sum(a => a.Monto)" Total="totalAnulado" Color="bg-danger" />
+                    </div>
+                }
+            </div>
+        }
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Fecha</th><th>Tipo</th><th>Documento</th><th>Cliente</th><th class="text-end">Monto</th><th>Motivo</th><th>Usuario</th></tr>
+                </thead>
+                <tbody>
+                    @if (Datos.Anulaciones.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-3">No hubo anulaciones en el periodo.</td></tr>
+                    }
+                    @foreach (var a in Datos.Anulaciones)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@Formato.FechaHora(a.Fecha)</td>
+                            <td><Estado Texto="@a.TipoTexto" /></td>
+                            <td class="text-nowrap">@a.Documento<div class="small text-muted">@a.Venta</div></td>
+                            <td>@a.Cliente</td>
+                            <td class="text-end text-nowrap">@a.Monto.ToString("N2")</td>
+                            <td class="small">@a.Motivo</td>
+                            <td class="small">@a.Usuario</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @Barra("Reporte de caja", "Cierres realizados, diferencias, responsables y anulaciones")
 
 @code {
     [Parameter, EditorRequired] public ReporteCaja Datos { get; set; } = default!;
-    // barra con el título y los botones de descarga (PDF y CSV) que arma la página
+    // barra con el título y los botones de descarga (PDF, Excel y XML) que arma la página
     [Parameter, EditorRequired] public Func<string, string, RenderFragment> Barra { get; set; } = default!;
 
     // paginación propia de la tabla de cierres; vuelve a la página 1 cuando llega otro reporte

@@ -38,4 +38,11 @@ public interface CuentaPorCobrarBO {
 
     // RF009: total de saldos pendientes y de cuentas vencidas; solo el Administrador
     ResumenCuentasPorCobrar obtenerResumen(int idResponsable) throws SQLException;
+
+    // RF009 + RF013 + RNF001: todo lo que le paso a la cuenta en orden (venta, notas de credito, cobros y
+    // anulaciones con su motivo, usuario y fecha); Cajero o Administrador
+    List<java.util.Map<String, Object>> historial(int idCuenta, int idResponsable) throws SQLException;
+
+    // RF013: seguimiento de las notas de credito de la venta de la cuenta (estado, quien autorizo y la anulacion)
+    List<java.util.Map<String, Object>> notasCredito(int idCuenta, int idResponsable) throws SQLException;
 }

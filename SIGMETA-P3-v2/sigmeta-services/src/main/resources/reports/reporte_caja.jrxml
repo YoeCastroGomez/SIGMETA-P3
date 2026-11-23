@@ -40,6 +40,8 @@
 	<parameter name="DS_CIERRES" class="net.sf.jasperreports.engine.JRDataSource"/>
 	<parameter name="DS_MEDIO_PAGO" class="net.sf.jasperreports.engine.JRDataSource"/>
 	<parameter name="DS_CAJERO" class="net.sf.jasperreports.engine.JRDataSource"/>
+	<parameter name="SUB_ANULACIONES" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="DS_ANULACIONES" class="net.sf.jasperreports.engine.JRDataSource"/>
 	<title height="140">
 		<element kind="staticText" x="0" y="4" width="320" height="20" fontSize="16.0" bold="true"><text><![CDATA[GRUPO META]]></text></element>
 		<element kind="staticText" x="0" y="25" width="320" height="12" fontSize="8.0" forecolor="#333333"><text><![CDATA[Sistema de Gestión Empresarial SIGMETA]]></text></element>
@@ -85,7 +87,7 @@
 		</element>
 	</title>
 	<detail>
-		<band height="58">
+		<band height="76">
 			<element kind="subreport" positionType="Float" x="0" y="6" width="535" height="10">
 				<dataSourceExpression><![CDATA[$P{DS_CIERRES}]]></dataSourceExpression>
 				<expression><![CDATA[$P{SUB_CIERRES}]]></expression>
@@ -97,6 +99,10 @@
 			<element kind="subreport" positionType="Float" x="0" y="42" width="535" height="10">
 				<dataSourceExpression><![CDATA[$P{DS_CAJERO}]]></dataSourceExpression>
 				<expression><![CDATA[$P{SUB_CAJERO}]]></expression>
+			</element>
+			<element kind="subreport" positionType="Float" x="0" y="60" width="535" height="10">
+				<dataSourceExpression><![CDATA[$P{DS_ANULACIONES}]]></dataSourceExpression>
+				<expression><![CDATA[$P{SUB_ANULACIONES}]]></expression>
 			</element>
 		</band>
 	</detail>

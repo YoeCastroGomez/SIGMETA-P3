@@ -1,0 +1,20 @@
+@* RF015 · Gráfico de barra "a base del total": el largo de la barra es la PARTICIPACIÓN de la fila en el total del
+   bloque (valor ÷ total), no su tamaño frente a la fila más grande. Así todas las barras de una tabla suman 100 %
+   y el porcentaje que se lee al lado es el mismo que se ve. *@
+<div class="d-flex align-items-center gap-2" role="img" aria-label="@($"{Porcentaje:0.0} % del total")">
+    <div class="flex-grow-1 bg-body-secondary rounded" style="height: 10px; min-width: 60px;">
+        <div class="@Color rounded" style="height: 10px; width: @Ancho;"></div>
+    </div>
+    <span class="small text-nowrap text-end" style="min-width: 3.5rem;">@Porcentaje.ToString("0.0", Peru) %</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public double Valor { get; set; }
+    [Parameter, EditorRequired] public double Total { get; set; }
+    [Parameter] public string Color { get; set; } = "bg-primary";
+
+    private static readonly System.Globalization.CultureInfo Peru = System.Globalization.CultureInfo.GetCultureInfo("es-PE");
+
+    private double Porcentaje => Reportes.Participacion(Valor, Total);
+    private string Ancho => Math.Clamp(Porcentaje, 0, 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
+}

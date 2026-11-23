@@ -49,6 +49,8 @@ En MySQL 8, quitar antes `ONLY_FULL_GROUP_BY` del `sql_mode` (ver el `README.md`
 | `09_migracion_indices_caja_cobranza.sql` | Índices de caja, cobranza y reportes (H10, Adriano). Solo agrega índices; se puede correr más de una vez |
 | `10_actualizar_base_adriano_h10.sql` | Solo lo nuevo de Adriano para la base compartida, sin recargar todo: los 7 procedimientos de búsqueda de caja y cobranza (H10) y sus índices (lo mismo que la 09). Re-ejecutable; al final lista los 7 procedimientos |
 | `11_autorizacion_con_datos_de_operacion.sql` | RF014 (Sebastián): la solicitud de autorización guarda la operación que se pide (referencia, detalle y huella) y 2 procedimientos nuevos. Re-ejecutable |
+| `12_auditoria_cxc_comprobante_caja.sql` a `15_reversion_nota_credito_trazable.sql` | Ver el encabezado de cada archivo (monto acreditado de la cuenta, foto del comprobante, anulado derivado, costo histórico, reversión de notas de crédito) |
+| `16_trazabilidad_anulaciones_y_notas_credito.sql` | Observaciones del JP (Adriano): tabla `registro_anulacion` (quién, cuándo y por qué se anuló un cobro, una nota de crédito o una cuenta por cobrar), historial de la cuenta, notas de crédito de la cuenta, anulaciones y notas de crédito en los reportes. Trae también los 2 procedimientos para anular una nota de crédito que solo estaban en la 15. Re-ejecutable; al final lista los 7 procedimientos |
 
 Nota H09: `04_SP_sebastian.sql` termina con un bloque que agrega, si todavía no están, `UNIQUE(serie, numero)` en comprobantes, `UNIQUE(numero)` en órdenes de compra de clientes y el correlativo `OCC`. No hace falta una migración aparte: basta con recargar los procedimientos como siempre.
 

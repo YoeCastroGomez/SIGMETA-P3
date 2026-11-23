@@ -7,8 +7,11 @@
 
 @* RF009 · Detalle de una cuenta por cobrar con sus cobros. Datos reales del Java:
    - GET    /api/cuentas-por-cobrar/{id}   la cuenta con sus cobros
-   - DELETE /api/cobros/{id}               anular un cobro (CobroBO.eliminar): el saldo vuelve a la cuenta y en la caja
-                                           queda un egreso que compensa el ingreso; no se puede si la caja ya cerró.
+   - DELETE /api/cobros/{id}?motivo=...    anular un cobro con su motivo (CobroBO.anular): el saldo vuelve a la cuenta y en
+                                           la caja queda un egreso que compensa el ingreso; no se puede si la caja ya cerró.
+   - GET    /api/cuentas-por-cobrar/{id}/notas-credito   RF013: seguimiento de las notas de crédito de la venta
+   - GET    /api/cuentas-por-cobrar/{id}/historial       RF009 + RNF001: todo lo que le pasó a la cuenta, con las
+                                           anulaciones (quién, cuándo y por qué)
    Un cobro no se borra: queda marcado como anulado (baja lógica). Modificar corrige la fecha y la referencia. *@
 <Encabezado Rf="RF009" Titulo="Cuenta por cobrar" Subtitulo="@(cuenta is null ? "" : $"{cuenta.Venta} · {cuenta.Cliente}")">
     <a class="btn btn-outline-secondary" href="/cobranzas">Volver a la lista</a>
@@ -21,6 +24,14 @@
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 <AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
+
+@* RF009 + RNF001: anular un cobro pide el motivo; queda en el historial de abajo y en el reporte de caja *@
+<ModalMotivo Visible="@(porAnular is not null)" Titulo="@($"Anular el cobro de S/ {porAnular?.Monto:N2}")" TextoConfirmar="Anular cobro"
+             Ocupado="@anulando" Ejemplo="Ejemplo: se registró en la cuenta equivocada."
+             AlConfirmar="ConfirmarAnular" AlCancelar="() => porAnular = null">
+    <p class="mb-0">El monto vuelve al saldo de la cuenta y en la caja queda un egreso que compensa el cobro.
+        La anulación queda en el historial de la cuenta con su motivo, usuario y fecha.</p>
+</ModalMotivo>
 
 @if (cuenta is null)
 {
@@ -76,6 +87,70 @@ else
                 <div class="small text-muted">Saldo pendiente</div>
                 <div class="fw-semibold">S/ @cuenta.SaldoPendiente.ToString("N2")</div>
             </div>
+        </div>
+    </div>
+
+    @if (cuenta.Estado == "ANULADA")
+    {
+        var anulacion = historial?.LastOrDefault(e => e.Evento == "CUENTA_ANULADA");
+        <div class="alert alert-danger">
+            <strong>Cuenta anulada</strong> porque se anuló su venta@(anulacion?.Fecha is null ? "" : $" el {anulacion.Fecha:dd/MM/yyyy HH:mm}")@(string.IsNullOrEmpty(anulacion?.Usuario) ? "" : $" por {anulacion.Usuario}").
+            @if (!string.IsNullOrEmpty(anulacion?.Detalle))
+            {
+                <div class="small">@anulacion.Detalle</div>
+            }
+            <div class="small">El saldo queda en S/ 0.00. Se ve en el historial de abajo y en Reportes › Caja › Anulaciones del periodo.</div>
+        </div>
+    }
+
+    @* RF013: seguimiento de las notas de crédito de la venta (las vigentes rebajan la deuda; las anuladas la devuelven) *@
+    <div class="card mb-3">
+        <div class="card-body pb-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h2 class="h6 fw-semibold mb-3">Notas de crédito de esta venta</h2>
+            <a class="btn btn-sm btn-outline-secondary mb-3" href="/notas-credito">Ir a Notas de crédito</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nota</th>
+                        <th>Corrige</th>
+                        <th>Motivo</th>
+                        <th>Autorizó</th>
+                        <th class="text-end">Total</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (notas is null || notas.Count == 0)
+                    {
+                        <tr><td colspan="6" class="text-center text-muted py-4">La venta no tiene notas de crédito.</td></tr>
+                    }
+                    @foreach (var n in notas ?? new())
+                    {
+                        <tr class="@(n.Anulada ? "text-muted" : "")">
+                            <td>
+                                <span class="fw-semibold">@n.Nota</span>
+                                <div class="small text-muted">Emitida el @TextosCaja.Fecha(n.FechaEmision)</div>
+                            </td>
+                            <td>@(n.Comprobante ?? "—")</td>
+                            <td>@(n.Motivo ?? "—")</td>
+                            <td>@(n.Autorizo ?? "—")</td>
+                            <td class="text-end text-nowrap">− S/ @n.Total.ToString("N2")</td>
+                            <td>
+                                <Estado Texto="@(n.Anulada ? "Anulada" : "Vigente")" />
+                                @if (n.Anulada)
+                                {
+                                    <div class="small text-muted">
+                                        @TextosCaja.FechaHora(n.FechaAnulacion)@(string.IsNullOrEmpty(n.UsuarioAnulacion) ? "" : $" · {n.UsuarioAnulacion}")
+                                    </div>
+                                    <div class="small text-muted">Motivo: @(n.MotivoAnulacion ?? "no registrado")</div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -137,6 +212,51 @@ else
     <div class="alert alert-secondary">
         Modificar un cobro solo corrige su fecha y su referencia. Para cambiar el monto o el medio de pago se anula y se registra uno nuevo.
     </div>
+
+    @* RF009 + RNF001: historial de la cuenta. Cada fila dice qué pasó, quién lo hizo y cómo quedó el saldo *@
+    <div class="card mb-3">
+        <div class="card-body pb-0">
+            <h2 class="h6 fw-semibold mb-1">Historial de la cuenta</h2>
+            <p class="small text-muted mb-3">Todo lo que movió el saldo, en orden: la venta, las notas de crédito, los cobros y las anulaciones con su motivo.</p>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Movimiento</th>
+                        <th>Documento</th>
+                        <th>Detalle</th>
+                        <th>Usuario</th>
+                        <th class="text-end">Efecto en la deuda</th>
+                        <th class="text-end">Saldo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (historial is null || historial.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">Sin movimientos.</td></tr>
+                    }
+                    @{ decimal saldo = 0; }
+                    @foreach (var e in historial ?? new())
+                    {
+                        saldo = e.Evento == "CUENTA_ANULADA" ? 0 : saldo + (e.EfectoSaldo ?? 0);
+                        <tr>
+                            <td class="text-nowrap">@TextosCaja.FechaHora(e.Fecha)</td>
+                            <td><span class="badge rounded-pill border @TextosHistorial.Clase(e.Evento)">@TextosHistorial.Evento(e.Evento)</span></td>
+                            <td class="text-nowrap">@e.Documento</td>
+                            <td class="small">@e.Detalle</td>
+                            <td class="small">@(e.Usuario ?? "—")</td>
+                            <td class="text-end text-nowrap @(e.EfectoSaldo > 0 && e.Evento != "CUENTA_GENERADA" ? "text-danger" : "")">
+                                @(e.EfectoSaldo is null ? "—" : (e.EfectoSaldo > 0 ? "+ " : "− ") + "S/ " + Math.Abs(e.EfectoSaldo.Value).ToString("N2"))
+                            </td>
+                            <td class="text-end text-nowrap fw-semibold">S/ @saldo.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
 }
 
 @code {
@@ -157,6 +277,8 @@ else
     [CascadingParameter(Name = "Rol")] public string Rol { get; set; } = "";
 
     private CuentaDatos? cuenta;
+    private List<NotaCreditoCuenta>? notas;
+    private List<EventoCuenta>? historial;
     private string? error;
     private string? exito;
 
@@ -180,6 +302,8 @@ else
         try
         {
             cuenta = await Api.Get<CuentaDatos>($"cuentas-por-cobrar/{Id}");
+            notas = await Api.Get<List<NotaCreditoCuenta>>($"cuentas-por-cobrar/{Id}/notas-credito") ?? new();
+            historial = await Api.Get<List<EventoCuenta>>($"cuentas-por-cobrar/{Id}/historial") ?? new();
         }
         catch (ErrorApi e)
         {
@@ -187,19 +311,38 @@ else
         }
     }
 
-    private async Task Anular(CobroDatos c)
+    // RF009 + RNF001: primero se pide el motivo (ModalMotivo); DELETE /api/cobros/{id}?motivo=...
+    private CobroDatos? porAnular;
+    private bool anulando;
+
+    private Task Anular(CobroDatos c)
     {
+        porAnular = c;
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmarAnular(string motivo)
+    {
+        if (porAnular is null) return;
+        var c = porAnular;
         error = null;
         exito = null;
+        anulando = true;
         try
         {
-            await Api.Delete($"cobros/{c.Id}");
-            exito = $"Se anuló el cobro de S/ {c.Monto:N2}. El monto volvió al saldo de la cuenta.";
+            await Api.Delete($"cobros/{c.Id}?motivo={Uri.EscapeDataString(motivo)}");
+            porAnular = null;
+            exito = $"Se anuló el cobro de S/ {c.Monto:N2}. El monto volvió al saldo y la anulación quedó en el historial.";
             await Cargar();
         }
         catch (ErrorApi e)
         {
+            porAnular = null;
             error = e.Message;
+        }
+        finally
+        {
+            anulando = false;
         }
     }
 }

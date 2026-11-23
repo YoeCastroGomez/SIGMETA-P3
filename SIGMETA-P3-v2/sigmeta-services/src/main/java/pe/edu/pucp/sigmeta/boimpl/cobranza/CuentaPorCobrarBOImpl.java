@@ -178,6 +178,22 @@ public class CuentaPorCobrarBOImpl implements CuentaPorCobrarBO {
         });
     }
 
+    private final pe.edu.pucp.sigmeta.dao.ConsultaDAO consultaDAO = new pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl();
+
+    @Override
+    public List<Map<String, Object>> historial(int idCuenta, int idResponsable) throws SQLException {
+        usuarioBO.verificarRol(idResponsable, pe.edu.pucp.sigmeta.model.enums.TipoRol.CAJERO,
+                pe.edu.pucp.sigmeta.model.enums.TipoRol.ADMINISTRADOR);
+        return Transaccion.consultar(() -> consultaDAO.consultar("sp_cuenta_por_cobrar_historial", idCuenta));
+    }
+
+    @Override
+    public List<Map<String, Object>> notasCredito(int idCuenta, int idResponsable) throws SQLException {
+        usuarioBO.verificarRol(idResponsable, pe.edu.pucp.sigmeta.model.enums.TipoRol.CAJERO,
+                pe.edu.pucp.sigmeta.model.enums.TipoRol.ADMINISTRADOR);
+        return Transaccion.consultar(() -> consultaDAO.consultar("sp_cuenta_por_cobrar_notas_credito", idCuenta));
+    }
+
     // RF009: a cada cuenta le pone el comprobante vigente de su venta (para mostrarlo y buscar por el).
     // H10: solo se piden a la base los comprobantes de las ventas de la lista (antes, todos los comprobantes).
     private List<CuentaPorCobrar> completarComprobantes(List<CuentaPorCobrar> cuentas) throws SQLException {

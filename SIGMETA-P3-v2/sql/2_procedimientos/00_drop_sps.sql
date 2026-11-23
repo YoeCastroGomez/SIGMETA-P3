@@ -235,6 +235,8 @@ DROP PROCEDURE IF EXISTS sp_compra_estado_reversion;
 DROP PROCEDURE IF EXISTS sp_movimiento_listar_producto;
 DROP PROCEDURE IF EXISTS sp_movimiento_bloquear;
 DROP PROCEDURE IF EXISTS sp_movimiento_existe_reversion;
+DROP PROCEDURE IF EXISTS sp_movimiento_listar_comprobante;
+DROP PROCEDURE IF EXISTS sp_movimiento_reversion_nota_credito;
 DROP PROCEDURE IF EXISTS sp_movimiento_listar_recepcion;
 DROP PROCEDURE IF EXISTS sp_detalle_compra_descontar;
 DROP PROCEDURE IF EXISTS sp_movimiento_reversion_despacho;
@@ -250,3 +252,9 @@ DROP PROCEDURE IF EXISTS sp_cuenta_por_cobrar_buscar_por_comprobante;
 DROP PROCEDURE IF EXISTS sp_cuenta_por_cobrar_buscar_por_fechas;
 DROP PROCEDURE IF EXISTS sp_cuenta_por_cobrar_resumen;
 DROP PROCEDURE IF EXISTS sp_cuenta_por_cobrar_comprobantes_vigentes;
+-- Adriano: trazabilidad de anulaciones y seguimiento de notas de credito
+DROP PROCEDURE IF EXISTS sp_anulacion_registrar;
+DROP PROCEDURE IF EXISTS sp_cuenta_por_cobrar_historial;
+DROP PROCEDURE IF EXISTS sp_cuenta_por_cobrar_notas_credito;
+DROP PROCEDURE IF EXISTS sp_reporte_anulaciones;
+DROP PROCEDURE IF EXISTS sp_reporte_notas_credito;

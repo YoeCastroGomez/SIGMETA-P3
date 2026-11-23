@@ -78,8 +78,12 @@ class ComprobanteBOTest {
 
         ventas.anular(v.getId(), "El cliente desistió antes del despacho", VENDEDOR);
         assertTrue(ventas.obtener(v.getId()).isAnulado());
-        assertNull(Transaccion.consultar(() -> new CuentaPorCobrarDAOImpl().obtenerPorVenta(v.getId())),
-                "la cuenta por cobrar se retira");
+        // RF009 + RNF002: la cuenta no se borra; queda ANULADA con saldo 0 y la anulacion registrada (RNF001)
+        var cuenta = Transaccion.consultar(() -> new CuentaPorCobrarDAOImpl().obtenerPorVenta(v.getId()));
+        assertEquals(pe.edu.pucp.sigmeta.model.enums.EstadoCuentaPorCobrar.ANULADA, cuenta.getEstado(), "la cuenta por cobrar queda anulada");
+        assertEquals(0.0, cuenta.getSaldoPendiente(), 0.001, "sin saldo pendiente");
+        assertEquals(1, DatosCaja.contar("SELECT COUNT(*) FROM registro_anulacion WHERE tipo_documento='CUENTA_POR_COBRAR' AND id_documento="
+                + cuenta.getId() + " AND motivo='El cliente desistió antes del despacho'"), "la anulacion queda registrada");
         assertEquals(disponibleAntes, disponible(p.getId()), 0.001, "el stock comprometido se libera");
     }
 

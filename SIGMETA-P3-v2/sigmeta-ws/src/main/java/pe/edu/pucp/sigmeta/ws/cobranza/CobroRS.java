@@ -36,7 +36,7 @@ import pe.edu.pucp.sigmeta.ws.caja.Utilidades;
 //   GET    /api/cobros/{id}            un cobro
 //   POST   /api/cobros                 registrar (Cajero con su caja abierta): baja el saldo y entra el ingreso a la caja
 //   PUT    /api/cobros/{id}            modificar fecha y referencia (Cajero o Administrador)
-//   DELETE /api/cobros/{id}            anular (Cajero o Administrador): el saldo vuelve a la cuenta y la caja registra un egreso
+//   DELETE /api/cobros/{id}?motivo=... anular (Cajero o Administrador): el saldo vuelve a la cuenta y la caja registra un egreso
 @Path("cobros")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -135,11 +135,13 @@ public class CobroRS extends VentanillaBase {
 
     @DELETE
     @Path("{id}")
-    public Response anular(@HeaderParam("ticket") String ticket, @PathParam("id") int idCobro) {
+    public Response anular(@HeaderParam("ticket") String ticket, @PathParam("id") int idCobro,
+                           @QueryParam("motivo") String motivo) {
+        // RNF001: el motivo es obligatorio; queda en registro_anulacion con el usuario y la fecha
         return ejecutar(ticket, id -> {
             Cobro cobro = new Cobro();
             cobro.setId(idCobro);
-            cobroBO.eliminar(cobro, id);
+            cobroBO.anular(cobro, motivo, id);
             return null;
         });
     }

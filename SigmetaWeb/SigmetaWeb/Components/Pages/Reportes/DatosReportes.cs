@@ -10,6 +10,8 @@ public class ReporteComercial
     public List<VentaVendedor> PorVendedor { get; set; } = new();
     public List<VentaCliente> PorCliente { get; set; } = new();
     public List<CreditoCliente> Credito { get; set; } = new();
+    // RF013: seguimiento de las notas de crédito del periodo
+    public List<NotaCreditoReporte> NotasCredito { get; set; } = new();
 }
 
 public class TotalesVentas
@@ -117,6 +119,8 @@ public class ReporteCaja
     public List<CierreReporte> Cierres { get; set; } = new();
     public List<MedioPagoReporte> PorMedioPago { get; set; } = new();
     public List<CajeroReporte> PorCajero { get; set; } = new();
+    // RF009 + RF013 + RNF001: cobros, notas de crédito y cuentas anuladas en el periodo
+    public List<AnulacionReporte> Anulaciones { get; set; } = new();
 }
 
 public class CierreReporte
@@ -154,4 +158,42 @@ public class CajeroReporte
     public double Faltantes { get; set; }
     public double Sobrantes { get; set; }
     public double DiferenciaNeta { get; set; }
+}
+
+// RF013 + RF015: nota de crédito emitida en el periodo (reporte comercial, sp_reporte_notas_credito)
+public class NotaCreditoReporte
+{
+    public int Id { get; set; }
+    public string? Nota { get; set; }
+    public string? FechaEmision { get; set; }
+    public string? Comprobante { get; set; }
+    public string? Venta { get; set; }
+    public string? CondicionPago { get; set; }
+    public string? Cliente { get; set; }
+    public string? Motivo { get; set; }
+    public double Total { get; set; }
+    public string Estado { get; set; } = "";
+    public string? Autorizo { get; set; }
+    public int? IdCuentaPorCobrar { get; set; }
+}
+
+// RF009 + RF013 + RF015 + RNF001: anulación del periodo (reporte de caja, sp_reporte_anulaciones)
+public class AnulacionReporte
+{
+    public string? Fecha { get; set; }
+    public string Tipo { get; set; } = "";
+    public string? Documento { get; set; }
+    public string? Venta { get; set; }
+    public string? Cliente { get; set; }
+    public double Monto { get; set; }
+    public string? Motivo { get; set; }
+    public string? Usuario { get; set; }
+
+    public string TipoTexto => Tipo switch
+    {
+        "COBRO" => "Cobro",
+        "NOTA_CREDITO" => "Nota de crédito",
+        "CUENTA_POR_COBRAR" => "Cuenta por cobrar",
+        _ => Tipo
+    };
 }

@@ -71,7 +71,7 @@ final class VentaCobranza {
             venta.setMotivoAnulacion(motivoValidado);
             ventaDAO.remove(venta);
             if (venta.getCondicionPago() == CondicionPago.CREDITO) {
-                cerrarCuentaPorCobrar(idVenta);
+                cerrarCuentaPorCobrar(idVenta, venta.getNumero(), motivoValidado, responsable.getId());
             }
             return null;
         });
@@ -106,7 +106,7 @@ final class VentaCobranza {
     // RF009, RNF002: una venta al credito anulada deja de generar deuda. Con cobros vigentes no se puede anular.
     // Su cuenta NO se borra (antes se borraba si no tenia cobros y, si los tenia anulados, quedaba "PAGADA" sin
     // que nadie pagara): queda ANULADA, con su monto original (lo que fue la venta) y saldo 0. Igual en los dos casos.
-    void cerrarCuentaPorCobrar(int idVenta) throws SQLException {
+    void cerrarCuentaPorCobrar(int idVenta, String numeroVenta, String motivo, int idResponsable) throws SQLException {
         CuentaPorCobrar cxc = cuentaPorCobrarDAO.obtenerPorVenta(idVenta);
         if (cxc == null) {
             return;
@@ -117,5 +117,10 @@ final class VentaCobranza {
         cxc.setSaldoPendiente(0);
         cxc.setEstado(pe.edu.pucp.sigmeta.model.enums.EstadoCuentaPorCobrar.ANULADA);
         cuentaPorCobrarDAO.update(cxc);
+        // RF009 + RNF001: la anulacion de la cuenta queda con su motivo, usuario y fecha (historial y reporte)
+        pe.edu.pucp.sigmeta.boimpl.cobranza.RegistroAnulacion.registrar(
+                pe.edu.pucp.sigmeta.boimpl.cobranza.RegistroAnulacion.CUENTA_POR_COBRAR, cxc.getId(),
+                "Cuenta de " + (numeroVenta == null ? "la venta " + idVenta : numeroVenta), cxc.getId(),
+                cxc.getMontoOriginal(), motivo, idResponsable);
     }
 }

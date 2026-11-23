@@ -9,7 +9,7 @@
    - GET    /api/cobros                       todos (CobroBO.listarTodos)
    - GET    /api/cobros?cliente={id}          por cliente (CobroBO.listarPorCliente)
    - GET    /api/cobros?desde=...&hasta=...   por rango de fechas de cobro (CobroBO.buscarPorRangoFechas)
-   - DELETE /api/cobros/{id}                  anular (CobroBO.eliminar) *@
+   - DELETE /api/cobros/{id}?motivo=...       anular con motivo (CobroBO.anular, RNF001) *@
 <Encabezado Rf="RF009" Titulo="Cobros"
             Subtitulo="Cobros registrados sobre las cuentas por cobrar. Importes en soles.">
     <a class="btn btn-outline-secondary" href="/cobranzas">Cuentas por cobrar</a>
@@ -17,6 +17,16 @@
 
 <AvisoError Mensaje="@error" AlCerrar="() => error = null" />
 <AvisoExito Mensaje="@exito" AlCerrar="() => exito = null" />
+
+@* RF009 + RNF001: anular un cobro pide el motivo; queda con el usuario y la fecha en el historial de la cuenta
+   y en el reporte de caja (Reportes > Caja > Anulaciones) *@
+<ModalMotivo Visible="@(porAnular is not null)" Titulo="@($"Anular el cobro de S/ {porAnular?.Monto:N2}")" TextoConfirmar="Anular cobro"
+             Ocupado="@anulando" Ejemplo="Ejemplo: se registró en la cuenta equivocada."
+             AlConfirmar="ConfirmarAnular" AlCancelar="() => porAnular = null">
+    <p class="mb-0">El monto vuelve al saldo de la cuenta y en la caja queda un egreso que compensa el cobro.
+        La anulación queda registrada con su motivo, usuario y fecha.</p>
+</ModalMotivo>
+
 
 <div class="card card-body mb-3">
     <form class="row g-3 align-items-end sigmeta-filtros" @onsubmit="Buscar" @onsubmit:preventDefault novalidate>
@@ -201,19 +211,38 @@ else
         }
     }
 
-    private async Task Anular(CobroDatos c)
+    // RF009 + RNF001: primero se pide el motivo (ModalMotivo); DELETE /api/cobros/{id}?motivo=...
+    private CobroDatos? porAnular;
+    private bool anulando;
+
+    private Task Anular(CobroDatos c)
     {
+        porAnular = c;
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmarAnular(string motivo)
+    {
+        if (porAnular is null) return;
+        var c = porAnular;
         error = null;
         exito = null;
+        anulando = true;
         try
         {
-            await Api.Delete($"cobros/{c.Id}");
+            await Api.Delete($"cobros/{c.Id}?motivo={Uri.EscapeDataString(motivo)}");
+            porAnular = null;
             await Buscar();
-            exito = $"Se anuló el cobro de S/ {c.Monto:N2} de {c.Cliente}.";
+            exito = $"Se anuló el cobro de S/ {c.Monto:N2} de {c.Cliente}. Motivo: {motivo}";
         }
         catch (ErrorApi e)
         {
+            porAnular = null;
             error = e.Message;
+        }
+        finally
+        {
+            anulando = false;
         }
     }
 }

@@ -158,6 +158,24 @@ class CobroBOTest {
     }
 
     @Test
+    @DisplayName("RNF001: anular con motivo deja quien, cuando y por que (registro_anulacion e historial de la cuenta)")
+    void anularConMotivoQuedaRegistrado() throws SQLException {
+        Cobro cobro = cobroBO.registrarCobro(nuevoCobro(7.25, MedioPago.EFECTIVO), cajero);
+        assertThrows(IllegalArgumentException.class, () -> cobroBO.anular(cobro, "  ", cajero));
+        cobroBO.anular(cobro, "Se registro en la cuenta equivocada", cajero);
+
+        assertEquals(1, DatosCaja.contar("SELECT COUNT(*) FROM registro_anulacion WHERE tipo_documento='COBRO' AND id_documento="
+                + cobro.getId() + " AND motivo='Se registro en la cuenta equivocada' AND id_usuario=" + cajero
+                + " AND id_cuenta_por_cobrar=" + idCuenta));
+        List<java.util.Map<String, Object>> historial = cuentaBO.historial(idCuenta, cajero);
+        assertTrue(historial.stream().anyMatch(e -> "COBRO_ANULADO".equals(e.get("evento"))
+                && String.valueOf(e.get("detalle")).contains("Se registro en la cuenta equivocada")));
+        assertEquals("CUENTA_GENERADA", historial.get(0).get("evento"));
+        assertEquals(saldoInicial, cuentaBO.obtenerPorId(idCuenta).getSaldoPendiente(), 0.001);
+        assertThrows(IllegalStateException.class, () -> cuentaBO.historial(idCuenta, vendedor));
+    }
+
+    @Test
     @DisplayName("Con la caja ya cerrada el cobro no se anula (el Administrador debe reabrirla)")
     void noSeAnulaConCajaCerrada() throws SQLException {
         Cobro cobro = cobroBO.registrarCobro(nuevoCobro(5.00, MedioPago.EFECTIVO), cajero);

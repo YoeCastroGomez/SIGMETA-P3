@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SIGMETA · RF015 + RF009 + RF013 · Reporte de caja: anulaciones del periodo (subreporte). Datos: sp_reporte_anulaciones. -->
+<jasperReport name="sub_anulaciones" language="java" pageWidth="535" pageHeight="842" whenNoDataType="NoDataSection" columnWidth="535" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+	<style name="base" default="true" fontName="Liberation Sans" fontSize="8.0" forecolor="#000000"/>
+	<style name="seccion" fontName="Liberation Sans" fontSize="9.0" bold="true" forecolor="#000000" vTextAlign="Bottom">
+		<box bottomPadding="2"><bottomPen lineWidth="0.75" lineColor="#000000"/></box>
+	</style>
+	<style name="nota" fontName="Liberation Sans" fontSize="7.0" forecolor="#4D4D4D"/>
+	<style name="th" mode="Opaque" backcolor="#E6E6E6" forecolor="#000000" fontName="Liberation Sans" fontSize="7.5" bold="true" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><pen lineWidth="0.5" lineColor="#808080"/></box>
+	</style>
+	<style name="td" fontName="Liberation Sans" fontSize="8.0" forecolor="#000000" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><pen lineWidth="0.5" lineColor="#A6A6A6"/></box>
+	</style>
+	<style name="vacio" fontName="Liberation Sans" fontSize="8.0" forecolor="#4D4D4D" hTextAlign="Center" vTextAlign="Middle">
+		<box><pen lineWidth="0.5" lineColor="#A6A6A6"/></box>
+	</style>
+	<style name="tot" mode="Opaque" backcolor="#F2F2F2" fontName="Liberation Sans" fontSize="8.0" bold="true" vTextAlign="Middle">
+		<box leftPadding="4" rightPadding="4"><pen lineWidth="0.5" lineColor="#808080"/></box>
+	</style>
+	<field name="fechaTexto" class="java.lang.String"/>
+	<field name="tipoTexto" class="java.lang.String"/>
+	<field name="documento" class="java.lang.String"/>
+	<field name="cliente" class="java.lang.String"/>
+	<field name="monto" class="java.lang.Number"/>
+	<field name="motivo" class="java.lang.String"/>
+	<field name="usuario" class="java.lang.String"/>
+	<group name="tabla" minHeightToStartNewPage="90" reprintHeaderOnEachPage="true">
+		<expression><![CDATA[1]]></expression>
+		<groupHeader>
+			<band height="48">
+				<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[4. ANULACIONES DEL PERIODO]]></text></element>
+				<element kind="staticText" x="0" y="18" width="535" height="11" style="nota"><text><![CDATA[Cobros, notas de crédito y cuentas por cobrar anuladas: quién, cuándo y por qué (RNF001).]]></text></element>
+				<element kind="staticText" x="0" y="32" width="62" height="16" style="th"><text><![CDATA[Fecha]]></text></element>
+				<element kind="staticText" x="62" y="32" width="72" height="16" style="th"><text><![CDATA[Tipo]]></text></element>
+				<element kind="staticText" x="134" y="32" width="70" height="16" style="th"><text><![CDATA[Documento]]></text></element>
+				<element kind="staticText" x="204" y="32" width="95" height="16" style="th"><text><![CDATA[Cliente]]></text></element>
+				<element kind="staticText" x="299" y="32" width="52" height="16" style="th" hTextAlign="Right"><text><![CDATA[Monto (S/)]]></text></element>
+				<element kind="staticText" x="351" y="32" width="112" height="16" style="th"><text><![CDATA[Motivo]]></text></element>
+				<element kind="staticText" x="463" y="32" width="72" height="16" style="th"><text><![CDATA[Usuario]]></text></element>
+			</band>
+		</groupHeader>
+	</group>
+	<detail>
+		<band height="15">
+			<element kind="textField" stretchType="ContainerHeight" x="0" y="0" width="62" height="15" style="td" textAdjust="StretchHeight" blankWhenNull="true"><expression><![CDATA[$F{fechaTexto}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="62" y="0" width="72" height="15" style="td" textAdjust="StretchHeight" blankWhenNull="true"><expression><![CDATA[$F{tipoTexto}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="134" y="0" width="70" height="15" style="td" textAdjust="StretchHeight" blankWhenNull="true"><expression><![CDATA[$F{documento}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="204" y="0" width="95" height="15" style="td" textAdjust="StretchHeight" blankWhenNull="true"><expression><![CDATA[$F{cliente}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="299" y="0" width="52" height="15" style="td" hTextAlign="Right" pattern="#,##0.00" textAdjust="StretchHeight" blankWhenNull="true"><expression><![CDATA[$F{monto}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="351" y="0" width="112" height="15" style="td" textAdjust="StretchHeight" blankWhenNull="true"><expression><![CDATA[$F{motivo}]]></expression></element>
+			<element kind="textField" stretchType="ContainerHeight" x="463" y="0" width="72" height="15" style="td" textAdjust="StretchHeight" blankWhenNull="true"><expression><![CDATA[$F{usuario}]]></expression></element>
+		</band>
+	</detail>
+	<noData height="42">
+		<element kind="staticText" x="0" y="0" width="535" height="16" style="seccion"><text><![CDATA[4. ANULACIONES DEL PERIODO]]></text></element>
+		<element kind="staticText" x="0" y="22" width="535" height="18" style="vacio"><text><![CDATA[No hubo anulaciones en el periodo.]]></text></element>
+	</noData>
+</jasperReport>

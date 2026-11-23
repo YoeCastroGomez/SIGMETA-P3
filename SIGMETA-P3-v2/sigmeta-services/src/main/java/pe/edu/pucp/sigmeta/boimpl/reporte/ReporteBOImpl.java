@@ -34,6 +34,8 @@ public class ReporteBOImpl implements ReporteBO {
             reporte.put("porVendedor", consultaDAO.consultar("sp_reporte_ventas_por_vendedor", desde, hasta));
             reporte.put("porCliente", consultaDAO.consultar("sp_reporte_ventas_por_cliente", desde, hasta));
             reporte.put("credito", consultaDAO.consultar("sp_reporte_credito_clientes"));
+            // RF013: seguimiento de las notas de credito emitidas en el periodo
+            reporte.put("notasCredito", consultaDAO.consultar("sp_reporte_notas_credito", desde, hasta));
             return reporte;
         });
     }
@@ -61,6 +63,8 @@ public class ReporteBOImpl implements ReporteBO {
             reporte.put("cierres", consultaDAO.consultar("sp_reporte_caja_cierres", desde, hasta));
             reporte.put("porMedioPago", consultaDAO.consultar("sp_reporte_caja_por_medio_pago", desde, hasta));
             reporte.put("porCajero", consultaDAO.consultar("sp_reporte_caja_por_cajero", desde, hasta));
+            // RF009 + RF013 + RNF001: cobros, notas de credito y cuentas anuladas en el periodo (quien, cuando, por que)
+            reporte.put("anulaciones", consultaDAO.consultar("sp_reporte_anulaciones", desde, hasta));
             return reporte;
         });
     }

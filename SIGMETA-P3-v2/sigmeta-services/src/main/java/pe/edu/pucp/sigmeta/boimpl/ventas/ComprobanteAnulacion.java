@@ -134,6 +134,18 @@ final class ComprobanteAnulacion {
 
                 // Revertir el efecto en la cuenta por cobrar: la deuda vuelve a su monto anterior (RF013)
                 Venta venta = ventaDAO.load(comprobante.getVenta().getId());
+                // RF013 + RNF001: queda constancia de quien anulo la nota, cuando y por que (historial de la
+                // cuenta por cobrar y reporte de caja)
+                Integer idCuenta = null;
+                if (venta != null && venta.getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CREDITO) {
+                    pe.edu.pucp.sigmeta.model.cobranza.CuentaPorCobrar cxc =
+                            new pe.edu.pucp.sigmeta.daoimpl.cobranza.CuentaPorCobrarDAOImpl().obtenerPorVenta(venta.getId());
+                    idCuenta = cxc == null ? null : cxc.getId();
+                }
+                pe.edu.pucp.sigmeta.boimpl.cobranza.RegistroAnulacion.registrar(
+                        pe.edu.pucp.sigmeta.boimpl.cobranza.RegistroAnulacion.NOTA_CREDITO, idComprobante,
+                        comprobante.getSerie() + "-" + comprobante.getNumero(), idCuenta, comprobante.getTotal(),
+                        motivo, responsable.getId());
                 if (venta != null && venta.getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CREDITO) {
                     // la deuda vuelve solo por la parte que la nota rebajo; lo que se devolvio en efectivo
                     // se revierte abajo, con su ingreso compensatorio en la caja

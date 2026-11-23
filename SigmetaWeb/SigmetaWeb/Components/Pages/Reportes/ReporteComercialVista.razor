@@ -1,6 +1,8 @@
 @* RF015 · Reporte comercial: ventas por día, por vendedor, mejores clientes y crédito. Parte de la página Reportes (/reportes): solo muestra los datos que recibe. *@
 @{
     var t = Datos.Totales;
+    // RF015: base de los gráficos = total vendido del periodo (contado + crédito)
+    var totalVendido = t.MontoVendido > 0 ? t.MontoVendido : Datos.PorDia.Sum(d => d.Total);
 }
     <div class="row g-3 mb-3">
         <div class="col-sm-6 col-lg-3">
@@ -33,6 +35,32 @@
         </div>
     </div>
 
+
+    @* RF015: composición del total vendido (barra apilada que suma 100 %) *@
+    @if (totalVendido > 0)
+    {
+        var pContado = Reportes.Participacion(t.MontoContado, totalVendido);
+        var pCredito = Reportes.Participacion(t.MontoCredito, totalVendido);
+        <div class="card card-body mb-3">
+            <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+                <h2 class="h6 fw-semibold mb-0">Composición del total vendido</h2>
+                <span class="small text-muted">Total vendido: @Formato.Soles(totalVendido) = 100 %</span>
+            </div>
+            <div class="progress-stacked" style="height: 22px;" role="img" aria-label="@($"Contado {pContado:0.0} %, crédito {pCredito:0.0} %")">
+                <div class="progress" style="width: @(pContado.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%">
+                    <div class="progress-bar bg-primary">@(pContado >= 8 ? $"Contado {pContado:0.0} %" : "")</div>
+                </div>
+                <div class="progress" style="width: @(pCredito.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%">
+                    <div class="progress-bar bg-info">@(pCredito >= 8 ? $"Crédito {pCredito:0.0} %" : "")</div>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-3 small text-muted mt-2">
+                <span><span class="d-inline-block rounded bg-primary me-1" style="width:10px;height:10px;"></span>Contado @Formato.Soles(t.MontoContado) (@pContado.ToString("0.0") %)</span>
+                <span><span class="d-inline-block rounded bg-info me-1" style="width:10px;height:10px;"></span>Crédito @Formato.Soles(t.MontoCredito) (@pCredito.ToString("0.0") %)</span>
+                <span>Notas de crédito: @Formato.Soles(t.MontoNotasCredito) (@Reportes.Participacion(t.MontoNotasCredito, totalVendido).ToString("0.0") % del total vendido)</span>
+            </div>
+        </div>
+    }
     <div class="card mb-3">
         <div class="card-body pb-0"><h2 class="h6 fw-semibold mb-3">Ventas por día</h2></div>
         @if (Datos.PorDia.Count == 0)
@@ -41,11 +69,11 @@
         }
         else
         {
-            var maximo = Datos.PorDia.Max(d => d.Total);
+            var totalDias = Datos.PorDia.Sum(d => d.Total);
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
                     <thead class="table-light">
-                        <tr><th>Fecha</th><th class="text-end">Ventas</th><th class="text-end">Subtotal</th><th class="text-end">IGV</th><th class="text-end">Total</th><th style="width: 35%;"></th></tr>
+                        <tr><th>Fecha</th><th class="text-end">Ventas</th><th class="text-end">Subtotal</th><th class="text-end">IGV</th><th class="text-end">Total</th><th style="width: 30%;">% del total del periodo</th></tr>
                     </thead>
                     <tbody>
                         @foreach (var d in Datos.PorDia)
@@ -56,7 +84,7 @@
                                 <td class="text-end">@d.SubTotal.ToString("N2")</td>
                                 <td class="text-end">@d.Igv.ToString("N2")</td>
                                 <td class="text-end fw-semibold">@d.Total.ToString("N2")</td>
-                                <td><div class="bg-primary rounded" style="height: 10px; width: @Reportes.Ancho(d.Total, maximo);" role="img" aria-label="@($"{d.Total:N2} soles")"></div></td>
+                                <td><BarraParticipacion Valor="d.Total" Total="totalDias" /></td>
                             </tr>
                         }
                     </tbody>
@@ -67,7 +95,7 @@
                             <th class="text-end">@Datos.PorDia.Sum(d => d.SubTotal).ToString("N2")</th>
                             <th class="text-end">@Datos.PorDia.Sum(d => d.Igv).ToString("N2")</th>
                             <th class="text-end">@Datos.PorDia.Sum(d => d.Total).ToString("N2")</th>
-                            <th></th>
+                            <th>100 %</th>
                         </tr>
                     </tfoot>
                 </table>
@@ -77,19 +105,19 @@
 
     <div class="row g-3 mb-3">
         <div class="col-lg-6">
-            <div class="card h-100">
+            <div class="card">
                 <div class="card-body pb-0"><h2 class="h6 fw-semibold mb-3">Ventas por vendedor</h2></div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead class="table-light"><tr><th>Vendedor</th><th class="text-end">Ventas</th><th class="text-end">Total</th></tr></thead>
+                        <thead class="table-light"><tr><th>Vendedor</th><th class="text-end">Ventas</th><th class="text-end">Total</th><th style="width: 30%;">% del total</th></tr></thead>
                         <tbody>
                             @if (Datos.PorVendedor.Count == 0)
                             {
-                                <tr><td colspan="3" class="text-center text-muted py-3">Sin ventas en el periodo.</td></tr>
+                                <tr><td colspan="4" class="text-center text-muted py-3">Sin ventas en el periodo.</td></tr>
                             }
                             @foreach (var v in Datos.PorVendedor)
                             {
-                                <tr><td>@v.Vendedor <span class="small text-muted">(@v.Usuario)</span></td><td class="text-end">@v.Ventas.ToString("N0")</td><td class="text-end">@v.Total.ToString("N2")</td></tr>
+                                <tr><td>@v.Vendedor <span class="small text-muted">(@v.Usuario)</span></td><td class="text-end">@v.Ventas.ToString("N0")</td><td class="text-end">@v.Total.ToString("N2")</td><td><BarraParticipacion Valor="v.Total" Total="Datos.PorVendedor.Sum(x => x.Total)" /></td></tr>
                             }
                         </tbody>
                     </table>
@@ -97,19 +125,19 @@
             </div>
         </div>
         <div class="col-lg-6">
-            <div class="card h-100">
+            <div class="card">
                 <div class="card-body pb-0"><h2 class="h6 fw-semibold mb-3">Clientes que más compraron (10 primeros)</h2></div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead class="table-light"><tr><th>Cliente</th><th class="text-end">Ventas</th><th class="text-end">Total</th></tr></thead>
+                        <thead class="table-light"><tr><th>Cliente</th><th class="text-end">Ventas</th><th class="text-end">Total</th><th style="width: 30%;">% del total vendido</th></tr></thead>
                         <tbody>
                             @if (Datos.PorCliente.Count == 0)
                             {
-                                <tr><td colspan="3" class="text-center text-muted py-3">Sin ventas en el periodo.</td></tr>
+                                <tr><td colspan="4" class="text-center text-muted py-3">Sin ventas en el periodo.</td></tr>
                             }
                             @foreach (var c in Datos.PorCliente)
                             {
-                                <tr><td>@c.Cliente <div class="small text-muted">@c.NumeroDocumento</div></td><td class="text-end">@c.Ventas.ToString("N0")</td><td class="text-end">@c.Total.ToString("N2")</td></tr>
+                                <tr><td>@c.Cliente <div class="small text-muted">@c.NumeroDocumento</div></td><td class="text-end">@c.Ventas.ToString("N0")</td><td class="text-end">@c.Total.ToString("N2")</td><td><BarraParticipacion Valor="c.Total" Total="totalVendido" Color="bg-info" /></td></tr>
                             }
                         </tbody>
                     </table>
@@ -150,10 +178,60 @@
         </div>
     </div>
 
-    @Barra("Reporte comercial", "Ventas y crédito de clientes")
+
+    @* RF013 + RF015: seguimiento de las notas de crédito del periodo *@
+    <div class="card mb-3">
+        <div class="card-body pb-0">
+            <h2 class="h6 fw-semibold mb-1">Notas de crédito emitidas en el periodo</h2>
+            <p class="small text-muted mb-3">Cada nota con el comprobante que corrige, su motivo, quién la autorizó y su estado. Las de ventas al crédito enlazan a su cuenta por cobrar.</p>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Nota</th><th>Corrige</th><th>Cliente</th><th>Motivo</th><th>Autorizó</th><th class="text-end">Total</th><th>Estado</th></tr>
+                </thead>
+                <tbody>
+                    @if (Datos.NotasCredito.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-3">No se emitieron notas de crédito en el periodo.</td></tr>
+                    }
+                    @foreach (var n in Datos.NotasCredito)
+                    {
+                        <tr>
+                            <td class="text-nowrap"><span class="fw-semibold">@n.Nota</span><div class="small text-muted">@Formato.Fecha(n.FechaEmision)</div></td>
+                            <td class="text-nowrap">@n.Comprobante<div class="small text-muted">@n.Venta · @Formato.Legible(n.CondicionPago)</div></td>
+                            <td>@n.Cliente</td>
+                            <td class="small">@n.Motivo</td>
+                            <td class="small">@n.Autorizo</td>
+                            <td class="text-end text-nowrap">@n.Total.ToString("N2")</td>
+                            <td>
+                                <Estado Texto="@(n.Estado == "ANULADO" ? "Anulada" : "Vigente")" />
+                                @if (n.IdCuentaPorCobrar is int idCuenta)
+                                {
+                                    <div class="small"><a href="@($"/cobranzas/{idCuenta}")">Ver cuenta</a></div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                @if (Datos.NotasCredito.Count > 0)
+                {
+                    <tfoot class="table-light">
+                        <tr>
+                            <th colspan="5">Total vigente (@Datos.NotasCredito.Count(n => n.Estado != "ANULADO") de @Datos.NotasCredito.Count notas)</th>
+                            <th class="text-end">@Datos.NotasCredito.Where(n => n.Estado != "ANULADO").Sum(n => n.Total).ToString("N2")</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+    </div>
+
+    @Barra("Reporte comercial", "Ventas, crédito de clientes y notas de crédito")
 
 @code {
     [Parameter, EditorRequired] public ReporteComercial Datos { get; set; } = default!;
-    // barra con el título y los botones de descarga (PDF y CSV) que arma la página
+    // barra con el título y los botones de descarga (PDF, Excel y XML) que arma la página
     [Parameter, EditorRequired] public Func<string, string, RenderFragment> Barra { get; set; } = default!;
 }

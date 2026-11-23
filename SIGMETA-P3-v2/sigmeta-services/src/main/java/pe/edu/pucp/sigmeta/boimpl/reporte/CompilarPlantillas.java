@@ -32,6 +32,10 @@ public final class CompilarPlantillas {
         if (!destino.isDirectory() && !destino.mkdirs()) {
             throw new IllegalStateException("No se pudo crear " + destino.getAbsolutePath());
         }
+        // las clases de las expresiones se generan para Java 17 aunque el build use un JDK mas nuevo
+        // (si no, GlassFish con Java 17 o 21 no carga los .jasper y el PDF no se descarga)
+        net.sf.jasperreports.engine.DefaultJasperReportsContext.getInstance()
+                .setProperty(CompiladorPlantillasJava.PROPIEDAD, CompiladorPlantillasJava.class.getName());
         for (File jrxml : plantillas) {
             String jasper = new File(destino, jrxml.getName().replace(".jrxml", ".jasper")).getAbsolutePath();
             JasperCompileManager.compileReportToFile(jrxml.getAbsolutePath(), jasper);

@@ -122,8 +122,16 @@ public class CobroBOImpl implements CobroBO {
     // siempre que esa caja siga abierta (una caja cerrada la reabre el Administrador)
     @Override
     public void eliminar(Cobro cobro, int idResponsable) throws SQLException {
+        anular(cobro, "Anulado sin motivo indicado", idResponsable);
+    }
+
+    // RF009 + RNF001: la anulacion queda registrada con su motivo, usuario y fecha (registro_anulacion), y se ve
+    // en el historial de la cuenta y en el reporte de caja
+    @Override
+    public void anular(Cobro cobro, String motivo, int idResponsable) throws SQLException {
         Usuario responsable = usuarioBO.verificarRol(idResponsable, TipoRol.CAJERO, TipoRol.ADMINISTRADOR);
         Validador.obligatorio(cobro, "cobro");
+        String motivoValidado = Validador.textoObligatorio(motivo, "motivo de anulación", 200);
         Transaccion.ejecutar(() -> {
             Cobro actual = obtenerExistente(cobro.getId());
             if (actual.isAnulado()) {
@@ -157,6 +165,8 @@ public class CobroBOImpl implements CobroBO {
 
             // RNF002: baja logica, el cobro queda marcado como anulado
             cobroDAO.remove(actual);
+            RegistroAnulacion.registrar(RegistroAnulacion.COBRO, actual.getId(), "Cobro N.º " + actual.getId(),
+                    cxc.getId(), actual.getMonto(), motivoValidado, responsable.getId());
             return null;
         });
     }

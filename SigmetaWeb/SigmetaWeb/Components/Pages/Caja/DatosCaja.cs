@@ -165,3 +165,58 @@ public static class TextosCaja
     public static string Fecha(DateOnly? f) => f?.ToString("yyyy-MM-dd") ?? "—";
     public static string FechaHora(DateTime? f) => f?.ToString("yyyy-MM-dd HH:mm") ?? "—";
 }
+
+// RF009 + RF013 + RNF001: un evento del historial de la cuenta (GET /api/cuentas-por-cobrar/{id}/historial).
+// Evento: CUENTA_GENERADA, NOTA_CREDITO, COBRO, COBRO_ANULADO, NOTA_CREDITO_ANULADA o CUENTA_ANULADA.
+// EfectoSaldo: cuánto subió (+) o bajó (−) la deuda; null si no la cambió.
+public class EventoCuenta
+{
+    public DateTime? Fecha { get; set; }
+    public string Evento { get; set; } = "";
+    public string? Documento { get; set; }
+    public string? Detalle { get; set; }
+    public decimal? EfectoSaldo { get; set; }
+    public string? Usuario { get; set; }
+}
+
+// RF013: nota de crédito de la venta de la cuenta (GET /api/cuentas-por-cobrar/{id}/notas-credito)
+public class NotaCreditoCuenta
+{
+    public int Id { get; set; }
+    public string Nota { get; set; } = "";
+    public DateOnly? FechaEmision { get; set; }
+    public DateTime? FechaRegistro { get; set; }
+    public string? Comprobante { get; set; }
+    public string? Motivo { get; set; }
+    public decimal SubTotal { get; set; }
+    public decimal Igv { get; set; }
+    public decimal Total { get; set; }
+    public string Estado { get; set; } = "";
+    public string? Autorizo { get; set; }
+    public DateTime? FechaAnulacion { get; set; }
+    public string? MotivoAnulacion { get; set; }
+    public string? UsuarioAnulacion { get; set; }
+    public bool Anulada => Estado == "ANULADO";
+}
+
+public static class TextosHistorial
+{
+    public static string Evento(string evento) => evento switch
+    {
+        "CUENTA_GENERADA" => "Cuenta generada",
+        "NOTA_CREDITO" => "Nota de crédito",
+        "COBRO" => "Cobro",
+        "COBRO_ANULADO" => "Cobro anulado",
+        "NOTA_CREDITO_ANULADA" => "Nota de crédito anulada",
+        "CUENTA_ANULADA" => "Cuenta anulada",
+        _ => evento
+    };
+
+    // anulaciones en rojo, lo que baja la deuda en verde, el resto en gris (mismo estándar que <Estado>)
+    public static string Clase(string evento) => evento switch
+    {
+        "COBRO_ANULADO" or "NOTA_CREDITO_ANULADA" or "CUENTA_ANULADA" => "bg-danger-subtle text-danger-emphasis border-danger-subtle",
+        "COBRO" or "NOTA_CREDITO" => "bg-success-subtle text-success-emphasis border-success-subtle",
+        _ => "bg-secondary-subtle text-secondary-emphasis border-secondary-subtle"
+    };
+}

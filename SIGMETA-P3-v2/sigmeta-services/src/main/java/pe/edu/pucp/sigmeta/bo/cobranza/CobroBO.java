@@ -17,6 +17,9 @@ public interface CobroBO {
     // anula el cobro: devuelve el saldo a la cuenta y retira el ingreso de la caja (si sigue abierta)
     void eliminar(Cobro cobro, int idResponsable) throws SQLException;
 
+    // RF009 + RNF001: anular un cobro dejando el motivo, el usuario y la fecha (registro_anulacion)
+    void anular(Cobro cobro, String motivo, int idResponsable) throws SQLException;
+
     Cobro obtenerPorId(int id) throws SQLException;
 
     List<Cobro> listarTodos() throws SQLException;
