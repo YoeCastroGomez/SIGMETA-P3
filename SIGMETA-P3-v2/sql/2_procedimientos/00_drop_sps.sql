@@ -8,7 +8,7 @@ USE sigmeta;
 -- Los sql/5_pruebas/sql_prueba_*.sql no se eliminan: no crean objetos en la base, solo ejecutan CALL.
 --
 -- Uso: 1) ejecutar este archivo  2) ejecutar SP_yoe, SP_claudia, SP_daniel, SP_sebastian, SP_adriano
--- Total actual: 182 procedimientos.
+-- Total actual: 265 procedimientos (archivos 01 a 07).
 --      3) comprobar: SELECT COUNT(*) FROM information_schema.routines WHERE routine_schema = 'sigmeta';
 -- =========================================================================
 
@@ -236,6 +236,9 @@ DROP PROCEDURE IF EXISTS sp_movimiento_listar_producto;
 DROP PROCEDURE IF EXISTS sp_movimiento_bloquear;
 DROP PROCEDURE IF EXISTS sp_movimiento_existe_reversion;
 DROP PROCEDURE IF EXISTS sp_movimiento_listar_comprobante;
+DROP PROCEDURE IF EXISTS sp_costo_recepcion_guardar;
+DROP PROCEDURE IF EXISTS sp_costo_recepcion_obtener;
+DROP PROCEDURE IF EXISTS sp_proveedor_activar;
 DROP PROCEDURE IF EXISTS sp_movimiento_reversion_nota_credito;
 DROP PROCEDURE IF EXISTS sp_movimiento_listar_recepcion;
 DROP PROCEDURE IF EXISTS sp_detalle_compra_descontar;

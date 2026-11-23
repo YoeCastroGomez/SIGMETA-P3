@@ -11,6 +11,9 @@
 --   3. Los dos procedimientos para ANULAR una nota de credito, que solo estaban en la migracion 15 (sin ellos la
 --      anulacion fallaba con "PROCEDURE sigmeta.sp_movimiento_listar_comprobante does not exist"):
 --        sp_movimiento_listar_comprobante, sp_movimiento_reversion_nota_credito (ahora tambien en 07_SP_reforma.sql)
+--   4. Lo que la base tampoco tenia si no se corrio la migracion 14 (recepcion de compras) y un procedimiento que
+--      el Java llamaba y no existia en ningun script: tabla costo_recepcion_historico, sp_costo_recepcion_guardar,
+--      sp_costo_recepcion_obtener y sp_proveedor_activar (reactivar un proveedor).
 --
 -- DESPUES: volver a desplegar el .war (mvn clean install) y reiniciar GlassFish.
 -- =========================================================================
@@ -40,6 +43,18 @@ CREATE TABLE IF NOT EXISTS registro_anulacion (
         FOREIGN KEY (id_usuario) REFERENCES usuario(id),
     INDEX ix_registro_anulacion_fecha (fecha)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- RF012 (migracion 14)
+CREATE TABLE IF NOT EXISTS costo_recepcion_historico (
+    id_movimiento_ingreso INT PRIMARY KEY,
+    costo_anterior DECIMAL(12,2) NOT NULL,
+    costo_posterior DECIMAL(12,2) NOT NULL,
+    CONSTRAINT fk_costo_recepcion_movimiento
+        FOREIGN KEY (id_movimiento_ingreso) REFERENCES movimiento_inventario(id),
+    CONSTRAINT chk_costo_recepcion_anterior CHECK (costo_anterior >= 0),
+    CONSTRAINT chk_costo_recepcion_posterior CHECK (costo_posterior >= 0)
+) ENGINE=InnoDB;
+
 
 DELIMITER $$
 -- ============================================================
@@ -295,12 +310,48 @@ BEGIN
     SET p_id = LAST_INSERT_ID();
 END$$
 
+DROP PROCEDURE IF EXISTS sp_costo_recepcion_guardar$$
+CREATE PROCEDURE sp_costo_recepcion_guardar(
+    IN p_id_movimiento INT,
+    IN p_costo_anterior DECIMAL(12,2),
+    IN p_costo_posterior DECIMAL(12,2)
+)
+BEGIN
+    IF p_costo_anterior IS NULL OR p_costo_posterior IS NULL
+       OR p_costo_anterior < 0 OR p_costo_posterior < 0
+       OR NOT EXISTS (
+           SELECT 1 FROM movimiento_inventario
+           WHERE id = p_id_movimiento AND tipo = 'INGRESO_COMPRA'
+       ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Snapshot de costo de recepcion invalido';
+    END IF;
+
+    INSERT INTO costo_recepcion_historico
+        (id_movimiento_ingreso, costo_anterior, costo_posterior)
+    VALUES (p_id_movimiento, p_costo_anterior, p_costo_posterior);
+END$$
+
+DROP PROCEDURE IF EXISTS sp_costo_recepcion_obtener$$
+CREATE PROCEDURE sp_costo_recepcion_obtener(IN p_id_movimiento INT)
+BEGIN
+    SELECT costo_anterior, costo_posterior
+      FROM costo_recepcion_historico
+     WHERE id_movimiento_ingreso = p_id_movimiento;
+END$$
+
+DROP PROCEDURE IF EXISTS sp_proveedor_activar$$
+CREATE PROCEDURE sp_proveedor_activar(IN p_id_proveedor INT)
+BEGIN
+    UPDATE proveedor SET estado = TRUE WHERE id = p_id_proveedor;
+END$$
+
 DELIMITER ;
 
--- Revision: deben salir los 7 procedimientos y la tabla
+-- Revision: deben salir los 10 procedimientos
 SELECT ROUTINE_NAME AS procedimiento FROM information_schema.ROUTINES
 WHERE ROUTINE_SCHEMA = DATABASE() AND ROUTINE_NAME IN ('sp_anulacion_registrar', 'sp_cuenta_por_cobrar_historial',
       'sp_cuenta_por_cobrar_notas_credito', 'sp_reporte_anulaciones', 'sp_reporte_notas_credito',
-      'sp_movimiento_listar_comprobante', 'sp_movimiento_reversion_nota_credito')
+      'sp_movimiento_listar_comprobante', 'sp_movimiento_reversion_nota_credito',
+      'sp_costo_recepcion_guardar', 'sp_costo_recepcion_obtener', 'sp_proveedor_activar')
 ORDER BY ROUTINE_NAME;
 SELECT COUNT(*) AS anulaciones_registradas FROM registro_anulacion;

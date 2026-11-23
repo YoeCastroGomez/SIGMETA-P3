@@ -171,6 +171,20 @@ CREATE TABLE movimiento_inventario (
         REFERENCES usuario(id)
 );
 
+-- Tabla: costo_recepcion_historico
+-- RF012: costo promedio del producto ANTES y DESPUES de cada ingreso por compra, para que revertir una
+-- recepcion devuelva el costo exacto. Venia solo en la migracion 14; sin ella una base nueva no podia
+-- registrar recepciones (sp_costo_recepcion_guardar no existia).
+CREATE TABLE IF NOT EXISTS costo_recepcion_historico (
+    id_movimiento_ingreso INT PRIMARY KEY,
+    costo_anterior DECIMAL(12,2) NOT NULL,
+    costo_posterior DECIMAL(12,2) NOT NULL,
+    CONSTRAINT fk_costo_recepcion_movimiento
+        FOREIGN KEY (id_movimiento_ingreso) REFERENCES movimiento_inventario(id),
+    CONSTRAINT chk_costo_recepcion_anterior CHECK (costo_anterior >= 0),
+    CONSTRAINT chk_costo_recepcion_posterior CHECK (costo_posterior >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ============ DATOS DE PRUEBA ============
 -- Compra al proveedor 1 (Importaciones Electricas Delta) de 50 unidades de
 -- Martillo de Acero (producto 1, costo_unitario real del catalogo = 25.00).

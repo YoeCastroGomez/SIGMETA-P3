@@ -75,7 +75,7 @@ porque esos dos archivos no tienen `USE sigmeta;`.
 En vez de `sql/1_base/sigmeta.sql` se pueden correr los de `sql/1_base/por_modulo/` (00 a 06) en orden.
 Una opcion o la otra, no las dos.
 
-Para revisar que quedo bien: 29 tablas y 246 procedimientos en el schema `sigmeta` (215 de los archivos 01 a 06 y 32 del 07; el 07 reemplaza uno que ya existia).
+Para revisar que quedo bien: 32 tablas y 265 procedimientos en el schema `sigmeta` (archivos 00 a 07). Para PAIDEIA hay un solo script con todo: `sql/SIGMETA_P3_DDL_COMPLETO.sql` (tablas y procedimientos), `sql/SIGMETA_P3_DML_COMPLETO.sql` (datos) y `sql/SIGMETA_P3_DROP_COMPLETO.sql` (borrar).
 
 Los archivos `sql/5_pruebas/sql_prueba_*.sql` son consultas para probar a mano los procedimientos de cada integrante.
 
