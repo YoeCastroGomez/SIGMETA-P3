@@ -14,13 +14,16 @@ import pe.edu.pucp.sigmeta.bo.cobranza.CuentaPorCobrarBO;
 import pe.edu.pucp.sigmeta.bo.usuario.UsuarioBO;
 import pe.edu.pucp.sigmeta.boimpl.Validador;
 import pe.edu.pucp.sigmeta.boimpl.usuario.UsuarioBOImpl;
+import pe.edu.pucp.sigmeta.dao.ConsultaDAO;
 import pe.edu.pucp.sigmeta.dao.cobranza.CobroDAO;
 import pe.edu.pucp.sigmeta.dao.cobranza.CuentaPorCobrarDAO;
+import pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl;
 import pe.edu.pucp.sigmeta.daoimpl.cobranza.CobroDAOImpl;
 import pe.edu.pucp.sigmeta.daoimpl.cobranza.CuentaPorCobrarDAOImpl;
 import pe.edu.pucp.sigmeta.model.cobranza.CuentaPorCobrar;
 import pe.edu.pucp.sigmeta.model.cobranza.ResumenCuentasPorCobrar;
 import pe.edu.pucp.sigmeta.model.enums.EstadoCuentaPorCobrar;
+import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.model.ventas.Comprobante;
 
 public class CuentaPorCobrarBOImpl implements CuentaPorCobrarBO {
@@ -28,6 +31,8 @@ public class CuentaPorCobrarBOImpl implements CuentaPorCobrarBO {
     private final CuentaPorCobrarDAO cuentaPorCobrarDAO;
     private final CobroDAO cobroDAO;
     private final UsuarioBO usuarioBO;
+    // RF009 + RF013: historial y notas de credito de la cuenta (los arma la base)
+    private final ConsultaDAO consultaDAO = new ConsultaDAOImpl();
 
     public CuentaPorCobrarBOImpl() {
         this.cuentaPorCobrarDAO = new CuentaPorCobrarDAOImpl();
@@ -178,19 +183,15 @@ public class CuentaPorCobrarBOImpl implements CuentaPorCobrarBO {
         });
     }
 
-    private final pe.edu.pucp.sigmeta.dao.ConsultaDAO consultaDAO = new pe.edu.pucp.sigmeta.daoimpl.ConsultaDAOImpl();
-
     @Override
     public List<Map<String, Object>> historial(int idCuenta, int idResponsable) throws SQLException {
-        usuarioBO.verificarRol(idResponsable, pe.edu.pucp.sigmeta.model.enums.TipoRol.CAJERO,
-                pe.edu.pucp.sigmeta.model.enums.TipoRol.ADMINISTRADOR);
+        usuarioBO.verificarRol(idResponsable, TipoRol.CAJERO, TipoRol.ADMINISTRADOR);
         return Transaccion.consultar(() -> consultaDAO.consultar("sp_cuenta_por_cobrar_historial", idCuenta));
     }
 
     @Override
     public List<Map<String, Object>> notasCredito(int idCuenta, int idResponsable) throws SQLException {
-        usuarioBO.verificarRol(idResponsable, pe.edu.pucp.sigmeta.model.enums.TipoRol.CAJERO,
-                pe.edu.pucp.sigmeta.model.enums.TipoRol.ADMINISTRADOR);
+        usuarioBO.verificarRol(idResponsable, TipoRol.CAJERO, TipoRol.ADMINISTRADOR);
         return Transaccion.consultar(() -> consultaDAO.consultar("sp_cuenta_por_cobrar_notas_credito", idCuenta));
     }
 

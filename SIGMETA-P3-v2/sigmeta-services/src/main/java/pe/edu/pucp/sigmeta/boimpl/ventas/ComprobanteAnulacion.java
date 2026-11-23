@@ -5,6 +5,11 @@ import pe.edu.pucp.sigmeta.boimpl.caja.CompensacionCaja;
 import pe.edu.pucp.sigmeta.model.caja.MovimientoCaja;
 import pe.edu.pucp.sigmeta.bo.usuario.UsuarioBO;
 import pe.edu.pucp.sigmeta.boimpl.Validador;
+import pe.edu.pucp.sigmeta.boimpl.cobranza.RegistroAnulacion;
+import pe.edu.pucp.sigmeta.dao.cobranza.CuentaPorCobrarDAO;
+import pe.edu.pucp.sigmeta.daoimpl.cobranza.CuentaPorCobrarDAOImpl;
+import pe.edu.pucp.sigmeta.model.cobranza.CuentaPorCobrar;
+import pe.edu.pucp.sigmeta.model.enums.CondicionPago;
 import pe.edu.pucp.sigmeta.dao.almacen.DespachoDAO;
 import pe.edu.pucp.sigmeta.dao.almacen.MovimientoInventarioDAO;
 import pe.edu.pucp.sigmeta.dao.almacen.StockInventarioDAO;
@@ -39,6 +44,8 @@ final class ComprobanteAnulacion {
     private final UsuarioBO usuarioBO;
     private final CompensacionCaja compensacionCaja;
     private final DespachoDAO despachoDAO;
+    // RF013 + RNF001: para enlazar la anulacion de una nota con la cuenta por cobrar de su venta
+    private final CuentaPorCobrarDAO cuentaPorCobrarDAO = new CuentaPorCobrarDAOImpl();
 
     ComprobanteAnulacion(ComprobanteDAO comprobanteDAO, DetalleNotaCreditoDAO detalleNotaCreditoDAO, VentaDAO ventaDAO, StockInventarioDAO stockDAO, MovimientoInventarioDAO movimientoDAO, UsuarioBO usuarioBO, CompensacionCaja compensacionCaja, DespachoDAO despachoDAO) {
         this.comprobanteDAO = comprobanteDAO;
@@ -137,16 +144,14 @@ final class ComprobanteAnulacion {
                 // RF013 + RNF001: queda constancia de quien anulo la nota, cuando y por que (historial de la
                 // cuenta por cobrar y reporte de caja)
                 Integer idCuenta = null;
-                if (venta != null && venta.getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CREDITO) {
-                    pe.edu.pucp.sigmeta.model.cobranza.CuentaPorCobrar cxc =
-                            new pe.edu.pucp.sigmeta.daoimpl.cobranza.CuentaPorCobrarDAOImpl().obtenerPorVenta(venta.getId());
+                if (venta != null && venta.getCondicionPago() == CondicionPago.CREDITO) {
+                    CuentaPorCobrar cxc = cuentaPorCobrarDAO.obtenerPorVenta(venta.getId());
                     idCuenta = cxc == null ? null : cxc.getId();
                 }
-                pe.edu.pucp.sigmeta.boimpl.cobranza.RegistroAnulacion.registrar(
-                        pe.edu.pucp.sigmeta.boimpl.cobranza.RegistroAnulacion.NOTA_CREDITO, idComprobante,
+                RegistroAnulacion.registrar(RegistroAnulacion.NOTA_CREDITO, idComprobante,
                         comprobante.getSerie() + "-" + comprobante.getNumero(), idCuenta, comprobante.getTotal(),
                         motivo, responsable.getId());
-                if (venta != null && venta.getCondicionPago() == pe.edu.pucp.sigmeta.model.enums.CondicionPago.CREDITO) {
+                if (venta != null && venta.getCondicionPago() == CondicionPago.CREDITO) {
                     // la deuda vuelve solo por la parte que la nota rebajo; lo que se devolvio en efectivo
                     // se revierte abajo, con su ingreso compensatorio en la caja
                     BigDecimal devueltoEnCaja = BigDecimal.ZERO;

@@ -3,6 +3,7 @@ package pe.edu.pucp.sigmeta.boimpl.ventas;
 import pe.edu.pucp.sigmeta.boimpl.Transaccion;
 import pe.edu.pucp.sigmeta.boimpl.caja.CompensacionCaja;
 import pe.edu.pucp.sigmeta.boimpl.cobranza.CuentaPorCobrarBOImpl;
+import pe.edu.pucp.sigmeta.boimpl.cobranza.RegistroAnulacion;
 import pe.edu.pucp.sigmeta.dao.cobranza.CuentaPorCobrarDAO;
 import pe.edu.pucp.sigmeta.model.caja.MovimientoCaja;
 import pe.edu.pucp.sigmeta.model.cobranza.CuentaPorCobrar;
@@ -12,6 +13,7 @@ import pe.edu.pucp.sigmeta.dao.almacen.DespachoDAO;
 import pe.edu.pucp.sigmeta.dao.ventas.*;
 import pe.edu.pucp.sigmeta.daoimpl.ventas.*;
 import pe.edu.pucp.sigmeta.model.enums.CondicionPago;
+import pe.edu.pucp.sigmeta.model.enums.EstadoCuentaPorCobrar;
 import pe.edu.pucp.sigmeta.model.enums.TipoRol;
 import pe.edu.pucp.sigmeta.model.socio.Cliente;
 import pe.edu.pucp.sigmeta.model.usuario.Usuario;
@@ -115,11 +117,10 @@ final class VentaCobranza {
             throw new IllegalStateException("La venta tiene cobros registrados; anule primero los cobros de su cuenta por cobrar");
         }
         cxc.setSaldoPendiente(0);
-        cxc.setEstado(pe.edu.pucp.sigmeta.model.enums.EstadoCuentaPorCobrar.ANULADA);
+        cxc.setEstado(EstadoCuentaPorCobrar.ANULADA);
         cuentaPorCobrarDAO.update(cxc);
         // RF009 + RNF001: la anulacion de la cuenta queda con su motivo, usuario y fecha (historial y reporte)
-        pe.edu.pucp.sigmeta.boimpl.cobranza.RegistroAnulacion.registrar(
-                pe.edu.pucp.sigmeta.boimpl.cobranza.RegistroAnulacion.CUENTA_POR_COBRAR, cxc.getId(),
+        RegistroAnulacion.registrar(RegistroAnulacion.CUENTA_POR_COBRAR, cxc.getId(),
                 "Cuenta de " + (numeroVenta == null ? "la venta " + idVenta : numeroVenta), cxc.getId(),
                 cxc.getMontoOriginal(), motivo, idResponsable);
     }

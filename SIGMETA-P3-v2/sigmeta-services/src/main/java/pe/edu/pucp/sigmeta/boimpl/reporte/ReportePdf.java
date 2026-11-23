@@ -196,7 +196,7 @@ public final class ReportePdf {
                     byte[] compilada = jasper.readAllBytes();
                     // un .jasper compilado con un JDK mas nuevo que el de GlassFish no se puede usar
                     // (UnsupportedClassVersionError al llenar): en ese caso se compila el .jrxml aqui mismo
-                    if (compatibleConEsteJava(compilada)) {
+                    if (CompiladorPlantillasJava.compatibleConEsteJava(compilada)) {
                         return (JasperReport) JRLoader.loadObject(new java.io.ByteArrayInputStream(compilada));
                     }
                 }
@@ -214,24 +214,6 @@ public final class ReportePdf {
                         + "con GlassFish detenido y vuelva a desplegar. Detalle: " + e.getMessage(), e);
             }
         });
-    }
-
-    /**
-     * Revisa la version de las clases que van dentro del .jasper (cada clase empieza con CAFEBABE y luego trae
-     * su version). Si alguna es mas nueva que este Java, el .jasper no sirve en este servidor.
-     */
-    static boolean compatibleConEsteJava(byte[] jasper) {
-        int maxima = 44 + Runtime.version().feature();
-        for (int i = 0; i + 7 < jasper.length; i++) {
-            if ((jasper[i] & 0xFF) == 0xCA && (jasper[i + 1] & 0xFF) == 0xFE
-                    && (jasper[i + 2] & 0xFF) == 0xBA && (jasper[i + 3] & 0xFF) == 0xBE) {
-                int version = ((jasper[i + 6] & 0xFF) << 8) | (jasper[i + 7] & 0xFF);
-                if (version > maxima) {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 
     private static volatile boolean compiladorListo;
